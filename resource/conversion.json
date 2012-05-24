@@ -1,0 +1,31 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "referrer",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "count",
+			"ordinal" : 2,
+			"dataType" : "int",
+			"bucketWidth" : 1 ,
+			"feature" : true
+		},
+		{
+			"name" : "avTimeSpent",
+			"ordinal" : 4,
+			"dataType" : "int",
+			"bucketWidth" : 60,
+			"feature" : true
+		},
+		{
+			"name" : "status",
+			"ordinal" : 5,
+			"dataType" : "categorical",
+			"feature" : false
+		}
+	]
+}
