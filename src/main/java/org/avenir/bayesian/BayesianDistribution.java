@@ -87,7 +87,7 @@ public class BayesianDistribution extends Configured implements Tool {
         
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
-        	InputStream fs = Utility.getSchemaFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
