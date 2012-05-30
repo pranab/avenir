@@ -17,14 +17,67 @@
 
 package org.avenir.bayesian;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.chombo.util.BinCount;
 import org.chombo.util.FeatureCount;
 
 public class BayesianModel {
-	private List<FeaturePosterior> featurePosteriors;
-	private List<FeatureCount> featurePriors;
+	private List<FeaturePosterior> featurePosteriors = new ArrayList<FeaturePosterior>();
+	private List<FeatureCount> featurePriors = new ArrayList<FeatureCount>();
 	private int count;
+	
+	public void addClassPrior(String classValue, int count) {
+		FeaturePosterior feaPost = getFeaturePosterior(classValue);
+		feaPost.setCount(count);
+	}
+	
+	public void addFeaturePrior(int ordinal, String bin,  int count) {
+		FeatureCount feaCount = getFeatureCount( ordinal);
+		BinCount binCount = new BinCount(bin, count);
+		feaCount.addBinCount(binCount);
+	}
+	
+	public void addFeaturePosterior(String classValue, int ordinal, String bin,  int count) {
+		FeaturePosterior feaPost = getFeaturePosterior(classValue);
+		FeatureCount  feaCount =  feaPost.getFeatureCount( ordinal);
+		BinCount binCount = new BinCount(bin, count);
+		feaCount.addBinCount(binCount);
+	}
+	
+	private FeatureCount getFeatureCount(int ordinal) {
+		FeatureCount feaCount  = null;
+		for (FeatureCount thisFeaCount :   featurePriors) {
+			if (thisFeaCount.getOrdinal() == ordinal) {
+				feaCount = thisFeaCount;
+				break;
+			}
+		}
+		if (null ==  feaCount) {
+			feaCount = new FeatureCount(ordinal, "");
+			featurePriors.add(feaCount);
+		}
+		return feaCount;
+	}
+	
+	private FeaturePosterior getFeaturePosterior(String classValue) {
+		FeaturePosterior feaPost = null;
+		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
+			if (thisFeaPost.getClassValue().equals(classValue)) {
+				feaPost = thisFeaPost;
+				break;
+			}
+		}
+		
+		if (null == feaPost) {
+			feaPost = new FeaturePosterior();
+			feaPost.setClassValue(classValue);
+			featurePosteriors.add(feaPost);
+		}
+		
+		return feaPost;
+	}
 	
 	public List<FeaturePosterior> getFeaturePosteriors() {
 		return featurePosteriors;

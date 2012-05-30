@@ -17,8 +17,10 @@
 
 package org.avenir.bayesian;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configured;
@@ -33,6 +35,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -76,10 +79,11 @@ public class BayesianPredictor extends Configured implements Tool {
         private Integer featureAttrOrdinal;
         private String featureAttrBin;
         private int bin;
+        private BayesianModel model;
         
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
-        	InputStream fs = Utility.getSchemaFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
@@ -91,11 +95,42 @@ public class BayesianPredictor extends Configured implements Tool {
         			break;
         		}
         	}
+        	
+        	loadModel(context);
         }
  
+        private void loadModel(Context context) throws IOException {
+        	model = new BayesianModel();
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bayesian.model.file.path");
+        	BufferedReader reader = new BufferedReader(new InputStreamReader(fs));
+        	String line = null; 
+        	String[] items = null;
+        	
+        	while((line = reader.readLine()) != null) {
+        		items = line.split(fieldDelimRegex);
+        		if (items[0].isEmpty()) {
+        			//feature prior
+        			model.addFeaturePrior(Integer.parseInt(items[1]), items[2], Integer.parseInt(items[3]));
+        		} else if (items[1].isEmpty()) {
+        			//class prior
+        			model.addClassPrior(items[0], Integer.parseInt(items[3]));
+        		} else {
+        			//feature posterior
+        			model.addFeaturePosterior(items[0], Integer.parseInt(items[1]), items[2], Integer.parseInt(items[3]));
+        		}
+        	}
+        	
+        }
+        
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
         }	
 	}
+	
+    public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new BayesianPredictor(), args);
+        System.exit(exitCode);
+    }
+	
 }

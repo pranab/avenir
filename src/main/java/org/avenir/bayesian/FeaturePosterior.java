@@ -17,13 +17,14 @@
 
 package org.avenir.bayesian;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.chombo.util.FeatureCount;
 
 public class FeaturePosterior {
 	private String classValue;
-	private List<FeatureCount> featureCounts;
+	private List<FeatureCount> featureCounts = new ArrayList<FeatureCount>();
 	private int count;
 	
 	public String getClassValue() {
@@ -43,6 +44,20 @@ public class FeaturePosterior {
 	}
 	public void setCount(int count) {
 		this.count = count;
+	}
+	public  FeatureCount getFeatureCount(int ordinal) {
+		FeatureCount feaCount  = null;
+		for (FeatureCount thisFeaCount :   featureCounts) {
+			if (thisFeaCount.getOrdinal() == ordinal) {
+				feaCount = thisFeaCount;
+				break;
+			}
+		}
+		if (null ==  feaCount) {
+			feaCount = new FeatureCount(ordinal, "");
+			featureCounts.add(feaCount);
+		}
+		return feaCount;
 	}
 
 }
