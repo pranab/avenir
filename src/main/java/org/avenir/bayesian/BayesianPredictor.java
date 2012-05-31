@@ -21,8 +21,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -80,12 +83,22 @@ public class BayesianPredictor extends Configured implements Tool {
         private String featureAttrBin;
         private int bin;
         private BayesianModel model;
+		private List<Pair<Integer, String>> featureValues = new ArrayList<Pair<Integer, String>>();
+		private String[] predictingClasses;
+		private String fieldDelim;
+		private List<Pair<String, Integer>> classPrediction = new ArrayList<Pair<String,Integer>>();
         
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
+        	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
+
+        	//schema
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
+            
+            //predicting classes
+            predictingClasses = context.getConfiguration().get("bp.predict.class").split(fieldDelim);
             
             //class attribute field
         	fields = schema.getFields();
@@ -96,6 +109,7 @@ public class BayesianPredictor extends Configured implements Tool {
         		}
         	}
         	
+        	//bayesian model
         	loadModel(context);
         }
  
@@ -120,13 +134,44 @@ public class BayesianPredictor extends Configured implements Tool {
         		}
         	}
         	
+        	//caclulate distributions
+        	model.finishUp();
+        	
         }
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
+            items  =  value.toString().split(fieldDelimRegex);
+            classAttrVal = items[classAttrField.getOrdinal()];
+            featureValues.clear();
+            
+        	for (FeatureField field : fields) {
+        		if (field.isFeature()) {
+        			featureAttrVal = items[field.getOrdinal()];
+        			featureAttrOrdinal = field.getOrdinal();
+        			if  (field.isCategorical()) {
+        				featureAttrBin= featureAttrVal;
+        			} else {
+        				bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
+        				featureAttrBin = "" + bin;
+        			}
+        			Pair<Integer, String> feature = new ImmutablePair<Integer, String>(featureAttrOrdinal, featureAttrBin);
+        			featureValues.add(feature);
+        		}
+        	}
+            
+        	//predict
+        	predict();
+        	
         }	
+        
+        private void predict() {
+    		
+    	}
+    	     
 	}
+	
 	
     public static void main(String[] args) throws Exception {
         int exitCode = ToolRunner.run(new BayesianPredictor(), args);

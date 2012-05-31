@@ -26,6 +26,7 @@ public class FeaturePosterior {
 	private String classValue;
 	private List<FeatureCount> featureCounts = new ArrayList<FeatureCount>();
 	private int count;
+	private double prob;
 	
 	public String getClassValue() {
 		return classValue;
@@ -60,4 +61,18 @@ public class FeaturePosterior {
 		return feaCount;
 	}
 
+	public void normalize(int total) {
+		//feature posterior
+		for (FeatureCount feaCount : featureCounts) {
+			feaCount.normalize(count);
+		}
+		
+		//class prior
+		prob = ((double)count ) / total;
+	}
+	
+	public double getProb() {
+		return prob;
+	}
+	
 }

@@ -97,4 +97,20 @@ public class BayesianModel {
 	public void setCount(int count) {
 		this.count = count;
 	}
+	
+	public void finishUp() {
+		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
+			count += thisFeaPost.getCount();
+		}	
+		
+		//class prior and feature posterior
+		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
+			thisFeaPost.normalize(count);
+		}		
+		
+		//feature prior
+		for (FeatureCount thisFeaCount :   featurePriors) {
+			thisFeaCount.normalize(count);
+		}
+	}
 }
