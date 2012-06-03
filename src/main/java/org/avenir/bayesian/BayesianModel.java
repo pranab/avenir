@@ -20,6 +20,7 @@ package org.avenir.bayesian;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.chombo.util.BinCount;
 import org.chombo.util.FeatureCount;
 
@@ -27,6 +28,26 @@ public class BayesianModel {
 	private List<FeaturePosterior> featurePosteriors = new ArrayList<FeaturePosterior>();
 	private List<FeatureCount> featurePriors = new ArrayList<FeatureCount>();
 	private int count;
+	
+	public double getClassPriorProb(String classValue) {
+		FeaturePosterior feaPost = getFeaturePosterior(classValue);
+		return feaPost.getProb();
+	}
+	
+	public double getFeaturePriorProb(List<Pair<Integer, String>> featureValues) {
+		double prob = 1.0;
+		for (Pair<Integer, String> feature : featureValues) {
+			FeatureCount feaCount = getFeatureCount( feature.getLeft());
+			prob *= feaCount.getProb(feature.getRight());
+		}
+		return prob;
+	}
+	
+	public double getFeaturePostProb(String classVal, List<Pair<Integer, String>> featureValues) {
+		FeaturePosterior feaPost = getFeaturePosterior(classVal);
+		double prob = feaPost.getFeaturePostProb(featureValues);
+		return prob;
+	}
 	
 	public void addClassPrior(String classValue, int count) {
 		FeaturePosterior feaPost = getFeaturePosterior(classValue);

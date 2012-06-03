@@ -20,6 +20,7 @@ package org.avenir.bayesian;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.chombo.util.FeatureCount;
 
 public class FeaturePosterior {
@@ -48,7 +49,7 @@ public class FeaturePosterior {
 	}
 	public  FeatureCount getFeatureCount(int ordinal) {
 		FeatureCount feaCount  = null;
-		for (FeatureCount thisFeaCount :   featureCounts) {
+		for (FeatureCount thisFeaCount :   featureCounts){
 			if (thisFeaCount.getOrdinal() == ordinal) {
 				feaCount = thisFeaCount;
 				break;
@@ -75,4 +76,12 @@ public class FeaturePosterior {
 		return prob;
 	}
 	
+	public double getFeaturePostProb( List<Pair<Integer, String>> featureValues) {
+		double prob = 1.0;
+		for (Pair<Integer, String> feature : featureValues) {
+			FeatureCount feaCount = getFeatureCount( feature.getLeft());
+			prob *= feaCount.getProb(feature.getRight());
+		}
+		return prob;
+	}	
 }

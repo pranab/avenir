@@ -69,10 +69,9 @@ public class BayesianPredictor extends Configured implements Tool {
         return status;
 	}
 
-	public static class PredictorMapper extends Mapper<LongWritable, Text, Tuple, IntWritable> {
+	public static class PredictorMapper extends Mapper<LongWritable, Text, NullWritable, Text> {
 		private String[] items;
-		private Tuple outKey = new Tuple();
-		private IntWritable outVal = new IntWritable(1);
+		private Text outVal = new Text();
         private String fieldDelimRegex;
         private FeatureSchema schema;
         private List<FeatureField> fields;
@@ -161,13 +160,45 @@ public class BayesianPredictor extends Configured implements Tool {
         		}
         	}
             
-        	//predict
-        	predict();
+        	//predict probabilty for class values
+        	predictClassValue();
+        	
+        	if (classPrediction.size() == 1) {
+        		//single class
+        		outVal.set(value.toString() + fieldDelim + classPrediction.get(0).getLeft() + fieldDelim + classPrediction.get(0).getRight());
+        	} else {
+        		//take max among all classes
+        		int prob = 0;
+        		String classVal = null;
+        		int thisProb;
+        		for (Pair<String, Integer> item : classPrediction) {
+        			thisProb = item.getRight();
+        			if (thisProb > prob) {
+        				prob = thisProb;
+        				classVal = item.getLeft();
+        			}
+        		}
+        		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
+        	}
+			context.write(NullWritable.get(),outVal);
         	
         }	
         
-        private void predict() {
-    		
+        private void predictClassValue() {
+        	double classPriorProb = 0;
+        	double featurePriorProb = 1.0;
+        	double featurePostProb = 1.0;
+        	int classPostProb = 0;
+        	classPrediction.clear();
+        	
+    		for (String classVal :  predictingClasses) {
+    			classPriorProb = model.getClassPriorProb(classVal);
+    			featurePriorProb = model.getFeaturePriorProb(featureValues);
+    			featurePostProb = model.getFeaturePostProb(classVal, featureValues);
+    			classPostProb =(int)(((featurePostProb * classPriorProb) / featurePriorProb) * 100);
+    			Pair<String, Integer> classProb = new ImmutablePair<String, Integer>(classVal, classPostProb);
+    			classPrediction.add(classProb);
+    		}
     	}
     	     
 	}
