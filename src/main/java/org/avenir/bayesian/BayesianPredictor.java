@@ -86,6 +86,15 @@ public class BayesianPredictor extends Configured implements Tool {
 		private String[] predictingClasses;
 		private String fieldDelim;
 		private List<Pair<String, Integer>> classPrediction = new ArrayList<Pair<String,Integer>>();
+		private static final int MODEL_DATA_NUM_TOKENS = 4;
+		private String actualClass;
+		private String predClass;
+		private static final String CORRECT = "CORRECT";
+		private static final String WRONG = "WRONG";
+		private boolean  validationStatus;
+		private int predProb;
+		private int probThreshHold = 10;
+		
         
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
@@ -121,10 +130,14 @@ public class BayesianPredictor extends Configured implements Tool {
         	
         	while((line = reader.readLine()) != null) {
         		items = line.split(fieldDelimRegex);
+        		if(items.length != MODEL_DATA_NUM_TOKENS) {
+        			throw new IOException("invalid model data");
+        		}
+        		
         		if (items[0].isEmpty()) {
         			//feature prior
         			model.addFeaturePrior(Integer.parseInt(items[1]), items[2], Integer.parseInt(items[3]));
-        		} else if (items[1].isEmpty()) {
+        		} else if (items[1].isEmpty() && items[2].isEmpty()) {
         			//class prior
         			model.addClassPrior(items[0], Integer.parseInt(items[3]));
         		} else {
@@ -144,11 +157,13 @@ public class BayesianPredictor extends Configured implements Tool {
             items  =  value.toString().split(fieldDelimRegex);
             classAttrVal = items[classAttrField.getOrdinal()];
             featureValues.clear();
+            actualClass = items[items.length - 1];
             
+            //collect feature attribute and associated bin
         	for (FeatureField field : fields) {
         		if (field.isFeature()) {
-        			featureAttrVal = items[field.getOrdinal()];
         			featureAttrOrdinal = field.getOrdinal();
+        			featureAttrVal = items[featureAttrOrdinal];
         			if  (field.isCategorical()) {
         				featureAttrBin= featureAttrVal;
         			} else {
@@ -165,7 +180,10 @@ public class BayesianPredictor extends Configured implements Tool {
         	
         	if (classPrediction.size() == 1) {
         		//single class
-        		outVal.set(value.toString() + fieldDelim + classPrediction.get(0).getLeft() + fieldDelim + classPrediction.get(0).getRight());
+       			predClass = classPrediction.get(0).getLeft();
+       			predProb =  classPrediction.get(0).getRight();
+       			validationStatus = actualClass.equals(predClass) && predProb > probThreshHold;
+       		    outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
         	} else {
         		//take max among all classes
         		int prob = 0;
@@ -178,7 +196,14 @@ public class BayesianPredictor extends Configured implements Tool {
         				classVal = item.getLeft();
         			}
         		}
+        		predClass = classVal;
+       			predProb =  prob;
+       			validationStatus = actualClass.equals(predClass) && predProb > probThreshHold;
         		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
+        	}
+        	
+        	if (validationStatus){
+				context.getCounter("Validation", "Class").increment(1);
         	}
 			context.write(NullWritable.get(),outVal);
         	
@@ -195,6 +220,13 @@ public class BayesianPredictor extends Configured implements Tool {
     			classPriorProb = model.getClassPriorProb(classVal);
     			featurePriorProb = model.getFeaturePriorProb(featureValues);
     			featurePostProb = model.getFeaturePostProb(classVal, featureValues);
+    			
+    			if (actualClass.equals(classVal)) {
+    				System.out.println("featurePostProb:" + featurePostProb + " classPriorProb:" + classPriorProb +
+    						"featurePriorProb:" + featurePriorProb);
+    			}
+    			
+    			//predict
     			classPostProb =(int)(((featurePostProb * classPriorProb) / featurePriorProb) * 100);
     			Pair<String, Integer> classProb = new ImmutablePair<String, Integer>(classVal, classPostProb);
     			classPrediction.add(classProb);

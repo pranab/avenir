@@ -47,6 +47,11 @@ public class FeaturePosterior {
 	public void setCount(int count) {
 		this.count = count;
 	}
+	
+	public void addCount(int count) {
+		this.count += count;
+	}
+	
 	public  FeatureCount getFeatureCount(int ordinal) {
 		FeatureCount feaCount  = null;
 		for (FeatureCount thisFeaCount :   featureCounts){

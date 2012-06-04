@@ -51,7 +51,7 @@ public class BayesianModel {
 	
 	public void addClassPrior(String classValue, int count) {
 		FeaturePosterior feaPost = getFeaturePosterior(classValue);
-		feaPost.setCount(count);
+		feaPost.addCount(count);
 	}
 	
 	public void addFeaturePrior(int ordinal, String bin,  int count) {
@@ -120,6 +120,7 @@ public class BayesianModel {
 	}
 	
 	public void finishUp() {
+		//total count
 		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
 			count += thisFeaPost.getCount();
 		}	
