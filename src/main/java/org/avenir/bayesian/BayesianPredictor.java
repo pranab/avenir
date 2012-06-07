@@ -91,9 +91,10 @@ public class BayesianPredictor extends Configured implements Tool {
 		private String predClass;
 		private static final String CORRECT = "CORRECT";
 		private static final String WRONG = "WRONG";
-		private boolean  validationStatus;
+		private boolean  corrPred;
+		private boolean  incorrPred;
 		private int predProb;
-		private int probThreshHold = 10;
+		private int probThreshHold = 50;
 		
         
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -182,7 +183,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		//single class
        			predClass = classPrediction.get(0).getLeft();
        			predProb =  classPrediction.get(0).getRight();
-       			validationStatus = actualClass.equals(predClass) && predProb > probThreshHold;
+       			corrPred = actualClass.equals(predClass) && predProb >= probThreshHold;
+       			incorrPred = actualClass.equals(predClass) && predProb < probThreshHold;
        		    outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
         	} else {
         		//take max among all classes
@@ -198,12 +200,16 @@ public class BayesianPredictor extends Configured implements Tool {
         		}
         		predClass = classVal;
        			predProb =  prob;
-       			validationStatus = actualClass.equals(predClass) && predProb > probThreshHold;
+       			corrPred = actualClass.equals(predClass) && predProb >= probThreshHold;
+       			incorrPred = actualClass.equals(predClass) && predProb < probThreshHold;
         		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
         	}
         	
-        	if (validationStatus){
-				context.getCounter("Validation", "Class").increment(1);
+        	if (corrPred){
+				context.getCounter("Validation", "Correct").increment(1);
+        	}
+        	if (incorrPred){
+				context.getCounter("Validation", "Incorrect").increment(1);
         	}
 			context.write(NullWritable.get(),outVal);
         	
