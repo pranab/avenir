@@ -34,6 +34,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.util.Version;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -84,45 +87,67 @@ public class BayesianDistribution extends Configured implements Tool {
         private Integer featureAttrOrdinal;
         private String featureAttrBin;
         private int bin;
+        private boolean tabularInput;
+        private Analyzer analyzer;
         
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
-            ObjectMapper mapper = new ObjectMapper();
-            schema = mapper.readValue(fs, FeatureSchema.class);
-            
-            //class attribute field
-        	fields = schema.getFields();
-        	for (FeatureField field : fields) {
-        		if (!field.isFeature()) {
-        			classAttrField = field;
-        			break;
-        		}
+        	tabularInput = context.getConfiguration().getBoolean("tabular.input", true);
+        	if (tabularInput) {
+	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	            ObjectMapper mapper = new ObjectMapper();
+	            schema = mapper.readValue(fs, FeatureSchema.class);
+	            
+	            //class attribute field
+	        	fields = schema.getFields();
+	        	for (FeatureField field : fields) {
+	        		if (!field.isFeature()) {
+	        			classAttrField = field;
+	        			break;
+	        		}
+	        	}
+        	} else {
+                analyzer = new StandardAnalyzer(Version.LUCENE_35);
+                featureAttrOrdinal = 1;
         	}
         }
  
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
-            items  =  value.toString().split(fieldDelimRegex);
-            classAttrVal = items[classAttrField.getOrdinal()];
-            
-        	for (FeatureField field : fields) {
-        		if (field.isFeature()) {
-        			featureAttrVal = items[field.getOrdinal()];
-        			featureAttrOrdinal = field.getOrdinal();
-        			if  (field.isCategorical()) {
-        				featureAttrBin= featureAttrVal;
-        			} else {
-        				bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
-        				featureAttrBin = "" + bin;
-        			}
-        			outKey.initialize();
-        			outKey.add(classAttrVal, featureAttrOrdinal, featureAttrBin);
-       	   			context.write(outKey, outVal);
-        		}
+        	if (tabularInput) {
+	            items  =  value.toString().split(fieldDelimRegex);
+	            classAttrVal = items[classAttrField.getOrdinal()];
+	            
+	        	for (FeatureField field : fields) {
+	        		if (field.isFeature()) {
+	        			featureAttrVal = items[field.getOrdinal()];
+	        			featureAttrOrdinal = field.getOrdinal();
+	        			if  (field.isCategorical()) {
+	        				featureAttrBin= featureAttrVal;
+	        			} else {
+	        				bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
+	        				featureAttrBin = "" + bin;
+	        			}
+	        			outKey.initialize();
+	        			outKey.add(classAttrVal, featureAttrOrdinal, featureAttrBin);
+	       	   			context.write(outKey, outVal);
+	        		}
+	        	}
+        	}   else {
+        		mapText( value,  context);
         	}
-                    	
+        }
+        
+        private void mapText(Text value, Context context) throws IOException, InterruptedException {
+            items  =  value.toString().split(fieldDelimRegex);
+            classAttrVal = items[1];
+            List<String> tokens = Utility.tokenize(items[0], analyzer);
+            for (String token : tokens ) {
+    			outKey.initialize();
+    			outKey.add(classAttrVal, featureAttrOrdinal, token);
+   	   			context.write(outKey, outVal);
+            }
         }
 	}
 	
