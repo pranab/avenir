@@ -87,7 +87,6 @@ public class BayesianPredictor extends Configured implements Tool {
 		private String fieldDelim;
 		private List<Pair<String, Integer>> classPrediction = new ArrayList<Pair<String,Integer>>();
 		private static final int MODEL_DATA_NUM_TOKENS = 4;
-		private String actualClass;
 		private String predClass;
 		private static final String CORRECT = "CORRECT";
 		private static final String WRONG = "WRONG";
@@ -158,7 +157,6 @@ public class BayesianPredictor extends Configured implements Tool {
             items  =  value.toString().split(fieldDelimRegex);
             classAttrVal = items[classAttrField.getOrdinal()];
             featureValues.clear();
-            actualClass = items[items.length - 1];
             
             //collect feature attribute and associated bin
         	for (FeatureField field : fields) {
@@ -183,8 +181,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		//single class
        			predClass = classPrediction.get(0).getLeft();
        			predProb =  classPrediction.get(0).getRight();
-       			corrPred = actualClass.equals(predClass) && predProb >= probThreshHold;
-       			incorrPred = actualClass.equals(predClass) && predProb < probThreshHold;
+       			corrPred = classAttrVal.equals(predClass) && predProb >= probThreshHold;
+       			incorrPred = classAttrVal.equals(predClass) && predProb < probThreshHold;
        		    outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
         	} else {
         		//take max among all classes
@@ -200,8 +198,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		}
         		predClass = classVal;
        			predProb =  prob;
-       			corrPred = actualClass.equals(predClass) && predProb >= probThreshHold;
-       			incorrPred = actualClass.equals(predClass) && predProb < probThreshHold;
+       			corrPred = classAttrVal.equals(predClass);
+       			incorrPred = !corrPred;
         		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
         	}
         	
@@ -227,7 +225,7 @@ public class BayesianPredictor extends Configured implements Tool {
     			featurePriorProb = model.getFeaturePriorProb(featureValues);
     			featurePostProb = model.getFeaturePostProb(classVal, featureValues);
     			
-    			if (actualClass.equals(classVal)) {
+    			if (classAttrVal.equals(classVal)) {
     				System.out.println("featurePostProb:" + featurePostProb + " classPriorProb:" + classPriorProb +
     						"featurePriorProb:" + featurePriorProb);
     			}
