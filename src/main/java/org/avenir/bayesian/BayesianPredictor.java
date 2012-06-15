@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.avenir.util.ConfusionMatrix;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -94,6 +95,7 @@ public class BayesianPredictor extends Configured implements Tool {
 		private boolean  incorrPred;
 		private int predProb;
 		private int probThreshHold = 50;
+		private  ConfusionMatrix confMatrix;
 		
         
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -107,6 +109,7 @@ public class BayesianPredictor extends Configured implements Tool {
             
             //predicting classes
             predictingClasses = context.getConfiguration().get("bp.predict.class").split(fieldDelim);
+            confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
             
             //class attribute field
         	fields = schema.getFields();
@@ -121,6 +124,15 @@ public class BayesianPredictor extends Configured implements Tool {
         	loadModel(context);
         }
  
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+			context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+			context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+			context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+			context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+			context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+			context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+        }
+         
         private void loadModel(Context context) throws IOException {
         	model = new BayesianModel();
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bayesian.model.file.path");
@@ -200,6 +212,7 @@ public class BayesianPredictor extends Configured implements Tool {
        			predProb =  prob;
        			corrPred = classAttrVal.equals(predClass);
        			incorrPred = !corrPred;
+       			confMatrix.report(predClass, classAttrVal);
         		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
         	}
         	
