@@ -24,7 +24,7 @@ public class CostBasedArbitrator {
 	private int falseNegCost;
 	private int falsePosCost;
 	
-	public CostBasedArbitrator(String posClass, String negClass,
+	public CostBasedArbitrator(String negClass, String posClass,
 			int falseNegCost, int falsePosCost) {
 		this.posClass = posClass;
 		this.negClass = negClass;

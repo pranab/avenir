@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.avenir.util.ConfusionMatrix;
+import org.avenir.util.CostBasedArbitrator;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -96,6 +97,7 @@ public class BayesianPredictor extends Configured implements Tool {
 		private int predProb;
 		private int probThreshHold = 50;
 		private  ConfusionMatrix confMatrix;
+		private CostBasedArbitrator arbitrator;
 		
         
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -110,6 +112,13 @@ public class BayesianPredictor extends Configured implements Tool {
             //predicting classes
             predictingClasses = context.getConfiguration().get("bp.predict.class").split(fieldDelim);
             confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
+            
+            //cost based arbitrator
+            if (null != context.getConfiguration().get("bp.predict.class.cost")) {
+	            String[] costs = context.getConfiguration().get("bp.predict.class.cost").split(fieldDelim);
+	            arbitrator = new  CostBasedArbitrator(predictingClasses[0], predictingClasses[1], 
+	            		Integer.parseInt(costs[0]),  Integer.parseInt(costs[1]));
+            }
             
             //class attribute field
         	fields = schema.getFields();
@@ -197,23 +206,19 @@ public class BayesianPredictor extends Configured implements Tool {
        			incorrPred = classAttrVal.equals(predClass) && predProb < probThreshHold;
        		    outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
         	} else {
-        		//take max among all classes
-        		int prob = 0;
-        		String classVal = null;
-        		int thisProb;
-        		for (Pair<String, Integer> item : classPrediction) {
-        			thisProb = item.getRight();
-        			if (thisProb > prob) {
-        				prob = thisProb;
-        				classVal = item.getLeft();
-        			}
+        		//all classes
+        		if (null != arbitrator){
+        			//cost based arbitration
+        			 costArbitrate() ;
+        		} else {
+        			//default arbitration
+        			defaultArbitrate();
         		}
-        		predClass = classVal;
-       			predProb =  prob;
+       			
        			corrPred = classAttrVal.equals(predClass);
        			incorrPred = !corrPred;
        			confMatrix.report(predClass, classAttrVal);
-        		outVal.set(value.toString() + fieldDelim + classVal + fieldDelim + prob);
+        		outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
         	}
         	
         	if (corrPred){
@@ -225,6 +230,39 @@ public class BayesianPredictor extends Configured implements Tool {
 			context.write(NullWritable.get(),outVal);
         	
         }	
+        
+        private void defaultArbitrate() {
+    		int prob = 0;
+    		String classVal = null;
+    		int thisProb;
+    		for (Pair<String, Integer> item : classPrediction) {
+    			thisProb = item.getRight();
+    			if (thisProb > prob) {
+    				prob = thisProb;
+    				classVal = item.getLeft();
+    			}
+    		}
+    		predClass = classVal;
+   			predProb =  prob;
+        }
+        
+        private void costArbitrate() {
+			int posProb = 0;
+			int negProb = 0;
+			String thisClass;
+			int thisProb;
+    		for (Pair<String, Integer> item : classPrediction) {
+    			thisClass = item.getLeft();
+    			thisProb = item.getRight();
+    			if (thisClass.equals(predictingClasses[0])) {
+    				negProb = thisProb;
+    			} else {
+    				posProb = thisProb;
+    			}
+    		}   
+    		predClass = arbitrator.arbitrate(posProb, negProb);
+    		predProb = 100;
+        }
         
         private void predictClassValue() {
         	double classPriorProb = 0;
