@@ -33,8 +33,8 @@ public class CostBasedArbitrator {
 	}
 	
 	public String arbitrate(int posProb, int negProb) {
-		int negCost = falseNegCost * posProb;
-		int posCost = falsePosCost * negProb;
+		int negCost = falseNegCost * posProb + negProb;
+		int posCost = falsePosCost * negProb + posProb;
 		String predClass =  posCost < negCost  ? posClass : negClass;
 		return predClass;
 	}
