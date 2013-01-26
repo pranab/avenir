@@ -77,12 +77,16 @@ public class CramerCorrelation extends Configured implements Tool {
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
 	}
+	
 
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class CorrelationMapper extends Mapper<LongWritable, Text, Tuple, Text> {
 		private String fieldDelimRegex;
 		private String[] items;
-		private Tuple outKey  = new Tuple();
-		private Tuple outVal  = new Tuple();
+		private Text outVal  = new Text();
         private FeatureSchema schema;
  		private int[] sourceAttrs;
 		private int[] destAttrs;
@@ -92,6 +96,9 @@ public class CramerCorrelation extends Configured implements Tool {
 		private List<Tuple> attrPairs = new ArrayList<Tuple>();
 		
 		 
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
@@ -126,6 +133,18 @@ public class CramerCorrelation extends Configured implements Tool {
             }
         }
         
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
+        protected void cleanup(Context context)  throws IOException, InterruptedException {
+        	for (Tuple keyVal : attrPairs) {
+        		ContingencyMatrix contMat = contMatrices.get(keyVal);
+        		outVal.set(contMat.serialize());
+        		context.write(keyVal, outVal);
+        	}
+        }
+        
+        
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
@@ -155,9 +174,22 @@ public class CramerCorrelation extends Configured implements Tool {
 	 *
 	 */
 	public static class CorrelationReducer extends Reducer<Tuple, Text, NullWritable, Text> {
+        private FeatureSchema schema;
+    	private FeatureField srcField = null;
+    	private FeatureField dstField = null;
+    	private int srcSize = 0;
+    	private int dstSize = 0;
+    	private ContingencyMatrix contMat;
+		private Text outVal  = new Text();
+    	private ContingencyMatrix thisContMat = new ContingencyMatrix();
+		private String fieldDelim;
 		
 	   	protected void setup(Context context) throws IOException, InterruptedException {
-	   		
+        	Configuration conf = context.getConfiguration();
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+            ObjectMapper mapper = new ObjectMapper();
+            schema = mapper.readValue(fs, FeatureSchema.class);
+        	fieldDelim = conf.get("field.delim.out", ",");
 	   	}
 	   	
         /* (non-Javadoc)
@@ -165,7 +197,20 @@ public class CramerCorrelation extends Configured implements Tool {
          */
         protected void reduce(Tuple  key, Iterable<Text> values, Context context)
         throws IOException, InterruptedException {
+			srcField = schema.findFieldByOrdinal(key.getInt(0));
+			dstField = schema.findFieldByOrdinal(key.getInt(1));
+    		srcSize = srcField.getCardinality().size();
+    		dstSize = dstField.getCardinality().size();
+    		contMat = new ContingencyMatrix(srcSize, dstSize);
+    		
+    		thisContMat.initialize(srcSize, dstSize);
+    		for (Text value : values) {
+    			thisContMat.deseralize(value.toString());
+    			contMat.aggregate(thisContMat);
+    		}
         	
+    		outVal.set(srcField.getName() + fieldDelim +dstField.getName() + fieldDelim + contMat.carmerIndex());
+			context.write(NullWritable.get(),outVal);
         }	   	
 	   	
 	}

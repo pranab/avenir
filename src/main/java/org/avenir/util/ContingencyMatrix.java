@@ -26,8 +26,16 @@ public class ContingencyMatrix {
 	private int[][] table;
 	private int numRow;
 	private int numCol;
+	private static final String DELIMETER = ",";
 
+	public ContingencyMatrix() {
+	}
+	
 	public ContingencyMatrix(int numRow, int numCol) {
+		initialize( numRow,  numCol);
+	}
+	
+	public void  initialize(int numRow, int numCol) {
 		table = new int[numRow][numCol];
 		for (int r = 0; r < numRow; ++r) {
 			for (int c = 0; c < numCol; ++c) {
@@ -37,7 +45,7 @@ public class ContingencyMatrix {
 		this.numRow = numRow;
 		this.numCol = numCol;
 	}
-	
+
 	public void increment(int row, int col) {
 		table[row][col] += 1;
 	}
@@ -74,6 +82,31 @@ public class ContingencyMatrix {
 			}
 		}
 		return sum;
+	}
+	
+	public String serialize() {
+		StringBuilder stBld = new StringBuilder();
+		for (int r = 0; r < numRow; ++r) {
+			for (int c = 0; c < numCol; ++c) {
+				stBld.append(table[r][c]).append(DELIMETER);
+			}
+		}
+		
+		return stBld.substring(0, stBld.length()-1);
+	}
+	
+	public void deseralize(String data) {
+		String[] items = data.split(DELIMETER);
+		int k = 0;
+		for (int r = 0; r < numRow; ++r) {
+			for (int c = 0; c < numCol; ++c) {
+				table[r][c]  = Integer.parseInt(items[k++]);
+			}
+		}
+	}
+	
+	public double carmerIndex() {
+		return 0;
 	}
 	
 }
