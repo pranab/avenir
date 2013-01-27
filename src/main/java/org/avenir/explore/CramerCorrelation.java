@@ -37,15 +37,18 @@ import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.avenir.text.WordCounter;
 import org.avenir.util.ContingencyMatrix;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
+import org.chombo.mr.MultiVarHistogram;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
+ * Cramer index for correlation between categorical attributes
  * @author pranab
  *
  */
@@ -54,7 +57,7 @@ public class CramerCorrelation extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "Qualitative data correlation   MR";
+        String jobName = "Categorical data correlation with Cramer index";
         job.setJobName(jobName);
         
         job.setJarByClass(CramerCorrelation.class);
@@ -183,6 +186,7 @@ public class CramerCorrelation extends Configured implements Tool {
 		private Text outVal  = new Text();
     	private ContingencyMatrix thisContMat = new ContingencyMatrix();
 		private String fieldDelim;
+		private int corrScale;
 		
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
@@ -190,6 +194,7 @@ public class CramerCorrelation extends Configured implements Tool {
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
+        	corrScale = context.getConfiguration().getInt("correlation.scale", 1000);
 	   	}
 	   	
         /* (non-Javadoc)
@@ -209,11 +214,18 @@ public class CramerCorrelation extends Configured implements Tool {
     			contMat.aggregate(thisContMat);
     		}
         	
-    		outVal.set(srcField.getName() + fieldDelim +dstField.getName() + fieldDelim + contMat.carmerIndex());
+    		outVal.set(srcField.getName() + fieldDelim +dstField.getName() + fieldDelim + contMat.cramerIndex(corrScale));
 			context.write(NullWritable.get(),outVal);
         }	   	
 	   	
 	}
 	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new CramerCorrelation(), args);
+        System.exit(exitCode);
+	}
 	
 }

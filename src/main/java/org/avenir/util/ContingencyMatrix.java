@@ -19,6 +19,7 @@
 package org.avenir.util;
 
 /**
+ * Contingency matrix for correlation between categorical attributes
  * @author pranab
  *
  */
@@ -105,8 +106,43 @@ public class ContingencyMatrix {
 		}
 	}
 	
-	public double carmerIndex() {
-		return 0;
+	public int cramerIndex(int scale) {
+		//row sums
+		int[] rowSum = new int[numRow];
+		int totalCount = 0;
+		for (int i =0; i < numRow; ++ i) {
+			rowSum[i] = 0;
+			for (int j = 0; j < numCol; ++j) {
+				rowSum[i] += table[i][j];
+				totalCount +=  table[i][j];;
+			}
+			rowSum[i] = rowSum[i] == 0 ? 1 : rowSum[i];
+		}
+		
+		//column sums
+		int[] colSum = new int[numCol];
+		for (int j = 0; j < numCol; ++j) {
+			colSum[j] = 0;
+			for (int i =0; i < numRow; ++ i) {
+				colSum[j] +=  table[i][j];
+			}
+			colSum[j] = colSum[j] == 0 ? 1 : colSum[j];
+		}
+		
+		//pearson
+		int pearson = 0;
+		for (int i =0; i < numRow; ++ i) {
+			for (int j = 0; j < numCol; ++j) {
+					pearson += (totalCount * table[i][j] * table[i][j]) / (rowSum[i] *  colSum[j] );
+			}
+		}
+		pearson -= totalCount;
+		
+		//cramer
+		int smallerDim = numRow < numCol ?  numRow : numCol;
+		int cramer = (pearson * scale) / (totalCount * (smallerDim -1));
+		
+		return cramer;
 	}
 	
 }
