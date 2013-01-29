@@ -106,7 +106,7 @@ public class ContingencyMatrix {
 		}
 	}
 	
-	public int cramerIndex(int scale) {
+	public double  cramerIndex(int scale) {
 		//row sums
 		int[] rowSum = new int[numRow];
 		int totalCount = 0;
@@ -130,17 +130,17 @@ public class ContingencyMatrix {
 		}
 		
 		//pearson
-		int pearson = 0;
+		double  pearson = 0;
 		for (int i =0; i < numRow; ++ i) {
 			for (int j = 0; j < numCol; ++j) {
-					pearson += (totalCount * table[i][j] * table[i][j]) / (rowSum[i] *  colSum[j] );
+					pearson += ( (double)table[i][j] * table[i][j]) / ((double)rowSum[i] *  colSum[j] );
 			}
 		}
-		pearson -= totalCount;
+		pearson -= 1.0;
 		
 		//cramer
 		int smallerDim = numRow < numCol ?  numRow : numCol;
-		int cramer = (pearson * scale) / (totalCount * (smallerDim -1));
+		double cramer = (pearson) / (smallerDim -1);
 		
 		return cramer;
 	}

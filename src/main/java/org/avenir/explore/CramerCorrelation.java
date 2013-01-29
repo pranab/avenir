@@ -33,16 +33,15 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.avenir.text.WordCounter;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.avenir.util.ContingencyMatrix;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
-import org.chombo.mr.MultiVarHistogram;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -97,6 +96,7 @@ public class CramerCorrelation extends Configured implements Tool {
 		private List<FeatureField> srcFields = new ArrayList<FeatureField>();
 		private List<FeatureField> dstFields = new ArrayList<FeatureField>();
 		private List<Tuple> attrPairs = new ArrayList<Tuple>();
+        private static final Logger LOG = Logger.getLogger(CorrelationMapper.class);
 		
 		 
         /* (non-Javadoc)
@@ -104,6 +104,9 @@ public class CramerCorrelation extends Configured implements Tool {
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
+            if (conf.getBoolean("debug.on", false)) {
+            	LOG.setLevel(Level.DEBUG);
+            }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
@@ -116,23 +119,30 @@ public class CramerCorrelation extends Configured implements Tool {
         	FeatureField dstField = null;
         	int srcSize = 0;
         	int dstSize = 0;
+    		boolean dstFiledsInitialized = false;
             for (int src : sourceAttrs) {
+    			srcField = schema.findFieldByOrdinal(src);
+        		srcSize = srcField.getCardinality().size();
+        		srcFields.add(srcField);
             	for (int dst : destAttrs) {
+            		LOG.debug("attr ordinals:" + src + "  " + dst);
             		if (src != dst) {
-            			srcField = schema.findFieldByOrdinal(src);
             			dstField = schema.findFieldByOrdinal(dst);
-	            		srcSize = srcField.getCardinality().size();
 	            		dstSize = dstField.getCardinality().size();
+	            		LOG.debug("attr cardinality:" + srcSize + "  " + dstSize);
 	            		Tuple key = new Tuple();
 	            		key.add(src, dst);
 	            		ContingencyMatrix value = new ContingencyMatrix(srcSize, dstSize);
 	            		contMatrices.put(key, value);
 	            		
-	            		srcFields.add(srcField);
-	            		dstFields.add(dstField);
+	            		if (!dstFiledsInitialized) {
+	            			dstFields.add(dstField);
+	            		}
 	            		attrPairs.add(key);
             		}
             	}
+        		dstFiledsInitialized = true;
+            	
             }
         }
         
@@ -160,9 +170,9 @@ public class CramerCorrelation extends Configured implements Tool {
             int attPairIndex = 0;
             
             for (FeatureField srcField : srcFields) {
+        		srcVal = items[srcField.getOrdinal()];
+        		int srcIndex = srcField.cardinalityIndex(srcVal);
             	for (FeatureField dstField : dstFields) {
-            		srcVal = items[srcField.getOrdinal()];
-            		int srcIndex = srcField.cardinalityIndex(srcVal);
             		dstVal = items[dstField.getOrdinal()];
             		int dstIndex = dstField.cardinalityIndex(dstVal);
             		contMat = contMatrices.get(attrPairs.get(attPairIndex++));
@@ -187,9 +197,13 @@ public class CramerCorrelation extends Configured implements Tool {
     	private ContingencyMatrix thisContMat = new ContingencyMatrix();
 		private String fieldDelim;
 		private int corrScale;
+        private static final Logger LOG = Logger.getLogger(CorrelationReducer.class);
 		
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
+            if (conf.getBoolean("debug.on", false)) {
+            	LOG.setLevel(Level.DEBUG);
+            }
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
@@ -208,8 +222,10 @@ public class CramerCorrelation extends Configured implements Tool {
     		dstSize = dstField.getCardinality().size();
     		contMat = new ContingencyMatrix(srcSize, dstSize);
     		
+    		LOG.debug("attr pairs:" + key.getInt(0) + "  " + key.getInt(1));
     		thisContMat.initialize(srcSize, dstSize);
     		for (Text value : values) {
+    			LOG.debug("cont matrix:" + value.toString() );
     			thisContMat.deseralize(value.toString());
     			contMat.aggregate(thisContMat);
     		}
