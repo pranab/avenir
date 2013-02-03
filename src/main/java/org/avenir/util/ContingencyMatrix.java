@@ -106,7 +106,7 @@ public class ContingencyMatrix {
 		}
 	}
 	
-	public double  cramerIndex(int scale) {
+	public double  cramerIndex() {
 		//row sums
 		int[] rowSum = new int[numRow];
 		int totalCount = 0;
