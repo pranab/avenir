@@ -145,4 +145,13 @@ public class ContingencyMatrix {
 		return cramer;
 	}
 	
+	public double concentrationCoeff() {
+		//TODO
+		return 0;
+	}
+	
+	public double uncertaintyCoeff() {
+		//TODO
+		return 0;
+	}
 }

@@ -156,7 +156,7 @@ public class CategoricalCorrelation {
     	private FeatureField dstField = null;
     	private int srcSize = 0;
     	private int dstSize = 0;
-    	private ContingencyMatrix contMat;
+    	protected ContingencyMatrix contMat;
 		private Text outVal  = new Text();
     	private ContingencyMatrix thisContMat = new ContingencyMatrix();
 		private String fieldDelim;
