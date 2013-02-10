@@ -28,7 +28,11 @@ public class ContingencyMatrix {
 	private int numRow;
 	private int numCol;
 	private static final String DELIMETER = ",";
-
+	private int[] rowSum;
+	private int[] colSum;
+	private int totalCount;
+	
+	
 	public ContingencyMatrix() {
 	}
 	
@@ -106,6 +110,30 @@ public class ContingencyMatrix {
 		}
 	}
 	
+	private void getAggregates() {
+		rowSum = new int[numRow];
+		totalCount = 0;
+		for (int i =0; i < numRow; ++ i) {
+			rowSum[i] = 0;
+			for (int j = 0; j < numCol; ++j) {
+				rowSum[i] += table[i][j];
+				totalCount +=  table[i][j];;
+			}
+			rowSum[i] = rowSum[i] == 0 ? 1 : rowSum[i];
+		}
+		
+		//column sums
+		colSum = new int[numCol];
+		for (int j = 0; j < numCol; ++j) {
+			colSum[j] = 0;
+			for (int i =0; i < numRow; ++ i) {
+				colSum[j] +=  table[i][j];
+			}
+			colSum[j] = colSum[j] == 0 ? 1 : colSum[j];
+		}
+		
+	}
+	
 	public double  cramerIndex() {
 		//row sums
 		int[] rowSum = new int[numRow];
@@ -146,12 +174,51 @@ public class ContingencyMatrix {
 	}
 	
 	public double concentrationCoeff() {
-		//TODO
-		return 0;
+		 getAggregates() ;
+		 
+		double  sumOne = 0;
+		for (int i =0; i < numRow; ++ i) {
+			double elSqSum = 0;
+			for (int j = 0; j < numCol; ++j) {
+					elSqSum += (double)table[i][j] * table[i][j];
+			}
+			sumOne += elSqSum /  (double)rowSum[i];
+		}
+		
+		double sumTwo = 0;
+		for (int j = 0; j < numCol; ++j) {
+			sumTwo += (double)colSum[j]  * colSum[j] ;
+		}
+		
+		double concCoeff = (totalCount * sumOne - sumTwo) / ((double)totalCount * totalCount  - sumTwo);
+		return concCoeff;
 	}
 	
 	public double uncertaintyCoeff() {
-		//TODO
-		return 0;
+		double uncertainCoeff = 0;
+		double[] rowSumDouble = new double[numRow];
+		for (int i =0; i < numRow; ++ i) {
+			rowSumDouble[i] = (double)rowSum[i] / totalCount;
+		}		
+		
+		double[] colSumDouble = new double[numCol];
+		for (int j =0; j< numCol; ++ j) {
+			colSumDouble[j] = (double)colSum[j] / totalCount;
+		}		
+		
+		double sumOne = 0;
+		for (int i =0; i < numRow; ++ i) {
+			for (int j = 0; j < numCol; ++j) {
+				double elem = (double)table[i][j] / totalCount;
+				sumOne += elem  * Math.log10(elem *  colSumDouble[j] / rowSumDouble[i] );
+			}
+		}
+
+		double sumTwo = 0;
+		for (int j = 0; j < numCol; ++j) {
+			sumTwo += colSumDouble[j]  * Math.log10(colSumDouble[j]);
+		}
+		uncertainCoeff = sumOne / sumTwo;
+		return uncertainCoeff;
 	}
 }
