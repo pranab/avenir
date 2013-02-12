@@ -173,38 +173,51 @@ public class ContingencyMatrix {
 		return cramer;
 	}
 	
+	private double[] rowSumAsDouble() {
+		double[] rowSumDouble = new double[numRow];
+		for (int i =0; i < numRow; ++ i) {
+			rowSumDouble[i] = (double)rowSum[i] / totalCount;
+		}		
+		return rowSumDouble;
+	}
+	
+	private double[] colSumAsDouble() {
+		double[] colSumDouble = new double[numCol];
+		for (int j =0; j< numCol; ++ j) {
+			colSumDouble[j] = (double)colSum[j] / totalCount;
+		}		
+		return colSumDouble;
+	}
+	
 	public double concentrationCoeff() {
-		 getAggregates() ;
-		 
+		getAggregates() ;
+		double[] rowSumDouble = rowSumAsDouble() ;
+		double[] colSumDouble = colSumAsDouble();
+		
 		double  sumOne = 0;
 		for (int i =0; i < numRow; ++ i) {
 			double elSqSum = 0;
 			for (int j = 0; j < numCol; ++j) {
-					elSqSum += (double)table[i][j] * table[i][j];
+					double elem = (double)table[i][j] / totalCount;
+					elSqSum += elem * elem;
 			}
-			sumOne += elSqSum /  (double)rowSum[i];
+			sumOne += elSqSum /  rowSumDouble[i];
 		}
 		
 		double sumTwo = 0;
 		for (int j = 0; j < numCol; ++j) {
-			sumTwo += (double)colSum[j]  * colSum[j] ;
+			sumTwo += colSumDouble[j] * colSumDouble[j] ;
 		}
 		
-		double concCoeff = (totalCount * sumOne - sumTwo) / ((double)totalCount * totalCount  - sumTwo);
+		double concCoeff = (sumOne - sumTwo) / (1.0  - sumTwo);
 		return concCoeff;
 	}
 	
 	public double uncertaintyCoeff() {
 		double uncertainCoeff = 0;
-		double[] rowSumDouble = new double[numRow];
-		for (int i =0; i < numRow; ++ i) {
-			rowSumDouble[i] = (double)rowSum[i] / totalCount;
-		}		
-		
-		double[] colSumDouble = new double[numCol];
-		for (int j =0; j< numCol; ++ j) {
-			colSumDouble[j] = (double)colSum[j] / totalCount;
-		}		
+		getAggregates() ;
+		double[] rowSumDouble = rowSumAsDouble() ;
+		double[] colSumDouble = colSumAsDouble();
 		
 		double sumOne = 0;
 		for (int i =0; i < numRow; ++ i) {
