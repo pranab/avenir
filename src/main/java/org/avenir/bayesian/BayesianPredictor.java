@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -101,21 +102,19 @@ public class BayesianPredictor extends Configured implements Tool {
 		
         
         protected void setup(Context context) throws IOException, InterruptedException {
-        	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
-        	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
+        	Configuration config = context.getConfiguration();
+        	fieldDelimRegex = config.get("bs.field.delim.regex", ",");
+        	fieldDelim = config.get("field.delim.out", ",");
 
         	//schema
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
-            //predicting classes
-            predictingClasses = context.getConfiguration().get("bp.predict.class").split(fieldDelim);
-            confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
             
             //cost based arbitrator
-            if (null != context.getConfiguration().get("bp.predict.class.cost")) {
-	            String[] costs = context.getConfiguration().get("bp.predict.class.cost").split(fieldDelim);
+            if (null != config.get("bp.predict.class.cost")) {
+	            String[] costs = config.get("bp.predict.class.cost").split(fieldDelim);
 	            arbitrator = new  CostBasedArbitrator(predictingClasses[0], predictingClasses[1], 
 	            		Integer.parseInt(costs[0]),  Integer.parseInt(costs[1]));
             }
@@ -123,11 +122,22 @@ public class BayesianPredictor extends Configured implements Tool {
             //class attribute field
         	fields = schema.getFields();
         	for (FeatureField field : fields) {
-        		if (!field.isFeature()) {
+        		if (!field.isFeature()  &&  !field.isId()) {
         			classAttrField = field;
         			break;
         		}
         	}
+        	
+            //predicting classes and confusion matrix
+        	if (null != config.get("bp.predict.class")) {
+        		predictingClasses = config.get("bp.predict.class").split(fieldDelim);
+        	} else {
+            	List<String> cardinality = classAttrField.getCardinality();
+            	predictingClasses = new String[2];
+        		predictingClasses[0] = cardinality.get(0);
+        		predictingClasses[1] = cardinality.get(1);
+        	}
+    		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
         	
         	//bayesian model
         	loadModel(context);

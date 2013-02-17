@@ -101,7 +101,7 @@ public class BayesianDistribution extends Configured implements Tool {
 	            //class attribute field
 	        	fields = schema.getFields();
 	        	for (FeatureField field : fields) {
-	        		if (!field.isFeature()) {
+	        		if (!field.isFeature() &&  !field.isId()) {
 	        			classAttrField = field;
 	        			break;
 	        		}
