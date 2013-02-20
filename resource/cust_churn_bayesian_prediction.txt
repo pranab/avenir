@@ -1,0 +1,56 @@
+This tutorial is for Bayesian classifier. You will learn how to build the Bayesian 
+prediction model and then how to make predictions based on the prediction model.
+You can use the script usage.rb to generate data for customer churn data for
+mobile service provider users
+
+Bayesian Model
+==============
+This is the first MR. Here is a sample script to generate the bayesian model
+
+JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.bayesian.BayesianDistribution
+
+
+echo "running BayesianDistribution"
+IN_PATH=/user/pranab/churn/bayesian/train
+OUT_PATH=/user/pranab/churn/bayesian/model
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME  -Dconf.path=/home/pranab/Projects/bin/avenir/churn.properties   $IN_PATH  $OUT_PATH
+
+Bayesian Prediction
+===================
+This the second MR. It predicts class attribute values. Here is the script
+JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.bayesian.BayesianPredictor
+
+
+echo "running BayesianPredictor"
+IN_PATH=/user/pranab/churn/bayesian/validate
+OUT_PATH=/user/pranab/churn/bayesian/predict
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME  -Dconf.path=/home/pranab/Projects/bin/avenir/churn.properties   $IN_PATH  $OUT_PATH
+
+Configuration
+=============
+Here is some sample configuration
+field.delim.regex=,
+field.delim.out=,
+debug.on=true
+num.reducer=1
+feature.schema.file.path=/user/pranab/meta/chrn/churn.json
+source.attributes=1,2,3,4,5
+dest.attributes=6
+correlation.scale=1000
+
+tabular.input=true
+bayesian.model.file.path=/user/pranab/churn/bayesian/model/part-r-00000
+
+Data Schema
+===========
+The schema is defined in churn.json

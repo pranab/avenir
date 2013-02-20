@@ -1,0 +1,52 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "minUsed",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"cardinality" : ["low", "med", "high", "overage"],
+			"feature" : true
+		},
+		{
+			"name" : "dataUsed",
+			"ordinal" : 2,
+			"dataType" : "categorical",
+			"cardinality" : ["low", "med", "high"],
+			"feature" : true
+		},
+		{
+			"name" : "CSCalls",
+			"ordinal" : 3,
+			"dataType" : "categorical",
+			"cardinality" : ["low", "med", "high"],
+			"feature" : true
+		},
+		{
+			"name" : "payment",
+			"ordinal" : 4,
+			"dataType" : "categorical",
+			"cardinality" : ["poor", "average", "good"],
+			"feature" : true
+		},
+		{
+			"name" : "acctAge",
+			"ordinal" : 5,
+			"dataType" : "categorical",
+			"cardinality" : ["1", "2", "3", "4", "5"],
+			"feature" : true
+		},
+		{
+			"name" : "status",
+			"ordinal" : 6,
+			"dataType" : "categorical",
+			"cardinality" : [ "open", "closed"]
+		}
+	]
+}
