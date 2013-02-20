@@ -70,5 +70,9 @@ public class ConfusionMatrix {
 	public int getPrecision() {
 		return  (100 * truePos) /(truePos + falsePos);
 	}
+	
+	public int getAccuracy() {
+		return (100 * (truePos + trueNeg)) / (truePos + trueNeg + falsePos + falseNeg );
+	}
 
 }

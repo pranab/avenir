@@ -99,6 +99,8 @@ public class BayesianPredictor extends Configured implements Tool {
 		private int probThreshHold = 50;
 		private  ConfusionMatrix confMatrix;
 		private CostBasedArbitrator arbitrator;
+		private int classProbDiffThrehold;
+		private int classProbDiff;
 		
         
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -138,6 +140,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		predictingClasses[1] = cardinality.get(1);
         	}
     		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
+    		
+    		classProbDiffThrehold = config.getInt("class.prob.diff.threshold", -1);
         	
         	//bayesian model
         	loadModel(context);
@@ -148,6 +152,7 @@ public class BayesianPredictor extends Configured implements Tool {
 			context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
 			context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
 			context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+			context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
 			context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
 			context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
         }
@@ -228,7 +233,18 @@ public class BayesianPredictor extends Configured implements Tool {
        			corrPred = classAttrVal.equals(predClass);
        			incorrPred = !corrPred;
        			confMatrix.report(predClass, classAttrVal);
-        		outVal.set(value.toString() + fieldDelim + predClass + fieldDelim + predProb);
+       			
+       			StringBuilder stBld = new StringBuilder(value.toString());
+       			stBld.append(fieldDelim).append(predClass).append(fieldDelim).append(predProb);
+       			if (classProbDiffThrehold > 0) {
+       				stBld.append(fieldDelim);
+       				if (classProbDiff > classProbDiffThrehold) {
+       					stBld.append("classified");
+       				} else {
+       					stBld.append("ambiguous");
+       				}
+       			}
+        		outVal.set(stBld.toString());
         	}
         	
         	if (corrPred){
@@ -252,8 +268,23 @@ public class BayesianPredictor extends Configured implements Tool {
     				classVal = item.getLeft();
     			}
     		}
+    		
+    		if (classProbDiffThrehold > 0)  {
+    			//difference with next high class probabilty above a threshold
+    			classProbDiff = 100;
+        		for (Pair<String, Integer> item : classPrediction) {
+        			if (!classVal.equals( item.getLeft())) {
+        				int diff = prob - item.getRight();
+        				if (diff < classProbDiff) {
+        					classProbDiff = diff;
+        				}
+        			}
+        		}    			
+    		} 
+    		
+    		//class value with highest probability
     		predClass = classVal;
-   			predProb =  prob;
+    		predProb =  prob;
         }
         
         private void costArbitrate() {
