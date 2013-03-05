@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.util.AttributeSplitHandler;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -86,10 +87,12 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	public static class PartitionGeneratorMapper extends Mapper<LongWritable, Text, Tuple, IntWritable> {
 		private String fieldDelimRegex;
 		private String[] items;
-		private IntWritable outVal  = new IntWritable();
+        private Tuple outKey = new Tuple();
+		private IntWritable outVal  = new IntWritable(1);
         private FeatureSchema schema;
         private int[] splitAttrs;
-        private Map<String, Integer[]> splitInfo = new HashMap<String, Integer[]>();
+        private AttributeSplitHandler splitHandler = new AttributeSplitHandler();
+        private FeatureField classField;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorMapper.class);
 
         /* (non-Javadoc)
@@ -104,14 +107,39 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
+            
+            //generate all attribute splits
             splitAttrs = Utility.intArrayFromString(conf.get("split.attributes"), ",");
             createPartitions();
+            
+            //class attribute
+            classField = schema.findClassAttrField();
         }
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
+            String classVal = items[classField.getOrdinal()];
+            
+            //all attributes
+            for (int attrOrd : splitAttrs) {
+            	Integer attrOrdObj = attrOrd;
+        		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
+        		if (featFld.isInteger()) {
+        			String attrValue = items[attrOrd];
+        			splitHandler.selectAttribute(attrOrd);
+        			String splitKey = null;
+        			
+        			//all splits
+        			while((splitKey = splitHandler.next()) != null) {
+        				Integer segmentIndex = splitHandler.getSegmentIndex(attrValue);
+        				outKey.initialize();
+        				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
+        				context.write(outKey, outVal);
+        			}
+        		}            	
+            }
         }
         
         /**
@@ -121,13 +149,14 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	for (int attrOrd : splitAttrs) {
         		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
         		if (featFld.isInteger()) {
-        			List<Integer[]> newSplitList = new ArrayList<Integer[]>();
+        			List<Integer[]> splitList = new ArrayList<Integer[]>();
         			Integer[] splits = null;
-        			createNumPartitions(splits, featFld, newSplitList);
-        			for (Integer[] newSplits : newSplitList) {
-        				String splitKey = Utility.join(newSplits);
-        				splitInfo.put(splitKey, newSplits);
+        			createNumPartitions(splits, featFld, splitList);
+        			for (Integer[] thisSplit : splitList) {
+        				splitHandler.addIntSplits(attrOrd, thisSplit);
         			}
+        		} else if (featFld.isCategorical()) {
+        			//TODO
         		}
         	}
         }
