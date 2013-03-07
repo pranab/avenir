@@ -35,12 +35,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
+import org.avenir.util.AttributeSplitStat;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -201,8 +203,12 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	 *
 	 */
 	public static class PartitionGeneratorReducer extends Reducer<Tuple, IntWritable, NullWritable, Text> {
-        private FeatureSchema schema;
+ 		private FeatureSchema schema;
 		private String fieldDelim;
+		private Text outVal  = new Text();
+		private Map<Integer, AttributeSplitStat> splitStats = new HashMap<Integer, AttributeSplitStat>();
+		private int count;
+		private int[] attrOrdinals;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
         
 	   	protected void setup(Context context) throws IOException, InterruptedException {
@@ -214,14 +220,46 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
+        	
+        	attrOrdinals = Utility.intArrayFromString(conf.get("split.attributes"), ",");
+        	for (int attrOrdinal : attrOrdinals) {
+        		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal));
+        	}
 	   	}   
+	   	
+	   	@Override
+	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
+	   		//get stats and emit
+	   		for (int attrOrdinal : attrOrdinals) {
+	   			AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
+	   			Map<String, Double> stats = splitStat.processStat(true);
+	   			for (String key : stats.keySet()) {
+	   				double stat = stats.get(key);
+	   				outVal.set("" + attrOrdinal + fieldDelim + key + fieldDelim + stat);
+	   				context.write(NullWritable.get(),outVal);
+	   			}
+	   		}
+			super.cleanup(context);
+	   	}
 	   	
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
          */
         protected void reduce(Tuple  key, Iterable<IntWritable> values, Context context)
         		throws IOException, InterruptedException {
+        	int attrOrdinal = key.getInt(0);
+        	String splitKey = key.getString(1);
+        	int segmentIndex = key.getInt(2);
+        	String classVal = key.getString(3);
+        	AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
         	
+        	count = 0;
+        	for (IntWritable value : values) {
+        		count += value.get();
+        	}
+        	
+        	//update count
+        	splitStat.countClassVal(splitKey, segmentIndex, classVal, count);
         }	   	
         
 	}	
