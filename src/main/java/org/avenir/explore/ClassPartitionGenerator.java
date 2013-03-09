@@ -34,11 +34,12 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
@@ -77,6 +78,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
+        job.setPartitionerClass(AttributeSplitPartitioner.class);
+        
         job.setNumReduceTasks(job.getConfiguration().getInt("num.reducer", 1));
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
@@ -209,8 +212,10 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 		private Map<Integer, AttributeSplitStat> splitStats = new HashMap<Integer, AttributeSplitStat>();
 		private int count;
 		private int[] attrOrdinals;
+		private String  infoAlgorithm;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
         
+	   	@Override
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
             if (conf.getBoolean("debug.on", false)) {
@@ -225,6 +230,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	for (int attrOrdinal : attrOrdinals) {
         		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal));
         	}
+        	infoAlgorithm = conf.get("info.content.algorithm", "giniIndex");
 	   	}   
 	   	
 	   	@Override
@@ -232,7 +238,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	   		//get stats and emit
 	   		for (int attrOrdinal : attrOrdinals) {
 	   			AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
-	   			Map<String, Double> stats = splitStat.processStat(true);
+	   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm.equals("entropy"));
 	   			for (String key : stats.keySet()) {
 	   				double stat = stats.get(key);
 	   				outVal.set("" + attrOrdinal + fieldDelim + key + fieldDelim + stat);
@@ -264,5 +270,24 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         
 	}	
 	
+    /**
+     * @author pranab
+     *
+     */
+    public static class AttributeSplitPartitioner extends Partitioner<Tuple, IntWritable> {
+	     @Override
+	     public int getPartition(Tuple key,  IntWritable value, int numPartitions) {
+	    	 //consider only first 2 components of the key
+		     return key.hashCodePartial(2) % numPartitions;
+	     }
+   }
+    
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new ClassPartitionGenerator(), args);
+        System.exit(exitCode);
+	}    
 
 }

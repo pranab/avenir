@@ -36,7 +36,7 @@ public class AttributeSplitHandler {
 	private int cursor;
 	
 	public void addIntSplits(int attrOrd, Integer[] splitPoints) {
-		String key = Utility.join(splitPoints);
+		String key = Utility.join(splitPoints,";");
 		IntegerSplit intSplit = new IntegerSplit(key, splitPoints);
 		List<Split> splitList = attributeSplits.get(attrOrd);
 		if (null == splitList) {
@@ -95,7 +95,6 @@ public class AttributeSplitHandler {
 			int i = 0;
 			int iValue = Integer.parseInt(value);
 			for ( ; i < splitPoints.length && iValue > splitPoints[i]; ++i) {
-				
 			}
 			return i;
 		}

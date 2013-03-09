@@ -120,7 +120,7 @@ public class AttributeSplitStat {
 		
 		public double processStat(boolean isAlgoEntropy) {
 			double stat = 0.0;
-			int totalCount = 0;
+			totalCount = 0;
 			for (String key : classValCount.keySet()) {
 				totalCount += classValCount.get(key);
 			}
