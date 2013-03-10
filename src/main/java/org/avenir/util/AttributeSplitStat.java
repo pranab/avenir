@@ -60,6 +60,13 @@ public class AttributeSplitStat {
 		}
 		return stats;
 	}
+	
+	public Map<Integer, Map<String, Double>> getClassProbab(String splitKey) {
+		SplitStat splitStat = splitStats.get(splitKey);
+		return splitStat.getClassProbab();
+	}
+	
+	
 	/**
 	 * @author pranab
 	 *
@@ -109,6 +116,15 @@ public class AttributeSplitStat {
 			LOG.debug("split key:" + key + " stats:" +  stats);
 			return stats;
 		}
+		
+		public Map<Integer, Map<String, Double>>  getClassProbab() {
+			Map<Integer, Map<String, Double>> classProbab = new HashMap<Integer, Map<String, Double>>();
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				classProbab.put(segmentIndex, statSegment.getClassValPr());
+			}		
+			return classProbab;
+		}
 	}
 	
 	/**
@@ -118,6 +134,7 @@ public class AttributeSplitStat {
 	private static class SplitStatSegment {
 		private int segmentIndex;
 		private Map<String, Integer> classValCount = new HashMap<String, Integer>();
+		private Map<String, Double> classValPr = new HashMap<String, Double>();
 		private int totalCount;
 		
 		public SplitStatSegment(int segmentIndex) {
@@ -148,6 +165,7 @@ public class AttributeSplitStat {
 				for (String key : classValCount.keySet()) {
 					double pr = (double)classValCount.get(key) / totalCount;
 					stat -= pr * Math.log(pr) / log2;
+					classValPr.put(key, pr);
 				}
 				
 			} else {
@@ -158,6 +176,7 @@ public class AttributeSplitStat {
 					double pr = (double)count / totalCount;
 					LOG.debug("class val:" + key + " count:" + count);
 					prSquare += pr * pr;
+					classValPr.put(key, pr);
 				}
 				stat = 1.0 - prSquare;
 			}
@@ -166,6 +185,10 @@ public class AttributeSplitStat {
 
 		public int getTotalCount() {
 			return totalCount;
+		}
+
+		public Map<String, Double> getClassValPr() {
+			return classValPr;
 		}
 	}
 

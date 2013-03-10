@@ -264,11 +264,30 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm.equals("entropy"));
 	   			for (String key : stats.keySet()) {
 	   				double stat = stats.get(key);
-	   				outVal.set("" + attrOrdinal + fieldDelim + key + fieldDelim + stat);
+	   				Map<Integer, Map<String, Double>> classValPr = splitStat.getClassProbab(key);
+	   				
+	   				StringBuilder stBld = new StringBuilder();
+	   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(stat).
+	   					append(fieldDelim);
+	   				stBld.append(serializeClassProbab(classValPr));
+	   				outVal.set(stBld.toString());
 	   				context.write(NullWritable.get(),outVal);
 	   			}
 	   		}
 			super.cleanup(context);
+	   	}
+	   	
+	   	private String serializeClassProbab(Map<Integer, Map<String, Double>> classValPr) {
+	   		StringBuilder stBld = new StringBuilder();
+	   		for (Integer splitSegment : classValPr.keySet()) {
+	   			Map<String, Double> classPr = classValPr.get(splitSegment);
+	   			for (String classVal : classPr.keySet()) {
+	   				stBld.append(splitSegment).append(fieldDelim).append(classVal).append(fieldDelim);
+	   				stBld.append(classPr.get(classVal)).append(fieldDelim);
+	   			}
+	   		}
+	   		
+	   		return stBld.substring(0, stBld.length() -1);
 	   	}
 	   	
         /* (non-Javadoc)
