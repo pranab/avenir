@@ -71,6 +71,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(ClassPartitionGenerator.PartitionGeneratorMapper.class);
         job.setReducerClass(ClassPartitionGenerator.PartitionGeneratorReducer.class);
+        job.setCombinerClass(ClassPartitionGenerator.PartitionGeneratorCombiner.class);
         
         job.setMapOutputKeyClass(Tuple.class);
         job.setMapOutputValueClass(IntWritable.class);
@@ -142,6 +143,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				outKey.initialize();
         				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
         				context.write(outKey, outVal);
+        				context.getCounter("Stats", "mapper output count").increment(1);
         			}
         		}            	
             }
@@ -205,6 +207,25 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	 * @author pranab
 	 *
 	 */
+	public static class PartitionGeneratorCombiner extends Reducer<Tuple, IntWritable, Tuple, IntWritable> {
+		private int count;
+		private IntWritable outVal = new IntWritable();
+		
+        protected void reduce(Tuple  key, Iterable<IntWritable> values, Context context)
+        		throws IOException, InterruptedException {
+        	count = 0;
+        	for (IntWritable value : values) {
+        		count += value.get();
+        	}
+        	outVal.set(count);
+        	context.write(key, outVal);       	
+        }		
+	}	
+	
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class PartitionGeneratorReducer extends Reducer<Tuple, IntWritable, NullWritable, Text> {
  		private FeatureSchema schema;
 		private String fieldDelim;
@@ -220,7 +241,9 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	Configuration conf = context.getConfiguration();
             if (conf.getBoolean("debug.on", false)) {
             	LOG.setLevel(Level.DEBUG);
+            	AttributeSplitStat.enableLog();
             }
+            
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
@@ -253,6 +276,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         protected void reduce(Tuple  key, Iterable<IntWritable> values, Context context)
         		throws IOException, InterruptedException {
+			context.getCounter("Stats", "reducer input count").increment(1);
         	int attrOrdinal = key.getInt(0);
         	String splitKey = key.getString(1);
         	int segmentIndex = key.getInt(2);
@@ -264,6 +288,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         		count += value.get();
         	}
         	
+        	//LOG.debug("In reducer attrOrdinal:" + attrOrdinal + " splitKey:" + splitKey + 
+        	//		" segmentIndex:" + segmentIndex + " classVal:" + classVal);
         	//update count
         	splitStat.countClassVal(splitKey, segmentIndex, classVal, count);
         }	   	

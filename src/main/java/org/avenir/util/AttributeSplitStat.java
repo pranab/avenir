@@ -20,6 +20,10 @@ package org.avenir.util;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
+
 /**
  * Info stat for splits
  * @author pranab
@@ -28,7 +32,12 @@ import java.util.Map;
 public class AttributeSplitStat {
 	private int attrOrdinal;
 	private Map<String, SplitStat> splitStats = new HashMap<String, SplitStat>();
+    private static final Logger LOG = Logger.getLogger(AttributeSplitStat.class);
 	
+    public static void enableLog() {
+    	LOG.setLevel(Level.DEBUG);
+    }
+    
 	public AttributeSplitStat(int attrOrdinal) {
 		this.attrOrdinal = attrOrdinal;
 	}
@@ -60,19 +69,23 @@ public class AttributeSplitStat {
 		private Map<Integer, SplitStatSegment> segments = new HashMap<Integer, SplitStatSegment>();
 		
 		public SplitStat(String key) {
+			LOG.debug("constructing SplitStat key:" + key);
 			this.key = key;
 		}
 		
 		public void countClassVal(int segmentIndex, String classVal, int count) {
+			LOG.debug("counting  SplitStat key:" + key);
 			SplitStatSegment statSegment = segments.get(segmentIndex);
 			if (null == statSegment) {
 				statSegment = new SplitStatSegment(segmentIndex);
+				segments.put(segmentIndex, statSegment);
 			}
 			statSegment.countClassVal(classVal, count);
 		}
 		
 		public double processStat(boolean isAlgoEntropy) {
 			double stats = 0;
+			LOG.debug("processing SplitStat key:" + key);
 			
 			double[] statArr = new double[segments.size()];
 			int[] countArr = new int[segments.size()];
@@ -93,7 +106,7 @@ public class AttributeSplitStat {
 				statSum += statArr[j] * countArr[j];
 			}
 			stats = statSum / totalCount;
-			
+			LOG.debug("split key:" + key + " stats:" +  stats);
 			return stats;
 		}
 	}
@@ -108,10 +121,13 @@ public class AttributeSplitStat {
 		private int totalCount;
 		
 		public SplitStatSegment(int segmentIndex) {
+			LOG.debug("constructing SplitStatSegment segmentIndex:" + segmentIndex);
 			this.segmentIndex = segmentIndex;
 		}
 		
 		public void countClassVal(String classVal, int count) {
+			LOG.debug("counting SplitStatSegment segmentIndex:" + segmentIndex + 
+					" classVal:" + classVal + " count:" + count);
 			if (null == classValCount.get(classVal)) {
 				classValCount.put(classVal, 0);
 			}
@@ -124,6 +140,7 @@ public class AttributeSplitStat {
 			for (String key : classValCount.keySet()) {
 				totalCount += classValCount.get(key);
 			}
+			LOG.debug("processing segment index:" + segmentIndex + " total count:" + totalCount);
 			
 			if (isAlgoEntropy) {
 				//entropy based
@@ -137,7 +154,9 @@ public class AttributeSplitStat {
 				//gini index based
 				double prSquare = 0;
 				for (String key : classValCount.keySet()) {
-					double pr = (double)classValCount.get(key) / totalCount;
+					int count = classValCount.get(key);
+					double pr = (double)count / totalCount;
+					LOG.debug("class val:" + key + " count:" + count);
 					prSquare += pr * pr;
 				}
 				stat = 1.0 - prSquare;
