@@ -44,6 +44,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
 import org.avenir.util.AttributeSplitStat;
+import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
@@ -99,6 +100,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         private int[] splitAttrs;
         private AttributeSplitHandler splitHandler = new AttributeSplitHandler();
         private FeatureField classField;
+        private boolean atRoot = false;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorMapper.class);
 
         /* (non-Javadoc)
@@ -115,9 +117,15 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             schema = mapper.readValue(fs, FeatureSchema.class);
             
             //generate all attribute splits
-            splitAttrs = Utility.intArrayFromString(conf.get("split.attributes"), ",");
-            createPartitions();
-            
+            String attrs = conf.get("split.attributes");
+            if (null != attrs) {
+            	splitAttrs = Utility.intArrayFromString(attrs, ",");
+            	createPartitions();
+            	LOG.debug("processing attribute splits");
+            } else {
+            	atRoot = true;
+            	LOG.debug("processing at root");
+            }
             //class attribute
             classField = schema.findClassAttrField();
         }
@@ -129,23 +137,29 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             String classVal = items[classField.getOrdinal()];
             
             //all attributes
-            for (int attrOrd : splitAttrs) {
-            	Integer attrOrdObj = attrOrd;
-        		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
-        		if (featFld.isInteger()) {
-        			String attrValue = items[attrOrd];
-        			splitHandler.selectAttribute(attrOrd);
-        			String splitKey = null;
-        			
-        			//all splits
-        			while((splitKey = splitHandler.next()) != null) {
-        				Integer segmentIndex = splitHandler.getSegmentIndex(attrValue);
-        				outKey.initialize();
-        				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
-        				context.write(outKey, outVal);
-        				context.getCounter("Stats", "mapper output count").increment(1);
-        			}
-        		}            	
+            if (atRoot) {
+				outKey.initialize();
+				outKey.add(-1, "null", -1,classVal);
+				context.write(outKey, outVal);
+            } else {
+	            for (int attrOrd : splitAttrs) {
+	            	Integer attrOrdObj = attrOrd;
+	        		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
+	        		if (featFld.isInteger()) {
+	        			String attrValue = items[attrOrd];
+	        			splitHandler.selectAttribute(attrOrd);
+	        			String splitKey = null;
+	        			
+	        			//all splits
+	        			while((splitKey = splitHandler.next()) != null) {
+	        				Integer segmentIndex = splitHandler.getSegmentIndex(attrValue);
+	        				outKey.initialize();
+	        				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
+	        				context.write(outKey, outVal);
+	        				context.getCounter("Stats", "mapper output count").increment(1);
+	        			}
+	        		}            	
+	            }
             }
         }
         
@@ -231,9 +245,13 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 		private String fieldDelim;
 		private Text outVal  = new Text();
 		private Map<Integer, AttributeSplitStat> splitStats = new HashMap<Integer, AttributeSplitStat>();
+		private InfoContentStat rootInfoStat;
 		private int count;
 		private int[] attrOrdinals;
 		private String  infoAlgorithm;
+        private boolean atRoot = false;
+        private boolean outputSplitProb;
+        private double parentInfo;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
         
 	   	@Override
@@ -248,31 +266,55 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
-        	
-        	attrOrdinals = Utility.intArrayFromString(conf.get("split.attributes"), ",");
-        	for (int attrOrdinal : attrOrdinals) {
-        		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal));
-        	}
+
+            String attrs = conf.get("split.attributes");
+            if (null != attrs) {
+            	//attribute level
+            	attrOrdinals = Utility.intArrayFromString(attrs, ",");
+            	for (int attrOrdinal : attrOrdinals) {
+            		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal));
+            	}
+            } else {
+            	//data set root level
+            	atRoot = true;
+            	rootInfoStat = new InfoContentStat();
+            }
         	infoAlgorithm = conf.get("info.content.algorithm", "giniIndex");
+        	outputSplitProb = conf.getBoolean("output.split.prob", false);
+        	parentInfo = Double.parseDouble(conf.get("parent.info"));
 	   	}   
 	   	
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
 	   		//get stats and emit
-	   		for (int attrOrdinal : attrOrdinals) {
-	   			AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
-	   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm.equals("entropy"));
-	   			for (String key : stats.keySet()) {
-	   				double stat = stats.get(key);
-	   				Map<Integer, Map<String, Double>> classValPr = splitStat.getClassProbab(key);
-	   				
-	   				StringBuilder stBld = new StringBuilder();
-	   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(stat).
-	   					append(fieldDelim);
-	   				stBld.append(serializeClassProbab(classValPr));
-	   				outVal.set(stBld.toString());
-	   				context.write(NullWritable.get(),outVal);
-	   			}
+	   		if (atRoot) {
+	   			double stat = rootInfoStat.processStat(infoAlgorithm.equals("entropy"));
+   				outVal.set("" + stat);
+   				context.write(NullWritable.get(),outVal);
+	   		}  else {
+	   			double stat = 0;
+	   			double gain = 0;
+	   			double gainRatio = 0;
+		   		for (int attrOrdinal : attrOrdinals) {
+		   			AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
+		   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm.equals("entropy"));
+		   			for (String key : stats.keySet()) {
+		   				stat = stats.get(key);
+		   				gain = parentInfo - stat;
+		   				gainRatio = gain / splitStat.getInfoContent(key);
+		   				LOG.debug("attrOrdinal:" + attrOrdinal + " splitKey:" + key + " stat:" + stat +
+		   						" gain:"  + gain + " gainRatio:" + gainRatio);
+		   				
+		   				StringBuilder stBld = new StringBuilder();
+		   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(gainRatio);
+		   				if (outputSplitProb) {
+			   				Map<Integer, Map<String, Double>> classValPr = splitStat.getClassProbab(key);
+		   					stBld.append(fieldDelim).append(serializeClassProbab(classValPr));
+		   				}
+		   				outVal.set(stBld.toString());
+		   				context.write(NullWritable.get(),outVal);
+		   			}
+		   		}
 	   		}
 			super.cleanup(context);
 	   	}
@@ -300,17 +342,20 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	String splitKey = key.getString(1);
         	int segmentIndex = key.getInt(2);
         	String classVal = key.getString(3);
-        	AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
         	
         	count = 0;
         	for (IntWritable value : values) {
         		count += value.get();
         	}
-        	
-        	//LOG.debug("In reducer attrOrdinal:" + attrOrdinal + " splitKey:" + splitKey + 
-        	//		" segmentIndex:" + segmentIndex + " classVal:" + classVal);
-        	//update count
-        	splitStat.countClassVal(splitKey, segmentIndex, classVal, count);
+        	if (atRoot) {
+        		rootInfoStat.countClassVal(classVal, count);
+        	} else {
+	        	AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
+	        	//LOG.debug("In reducer attrOrdinal:" + attrOrdinal + " splitKey:" + splitKey + 
+	        	//		" segmentIndex:" + segmentIndex + " classVal:" + classVal);
+	        	//update count
+	        	splitStat.countClassVal(splitKey, segmentIndex, classVal, count);
+        	}
         }	   	
         
 	}	

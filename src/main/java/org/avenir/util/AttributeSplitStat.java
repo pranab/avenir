@@ -66,6 +66,10 @@ public class AttributeSplitStat {
 		return splitStat.getClassProbab();
 	}
 	
+	public  double getInfoContent(String splitKey) {
+		SplitStat splitStat = splitStats.get(splitKey);
+		return splitStat.getInfoContent();
+	}
 	
 	/**
 	 * @author pranab
@@ -124,6 +128,25 @@ public class AttributeSplitStat {
 				classProbab.put(segmentIndex, statSegment.getClassValPr());
 			}		
 			return classProbab;
+		}
+		
+		public double getInfoContent() {
+			int totalCount = 0;
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				totalCount += statSegment.getTotalCount();
+			}	
+			
+			double pr = 0;
+			double stat = 0;
+			double log2 = Math.log(2);
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				pr = (double)statSegment.getTotalCount() / totalCount;
+				stat -= pr * Math.log(pr) / log2;
+			}			
+			
+			return stat;
 		}
 	}
 	
