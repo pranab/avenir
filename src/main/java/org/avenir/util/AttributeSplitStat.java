@@ -18,7 +18,9 @@
 package org.avenir.util;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -33,6 +35,10 @@ public class AttributeSplitStat {
 	private int attrOrdinal;
 	private Map<String, SplitStat> splitStats = new HashMap<String, SplitStat>();
     private static final Logger LOG = Logger.getLogger(AttributeSplitStat.class);
+    private Set<String> classValues = new HashSet<String>();
+    public static final String ALG_ENTROPY = "entropy";
+    public static final String ALG_GINI_INDEX = "giniIndex";
+    public static final String ALG_HELLINGER_DIST = "hellingerDistance";
 	
     public static void enableLog() {
     	LOG.setLevel(Level.DEBUG);
@@ -49,14 +55,15 @@ public class AttributeSplitStat {
 			splitStats.put(key, splitStat);
 		}
 		splitStat.countClassVal(segmentIndex, classVal, count);
+		classValues.add(classVal);
 	}
 	
-	public Map<String, Double> processStat(boolean isAlgoEntropy) {
+	public Map<String, Double> processStat(String algorithm) {
 		Map<String, Double> stats =new HashMap<String, Double>();
 		
 		for (String key : splitStats.keySet()) {
 			SplitStat splitStat = splitStats.get(key);
-			stats.put(key,  splitStat.processStat(isAlgoEntropy));
+			stats.put(key,  splitStat.processStat(algorithm, classValues));
 		}
 		return stats;
 	}
@@ -94,29 +101,66 @@ public class AttributeSplitStat {
 			statSegment.countClassVal(classVal, count);
 		}
 		
-		public double processStat(boolean isAlgoEntropy) {
+		public double processStat(String algorithm, Set<String> classValues) {
 			double stats = 0;
 			LOG.debug("processing SplitStat key:" + key);
-			
-			double[] statArr = new double[segments.size()];
-			int[] countArr = new int[segments.size()];
-			int totalCount = 0;
-			int i = 0;
-			for (Integer segmentIndex : segments.keySet()) {
-				SplitStatSegment statSegment = segments.get(segmentIndex);
-				double stat = statSegment.processStat(isAlgoEntropy);
-				statArr[i] = stat;
-				int count = statSegment.getTotalCount();
-				countArr[i] = count;
-				totalCount += count;
-			}	
-			
-			//weighted average
-			double statSum = 0;
-			for (int j = 0; j < statArr.length; ++j) {
-				statSum += statArr[j] * countArr[j];
+		
+			if (algorithm.equals(ALG_ENTROPY) || algorithm.equals(ALG_GINI_INDEX)) {
+				double[] statArr = new double[segments.size()];
+				int[] countArr = new int[segments.size()];
+				int totalCount = 0;
+				int i = 0;
+				for (Integer segmentIndex : segments.keySet()) {
+					SplitStatSegment statSegment = segments.get(segmentIndex);
+					double stat = statSegment.processStat(algorithm);
+					statArr[i] = stat;
+					int count = statSegment.getTotalCount();
+					countArr[i] = count;
+					totalCount += count;
+				}	
+				
+				//weighted average
+				double statSum = 0;
+				for (int j = 0; j < statArr.length; ++j) {
+					statSum += statArr[j] * countArr[j];
+				}
+				stats = statSum / totalCount;
+			} else if (algorithm.equals(ALG_HELLINGER_DIST)) {
+				if (classValues.size() != 2) {
+					throw new IllegalArgumentException(
+							"Hellinger distance algorithm is only valid for binary valued class attributes");
+				}
+				
+				//binary class values
+				String[] classValueArr = new String[2];
+				int ci = 0;
+				for (String classVal : classValues) {
+					classValueArr[ci++] = classVal;
+				}
+				
+				//class value counts
+				int[] classValCount = new int[2];
+				for (int i = 0; i < 2; ++i) {
+					classValCount[i] = 0;
+					for (Integer segmentIndex : segments.keySet()) {
+						SplitStatSegment statSegment = segments.get(segmentIndex);
+						classValCount[i] += statSegment.getCountForClassVal(classValueArr[i]);
+					}
+				}
+				
+				//hellinger distance
+				double sum = 0;
+				for (Integer segmentIndex : segments.keySet()) {
+					SplitStatSegment statSegment = segments.get(segmentIndex);
+					double val0 = (double)statSegment.getCountForClassVal(classValueArr[0]) / classValCount[0];
+					val0 = Math.sqrt(val0);
+					double val1 = (double)statSegment.getCountForClassVal(classValueArr[1]) / classValCount[1];
+					val1 = Math.sqrt(val1);
+					sum += (val0 - val1) * (val0 - val1);
+				}				
+				stats = Math.sqrt(sum);
 			}
-			stats = statSum / totalCount;
+			
 			LOG.debug("split key:" + key + " stats:" +  stats);
 			return stats;
 		}
@@ -174,7 +218,7 @@ public class AttributeSplitStat {
 			classValCount.put(classVal, classValCount.get(classVal) + count);
 		}
 		
-		public double processStat(boolean isAlgoEntropy) {
+		public double processStat(String algorithm) {
 			double stat = 0.0;
 			totalCount = 0;
 			for (String key : classValCount.keySet()) {
@@ -182,7 +226,7 @@ public class AttributeSplitStat {
 			}
 			LOG.debug("processing segment index:" + segmentIndex + " total count:" + totalCount);
 			
-			if (isAlgoEntropy) {
+			if (algorithm.equals(ALG_ENTROPY)) {
 				//entropy based
 				double log2 = Math.log(2);
 				for (String key : classValCount.keySet()) {
@@ -191,7 +235,7 @@ public class AttributeSplitStat {
 					classValPr.put(key, pr);
 				}
 				
-			} else {
+			} else if (algorithm.equals(ALG_GINI_INDEX)) {
 				//gini index based
 				double prSquare = 0;
 				for (String key : classValCount.keySet()) {
@@ -203,6 +247,8 @@ public class AttributeSplitStat {
 				}
 				stat = 1.0 - prSquare;
 			}
+			
+			
 			return stat;
 		}
 
@@ -212,6 +258,11 @@ public class AttributeSplitStat {
 
 		public Map<String, Double> getClassValPr() {
 			return classValPr;
+		}
+		
+		public int getCountForClassVal(String classVal) {
+			Integer countObj = classValCount.get(classVal);
+			return countObj == null? 0 : countObj;
 		}
 	}
 

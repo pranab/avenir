@@ -297,20 +297,27 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	   			double gainRatio = 0;
 		   		for (int attrOrdinal : attrOrdinals) {
 		   			AttributeSplitStat splitStat = splitStats.get(attrOrdinal);
-		   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm.equals("entropy"));
+		   			Map<String, Double> stats = splitStat.processStat(infoAlgorithm);
 		   			for (String key : stats.keySet()) {
-		   				stat = stats.get(key);
-		   				gain = parentInfo - stat;
-		   				gainRatio = gain / splitStat.getInfoContent(key);
-		   				LOG.debug("attrOrdinal:" + attrOrdinal + " splitKey:" + key + " stat:" + stat +
-		   						" gain:"  + gain + " gainRatio:" + gainRatio);
-		   				
 		   				StringBuilder stBld = new StringBuilder();
-		   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(gainRatio);
-		   				if (outputSplitProb) {
-			   				Map<Integer, Map<String, Double>> classValPr = splitStat.getClassProbab(key);
-		   					stBld.append(fieldDelim).append(serializeClassProbab(classValPr));
+		   				stat = stats.get(key);
+		   				
+		   				if (infoAlgorithm.equals(AttributeSplitStat.ALG_ENTROPY) || 
+		   						infoAlgorithm.equals(AttributeSplitStat.ALG_GINI_INDEX)) {
+			   				gain = parentInfo - stat;
+			   				gainRatio = gain / splitStat.getInfoContent(key);
+			   				LOG.debug("attrOrdinal:" + attrOrdinal + " splitKey:" + key + " stat:" + stat +
+			   						" gain:"  + gain + " gainRatio:" + gainRatio);
+			   				
+			   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(gainRatio);
+			   				if (outputSplitProb) {
+				   				Map<Integer, Map<String, Double>> classValPr = splitStat.getClassProbab(key);
+			   					stBld.append(fieldDelim).append(serializeClassProbab(classValPr));
+			   				}
+		   				} else {
+			   				stBld.append(attrOrdinal).append(fieldDelim).append(key).append(fieldDelim).append(stat);
 		   				}
+		   				
 		   				outVal.set(stBld.toString());
 		   				context.write(NullWritable.get(),outVal);
 		   			}
