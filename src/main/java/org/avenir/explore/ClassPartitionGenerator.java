@@ -267,19 +267,19 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
 
+        	infoAlgorithm = conf.get("info.content.algorithm", "giniIndex");
             String attrs = conf.get("split.attributes");
             if (null != attrs) {
             	//attribute level
             	attrOrdinals = Utility.intArrayFromString(attrs, ",");
             	for (int attrOrdinal : attrOrdinals) {
-            		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal));
+            		splitStats.put(attrOrdinal, new AttributeSplitStat(attrOrdinal, infoAlgorithm));
             	}
             } else {
             	//data set root level
             	atRoot = true;
             	rootInfoStat = new InfoContentStat();
             }
-        	infoAlgorithm = conf.get("info.content.algorithm", "giniIndex");
         	outputSplitProb = conf.getBoolean("output.split.prob", false);
         	parentInfo = Double.parseDouble(conf.get("parent.info"));
 	   	}   

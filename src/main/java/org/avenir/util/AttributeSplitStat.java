@@ -27,7 +27,8 @@ import org.apache.log4j.Logger;
 import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
 
 /**
- * Info stat for splits
+ * Info stat for splits based various statistical criteria, to enable selection
+ * of optimum split for  attributes
  * @author pranab
  *
  */
@@ -39,19 +40,25 @@ public class AttributeSplitStat {
     public static final String ALG_ENTROPY = "entropy";
     public static final String ALG_GINI_INDEX = "giniIndex";
     public static final String ALG_HELLINGER_DIST = "hellingerDistance";
+    private String algorithm;
 	
     public static void enableLog() {
     	LOG.setLevel(Level.DEBUG);
     }
     
-	public AttributeSplitStat(int attrOrdinal) {
+	public AttributeSplitStat(int attrOrdinal, String algorithm) {
 		this.attrOrdinal = attrOrdinal;
+		this.algorithm = algorithm;
 	}
 	
 	public void countClassVal(String key, int segmentIndex, String classVal, int count) {
 		SplitStat splitStat = splitStats.get(key);
 		if (null == splitStat) {
-			splitStat = new SplitStat(key);
+			if (algorithm.equals(ALG_ENTROPY) || algorithm.equals(ALG_GINI_INDEX)) {
+				splitStat = new SplitInfoContent(key);
+			} else {
+				splitStat = new SplitHellingerDistance(key);
+			}
 			splitStats.put(key, splitStat);
 		}
 		splitStat.countClassVal(segmentIndex, classVal, count);
@@ -82,12 +89,11 @@ public class AttributeSplitStat {
 	 * @author pranab
 	 *
 	 */
-	private static class SplitStat {
-		private String key;
-		private Map<Integer, SplitStatSegment> segments = new HashMap<Integer, SplitStatSegment>();
+	private static abstract class SplitStat {
+		protected String key;
+		protected Map<Integer, SplitStatSegment> segments = new HashMap<Integer, SplitStatSegment>();
 		
 		public SplitStat(String key) {
-			LOG.debug("constructing SplitStat key:" + key);
 			this.key = key;
 		}
 		
@@ -101,69 +107,7 @@ public class AttributeSplitStat {
 			statSegment.countClassVal(classVal, count);
 		}
 		
-		public double processStat(String algorithm, Set<String> classValues) {
-			double stats = 0;
-			LOG.debug("processing SplitStat key:" + key);
-		
-			if (algorithm.equals(ALG_ENTROPY) || algorithm.equals(ALG_GINI_INDEX)) {
-				double[] statArr = new double[segments.size()];
-				int[] countArr = new int[segments.size()];
-				int totalCount = 0;
-				int i = 0;
-				for (Integer segmentIndex : segments.keySet()) {
-					SplitStatSegment statSegment = segments.get(segmentIndex);
-					double stat = statSegment.processStat(algorithm);
-					statArr[i] = stat;
-					int count = statSegment.getTotalCount();
-					countArr[i] = count;
-					totalCount += count;
-				}	
-				
-				//weighted average
-				double statSum = 0;
-				for (int j = 0; j < statArr.length; ++j) {
-					statSum += statArr[j] * countArr[j];
-				}
-				stats = statSum / totalCount;
-			} else if (algorithm.equals(ALG_HELLINGER_DIST)) {
-				if (classValues.size() != 2) {
-					throw new IllegalArgumentException(
-							"Hellinger distance algorithm is only valid for binary valued class attributes");
-				}
-				
-				//binary class values
-				String[] classValueArr = new String[2];
-				int ci = 0;
-				for (String classVal : classValues) {
-					classValueArr[ci++] = classVal;
-				}
-				
-				//class value counts
-				int[] classValCount = new int[2];
-				for (int i = 0; i < 2; ++i) {
-					classValCount[i] = 0;
-					for (Integer segmentIndex : segments.keySet()) {
-						SplitStatSegment statSegment = segments.get(segmentIndex);
-						classValCount[i] += statSegment.getCountForClassVal(classValueArr[i]);
-					}
-				}
-				
-				//hellinger distance
-				double sum = 0;
-				for (Integer segmentIndex : segments.keySet()) {
-					SplitStatSegment statSegment = segments.get(segmentIndex);
-					double val0 = (double)statSegment.getCountForClassVal(classValueArr[0]) / classValCount[0];
-					val0 = Math.sqrt(val0);
-					double val1 = (double)statSegment.getCountForClassVal(classValueArr[1]) / classValCount[1];
-					val1 = Math.sqrt(val1);
-					sum += (val0 - val1) * (val0 - val1);
-				}				
-				stats = Math.sqrt(sum);
-			}
-			
-			LOG.debug("split key:" + key + " stats:" +  stats);
-			return stats;
-		}
+		public abstract double processStat(String algorithm, Set<String> classValues);
 		
 		public Map<Integer, Map<String, Double>>  getClassProbab() {
 			Map<Integer, Map<String, Double>> classProbab = new HashMap<Integer, Map<String, Double>>();
@@ -194,6 +138,103 @@ public class AttributeSplitStat {
 		}
 	}
 	
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	private static class SplitInfoContent extends SplitStat {
+		public SplitInfoContent(String key) {
+			super(key);
+			LOG.debug("constructing SplitInfoContent key:" + key);
+		}
+		
+		public double processStat(String algorithm, Set<String> classValues) {
+			double stats = 0;
+			LOG.debug("processing SplitStat key:" + key);
+		
+			double[] statArr = new double[segments.size()];
+			int[] countArr = new int[segments.size()];
+			int totalCount = 0;
+			int i = 0;
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				double stat = statSegment.processStat(algorithm);
+				statArr[i] = stat;
+				int count = statSegment.getTotalCount();
+				countArr[i] = count;
+				totalCount += count;
+			}	
+			
+			//weighted average
+			double statSum = 0;
+			for (int j = 0; j < statArr.length; ++j) {
+				statSum += statArr[j] * countArr[j];
+			}
+			stats = statSum / totalCount;
+			
+			LOG.debug("split key:" + key + " stats:" +  stats);
+			return stats;
+		}
+	}
+
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	private static class SplitHellingerDistance extends SplitStat {
+		public SplitHellingerDistance(String key) {
+			super(key);
+			LOG.debug("constructing SplitHellingerDistance key:" + key);
+		}		
+		
+		public double processStat(String algorithm, Set<String> classValues) {
+			double stats = 0;
+			LOG.debug("processing SplitStat key:" + key);
+		
+			if (classValues.size() != 2) {
+				throw new IllegalArgumentException(
+						"Hellinger distance algorithm is only valid for binary valued class attributes");
+			}
+			
+			//binary class values
+			String[] classValueArr = new String[2];
+			int ci = 0;
+			for (String classVal : classValues) {
+				classValueArr[ci++] = classVal;
+			}
+			
+			//class value counts
+			int[] classValCount = new int[2];
+			for (int i = 0; i < 2; ++i) {
+				classValCount[i] = 0;
+				for (Integer segmentIndex : segments.keySet()) {
+					SplitStatSegment statSegment = segments.get(segmentIndex);
+					classValCount[i] += statSegment.getCountForClassVal(classValueArr[i]);
+				}
+			}
+			
+			//hellinger distance
+			double sum = 0;
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				double val0 = (double)statSegment.getCountForClassVal(classValueArr[0]) / classValCount[0];
+				statSegment.setClassValRatio(classValueArr[0], val0);
+				val0 = Math.sqrt(val0);
+				double val1 = (double)statSegment.getCountForClassVal(classValueArr[1]) / classValCount[1];
+				statSegment.setClassValRatio(classValueArr[1], val1);
+				val1 = Math.sqrt(val1);
+				sum += (val0 - val1) * (val0 - val1);
+			}				
+			stats = Math.sqrt(sum);
+			
+			LOG.debug("split key:" + key + " stats:" +  stats);
+			return stats;
+		}
+		
+	}	
+
 	/**
 	 * @author pranab
 	 *
@@ -202,6 +243,7 @@ public class AttributeSplitStat {
 		private int segmentIndex;
 		private Map<String, Integer> classValCount = new HashMap<String, Integer>();
 		private Map<String, Double> classValPr = new HashMap<String, Double>();
+		private Map<String, Double> classValRatio = new HashMap<String, Double>();
 		private int totalCount;
 		
 		public SplitStatSegment(int segmentIndex) {
@@ -263,6 +305,10 @@ public class AttributeSplitStat {
 		public int getCountForClassVal(String classVal) {
 			Integer countObj = classValCount.get(classVal);
 			return countObj == null? 0 : countObj;
+		}
+		
+		public void setClassValRatio(String classVal, double ratio) {
+			classValRatio.put(classVal, ratio);
 		}
 	}
 
