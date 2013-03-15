@@ -220,10 +220,10 @@ public class AttributeSplitStat {
 			for (Integer segmentIndex : segments.keySet()) {
 				SplitStatSegment statSegment = segments.get(segmentIndex);
 				double val0 = (double)statSegment.getCountForClassVal(classValueArr[0]) / classValCount[0];
-				statSegment.setClassValRatio(classValueArr[0], val0);
+				statSegment.setClassConfidence(classValueArr[0], val0);
 				val0 = Math.sqrt(val0);
 				double val1 = (double)statSegment.getCountForClassVal(classValueArr[1]) / classValCount[1];
-				statSegment.setClassValRatio(classValueArr[1], val1);
+				statSegment.setClassConfidence(classValueArr[1], val1);
 				val1 = Math.sqrt(val1);
 				sum += (val0 - val1) * (val0 - val1);
 			}				
@@ -235,6 +235,56 @@ public class AttributeSplitStat {
 		
 	}	
 
+	private static class SplitClassCofidenceRatio extends SplitStat {
+		public SplitClassCofidenceRatio(String key) {
+			super(key);
+			LOG.debug("constructing SplitClassCofidenceRatio key:" + key);
+		}
+
+		@Override
+		public double processStat(String algorithm, Set<String> classValues) {
+			Map <String, Integer> classValCount = new HashMap <String, Integer>();
+			double stat = 0;
+			
+			//class attribute total count
+			for (String classVal : classValues) {
+				for (Integer segmentIndex : segments.keySet()) {
+					SplitStatSegment statSegment = segments.get(segmentIndex);
+					int count = statSegment.getCountForClassVal(classVal);
+					if ( null == classValCount.get(classVal)) {
+						classValCount.put(classVal, 0);
+					}
+					classValCount.put(classVal, classValCount.get(classVal) + count);
+				}				
+			}
+			
+			// class confidence
+			for (String classVal : classValues) {
+				for (Integer segmentIndex : segments.keySet()) {
+					SplitStatSegment statSegment = segments.get(segmentIndex);
+					int count = statSegment.getCountForClassVal(classVal);
+					int totalCount = classValCount.get(classVal);
+					statSegment.setClassConfidence(classVal, (double)count / totalCount);
+				}				
+			}
+
+			//class cofidence ratio
+			int totalCount = 0;
+			double sum = 0;
+			for (Integer segmentIndex : segments.keySet()) {
+				SplitStatSegment statSegment = segments.get(segmentIndex);
+				double classConfRatio  = statSegment.processClassConfidenceRatio();
+				int count = statSegment.getTotalCount();
+				sum += classConfRatio * count;
+				totalCount += count;
+			}
+			stat = sum / totalCount;
+			return stat;
+		}		
+		
+		
+	}	
+	
 	/**
 	 * @author pranab
 	 *
@@ -243,8 +293,9 @@ public class AttributeSplitStat {
 		private int segmentIndex;
 		private Map<String, Integer> classValCount = new HashMap<String, Integer>();
 		private Map<String, Double> classValPr = new HashMap<String, Double>();
-		private Map<String, Double> classValRatio = new HashMap<String, Double>();
-		private int totalCount;
+		private Map<String, Double> classValConfidence = new HashMap<String, Double>();
+		private Map<String, Double> classValConfidenceRatio = new HashMap<String, Double>();
+		private int totalCount = 0;
 		
 		public SplitStatSegment(int segmentIndex) {
 			LOG.debug("constructing SplitStatSegment segmentIndex:" + segmentIndex);
@@ -295,6 +346,11 @@ public class AttributeSplitStat {
 		}
 
 		public int getTotalCount() {
+			if (0 == totalCount) {
+				for (String key : classValCount.keySet()) {
+					totalCount += classValCount.get(key);
+				}
+			}
 			return totalCount;
 		}
 
@@ -307,8 +363,29 @@ public class AttributeSplitStat {
 			return countObj == null? 0 : countObj;
 		}
 		
-		public void setClassValRatio(String classVal, double ratio) {
-			classValRatio.put(classVal, ratio);
+		public void setClassConfidence(String classVal, double confidence) {
+			classValConfidence.put(classVal, confidence);
+		}
+		
+		public double processClassConfidenceRatio() {
+			double entropy = 0;
+			double totalClassConf = 0;
+			for (String classVal : classValConfidence.keySet()) {
+				totalClassConf += classValConfidence.get(classVal);
+			}
+			for (String classVal : classValConfidence.keySet()) {
+				double classConfRatio =  classValConfidence.get(classVal) / totalClassConf;
+				classValConfidenceRatio.put(classVal, classConfRatio);
+			}
+			
+			//entropy based on class confidence ratio
+			double log2 = Math.log(2);
+			for (String key : classValConfidenceRatio.keySet()) {
+				double ccr = classValConfidenceRatio.get(key);
+				entropy -= ccr * Math.log(ccr) / log2;
+			}
+			
+			return entropy;
 		}
 	}
 
