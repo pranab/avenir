@@ -40,6 +40,7 @@ public class AttributeSplitStat {
     public static final String ALG_ENTROPY = "entropy";
     public static final String ALG_GINI_INDEX = "giniIndex";
     public static final String ALG_HELLINGER_DIST = "hellingerDistance";
+    public static final String ALG_CLASS_CONF = "classConfidenceRatio";
     private String algorithm;
 	
     public static void enableLog() {
@@ -56,8 +57,10 @@ public class AttributeSplitStat {
 		if (null == splitStat) {
 			if (algorithm.equals(ALG_ENTROPY) || algorithm.equals(ALG_GINI_INDEX)) {
 				splitStat = new SplitInfoContent(key);
-			} else {
+			} else if (algorithm.equals(ALG_HELLINGER_DIST)){
 				splitStat = new SplitHellingerDistance(key);
+			} else {
+				splitStat = new SplitClassCofidenceRatio(key);
 			}
 			splitStats.put(key, splitStat);
 		}
@@ -141,7 +144,7 @@ public class AttributeSplitStat {
 	
 	/**
 	 * @author pranab
-	 *
+	 * Entropy or gini index based
 	 */
 	private static class SplitInfoContent extends SplitStat {
 		public SplitInfoContent(String key) {
@@ -181,6 +184,7 @@ public class AttributeSplitStat {
 	
 	/**
 	 * @author pranab
+	 * Hellinger distance based crtieria
 	 *
 	 */
 	private static class SplitHellingerDistance extends SplitStat {
@@ -235,6 +239,10 @@ public class AttributeSplitStat {
 		
 	}	
 
+	/**
+	 * @author pranab
+	 * Class confidence based criteria
+	 */
 	private static class SplitClassCofidenceRatio extends SplitStat {
 		public SplitClassCofidenceRatio(String key) {
 			super(key);

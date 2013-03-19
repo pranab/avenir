@@ -267,7 +267,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
 
-        	infoAlgorithm = conf.get("info.content.algorithm", "giniIndex");
+        	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
             String attrs = conf.get("split.attributes");
             if (null != attrs) {
             	//attribute level
