@@ -1,0 +1,40 @@
+This tutorial for rule mining by splitting attributes using various statistical criteria.
+
+Test data
+---------
+You can generate patient data using the script disease.rb. Make sure that utol.rb is in the path
+../lib. util.rb can be checked out from the project visitante.
+
+Script for MR
+-------------
+JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.explore.ClassPartitionGenerator
+
+echo "running mr"
+IN_PATH=/Users/pranab/disease/input
+OUT_PATH=/Users/pranab/disease/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/disease.properties $IN_PATH $OUT_PATH
+
+Configuration
+-------------
+Here is the content of disease.properties
+
+field.delim.regex=,
+field.delim.out=,
+num.reducer=1
+feature.schema.file.path=/Users/pranab/disease/meta/patient.json
+split.attributes=1
+split.algorithm=hellingerDistance
+parent.info=0.333939
+output.split.prob=false
+debug.on=true
+
+
+Meta data
+---------
+Please make sure that the meta data file patient.json is in the HDFS path specified in 
+the config

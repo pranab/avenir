@@ -1,0 +1,56 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "patientID",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "age",
+			"ordinal" : 1,
+			"dataType" : "int",
+			"feature" : true,
+			"min"	: 20,
+			"max" : 80,
+			"maxSplit" : 3,
+			"bucketWidth" : 5
+		},
+		{
+			"name" : "race",
+			"ordinal" : 2,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "weight",
+			"ordinal" : 3,
+			"dataType" : "int",
+			"feature" : true
+		},
+		{
+			"name" : "diet",
+			"ordinal" : 4,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "family history",
+			"ordinal" : 5,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "domestic life",
+			"ordinal" : 6,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "disease",
+			"ordinal" : 7,
+			"dataType" : "categorical"
+		}
+	]
+}
