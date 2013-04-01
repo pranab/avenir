@@ -35,6 +35,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.util.StateTransitionProbability;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 
@@ -80,6 +81,9 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 		private String fieldDelimRegex;
 		private String[] items;
 		private int skipFieldCount;
+        private Tuple outKey = new Tuple();
+		private IntWritable outVal  = new IntWritable(1);
+
         private static final Logger LOG = Logger.getLogger(StateTransitionMapper.class);
 
         protected void setup(Context context) throws IOException, InterruptedException {
@@ -94,7 +98,11 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
         		throws IOException, InterruptedException {
         	items  =  value.toString().split(fieldDelimRegex);
-        	
+        	for (int i = skipFieldCount + 1; i < items.length; ++i) {
+        		outKey.initialize();
+        		outKey.add(items[i-1], items[i]);
+        		context.write(outKey, outVal);
+        	}
         }        
         
 	}	
@@ -121,7 +129,10 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 	 */
 	public static class StateTransitionReducer extends Reducer<Tuple, IntWritable, NullWritable, Text> {
 		private String fieldDelim;
+		private Text outVal  = new Text();
 		private String[] states;
+		private StateTransitionProbability transProb;
+		private int count;
 		
 		private static final Logger LOG = Logger.getLogger(StateTransitionMapper.class);
 		
@@ -133,16 +144,28 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             }
         	fieldDelim = conf.get("field.delim.out", ",");
         	states = conf.get("model.states").split(",");
+        	transProb = new StateTransitionProbability(states, states);
 	   	}
 	   	
 	   	protected void cleanup(Context context)  
 	   			throws IOException, InterruptedException {
-	   		
+	   		transProb.normalizeRows();
+	   		for (int i = 0; i < states.length; ++i) {
+	   			String val = transProb.serializeRow(i);
+	   			outVal.set(val);
+	   			context.write(NullWritable.get(),outVal);
+	   		}
 	   	}
 	   	
         protected void reduce(Tuple  key, Iterable<IntWritable> values, Context context)
         		throws IOException, InterruptedException {
-        	
+        	count = 0;
+        	for (IntWritable value : values) {
+        		count += value.get();
+        	}
+        	String fromSt = key.getString(0);
+        	String toSt = key.getString(0);
+        	transProb.add(fromSt, toSt, count);
         }	   	
 	}
 	

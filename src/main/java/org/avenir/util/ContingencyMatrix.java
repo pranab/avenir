@@ -48,21 +48,6 @@ public class ContingencyMatrix  extends TabularData {
 		}
 	}
 
-	public int getRowSum(int row) {
-		int sum = 0;
-		for (int c = 0; c < numCol; ++c) {
-			sum += table[row][c];
-		}
-		return sum;
-	}
-
-	public int getColumnSum(int col) {
-		int sum = 0;
-		for (int r = 0; r < numRow; ++r) {
-			sum += table[r][col];
-		}
-		return sum;
-	}
 	
 	public int getSum() {
 		int sum = 0;

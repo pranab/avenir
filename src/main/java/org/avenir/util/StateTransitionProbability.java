@@ -25,7 +25,11 @@ import org.chombo.util.TabularData;
  *
  */
 public class StateTransitionProbability extends TabularData {
-	private int scale;
+	private int scale = 100;
+	
+	public StateTransitionProbability() {
+		super();
+	}
 	
 	public StateTransitionProbability(int numRow, int numCol) {
 		super(numRow, numCol);
@@ -35,7 +39,17 @@ public class StateTransitionProbability extends TabularData {
 		super(rowLabels, colLabels);
 	}
 	
+	public void setScale(int scale) {
+		this.scale = scale;
+	}
+
 	public void normalizeRows() {
-		
+		int rowSum = 0;
+		for (int r = 0; r < numRow; ++r) {
+			rowSum = getRowSum(r);
+			for (int c = 0; c < numCol; ++c) {
+				table[r][c] = (table[r][c] * scale) / rowSum;
+			}
+		}
 	}
 }
