@@ -98,10 +98,12 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
         		throws IOException, InterruptedException {
         	items  =  value.toString().split(fieldDelimRegex);
-        	for (int i = skipFieldCount + 1; i < items.length; ++i) {
-        		outKey.initialize();
-        		outKey.add(items[i-1], items[i]);
-        		context.write(outKey, outVal);
+        	if (items.length >= (skipFieldCount + 2)) {
+	        	for (int i = skipFieldCount + 1; i < items.length; ++i) {
+	        		outKey.initialize();
+	        		outKey.add(items[i-1], items[i]);
+	        		context.write(outKey, outVal);
+	        	}
         	}
         }        
         
@@ -164,7 +166,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         		count += value.get();
         	}
         	String fromSt = key.getString(0);
-        	String toSt = key.getString(0);
+        	String toSt = key.getString(1);
         	transProb.add(fromSt, toSt, count);
         }	   	
 	}
