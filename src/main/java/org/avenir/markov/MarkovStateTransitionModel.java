@@ -147,6 +147,8 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         	fieldDelim = conf.get("field.delim.out", ",");
         	states = conf.get("model.states").split(",");
         	transProb = new StateTransitionProbability(states, states);
+        	int transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	transProb.setScale(transProbScale);
 	   	}
 	   	
 	   	protected void cleanup(Context context)  
