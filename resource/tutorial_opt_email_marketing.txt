@@ -65,3 +65,16 @@ Run as below
 
 The output of Markov model MR should be in model.txt
 
+Configuration
+-------------
+field.delim.regex=,
+field.delim.out=,
+num.reducer=1
+debug.on=true
+projection.operation=groupingOrdering
+orderBy.field=2
+key.field=0
+projection.field=2,3
+skip.field.count=1
+model.states=SL,SE,SG,ML,ME,MG,LL,LE,LG
+
