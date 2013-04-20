@@ -21,11 +21,13 @@ package org.avenir.util;
 import org.chombo.util.TabularData;
 
 /**
+ * Markov state transition probability matrix
  * @author pranab
  *
  */
 public class StateTransitionProbability extends TabularData {
 	private int scale = 100;
+	private double[][] dTable;
 	
 	public StateTransitionProbability() {
 		super();
@@ -44,12 +46,58 @@ public class StateTransitionProbability extends TabularData {
 	}
 
 	public void normalizeRows() {
+		//laplace correction
+		for (int r = 0; r < numRow; ++r) {
+			boolean gotZeroCount = false;
+			for (int c = 0; c < numCol && !gotZeroCount; ++c) {
+				gotZeroCount = table[r][c] == 0;
+			}
+			
+			if (gotZeroCount) {
+				for (int c = 0; c < numCol; ++c) {
+					 table[r][c] += 1;
+				}			
+			}
+		}		
+		
+		//normalize
 		int rowSum = 0;
 		for (int r = 0; r < numRow; ++r) {
 			rowSum = getRowSum(r);
 			for (int c = 0; c < numCol; ++c) {
-				table[r][c] = (table[r][c] * scale) / rowSum;
+				if (scale > 1) {
+					table[r][c] = (table[r][c] * scale) / rowSum;
+				} else {
+					dTable[r][c] = ((double)table[r][c]) / rowSum;
+				}
 			}
 		}
 	}
+	
+	public String serializeRow(int row) {
+		StringBuilder stBld = new StringBuilder();
+		for (int c = 0; c < numCol; ++c) {
+			if (scale > 1) {
+				stBld.append(table[row][c]).append(DELIMETER);
+			} else {
+				stBld.append(dTable[row][c]).append(DELIMETER);
+			}
+		}
+		
+		return stBld.substring(0, stBld.length()-1);
+	}
+	
+	public void deseralizeRow(String data, int row) {
+		String[] items = data.split(DELIMETER);
+		int k = 0;
+		for (int c = 0; c < numCol; ++c) {
+			if (scale > 1) {
+				table[row][c]  = Integer.parseInt(items[k++]);
+			} else {
+				dTable[row][c]  = Double.parseDouble(items[k++]);
+			}
+		}
+	}
+	
+	
 }
