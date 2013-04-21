@@ -62,6 +62,9 @@ public class StateTransitionProbability extends TabularData {
 		
 		//normalize
 		int rowSum = 0;
+		if (scale == 1) {
+			dTable = new double[numRow][numCol];
+		}
 		for (int r = 0; r < numRow; ++r) {
 			rowSum = getRowSum(r);
 			for (int c = 0; c < numCol; ++c) {
