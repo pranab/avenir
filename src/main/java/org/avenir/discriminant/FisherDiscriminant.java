@@ -18,6 +18,8 @@
 package org.avenir.discriminant;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -73,30 +75,44 @@ public class FisherDiscriminant  extends Configured implements Tool {
 	 */
 	public static class FisherReducer  extends NumericalAttrStats.StatsReducer  {
 		private static final String uncondAttrVal = "0";
-		private ConditionedFeatureStat[] consStats = new ConditionedFeatureStat[2];
-		private int  condStatIndex = 0;
+		private Map<Integer, ConditionedFeatureStat[]> attrCondStats  = new HashMap<Integer, ConditionedFeatureStat[]>();
 
 	   	/* (non-Javadoc)
 	   	 * @see org.apache.hadoop.mapreduce.Reducer#cleanup(org.apache.hadoop.mapreduce.Reducer.Context)
 	   	 */
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
-	   		double pooledVariance = (consStats[0].getVariance() * consStats[0].getCount() + 
-	   				consStats[1].getVariance() * consStats[1].getCount()) / (consStats[0].getCount() + consStats[1].getCount());
-	   		double logOddsPrior = Math.log((double)consStats[0].getCount() / consStats[1].getCount());
-	   		double meanDiff = consStats[0].getMean() - consStats[1].getMean();
-	   		double discrimValue = (consStats[0].getMean() + consStats[1].getMean()) / 2;
-	   		discrimValue -= logOddsPrior * pooledVariance / meanDiff;
-	   		outVal.set("" + logOddsPrior + fieldDelim + pooledVariance + fieldDelim + discrimValue);
-			context.write(NullWritable.get(), outVal);
+	   		//emit class boundary
+	   		for (int attr : attrCondStats.keySet()) {
+	   			ConditionedFeatureStat[] condStats = attrCondStats.get(attr);
+	   			double pooledVariance = (condStats[0].getVariance() * condStats[0].getCount() + 
+	   				condStats[1].getVariance() * condStats[1].getCount()) / (condStats[0].getCount() + condStats[1].getCount());
+	   			double logOddsPrior = Math.log((double)condStats[0].getCount() / condStats[1].getCount());
+	   			double meanDiff = condStats[0].getMean() - condStats[1].getMean();
+	   			double discrimValue = (condStats[0].getMean() + condStats[1].getMean()) / 2;
+	   			discrimValue -= logOddsPrior * pooledVariance / meanDiff;
+	   			outVal.set("" + attr +  fieldDelim + logOddsPrior + fieldDelim + pooledVariance + fieldDelim + discrimValue);
+	   			context.write(NullWritable.get(), outVal);
+	   		}
 	   	}	
 	   	
     	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
             	throws IOException, InterruptedException {
     		processReduce(values);
+
+    		//process conditional stats
     		String condAttrVal = key.getString(1);
     		if (!uncondAttrVal.equals(condAttrVal)) {
-    			consStats[condStatIndex++] = new ConditionedFeatureStat(condAttrVal, totalCount, mean, variance);
+    			Integer attr = key.getInt(0);
+    			ConditionedFeatureStat[] condStats = attrCondStats.get(attr);
+    			if (null == condStats) {
+    				condStats = new ConditionedFeatureStat[2];
+    				condStats[0] = condStats[1] = null;
+    				attrCondStats.put(attr, condStats);
+    			}
+    			int indx = condStats[0] == null ? 0 : 1;
+    			condStats[indx] = new ConditionedFeatureStat(condAttrVal, totalCount, mean, variance);
     		}
+    		//emit conditional stat
     		emitOutput( key,  context);
     	}	
 	}
