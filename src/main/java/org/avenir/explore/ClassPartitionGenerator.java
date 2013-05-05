@@ -189,8 +189,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         private void createNumPartitions(Integer[] splits, FeatureField featFld, 
         		List<Integer[]> newSplitList) {
-    		int min = featFld.getMin();
-    		int max = featFld.getMax();
+    		int min = (int)(featFld.getMin() + 0.01);
+    		int max = (int)(featFld.getMax() + 0.01);
     		int binWidth = featFld.getBucketWidth();
         	if (null == splits) {
         		for (int split = min + binWidth ; split < max; split += binWidth) {

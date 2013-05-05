@@ -71,8 +71,9 @@ public class CategoricalCorrelation {
             if (conf.getBoolean("debug.on", false)) {
             	LOG.setLevel(Level.DEBUG);
             }
+            
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(conf, "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	sourceAttrs = Utility.intArrayFromString(conf.get("first.set..attributes"), ",");
@@ -108,6 +109,7 @@ public class CategoricalCorrelation {
         		dstFiledsInitialized = true;
             	
             }
+            
         }
         
         /* (non-Javadoc)
