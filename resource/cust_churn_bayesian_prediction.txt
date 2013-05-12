@@ -1,7 +1,9 @@
 This tutorial is for Bayesian classifier. You will learn how to build the Bayesian 
 prediction model and then how to make predictions based on the prediction model.
 You can use the script usage.rb to generate data for customer churn data for
-mobile service provider users
+mobile service provider users. Make sure that utol.rb is in the path../lib. util.rb 
+can be checked out from the project visitante. It's under script/ruby/lib directory
+in that project.
 
 Bayesian Model
 ==============

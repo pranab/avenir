@@ -4,7 +4,8 @@ This tutorial for optmum email marketing time prediction based on Markov model.
 Test data
 ---------
 You can generate customer transaction  data using the script buy_xaction.rb. Make sure that utol.rb is in the path
-../lib. util.rb can be checked out from the project visitante.
+../lib. util.rb can be checked out from the project visitante. It's under script/ruby/lib directory
+in that project.
 
 generate training data as below
 ./buy_xaction.rb 80000 210 .05  > training.txt
