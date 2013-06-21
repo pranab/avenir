@@ -85,12 +85,15 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
 		private String[] items;
 		private Text outVal  = new Text();
 		private Tuple outKey = new  Tuple();
-		private Map<String, Integer> groupItemCounts = new HashMap<String, Integer>();
 		private int roundNum;
 		private int explorationCountFactor;
-		private int  perRoundBatchSize;
 		private int rank;
 		private final int RANK_MAX = 1000;
+		private Map<String, ExplorationCounter> explCounters = new HashMap<String, ExplorationCounter>();
+		private String curGroupID = null;
+		private String groupID;
+		private ExplorationCounter curExplCounter;
+		private int  curItemIndex = 0;
 		
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -100,10 +103,18 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	roundNum = conf.getInt("current.round.num",  2);
         	explorationCountFactor = conf.getInt("exploration.count.factor",  2);
-        	perRoundBatchSize = conf.getInt("per.round.batch.size",  1);
         	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count",  ",");
+        	
+        	String groupID;
+        	int count; 
+        	int explorationCount;
+			int batchSize;
         	for (String[] line : lines) {
-        		groupItemCounts.put(line[0], getExplorationCount(Integer.parseInt(line[1])));
+        		groupID= line[0];
+        		count = Integer.parseInt(line[1]);
+        		batchSize = Integer.parseInt(line[2]);
+        		explorationCount = getExplorationCount(count);
+        		explCounters.put(groupID, new ExplorationCounter( groupID,  count,  explorationCount,  batchSize) );
         	}
 
         }
@@ -116,25 +127,42 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
-            int explorationRounds = groupItemCounts.get(items[0]) - (roundNum - 1) * perRoundBatchSize;
+            groupID = items[0];
+    		if (null == curGroupID || !groupID.equals(curGroupID)) {
+    			//new group
+    			curExplCounter = explCounters.get(groupID);
+    			curExplCounter.selectNextRound(roundNum);
+    			curGroupID= groupID;
+    			curItemIndex = 0;
+    		} else {
+    			//same group
+    			++curItemIndex;
+    		}
+    		
             outKey.initialize();
-            if (explorationRounds > 0) {
+            if (curExplCounter.isInExploration()) {
             	//exploration
-            	rank = (int)(Math.random() * RANK_MAX);
+                if (curExplCounter.shouldExplore(curItemIndex)) {
+                	rank = 1;
+                } else {
+                	rank = -1;
+                }
             } else {
             	//exploitation
             	if (items.length > 2) {
             		rank = RANK_MAX -  Integer.parseInt(items[2]);
-            	} else {
-            		//not explored yet
-                	rank = (int)(Math.random() * RANK_MAX);
+            	}  else {
+            		rank = -1;
             	}
             }
-        	outKey.add(items[0], rank);
-        	outVal.set(items[1]);
-          	context.write(outKey, outVal);
+            if (rank > 0) {
+            	outKey.add(items[0], rank);
+            	outVal.set(items[1]);
+            	context.write(outKey, outVal);
+            }
        }
- 	}	
+ 	
+	}	
 	
 	
 	/**
