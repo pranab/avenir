@@ -94,6 +94,11 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
 		private String groupID;
 		private ExplorationCounter curExplCounter;
 		private int  curItemIndex = 0;
+		private String explCountStrategy;
+		private static final String EXPL_STRATEGY_SIMPLE = "simple";
+		private static final String EXPL_STRATEGY_PAC = "pac";
+		private float rewardDiff;
+		private float probDiff ;
 		
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -102,7 +107,13 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         	Configuration conf = context.getConfiguration();
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	roundNum = conf.getInt("current.round.num",  2);
-        	explorationCountFactor = conf.getInt("exploration.count.factor",  2);
+        	explCountStrategy = conf.get("exploration.count.strategy", EXPL_STRATEGY_SIMPLE);
+        	if (explCountStrategy.equals(EXPL_STRATEGY_SIMPLE)) {
+            	explorationCountFactor = conf.getInt("exploration.count.factor",  2);
+        	} else {
+        		rewardDiff = conf.getFloat("pac.reward.diff", (float)0.2);
+        		probDiff = conf.getFloat("pac.prob.diff", (float)0.2);
+        	}
         	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count",  ",");
         	
         	String groupID;
@@ -120,7 +131,14 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         }
 
         private int getExplorationCount(int itemCount) {
-        	return explorationCountFactor * itemCount;
+        	int explCount = 0;
+        	if (explCountStrategy.equals(EXPL_STRATEGY_SIMPLE)) {
+        		explCount =  explorationCountFactor * itemCount;
+        	} else {
+        		explCount = (int)(4.0 / (rewardDiff * rewardDiff) + Math.log( 2.0 * itemCount / probDiff));
+        	}
+        	
+        	return explCount;
         }
         
         @Override
