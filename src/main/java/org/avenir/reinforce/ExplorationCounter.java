@@ -30,6 +30,7 @@ public class ExplorationCounter {
 	private int explorationCount;
 	private int batchSize;
 	private List<int[]> selections = new ArrayList<int[]>();
+	
 	/**
 	 * @param groupID
 	 * @param count
@@ -55,6 +56,7 @@ public class ExplorationCounter {
             int itemIndexBeg = remainingExplorationRounds %  count;
             int itemIndexEnd = itemIndexBeg + batchSize - 1;
             if (itemIndexEnd >= count) {
+            	//batch across boundary of all items in group
             	int[] range = new int[2];
             	range[0] = itemIndexBeg;
             	range[1] = count -1;
@@ -65,6 +67,7 @@ public class ExplorationCounter {
             	range[1] = itemIndexEnd - count;
             	selections.add(range);
             } else {
+            	//batch within item set
             	int[] range = new int[2];
             	range[0] = itemIndexBeg;
             	range[1] = itemIndexEnd;
@@ -73,6 +76,9 @@ public class ExplorationCounter {
         }        
 	}
 	
+	/**
+	 * @return
+	 */
 	public boolean isInExploration() {
 		return !selections.isEmpty();
 	}
@@ -91,6 +97,22 @@ public class ExplorationCounter {
 		}
 		
 		return toExplore;
+	}
+
+	public String getGroupID() {
+		return groupID;
+	}
+
+	public int getCount() {
+		return count;
+	}
+
+	public int getExplorationCount() {
+		return explorationCount;
+	}
+
+	public int getBatchSize() {
+		return batchSize;
 	}
 	
 }

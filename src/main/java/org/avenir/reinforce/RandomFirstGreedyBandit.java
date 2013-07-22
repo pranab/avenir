@@ -130,6 +130,11 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
 
         }
 
+        /**
+         * calculates exploration count
+         * @param itemCount
+         * @return
+         */
         private int getExplorationCount(int itemCount) {
         	int explCount = 0;
         	if (explCountStrategy.equals(EXPL_STRATEGY_SIMPLE)) {
@@ -173,7 +178,18 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
             		rank = -1;
             	}
             }
+            
+            //emit if current item needs exploration or current items needs to be exploited and reawrd data is available
             if (rank > 0) {
+            	if (0 == curItemIndex) {
+            		//if new group emit batch size
+            		outKey.add(items[0], -1);
+            		outVal.set("" + curExplCounter.getBatchSize());
+                	context.write(outKey, outVal);
+                    outKey.initialize();
+            	}
+            	
+            	//emit rank
             	outKey.add(items[0], rank);
             	outVal.set(items[1]);
             	context.write(outKey, outVal);
@@ -191,6 +207,9 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
 		private Text valOut;
 		private String fieldDelim;
 		
+	   	/* (non-Javadoc)
+	   	 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
+	   	 */
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
         	fieldDelim = conf.get("field.delim", ",");
@@ -203,15 +222,25 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         throws IOException, InterruptedException {
         	boolean first = true;
         	String val = null;
+        	int batchCount = 0;
+        	int batchSize = 0;
+        	String groupID = key.getString(0);
         	for (Text value : values) {
         		if (first) {
-        			val = value.toString();;
-        			break;
+        			//first one is batch size
+        			val = value.toString();
+        			batchSize = Integer.parseInt(val);
+        			first = false;
+        		} else {
+        			//select as many as batch size
+        			val = value.toString();
+                	valOut.set(groupID + fieldDelim + val);
+        			context.write(NullWritable.get(), valOut);
+        			if (++batchCount == batchSize) {
+        				break;
+        			}
         		}
         	}
-        	
-        	valOut.set(key.getString(0) + fieldDelim + val);
-			context.write(NullWritable.get(), valOut);
         }	   	
 	}	
 }
