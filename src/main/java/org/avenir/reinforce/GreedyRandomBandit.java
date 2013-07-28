@@ -81,6 +81,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private int rewardOrdinal;
 		private List<Pair<String, Integer>> groupItems = new ArrayList<Pair<String, Integer>>();
 		private static final String PROB_RED_LINEAR = "linear";
+		private static final String PROB_RED_LOG_LINEAR = "logLinear";
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -102,7 +103,9 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         protected void cleanup(Context context)  throws IOException, InterruptedException {
 			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
 				 linearSelect(context);
-			}		
+			}	else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
+				 logLinearSelect(context);
+			}	
         }
         
         @Override
@@ -118,6 +121,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     			} else  {
 	    			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
 	    				 linearSelect(context);
+	    			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
+	    				 logLinearSelect(context);
 	    			}
     			}
     			
@@ -136,11 +141,31 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws IOException 
          */
         private void linearSelect(Context context) throws IOException, InterruptedException {
-        	String itemID = null;
         	float curProb = randomSelectionProb / roundNum;
+        	linearSelectHelper(curProb, context);
+        }
+        
+        /**
+         * @return
+         * @throws InterruptedException 
+         * @throws IOException 
+         */
+        private void logLinearSelect(Context context) throws IOException, InterruptedException {
+        	float curProb = (float)(randomSelectionProb * Math.log(roundNum) / roundNum);
+        	linearSelectHelper(curProb, context);
+        }
+
+        /**
+         * @param curProb
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
+        	String itemID = null;
         	if (curProb < Math.random()) {
         		//random
-        		int select =(int)( Math.random() * groupItems.size());
+        		int select = (int)Math.round( Math.random() * groupItems.size());
         		itemID = groupItems.get(select).getLeft();
         	} else {
         		//choose best so far
@@ -154,6 +179,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 			outVal.set(curGroupID + fieldDelim + itemID);
     		context.write(NullWritable.get(), outVal);
         }
+        
+        
 	}
 	
 	
