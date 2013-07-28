@@ -18,7 +18,6 @@
 package org.avenir.reinforce;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +34,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -114,7 +114,7 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         		rewardDiff = conf.getFloat("pac.reward.diff", (float)0.2);
         		probDiff = conf.getFloat("pac.prob.diff", (float)0.2);
         	}
-        	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count",  ",");
+        	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
         	
         	String groupID;
         	int count; 
@@ -243,4 +243,10 @@ public class RandomFirstGreedyBandit   extends Configured implements Tool {
         	}
         }	   	
 	}	
+	
+    public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new RandomFirstGreedyBandit(), args);
+        System.exit(exitCode);
+    }
+	
 }
