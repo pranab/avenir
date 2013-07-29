@@ -35,6 +35,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.Pair;
 import org.chombo.util.Utility;
+import org.chombo.util.DynamicBean;
 
 /**
  * Implements greedy multiarm bandit  reinforcement learning algorithms
@@ -78,10 +79,16 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private String  probRedAlgorithm;
 		private String curGroupID = null;
 		private String groupID;
+		private int countOrdinal;
 		private int rewardOrdinal;
-		private List<Pair<String, Integer>> groupItems = new ArrayList<Pair<String, Integer>>();
 		private static final String PROB_RED_LINEAR = "linear";
 		private static final String PROB_RED_LOG_LINEAR = "logLinear";
+		private static final String DET_UBC1 = "UBC1";
+		private List<DynamicBean> groupItems = new ArrayList<DynamicBean>();
+		private static final String ITEM_ID = "itemID";
+		private static final String ITEM_COUNT = "count";
+		private static final String ITEM_REWARD = "reward";
+		
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -94,6 +101,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	roundNum = conf.getInt("current.round.num",  2);
         	randomSelectionProb = conf.getFloat("random.selection.prob", (float)0.5);
         	probRedAlgorithm = conf.get("prob.reduction.algorithm", PROB_RED_LINEAR );
+        	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
         }
 
@@ -101,11 +109,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void cleanup(Context context)  throws IOException, InterruptedException {
-			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-				 linearSelect(context);
-			}	else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
-				 logLinearSelect(context);
-			}	
+			select( context);
         }
         
         @Override
@@ -116,24 +120,44 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     		if (null == curGroupID || !groupID.equals(curGroupID)) {
     			//new group
     			if (null == curGroupID) {
-        			Pair<String, Integer> item = new Pair<String, Integer>(items[1], Integer.parseInt(items[rewardOrdinal])); 
-        			groupItems.add(item);
+    				collectGroupItems();
     			} else  {
-	    			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-	    				 linearSelect(context);
-	    			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
-	    				 logLinearSelect(context);
-	    			}
+    				select( context);
     			}
     			
     			groupItems.clear();
     			curGroupID = groupID;
     		} else {
     			//existing group
-    			Pair<String, Integer> item = new Pair<String, Integer>(items[1], Integer.parseInt(items[rewardOrdinal])); 
-    			groupItems.add(item);
+				collectGroupItems();
     		}
         }
+
+        /**
+         * 
+         */
+        private void collectGroupItems() {
+			DynamicBean item = new DynamicBean();
+			item.set(ITEM_ID, items[1]);
+			item.set(ITEM_COUNT, Integer.parseInt(items[countOrdinal]));
+			item.set(ITEM_REWARD, Integer.parseInt(items[rewardOrdinal]));
+			groupItems.add(item);
+        }
+        
+        /**
+         * @return
+         * @throws InterruptedException 
+         * @throws IOException 
+         */
+        private void select(Context context) throws IOException, InterruptedException {
+			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
+				 linearSelect(context);
+			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
+				 logLinearSelect(context);
+			} else if (probRedAlgorithm.equals(DET_UBC1 )) {
+				 deterministicAuerSelect(context);
+			}
+        }        
         
         /**
          * @return
@@ -156,6 +180,49 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         }
 
         /**
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void deterministicAuerSelect(Context context) throws IOException, InterruptedException {
+    		int maxReward = 0;
+    		String itemID = null;
+			int count;
+    		int reward;
+    		for (DynamicBean groupItem : groupItems) {
+    			count = groupItem.getInt(ITEM_COUNT);
+    			if (count == 0) {
+    				//select first item that has not been tried before
+    				itemID = groupItem.getString(ITEM_ID);
+    				break;
+    			} else {
+        				reward = groupItem.getInt(ITEM_REWARD);
+	    				if (reward > maxReward) {
+	    					maxReward = reward;
+	    				}
+    			}
+    		}
+    		
+    		if (null == itemID) {
+    			//aply UBC
+    			double valueMax = 0.0;
+    			double value;
+        		for (DynamicBean groupItem : groupItems) {
+        			reward = groupItem.getInt(ITEM_REWARD);
+        			count = groupItem.getInt(ITEM_COUNT);
+        			value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(roundNum) / count);
+        			if (value > valueMax) {
+        				itemID = groupItem.getString(ITEM_ID);
+        				valueMax = value;
+        			}
+        		}
+    		}
+			outVal.set(curGroupID + fieldDelim + itemID);
+    		context.write(NullWritable.get(), outVal);
+        	
+        }
+        
+        /**
          * @param curProb
          * @param context
          * @throws IOException
@@ -166,20 +233,21 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	if (curProb < Math.random()) {
         		//random
         		int select = (int)Math.round( Math.random() * groupItems.size());
-        		itemID = groupItems.get(select).getLeft();
+        		select = select < groupItems.size() ? select : groupItems.size() -1; 
+        		itemID = groupItems.get(select).getString(ITEM_ID);
         	} else {
         		//choose best so far
         		int maxReward = 0;
-        		for (Pair<String, Integer> groupItem : groupItems) {
-        			if (groupItem.getRight() > maxReward) {
-        				itemID = groupItem.getLeft();
+        		for (DynamicBean groupItem : groupItems) {
+        			if (groupItem.getInt(ITEM_REWARD) > maxReward) {
+        				maxReward = groupItem.getInt(ITEM_REWARD);
+        				itemID = groupItem.getString(ITEM_ID);
         			}
         		}
         	}
 			outVal.set(curGroupID + fieldDelim + itemID);
     		context.write(NullWritable.get(), outVal);
         }
-        
         
 	}
 	
