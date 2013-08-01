@@ -19,7 +19,12 @@ package org.avenir.reinforce;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -33,9 +38,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.chombo.util.Pair;
-import org.chombo.util.Utility;
 import org.chombo.util.DynamicBean;
+import org.chombo.util.Utility;
 
 /**
  * Implements greedy multiarm bandit  reinforcement learning algorithms
@@ -88,6 +92,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private static final String ITEM_ID = "itemID";
 		private static final String ITEM_COUNT = "count";
 		private static final String ITEM_REWARD = "reward";
+		private Map<String, Integer> groupBatchCount = new HashMap<String, Integer>();
 		
 		
 		/* (non-Javadoc)
@@ -103,6 +108,17 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	probRedAlgorithm = conf.get("prob.reduction.algorithm", PROB_RED_LINEAR );
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
+ 
+        	//batch size
+        	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
+        	String groupID;
+ 			int batchSize;
+        	for (String[] line : lines) {
+        		groupID= line[0];
+        		batchSize = Integer.parseInt(line[1]);
+        		groupBatchCount.put(groupID,   batchSize );
+        	}
+        	
         }
 
         /* (non-Javadoc)
@@ -134,6 +150,14 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         }
 
         /**
+         * @return
+         */
+        private int getBatchSize() {
+        	int batchSize = groupBatchCount.isEmpty() ? 1 : groupBatchCount.get(curGroupID);
+        	return batchSize;
+        }
+        
+        /**
          * 
          */
         private void collectGroupItems() {
@@ -151,9 +175,9 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          */
         private void select(Context context) throws IOException, InterruptedException {
 			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-				 linearSelect(context);
+				 linearSelect(context, false);
 			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
-				 logLinearSelect(context);
+				 linearSelect(context, true);
 			} else if (probRedAlgorithm.equals(DET_UBC1 )) {
 				 deterministicAuerSelect(context);
 			}
@@ -164,61 +188,101 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws InterruptedException 
          * @throws IOException 
          */
-        private void linearSelect(Context context) throws IOException, InterruptedException {
-        	float curProb = randomSelectionProb / roundNum;
-        	linearSelectHelper(curProb, context);
+        private void linearSelect(Context context, boolean logLinear) throws IOException, InterruptedException {
+        	Set<String> items = new HashSet<String>();
+        	int batchSize = getBatchSize();
+        	int count = (roundNum -1) * batchSize;
+        	String itemID = null;
+        	float curProb;
+        	
+        	//select items for the batch
+        	for (int i = 0; i < batchSize; ++i) {
+        		++count;
+        		if (logLinear) {
+        			curProb = randomSelectionProb /count ;
+        		} else {
+        			curProb = (float)(randomSelectionProb * Math.log(count) / count);
+        		}
+            	itemID = linearSelectHelper(curProb, context);
+            	while(!items.contains(itemID)) {
+            		itemID = linearSelectHelper(curProb, context);
+            	}
+            	items.add(itemID);
+        	}
+        	
+        	//emit all selected items
+          	for (String item : items) {
+    			outVal.set(curGroupID + fieldDelim + itemID);
+        		context.write(NullWritable.get(), outVal);
+          	}
         }
         
-        /**
-         * @return
-         * @throws InterruptedException 
-         * @throws IOException 
-         */
-        private void logLinearSelect(Context context) throws IOException, InterruptedException {
-        	float curProb = (float)(randomSelectionProb * Math.log(roundNum) / roundNum);
-        	linearSelectHelper(curProb, context);
-        }
-
         /**
          * @param context
          * @throws IOException
          * @throws InterruptedException
          */
         private void deterministicAuerSelect(Context context) throws IOException, InterruptedException {
+        	List<String> items = new ArrayList<String>();
+        	int batchSize = getBatchSize();
+        	int count = (roundNum -1) * batchSize;
     		int maxReward = 0;
-    		String itemID = null;
-			int count;
+    		String item = null;
+			int thisCount;
     		int reward;
+
+    		//max reward in this group
     		for (DynamicBean groupItem : groupItems) {
-    			count = groupItem.getInt(ITEM_COUNT);
-    			if (count == 0) {
-    				//select first item that has not been tried before
-    				itemID = groupItem.getString(ITEM_ID);
-    				break;
-    			} else {
-        				reward = groupItem.getInt(ITEM_REWARD);
-	    				if (reward > maxReward) {
-	    					maxReward = reward;
-	    				}
+   				reward = groupItem.getInt(ITEM_REWARD);
+    			if (reward > maxReward) {
+    				maxReward = reward;
     			}
     		}
+
+    		//collect items not tried before
+    		ListIterator<DynamicBean> iter = groupItems.listIterator();
+    		while (iter.hasNext()) {
+    			DynamicBean groupItem = iter.next();
+    			thisCount = groupItem.getInt(ITEM_COUNT);
+    			if (thisCount == 0) {
+    				//select  item that has not been tried before
+    				item = groupItem.getString(ITEM_ID);
+    				if (items.size() < batchSize) {
+    					items.add(item);
+    					iter.remove();
+    					++count;
+    				} else if (items.size() == batchSize) {
+    					break;
+    				}
+    			} 
+    		}
     		
-    		if (null == itemID) {
-    			//aply UBC
+    		//collect items according to UBC 
+    		while (items.size() < batchSize) {
     			double valueMax = 0.0;
     			double value;
+    			DynamicBean selectedGroupItem = null;
         		for (DynamicBean groupItem : groupItems) {
         			reward = groupItem.getInt(ITEM_REWARD);
-        			count = groupItem.getInt(ITEM_COUNT);
-        			value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(roundNum) / count);
+        			thisCount = groupItem.getInt(ITEM_COUNT);
+        			value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(count) / thisCount);
         			if (value > valueMax) {
-        				itemID = groupItem.getString(ITEM_ID);
+        				item = groupItem.getString(ITEM_ID);
         				valueMax = value;
+        				selectedGroupItem = groupItem;
         			}
         		}
+        		
+				items.add(item);
+				groupItems.remove(selectedGroupItem);
+				++count;
     		}
-			outVal.set(curGroupID + fieldDelim + itemID);
-    		context.write(NullWritable.get(), outVal);
+    		
+        	//emit all selected items
+          	for (String it : items) {
+    			outVal.set(curGroupID + fieldDelim + it);
+        		context.write(NullWritable.get(), outVal);
+          	}
         	
         }
         
@@ -228,7 +292,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws IOException
          * @throws InterruptedException
          */
-        private void linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
+        private String linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
         	String itemID = null;
         	if (curProb < Math.random()) {
         		//random
@@ -247,6 +311,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	}
 			outVal.set(curGroupID + fieldDelim + itemID);
     		context.write(NullWritable.get(), outVal);
+    		
+    		return itemID;
         }
         
 	}
