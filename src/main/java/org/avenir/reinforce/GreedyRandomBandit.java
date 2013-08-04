@@ -62,8 +62,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(GreedyRandomBandit.BanditMapper.class);
         
-        job.setMapOutputKeyClass(NullWritable.class);
-        job.setMapOutputValueClass(Text.class);
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
@@ -87,6 +87,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private int rewardOrdinal;
 		private static final String PROB_RED_LINEAR = "linear";
 		private static final String PROB_RED_LOG_LINEAR = "logLinear";
+		private float probReductionConstant;
 		private static final String DET_UBC1 = "UBC1";
 		private List<DynamicBean> groupItems = new ArrayList<DynamicBean>();
 		private static final String ITEM_ID = "itemID";
@@ -103,9 +104,10 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim", ",");
 
-        	roundNum = conf.getInt("current.round.num",  2);
+        	roundNum = conf.getInt("current.round.num",  -1);
         	randomSelectionProb = conf.getFloat("random.selection.prob", (float)0.5);
         	probRedAlgorithm = conf.get("prob.reduction.algorithm", PROB_RED_LINEAR );
+        	probReductionConstant = conf.getFloat("prob.reduction.constant",  (float)1.0);
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
  
@@ -199,12 +201,13 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	for (int i = 0; i < batchSize; ++i) {
         		++count;
         		if (logLinear) {
-        			curProb = randomSelectionProb /count ;
+        			curProb = (float)(randomSelectionProb * probReductionConstant * Math.log(count) / count);
         		} else {
-        			curProb = (float)(randomSelectionProb * Math.log(count) / count);
+        			curProb = randomSelectionProb * probReductionConstant / count ;
         		}
+        		curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
             	itemID = linearSelectHelper(curProb, context);
-            	while(!items.contains(itemID)) {
+            	while(items.contains(itemID)) {
             		itemID = linearSelectHelper(curProb, context);
             	}
             	items.add(itemID);
@@ -295,10 +298,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         private String linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
         	String itemID = null;
         	if (curProb < Math.random()) {
-        		//random
-        		int select = (int)Math.round( Math.random() * groupItems.size());
-        		select = select < groupItems.size() ? select : groupItems.size() -1; 
-        		itemID = groupItems.get(select).getString(ITEM_ID);
+        		//select random
+        		itemID = selectRandom();
         	} else {
         		//choose best so far
         		int maxReward = 0;
@@ -308,10 +309,22 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         				itemID = groupItem.getString(ITEM_ID);
         			}
         		}
+        		
+        		//nothing tried, choose randomly
+        		if (null == itemID) {
+            		itemID = selectRandom();
+        		}
         	}
-			outVal.set(curGroupID + fieldDelim + itemID);
-    		context.write(NullWritable.get(), outVal);
-    		
+    		return itemID;
+        }
+        
+        /**
+         * @return
+         */
+        private String selectRandom() {
+    		int select = (int)Math.round( Math.random() * groupItems.size());
+    		select = select < groupItems.size() ? select : groupItems.size() -1; 
+    		String itemID = groupItems.get(select).getString(ITEM_ID);
     		return itemID;
         }
         
