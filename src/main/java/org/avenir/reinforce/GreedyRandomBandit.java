@@ -88,15 +88,13 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private static final String PROB_RED_LINEAR = "linear";
 		private static final String PROB_RED_LOG_LINEAR = "logLinear";
 		private float probReductionConstant;
-		private static final String AUER_DET_UBC1 = "AuerUBC1";
 		private static final String AUER_GREEDY = "AuerGreedy";
-		private List<DynamicBean> groupItems = new ArrayList<DynamicBean>();
 		private static final String ITEM_ID = "itemID";
 		private static final String ITEM_COUNT = "count";
 		private static final String ITEM_REWARD = "reward";
 		private Map<String, Integer> groupBatchCount = new HashMap<String, Integer>();
-		//private String maxRewardItem;
 		private int auerGreedyConstant;
+		private GroupedItems groupedItems = new GroupedItems();
 		
 		
 		/* (non-Javadoc)
@@ -147,7 +145,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     				select( context);
     			}
     			
-    			groupItems.clear();
+    			groupedItems.initialize();
     			curGroupID = groupID;
     		} else {
     			//existing group
@@ -167,11 +165,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * 
          */
         private void collectGroupItems() {
-			DynamicBean item = new DynamicBean();
-			item.set(ITEM_ID, items[1]);
-			item.set(ITEM_COUNT, Integer.parseInt(items[countOrdinal]));
-			item.set(ITEM_REWARD, Integer.parseInt(items[rewardOrdinal]));
-			groupItems.add(item);
+        	groupedItems.createtem(items[1], Integer.parseInt(items[countOrdinal]), Integer.parseInt(items[rewardOrdinal]));
         }
         
         /**
@@ -184,9 +178,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 				 linearSelect(context, false);
 			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
 				 linearSelect(context, true);
-			} else if (probRedAlgorithm.equals(AUER_DET_UBC1 )) {
-				 deterministicAuerSelect(context);
-			} else if (probRedAlgorithm.equals(AUER_GREEDY )) {
+			}  else if (probRedAlgorithm.equals(AUER_GREEDY )) {
 				 greedyAuerSelect(context);
 			}
         }        
@@ -221,60 +213,11 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	
         	//emit all selected items
           	for (String item : items) {
-    			outVal.set(curGroupID + fieldDelim + itemID);
+    			outVal.set(curGroupID + fieldDelim + item);
         		context.write(NullWritable.get(), outVal);
           	}
         }
         
-        /**
-         * @param context
-         * @throws IOException
-         * @throws InterruptedException
-         */
-        private void deterministicAuerSelect(Context context) throws IOException, InterruptedException {
-        	List<String> items = new ArrayList<String>();
-        	int batchSize = getBatchSize();
-        	int count = (roundNum -1) * batchSize;
-    		int maxReward = 0;
-    		String item = null;
-			int thisCount;
-    		int reward;
-
-    		//max reward in this group
-    		DynamicBean maxRewardItem = getMaxRewardItem();
-    		maxReward = maxRewardItem.getInt(ITEM_REWARD);
-
-    		//collect items not tried before
-    		count += collectItemsNotTried( items,  batchSize);
-    		
-    		//collect items according to UBC 
-    		while (items.size() < batchSize) {
-    			double valueMax = 0.0;
-    			double value;
-    			DynamicBean selectedGroupItem = null;
-        		for (DynamicBean groupItem : groupItems) {
-        			reward = groupItem.getInt(ITEM_REWARD);
-        			thisCount = groupItem.getInt(ITEM_COUNT);
-        			value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(count) / thisCount);
-        			if (value > valueMax) {
-        				item = groupItem.getString(ITEM_ID);
-        				valueMax = value;
-        				selectedGroupItem = groupItem;
-        			}
-        		}
-        		
-				items.add(item);
-				groupItems.remove(selectedGroupItem);
-				++count;
-    		}
-    		
-        	//emit all selected items
-          	for (String it : items) {
-    			outVal.set(curGroupID + fieldDelim + it);
-        		context.write(NullWritable.get(), outVal);
-          	}
-        	
-        }
 
         /**
          * @param context
@@ -288,19 +231,23 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     		int maxReward = 0;
  
     		//max reward in this group
-    		DynamicBean maxRewardItem = getMaxRewardItem();
+    		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
     		maxReward = maxRewardItem.getInt(ITEM_REWARD);
-    		int groupCount = groupItems.size();
+    		int groupCount = groupedItems.size();
     		
     		//collect items not tried before
-    		count += collectItemsNotTried( items,  batchSize);
+    		List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
+    		count += collectedItems.size();
+    		for (DynamicBean it : collectedItems) {
+    			items.add(it.getString(ITEM_ID));
+    		}
     		
     		//collect items according to greedy algorithm 
     		if (items.size() < batchSize) {
-    			groupItems.remove(maxRewardItem);
-    			int nextMaxreward = getMaxRewardItem().getInt(ITEM_REWARD);
+    			groupedItems.remove(maxRewardItem);
+    			int nextMaxreward = groupedItems.getMaxRewardItem().getInt(ITEM_REWARD);
     			double rewardDiff = (double)((maxReward - nextMaxreward)) / maxReward;
-    			groupItems.add(maxRewardItem);
+    			groupedItems.add(maxRewardItem);
     			
     			//select as per Auer greedy algorithm
     			while (items.size() < batchSize) {
@@ -309,46 +256,18 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     	   		    DynamicBean selectedItem = null;
 	            	if (prob < Math.random()) {
 	            		//select random
-	            		selectedItem = selectRandom();
+	            		selectedItem = groupedItems.selectRandom();
 	            	} else {
 	            		//select one with best reward
-	            		selectedItem = getMaxRewardItem();
+	            		selectedItem = groupedItems.getMaxRewardItem();
 	            	}    	
 	            	items.add(selectedItem.getString(ITEM_ID));
-	            	groupItems.remove(selectedItem);
+	            	groupedItems.remove(selectedItem);
 	            	++count;
     			}
     		}        
         }        
         
-        /**
-         * @param items
-         * @param batchSize
-         * @return
-         */
-        private int collectItemsNotTried(List<String> items, int batchSize) {
-    		//collect items not tried before
-        	int thisCount = 0;
-        	String item = null;
-        	int count = 0;
-    		ListIterator<DynamicBean> iter = groupItems.listIterator();
-    		while (iter.hasNext()) {
-    			DynamicBean groupItem = iter.next();
-    			thisCount = groupItem.getInt(ITEM_COUNT);
-    			if (thisCount == 0) {
-    				item = groupItem.getString(ITEM_ID);
-    				if (items.size() < batchSize) {
-    					items.add(item);
-    					iter.remove();
-    					++count;
-    				} else if (items.size() == batchSize) {
-    					break;
-    				}
-    			} 
-    		}
-        	
-        	return count;
-        }
         /**
          * @param curProb
          * @param context
@@ -359,52 +278,21 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	String itemID = null;
         	if (curProb < Math.random()) {
         		//select random
-        		itemID = selectRandom().getString(ITEM_ID);
+        		itemID = groupedItems.selectRandom().getString(ITEM_ID);
         	} else {
         		//choose best so far
-        		int maxReward = 0;
-        		for (DynamicBean groupItem : groupItems) {
-        			if (groupItem.getInt(ITEM_REWARD) > maxReward) {
-        				maxReward = groupItem.getInt(ITEM_REWARD);
-        				itemID = groupItem.getString(ITEM_ID);
-        			}
-        		}
+        		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
         		
-        		//nothing tried, choose randomly
-        		if (null == itemID) {
-            		itemID = selectRandom().getString(ITEM_ID);
+        		if (null == maxRewardItem) {
+            		//nothing tried, choose randomly
+            		itemID =  groupedItems.selectRandom().getString(ITEM_ID);
+        		} else {
+        			itemID = maxRewardItem.getString(ITEM_ID);
         		}
         	}
     		return itemID;
         }
-        
-        /**
-         * @return
-         */
-        private DynamicBean selectRandom() {
-    		int select = (int)Math.round( Math.random() * groupItems.size());
-    		select = select < groupItems.size() ? select : groupItems.size() -1; 
-    		DynamicBean item = groupItems.get(select);
-    		return item;
-        }
 
-        /**
-         * @return
-         */
-        private DynamicBean getMaxRewardItem() {
-        	int reward = 0;
-        	int maxReward = 0;
-        	DynamicBean maxRewardItem = null;
-    		//max reward in this group
-    		for (DynamicBean groupItem : groupItems) {
-   				reward = groupItem.getInt(ITEM_REWARD);
-    			if (reward > maxReward) {
-    				maxReward = reward;
-    				maxRewardItem = groupItem;
-    			}
-    		}
-        	return maxRewardItem;
-        }
 	}
 	
 	

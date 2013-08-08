@@ -34,6 +34,18 @@ public class GroupedItems {
 	private static final String ITEM_COUNT = "count";
 	private static final String ITEM_REWARD = "reward";
 
+	/**
+	 * 
+	 */
+	public void initialize() {
+		groupItems.clear();
+	}
+	
+    /**
+     * @param itemID
+     * @param count
+     * @param reward
+     */
     public void createtem(String itemID, int count, int reward) {
 		DynamicBean item = new DynamicBean();
 		item.set(ITEM_ID, itemID);
@@ -42,15 +54,37 @@ public class GroupedItems {
 		groupItems.add(item);
     }
 	
+	/**
+	 * @return
+	 */
 	public List<DynamicBean> getGroupItems() {
 		return groupItems;
 	}
 
+	/**
+	 * @param groupItems
+	 */
 	public void setGroupItems(List<DynamicBean> groupItems) {
 		this.groupItems = groupItems;
 	}
+	
+	/**
+	 * @param item
+	 */
+	public void add(DynamicBean item) {
+		groupItems.add(item);
+	}
 
+	/**
+	 * @param item
+	 */
+	public void remove(DynamicBean item) {
+		groupItems.remove(item);
+	}
 
+	public int size() {
+		return groupItems.size();
+	}
     /**
      * @param items
      * @param batchSize

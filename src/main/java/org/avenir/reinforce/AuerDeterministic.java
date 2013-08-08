@@ -83,7 +83,6 @@ public class AuerDeterministic  extends Configured implements Tool {
 		private int countOrdinal;
 		private int rewardOrdinal;
 		private static final String AUER_DET_UBC1 = "AuerUBC1";
-		private List<DynamicBean> groupItems ;
 		private static final String ITEM_ID = "itemID";
 		private static final String ITEM_COUNT = "count";
 		private static final String ITEM_REWARD = "reward";
@@ -136,7 +135,7 @@ public class AuerDeterministic  extends Configured implements Tool {
     				select( context);
     			}
     			
-    			groupItems.clear();
+    			groupedItems.initialize();
     			curGroupID = groupID;
     		} else {
     			//existing group
@@ -201,7 +200,7 @@ public class AuerDeterministic  extends Configured implements Tool {
     			double valueMax = 0.0;
     			double value;
     			DynamicBean selectedGroupItem = null;
-    			groupItems = groupedItems.getGroupItems();
+    			List<DynamicBean> groupItems = groupedItems.getGroupItems();
         		for (DynamicBean groupItem : groupItems) {
         			reward = groupItem.getInt(ITEM_REWARD);
         			thisCount = groupItem.getInt(ITEM_COUNT);
