@@ -85,6 +85,7 @@ public class GroupedItems {
 	public int size() {
 		return groupItems.size();
 	}
+	
     /**
      * @param items
      * @param batchSize
