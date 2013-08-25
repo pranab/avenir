@@ -140,13 +140,18 @@ public class GreedyRandomBandit   extends Configured implements Tool {
     		if (null == curGroupID || !groupID.equals(curGroupID)) {
     			//new group
     			if (null == curGroupID) {
+    				//first group
     				collectGroupItems();
+        			curGroupID = groupID;
     			} else  {
+    				//process this group
     				select( context);
+    				
+    				//start next group
+        			groupedItems.initialize();
+        			curGroupID = groupID;
+    				collectGroupItems();
     			}
-    			
-    			groupedItems.initialize();
-    			curGroupID = groupID;
     		} else {
     			//existing group
 				collectGroupItems();

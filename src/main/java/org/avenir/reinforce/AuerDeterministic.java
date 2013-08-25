@@ -131,12 +131,16 @@ public class AuerDeterministic  extends Configured implements Tool {
     			//new group
     			if (null == curGroupID) {
     				collectGroupItems();
+        			curGroupID = groupID;
     			} else  {
+    				//process this group
     				select( context);
+    				
+    				//start next group
+        			groupedItems.initialize();
+        			curGroupID = groupID;
+    				collectGroupItems();
     			}
-    			
-    			groupedItems.initialize();
-    			curGroupID = groupID;
     		} else {
     			//existing group
 				collectGroupItems();
@@ -184,19 +188,20 @@ public class AuerDeterministic  extends Configured implements Tool {
 			int thisCount;
     		int reward;
 
-    		//max reward in this group
-    		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
-    		maxReward = maxRewardItem.getInt(ITEM_REWARD);
-
     		//collect items not tried before
     		List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
     		count += collectedItems.size();
     		for (DynamicBean it : collectedItems) {
     			items.add(it.getString(ITEM_ID));
     		}
+
     		
     		//collect items according to UBC 
     		while (items.size() < batchSize) {
+        		//max reward in this group
+        		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
+        		maxReward = maxRewardItem.getInt(ITEM_REWARD);
+    			
     			double valueMax = 0.0;
     			double value;
     			DynamicBean selectedGroupItem = null;
