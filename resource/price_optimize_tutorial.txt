@@ -1,0 +1,89 @@
+This tutorial is for price optimization using multi arm bandit algorithms. In this tutorial, 
+we will be using epsilon-greedy and UCB1 algorithm.
+
+There are set of products. Each product has a set of candidate prices. The goal is to find
+the optimum price for each product
+
+Generate candiate prices
+========================
+Run the python script as below. We are generating prices for 100 products. Certain
+statistics about prices are saved in price_stat.txt file
+
+./price_opt.py price 100 price_stat.txt > price.txt
+
+Rum multi arm bandit MR
+=======================
+Run the map reduce as below. The price file should be copied to the HDFS input
+directory prior to running. For UCB1 algorithm, the MR class should be changed to 
+org.avenir.reinforce.AuerDeterministic
+
+JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.reinforce.GreedyRandomBandit
+
+echo "running mr"
+IN_PATH=/user/pranab/grba/input
+OUT_PATH=/user/pranab/grba/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/prop.properties  $IN_PATH  $OUT_PATH
+
+Generate profit data for selected price for each product
+========================================================
+Copy the output od MR to a file select2.txt. The number 3 indicates that the output 
+is for round 3. Run the python script as below. The profit data for the selected prices 
+will be in the file inc_return.txt
+
+./price_opt.py return price_stat.txt  select3.txt > inc_return3.txt
+
+Generate running aggregate MR for profit data
+=============================================
+Copy inc_return3.txt to /user/pranab/grba/input. The directory already has the current 
+running aggregate profit data. Run the RunningAggregate MR as below
+
+JAR_NAME=/home/pranab/Projects/chombo/target/chombo-1.0.jar
+CLASS_NAME=org.chombo.mr.RunningAggregator
+
+echo "running mr"
+IN_PATH=/user/pranab/grba/input
+
+OUT_PATH=/user/pranab/ruag/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/prop.properties  $IN_PATH  $OUT_PATH
+
+Next round
+==========
+Delete all files in /user/pranab/grba/input and copy /user/pranab/ruag/output/part-r-00000 to 
+/user/pranab/grba/input. Increment the parameter current.round.num. Go back to running 
+multi arm bandit MR and repeat all the susequent steps.
+
+
+Configuration
+=============
+Here is the content of prop.properties
+
+field.delim.regex=,
+field.delim=,
+num.reducer=1
+
+current.round.num=8
+count.ordinal=2
+reward.ordinal=4
+
+#GreedyRandomBandit
+random.selection.prob=0.3
+prob.reduction.algorithm=linear
+prob.reduction.constant=2.0
+
+#AuerDeterministic
+det.algorithm=AuerUBC1
+
+#RunningAggregator
+quantity.attr=2
+incremental.file.prefix=inc
+
+
