@@ -30,9 +30,9 @@ import org.chombo.util.DynamicBean;
  */
 public class GroupedItems {
 	private List<DynamicBean> groupItems = new ArrayList<DynamicBean>();
-	private static final String ITEM_ID = "itemID";
-	private static final String ITEM_COUNT = "count";
-	private static final String ITEM_REWARD = "reward";
+	public static final String ITEM_ID = "itemID";
+	public static final String ITEM_COUNT = "count";
+	public  static final String ITEM_REWARD = "reward";
 
 	/**
 	 * 
