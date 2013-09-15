@@ -112,4 +112,12 @@ public class HiddenMarkovModel {
 	public String getState(int indx) {
 		return states[indx];
 	}
+
+	public int getNumStates() {
+		return numStates;
+	}
+
+	public int getNumObservations() {
+		return numObservations;
+	}
 }
