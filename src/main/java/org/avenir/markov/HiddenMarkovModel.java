@@ -66,19 +66,36 @@ public class HiddenMarkovModel {
 	}
 	
 	/**
-	 * @param indx
+	 * @param stateIndx
 	 * @return
 	 */
-	public int[] getDestStateProbility(int stateIndx) {
+	public int getIntialStateProbability(int stateIndx) {
+		return intialStateProb[stateIndx];
+	}
+	
+	/**
+	 * @param stateIndx
+	 * @return
+	 */
+	public int[] getALLDestStateProbility(int stateIndx) {
 		return stateTransitionProb.getRow(stateIndx);
 	}
 
 	/**
-	 * @param indx
+	 * @param srcStateIndx
+	 * @param dstStateIndx
 	 * @return
 	 */
-	public int[] getObservationProbility(int observationIndx) {
-		return stateObservationProb.getRow(observationIndx);
+	public int getDestStateProbility(int srcStateIndx, int dstStateIndx) {
+		return stateTransitionProb.get(srcStateIndx, dstStateIndx);
+	}
+
+	/**
+	 * @param stateIndx
+	 * @return
+	 */
+	public int[] getObservationProbility(int stateIndx) {
+		return stateObservationProb.getRow(stateIndx);
 	}
 
 	/**
@@ -86,7 +103,7 @@ public class HiddenMarkovModel {
 	 * @param observation
 	 * @return
 	 */
-	public int getObservationProbility(int stateIndx, int observationIndx) {
+	public int getObservationProbabiility(int stateIndx, int observationIndx) {
 		return stateObservationProb.get(stateIndx,  observationIndx);
 	}
 
@@ -96,13 +113,15 @@ public class HiddenMarkovModel {
 	 */
 	public int getObservationIndex(String observation) {
 		int indx = 0;
+		boolean found = false;
 		for (String obs : observations) {
 			if (obs.equals(observation)) {
+				found = true;
 				break;
 			}
 			++indx;
 		}
-		return indx;
+		return found? indx : -1;
 	}
 	
 	/**
