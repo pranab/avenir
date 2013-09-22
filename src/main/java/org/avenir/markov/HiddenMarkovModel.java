@@ -19,7 +19,8 @@ package org.avenir.markov;
 
 import java.util.List;
 
-import org.chombo.util.TabularData;
+import org.apache.log4j.Logger;
+import org.chombo.util.DoubleTable;
 import org.chombo.util.Utility;
 
 /**
@@ -30,46 +31,49 @@ import org.chombo.util.Utility;
 public class HiddenMarkovModel {
 	private String[] states;
 	private String[] observations;
-	private TabularData stateTransitionProb;
-	private TabularData stateObservationProb;
-	private int[] intialStateProb;
+	private DoubleTable stateTransitionProb;
+	private DoubleTable stateObservationProb;
+	private double[] intialStateProb;
 	private int numStates;
 	private int numObservations;
 	private static final  String DELIM = ",";
-	
+	private static Logger LOG;
 	
 	/**
 	 * @param states
 	 * @param observations
 	 */
-	public HiddenMarkovModel(List<String> lines) {
+	public HiddenMarkovModel(List<String> lines, Logger LOG) {
+		HiddenMarkovModel.LOG = LOG;
 		int count = 0;
 		states = lines.get(count++).split(DELIM);
 		observations = lines.get(count++).split(DELIM);
 		numStates = states.length;
 		numObservations = observations.length;
+		LOG.debug("numStates:" + numStates + " numObservations:" + numObservations);
+		
 		
 		//state transition probablity
-		stateTransitionProb = new TabularData(numStates, numStates);
+		stateTransitionProb = new DoubleTable(numStates, numStates);
 		for (int i = 0; i < numStates; ++i) {
 			stateTransitionProb.deseralizeRow(lines.get(count++), i);
 		}
 		
 		//state observation probability
-		stateObservationProb = new TabularData(numStates, numObservations);
+		stateObservationProb = new DoubleTable(numStates, numObservations);
 		for (int i = 0; i < numStates; ++i) {
 			stateObservationProb.deseralizeRow(lines.get(count++), i);
 		}
 		
 		//initial state probility
-		intialStateProb =  Utility.intArrayFromString(lines.get(count++), DELIM);
+		intialStateProb =  Utility.doubleArrayFromString(lines.get(count++), DELIM);
 	}
 	
 	/**
 	 * @param stateIndx
 	 * @return
 	 */
-	public int getIntialStateProbability(int stateIndx) {
+	public double getIntialStateProbability(int stateIndx) {
 		return intialStateProb[stateIndx];
 	}
 	
@@ -77,7 +81,7 @@ public class HiddenMarkovModel {
 	 * @param stateIndx
 	 * @return
 	 */
-	public int[] getALLDestStateProbility(int stateIndx) {
+	public double[] getAllDestStateProbility(int stateIndx) {
 		return stateTransitionProb.getRow(stateIndx);
 	}
 
@@ -86,7 +90,7 @@ public class HiddenMarkovModel {
 	 * @param dstStateIndx
 	 * @return
 	 */
-	public int getDestStateProbility(int srcStateIndx, int dstStateIndx) {
+	public double getDestStateProbility(int srcStateIndx, int dstStateIndx) {
 		return stateTransitionProb.get(srcStateIndx, dstStateIndx);
 	}
 
@@ -94,7 +98,7 @@ public class HiddenMarkovModel {
 	 * @param stateIndx
 	 * @return
 	 */
-	public int[] getObservationProbility(int stateIndx) {
+	public double[] getObservationProbility(int stateIndx) {
 		return stateObservationProb.getRow(stateIndx);
 	}
 
@@ -103,7 +107,7 @@ public class HiddenMarkovModel {
 	 * @param observation
 	 * @return
 	 */
-	public int getObservationProbabiility(int stateIndx, int observationIndx) {
+	public double getObservationProbabiility(int stateIndx, int observationIndx) {
 		return stateObservationProb.get(stateIndx,  observationIndx);
 	}
 

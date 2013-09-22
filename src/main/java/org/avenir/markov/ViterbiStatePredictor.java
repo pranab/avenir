@@ -34,7 +34,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.avenir.markov.MarkovStateTransitionModel.StateTransitionMapper;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 
@@ -50,7 +53,7 @@ public class ViterbiStatePredictor extends Configured implements Tool {
         String jobName = "Markov hidden state sequence predictor";
         job.setJobName(jobName);
         
-        job.setJarByClass(MarkovStateTransitionModel.class);
+        job.setJarByClass(ViterbiStatePredictor.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
@@ -81,6 +84,7 @@ public class ViterbiStatePredictor extends Configured implements Tool {
 		private String fieldDelim;
 		private Text outVal  = new Text();
 		private StringBuilder stBld = new StringBuilder();
+	    private static final Logger LOG = Logger.getLogger(StatePredictionMapper.class);
 		
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -88,6 +92,7 @@ public class ViterbiStatePredictor extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
             if (conf.getBoolean("debug.on", false)) {
+            	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim.out", ",");
@@ -95,8 +100,8 @@ public class ViterbiStatePredictor extends Configured implements Tool {
             idFieldIndex = conf.getInt("id.field.ordinal", 0);
 
         	List<String> lines = Utility.getFileLines(conf, "hmm.model.path");
-        	model = new HiddenMarkovModel(lines);
-        	decoder = new ViterbiDecoder(model);
+        	model = new HiddenMarkovModel(lines,  LOG);
+        	decoder = new ViterbiDecoder(model, LOG);
         }
         
         /* (non-Javadoc)
@@ -126,6 +131,10 @@ public class ViterbiStatePredictor extends Configured implements Tool {
         
 	}	
 	
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new ViterbiStatePredictor(), args);
+        System.exit(exitCode);
+	}
 	
 
 }

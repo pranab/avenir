@@ -18,6 +18,8 @@
 
 package org.avenir.markov;
 
+import org.apache.log4j.Logger;
+import org.chombo.util.DoubleTable;
 import org.chombo.util.TabularData;
 
 /**
@@ -26,18 +28,20 @@ import org.chombo.util.TabularData;
  *
  */
 public class ViterbiDecoder {
-	private TabularData statePathProb;
+	private DoubleTable statePathProb;
 	private TabularData statePtr;
 	private HiddenMarkovModel model;
 	private boolean processed;
 	private int numObs;
 	private int curObsIndex;
 	private int numStates;
+	private static Logger LOG;
 	
 	/**
 	 * @param model
 	 */
-	public ViterbiDecoder(HiddenMarkovModel model) {
+	public ViterbiDecoder(HiddenMarkovModel model, Logger LOG) {
+		ViterbiDecoder.LOG = LOG;
 		this.model = model;
 		numStates = model.getNumStates();
 	}
@@ -47,10 +51,11 @@ public class ViterbiDecoder {
 	 */
 	public void initialize(int numObs) {
 		this.numObs = numObs;
-		statePathProb = new TabularData(numObs, numStates);
+		statePathProb = new DoubleTable(numObs, numStates);
 		statePtr = new TabularData(numObs, numStates);
 		processed = false;
 		curObsIndex = 0;
+		LOG.debug("numObs:" + numObs);
 	}
 	
 	/**
@@ -59,13 +64,15 @@ public class ViterbiDecoder {
 	 */
 	public void nextObservation(String observation) {
 		int obsIndx = model.getObservationIndex(observation);
-		int stateProb, obsProb, pathProb, priorPathProb, transProb, maxPathProb, maxPathProbStateIndx;
-		
+		double stateProb, obsProb, pathProb, priorPathProb, transProb, maxPathProb;
+		int maxPathProbStateIndx;
+		LOG.debug("curObsIndex:" + curObsIndex);
 		if (!processed) {
 			for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
 				stateProb = model.getIntialStateProbability(stateIndx);
 				obsProb = model.getObservationProbabiility(stateIndx, obsIndx);
 				pathProb = stateProb * obsProb;
+				LOG.debug("pathProb:" + pathProb );
 				statePathProb.set(curObsIndex, stateIndx, pathProb);
 				statePtr.set(curObsIndex, stateIndx, -1);
 			}
@@ -85,6 +92,7 @@ public class ViterbiDecoder {
 					}
 				}
 				
+				LOG.debug("maxPathProb:" + maxPathProb + " maxPathProbStateIndx:"  + maxPathProbStateIndx);
 				statePathProb.set(curObsIndex, stateIndx, maxPathProb);
 				statePtr.set(curObsIndex, stateIndx, maxPathProbStateIndx);
 			}			
@@ -99,13 +107,14 @@ public class ViterbiDecoder {
 	public String[] getStateSequence() {
 		String[] states = new String[numObs];
 		int stateSeqIndx = 0;
-		int pathProb;
-		int maxPathProb = 0;
+		double pathProb;
+		double maxPathProb = 0;
 		int maxProbStateIndx = -1;
 		int priorStateIndx;
 		int nextStateIndx = -1;
 		
 		//state at end of observation sequence
+		LOG.debug("state seq" );
 		maxPathProb = 0;
 		for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
 			pathProb = statePathProb.get(numObs -1, stateIndx);
@@ -114,6 +123,7 @@ public class ViterbiDecoder {
 				maxProbStateIndx = stateIndx;
 			}
 		}
+		LOG.debug("maxProbStateIndx:" + maxProbStateIndx);
 		states[stateSeqIndx++] = model.getState(maxProbStateIndx);
 		nextStateIndx = maxProbStateIndx;
 		
@@ -122,6 +132,7 @@ public class ViterbiDecoder {
 			for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
 				priorStateIndx = statePtr.get(obsIndx, stateIndx);
 				if (priorStateIndx == nextStateIndx) {
+					LOG.debug("stateIndx:" + stateIndx);
 					states[stateSeqIndx++] = model.getState(stateIndx);
 					nextStateIndx = stateIndx;
 					break;
