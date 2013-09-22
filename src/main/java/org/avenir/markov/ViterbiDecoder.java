@@ -24,6 +24,7 @@ import org.chombo.util.TabularData;
 
 /**
  * State sequence predictor based on given observation sequence and HMM model
+ * using viterbi algorithm
  * @author pranab
  *
  */
@@ -68,6 +69,7 @@ public class ViterbiDecoder {
 		int maxPathProbStateIndx;
 		LOG.debug("curObsIndex:" + curObsIndex);
 		if (!processed) {
+			//first use initial state probability
 			for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
 				stateProb = model.getIntialStateProbability(stateIndx);
 				obsProb = model.getObservationProbabiility(stateIndx, obsIndx);
@@ -78,9 +80,11 @@ public class ViterbiDecoder {
 			}
 			processed = true;
 		} else {
+			//iterative for subsequent using prevoious state path probability 
 			for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
 				maxPathProb  = 0;
 				maxPathProbStateIndx = 0;
+				obsProb = model.getObservationProbabiility(stateIndx, obsIndx);
 				for (int priorStateIndx = 0; priorStateIndx < numStates; ++priorStateIndx) {
 					priorPathProb =statePathProb.get(curObsIndex-1, priorStateIndx);
 					transProb = model.getDestStateProbility(priorStateIndx, stateIndx);
@@ -93,7 +97,7 @@ public class ViterbiDecoder {
 				}
 				
 				LOG.debug("maxPathProb:" + maxPathProb + " maxPathProbStateIndx:"  + maxPathProbStateIndx);
-				statePathProb.set(curObsIndex, stateIndx, maxPathProb);
+				statePathProb.set(curObsIndex, stateIndx, maxPathProb * obsProb);
 				statePtr.set(curObsIndex, stateIndx, maxPathProbStateIndx);
 			}			
 		}
@@ -117,6 +121,7 @@ public class ViterbiDecoder {
 		LOG.debug("state seq" );
 		maxPathProb = 0;
 		for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
+			//max path probability for the last observation
 			pathProb = statePathProb.get(numObs -1, stateIndx);
 			if (pathProb > maxPathProb) {
 				maxPathProb = pathProb;
@@ -127,17 +132,12 @@ public class ViterbiDecoder {
 		states[stateSeqIndx++] = model.getState(maxProbStateIndx);
 		nextStateIndx = maxProbStateIndx;
 		
-		//backtrack for rest of the states
+		//backtrack for rest of the states going back ward
 		for (int obsIndx = numObs -1 ; obsIndx >= 1; --obsIndx) {
-			for (int stateIndx = 0; stateIndx < numStates; ++stateIndx) {
-				priorStateIndx = statePtr.get(obsIndx, stateIndx);
-				if (priorStateIndx == nextStateIndx) {
-					LOG.debug("stateIndx:" + stateIndx);
-					states[stateSeqIndx++] = model.getState(stateIndx);
-					nextStateIndx = stateIndx;
-					break;
-				}
-			}				
+			priorStateIndx = statePtr.get(obsIndx, nextStateIndx);
+			LOG.debug("priorStateIndx:" + priorStateIndx);
+			states[stateSeqIndx++] = model.getState(priorStateIndx);
+			nextStateIndx = priorStateIndx;
 		}
 		return states;
 	}
