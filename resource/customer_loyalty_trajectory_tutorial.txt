@@ -1,0 +1,55 @@
+This tutorial is for customer loyalty trajectory based on viterbi decoding using HMM model. The transaction 
+states are codified by two symbols. signifying the time elapsed since last transaction and amount spent
+compared to the amount spent in the last transaction
+
+Input
+=====
+Generate transaction state data as below. The argument is the number of customers.
+./evt_seq.rb  1000
+
+Copy the the generated file to HDFS input path.
+
+HMM Model Data
+==============
+Here is the model being used
+
+L,N,H
+SL,SS,SM,ML,MS,MM,LL,LS,LM
+.30,.45,.25
+.35,.40,.25
+.25,.35,.40
+.08,.05,.01,.15,.12,.07,.21,.17,.14
+.10,.09,.08,.17,.15,.12,.11,.10,.08
+.13,.18,.21,.08,.12,.14,.03,.04,.07
+.38,.36,.26
+
+This data should be copied to HDFS file /Users/pranab/visp/meta/loyalty_model.txt
+
+ViterbiStatePredictor MR
+========================
+This is the script to run the MR
+
+JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.markov.ViterbiStatePredictor
+
+echo "running mr"
+IN_PATH=/Users/pranab/visp/input
+OUT_PATH=/Users/pranab/visp/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
+
+Configuration
+=============
+field.delim.regex=,
+field.delim.out=,
+num.reducer=1
+debug.on=true
+
+#ViterbiStatePredictor
+id.field.ordinal=0
+hmm.model.path=/Users/pranab/visp/meta/loyalty_model.txt
+
+
