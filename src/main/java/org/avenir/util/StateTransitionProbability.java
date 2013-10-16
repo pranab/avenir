@@ -29,22 +29,39 @@ public class StateTransitionProbability extends TabularData {
 	private int scale = 100;
 	private double[][] dTable;
 	
+	/**
+	 * 
+	 */
 	public StateTransitionProbability() {
 		super();
 	}
 	
+	/**
+	 * @param numRow
+	 * @param numCol
+	 */
 	public StateTransitionProbability(int numRow, int numCol) {
 		super(numRow, numCol);
 	}
 
+	/**
+	 * @param rowLabels
+	 * @param colLabels
+	 */
 	public StateTransitionProbability(String[] rowLabels, String[] colLabels) {
 		super(rowLabels, colLabels);
 	}
 	
+	/**
+	 * @param scale
+	 */
 	public void setScale(int scale) {
 		this.scale = scale;
 	}
 
+	/**
+	 * 
+	 */
 	public void normalizeRows() {
 		//laplace correction
 		for (int r = 0; r < numRow; ++r) {
@@ -77,6 +94,9 @@ public class StateTransitionProbability extends TabularData {
 		}
 	}
 	
+	/* (non-Javadoc)
+	 * @see org.chombo.util.TabularData#serializeRow(int)
+	 */
 	public String serializeRow(int row) {
 		StringBuilder stBld = new StringBuilder();
 		for (int c = 0; c < numCol; ++c) {
@@ -90,6 +110,9 @@ public class StateTransitionProbability extends TabularData {
 		return stBld.substring(0, stBld.length()-1);
 	}
 	
+	/* (non-Javadoc)
+	 * @see org.chombo.util.TabularData#deseralizeRow(java.lang.String, int)
+	 */
 	public void deseralizeRow(String data, int row) {
 		String[] items = data.split(DELIMETER);
 		int k = 0;
