@@ -153,7 +153,13 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 	   	
 	   	protected void cleanup(Context context)  
 	   			throws IOException, InterruptedException {
-	   		transProb.normalizeRows();
+	   		//all states
+        	Configuration conf = context.getConfiguration();
+	   		outVal.set(conf.get("model.states"));
+   			context.write(NullWritable.get(),outVal);
+
+   			//state transitions
+   			transProb.normalizeRows();
 	   		for (int i = 0; i < states.length; ++i) {
 	   			String val = transProb.serializeRow(i);
 	   			outVal.set(val);

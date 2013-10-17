@@ -84,6 +84,8 @@ public class ViterbiStatePredictor extends Configured implements Tool {
 		private String fieldDelim;
 		private Text outVal  = new Text();
 		private StringBuilder stBld = new StringBuilder();
+		private boolean outputStateOnly;
+		private String subFieldDelim;
 	    private static final Logger LOG = Logger.getLogger(StatePredictionMapper.class);
 		
         /* (non-Javadoc)
@@ -98,7 +100,9 @@ public class ViterbiStatePredictor extends Configured implements Tool {
         	fieldDelim = conf.get("field.delim.out", ",");
             skipFieldCount = conf.getInt("skip.field.count", 1);
             idFieldIndex = conf.getInt("id.field.ordinal", 0);
-
+            outputStateOnly = conf.getBoolean("output.state.only", true);
+            subFieldDelim = conf.get("sub.field.delim", ":");
+            
         	List<String> lines = Utility.getFileLines(conf, "hmm.model.path");
         	model = new HiddenMarkovModel(lines,  LOG);
         	decoder = new ViterbiDecoder(model, LOG);
@@ -122,8 +126,16 @@ public class ViterbiStatePredictor extends Configured implements Tool {
         	
         	stBld.delete(0, stBld.length());
         	stBld.append(items[idFieldIndex]);
-        	for (int i = states.length - 1; i >= 0; --i) {
-        		stBld.append(fieldDelim).append(states[i]);
+        	if (outputStateOnly) {
+        		//states only
+	        	for (int i = states.length - 1; i >= 0; --i) {
+	        		stBld.append(fieldDelim).append(states[i]);
+	        	}
+        	} else {
+        		//observation followed by state
+	        	for (int i = states.length - 1, j = skipFieldCount; i >= 0; --i, ++j) {
+	        		stBld.append(fieldDelim).append(items[j]).append(subFieldDelim).append(states[i]);
+	        	}
         	}
         	outVal.set(stBld.toString());
    			context.write(NullWritable.get(),outVal);
