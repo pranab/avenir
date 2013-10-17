@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.StateTransitionProbability;
@@ -242,5 +243,9 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         }	   	
 	}
 	
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new HiddenMarkovModelBuilder(), args);
+        System.exit(exitCode);
+	}
 	
 }
