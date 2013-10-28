@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -179,6 +181,9 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         			}
         		} else if (featFld.isCategorical()) {
         			//ctegorical
+        			List<List<Set<String>>> splitList = new ArrayList<List<Set<String>>>();
+        			List<Set<String>> splits = null;
+        			createCatPartitions(splits,  featFld, splitList);
         		}
         	}
         }
@@ -221,8 +226,71 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         		}
         	}
         }
+        
+        /**
+         * @param splits
+         * @param featFld
+         * @param newSplitList
+         */
+        private void createCatPartitions(List<Set<String>> splits, FeatureField featFld, 
+        		List<List<Set<String>>>  newSplitList) {
+        	List<String> cardinality = featFld.getCardinality();
+        	if (null == splits) {
+        		for (int i = 0; i < cardinality.size(); ++i) {
+    				//one set has one element and the other the remaining
+        			Set<String> setOne = new HashSet<String>();
+    				Set<String> setTwo = new HashSet<String>();
+        			for (int j = 0; j < cardinality.size(); ++j) {
+        				if (j == i) {
+        					setOne.add(cardinality.get(j));
+        				} else {
+        					setTwo.add(cardinality.get(j));
+        				}
+        			}
+        			List<Set<String>> splitSets = new ArrayList<Set<String>>();
+        			splitSets.add(setOne);
+        			splitSets.add(setTwo);
+        			newSplitList.add(splitSets);
+        			
+        			//recursive call
+        			createCatPartitions(splitSets, featFld, newSplitList);
+        		}
+        	} else {
+        		Set<String> setOne = splits.get(0);
+        		Set<String> setTwo = splits.get(1);
+        		if (setTwo.size() > 1) {
+        			//remove from second and add to the first
+        			Set<String> setOneNew = cloneCatSet(setOne);
+        			Set<String> setTwoNew = cloneCatSet(setTwo);
+        			String item = setTwoNew.iterator().next();
+        			setOneNew.add(item);
+        			setTwoNew.remove(item);
+
+        			
+        			//recusrive call
+        			List<Set<String>> splitSets = new ArrayList<Set<String>>();
+        			splitSets.add(setOneNew);
+        			splitSets.add(setTwoNew);
+        			newSplitList.add(splitSets);
+        			createCatPartitions(splitSets, featFld, newSplitList);
+        		}
+        	}
+        }	
+    	
+        private Set<String> cloneCatSet(Set<String> catSet) {
+        	Set<String> newCatSet = new HashSet<String>();
+        	for (String item : catSet) {
+        		newCatSet.add(item);
+        	}
+        	
+        	return newCatSet;
+        }
+        
+        
+        
 	}
-	
+
+    
 	/**
 	 * @author pranab
 	 *
