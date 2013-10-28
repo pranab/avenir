@@ -170,6 +170,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	for (int attrOrd : splitAttrs) {
         		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
         		if (featFld.isInteger()) {
+        			//numerical
         			List<Integer[]> splitList = new ArrayList<Integer[]>();
         			Integer[] splits = null;
         			createNumPartitions(splits, featFld, splitList);
@@ -177,15 +178,16 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				splitHandler.addIntSplits(attrOrd, thisSplit);
         			}
         		} else if (featFld.isCategorical()) {
-        			//TODO
+        			//ctegorical
         		}
         	}
         }
         
         /**
-         * @param splits
+         * Create all possible splits within the max number of splits allowed
+         * @param splits previous split
          * @param featFld
-         * @param newSplitList
+         * @param newSplitList all possible splits
          */
         private void createNumPartitions(Integer[] splits, FeatureField featFld, 
         		List<Integer[]> newSplitList) {
@@ -193,6 +195,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
     		int max = (int)(featFld.getMax() + 0.01);
     		int binWidth = featFld.getBucketWidth();
         	if (null == splits) {
+        		//first time
         		for (int split = min + binWidth ; split < max; split += binWidth) {
         			Integer[] newSplits = new Integer[1];
         			newSplits[0] = split;
@@ -200,6 +203,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         			createNumPartitions(newSplits, featFld,newSplitList);
         		}
         	} else {
+        		//create split based off last split that will contain one additinal split point
         		int len = splits.length;
         		if (len < featFld.getMaxSplit() -1) {
 	        		for (int split = splits[len -1] + binWidth; split < max; split += binWidth) {
@@ -210,6 +214,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	        			}
 	        			newSplits[i] = split;
 	        			newSplitList.add(newSplits);
+	        			
+	        			//recurse to generate additional splits
 	        			createNumPartitions(newSplits, featFld,newSplitList);
 	        		}
         		}
