@@ -181,9 +181,9 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         			}
         		} else if (featFld.isCategorical()) {
         			//ctegorical
-        			List<List<Set<String>>> splitList = new ArrayList<List<Set<String>>>();
-        			List<Set<String>> splits = null;
-        			createCatPartitions(splits,  featFld, splitList);
+        			List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
+        			List<List<String>> splits = null;
+        			createCatPartitions(splitList,  featFld.getCardinality(), 0, 2);
         		}
         	}
         }
@@ -232,62 +232,117 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          * @param featFld
          * @param newSplitList
          */
-        private void createCatPartitions(List<Set<String>> splits, FeatureField featFld, 
-        		List<List<Set<String>>>  newSplitList) {
-        	List<String> cardinality = featFld.getCardinality();
-        	if (null == splits) {
-        		for (int i = 0; i < cardinality.size(); ++i) {
-    				//one set has one element and the other the remaining
-        			Set<String> setOne = new HashSet<String>();
-    				Set<String> setTwo = new HashSet<String>();
-        			for (int j = 0; j < cardinality.size(); ++j) {
-        				if (j == i) {
-        					setOne.add(cardinality.get(j));
-        				} else {
-        					setTwo.add(cardinality.get(j));
-        				}
-        			}
-        			List<Set<String>> splitSets = new ArrayList<Set<String>>();
-        			splitSets.add(setOne);
-        			splitSets.add(setTwo);
-        			newSplitList.add(splitSets);
-        			
-        			//recursive call
-        			createCatPartitions(splitSets, featFld, newSplitList);
-        		}
-        	} else {
-        		Set<String> setOne = splits.get(0);
-        		Set<String> setTwo = splits.get(1);
-        		if (setTwo.size() > 1) {
-        			//remove from second and add to the first
-        			Set<String> setOneNew = cloneCatSet(setOne);
-        			Set<String> setTwoNew = cloneCatSet(setTwo);
-        			String item = setTwoNew.iterator().next();
-        			setOneNew.add(item);
-        			setTwoNew.remove(item);
+        private void createCatPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
+        		int cardinalityIndex, int numGroups) {
+        	if (0 == cardinalityIndex) {
+        		if (numGroups == 2) {
+        			//intial full splits
+        			List<List<String>> fullSp = createInitialSplit(cardinality, numGroups);
 
+        			//partial split
+        			cardinalityIndex += 2;
+        			List<List<String>> partialSp = createPartialSplit(cardinality,cardinalityIndex, numGroups);
         			
-        			//recusrive call
-        			List<Set<String>> splitSets = new ArrayList<Set<String>>();
-        			splitSets.add(setOneNew);
-        			splitSets.add(setTwoNew);
-        			newSplitList.add(splitSets);
-        			createCatPartitions(splitSets, featFld, newSplitList);
+        			//split list
+        			splitList.add(fullSp);
+        			splitList.add(partialSp);
+        			
+        			//recurse
+        			createCatPartitions(splitList, cardinality,cardinalityIndex, numGroups);
         		}
+        	} else if (cardinalityIndex < cardinality.size()){
+        		List<List<List<String>>>  newSplitList = new ArrayList<List<List<String>>>(); 
+        		String newElement = cardinality.get(cardinalityIndex);
+        		for (List<List<String>> sp : splitList) {
+        			
+        			if (sp.size() == numGroups) {
+        				//if full split, append new element to each group within split to create new splits
+        				for (int i = 0; i < numGroups; ++i) {
+            				List<List<String>> newSp = new ArrayList<List<String>>();
+        					for (int j = 0; j < sp.size(); ++j) {
+        						List<String> gr = cloneStringList(sp.get(j));
+        						if (j == i) {
+        							//add new element
+        							gr.add(newElement);
+        						}
+        						newSp.add(gr);
+        					}
+        					newSplitList.add(newSp);
+        				}
+        			} else {
+        				//if partial split, create new group with new element and add to split
+        				List<List<String>> newSp = new ArrayList<List<String>>();
+    					for (int i = 0; i < sp.size(); ++i) {
+    						List<String> gr = cloneStringList(sp.get(i));
+    						newSp.add(gr);
+    					}
+    					List<String> newGr = new ArrayList<String>();
+    					newGr.add(newElement);
+    					newSp.add(newGr);
+    					newSplitList.add(newSp);
+        			}
+        		}
+        		
+        		//generate partial splits
+        		List<List<String>> partialSp = createPartialSplit(cardinality,cardinalityIndex, numGroups);
+				newSplitList.add(partialSp);
+        		
+        		//replace old splits with new
+				splitList.clear();
+				splitList.addAll(newSplitList);
+				
+    			//recurse
+				++cardinalityIndex;
+    			createCatPartitions(splitList, cardinality,cardinalityIndex, numGroups);
         	}
         }	
     	
-        private Set<String> cloneCatSet(Set<String> catSet) {
-        	Set<String> newCatSet = new HashSet<String>();
-        	for (String item : catSet) {
-        		newCatSet.add(item);
+        /**
+         * @param cardinality
+         * @param numGroups
+         * @return
+         */
+        private List<List<String>> createInitialSplit(List<String> cardinality, int numGroups) {
+        	List<List<String>> newSp = new ArrayList<List<String>>();
+        	if (numGroups == 2) {
+        		for (int i = 0; i < numGroups; ++i) {
+        			List<String> gr = new ArrayList<String>();
+        			gr.add(cardinality.get(i));
+        			newSp.add(gr);
+        		}
         	}
-        	
-        	return newCatSet;
+        	return newSp;
         }
         
+        /**
+         * @param cardinality
+         * @param cardinalityIndex
+         * @param numGroups
+         * @return
+         */
+        private List<List<String>> createPartialSplit(List<String> cardinality,
+        		int cardinalityIndex, int numGroups) {
+        	List<List<String>> newSp = new ArrayList<List<String>>();
+        	if (numGroups == 2) {
+        		List<String> gr = new ArrayList<String>();
+        		for (int i = 0;i <= cardinalityIndex; ++i) {
+        			gr.add(cardinality.get(i));
+        		}
+        		newSp.add(gr);
+        	}
+        	
+        	return newSp;
+        }
         
-        
+        /**
+         * @param curList
+         * @return
+         */
+        private List<String> cloneStringList(List<String> curList) {
+        	List<String> newList = new ArrayList<String>();
+        	newList.addAll(curList);
+        	return newList;
+        }
 	}
 
     
