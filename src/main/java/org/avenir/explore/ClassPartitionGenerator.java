@@ -103,6 +103,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         private AttributeSplitHandler splitHandler = new AttributeSplitHandler();
         private FeatureField classField;
         private boolean atRoot = false;
+        private int maxCatAttrSplitGroups;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorMapper.class);
 
         /* (non-Javadoc)
@@ -114,6 +115,9 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
+        	
+        	maxCatAttrSplitGroups = conf.getInt("nax.cat.attr.split.groups", 3);
+        			
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
@@ -180,10 +184,14 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				splitHandler.addIntSplits(attrOrd, thisSplit);
         			}
         		} else if (featFld.isCategorical()) {
-        			//ctegorical
+        			//categorical
+        			int numGroups = featFld.getMaxSplit();
+        			if (numGroups > maxCatAttrSplitGroups) {
+        				throw new IllegalArgumentException(
+        					"more than " +  maxCatAttrSplitGroups + " split groups not allwed for categorical attr");
+        			}
         			List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
-        			List<List<String>> splits = null;
-        			createCatPartitions(splitList,  featFld.getCardinality(), 0, 2);
+        			createCatPartitions(splitList,  featFld.getCardinality(), 0, numGroups);
         		}
         	}
         }
@@ -234,22 +242,22 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         private void createCatPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
         		int cardinalityIndex, int numGroups) {
+    		//first time
         	if (0 == cardinalityIndex) {
-        		if (numGroups == 2) {
-        			//intial full splits
-        			List<List<String>> fullSp = createInitialSplit(cardinality, numGroups);
+    			//initial full splits
+    			List<List<String>> fullSp = createInitialSplit(cardinality, numGroups);
 
-        			//partial split
-        			cardinalityIndex += 2;
-        			List<List<String>> partialSp = createPartialSplit(cardinality,cardinalityIndex, numGroups);
-        			
-        			//split list
-        			splitList.add(fullSp);
-        			splitList.add(partialSp);
-        			
-        			//recurse
-        			createCatPartitions(splitList, cardinality,cardinalityIndex, numGroups);
-        		}
+    			//partial split shorter in length by one 
+    			List<List<List<String>>> partialSpList = createPartialSplit(cardinality,numGroups-1, numGroups);
+    			
+    			//split list
+    			splitList.add(fullSp);
+    			splitList.addAll(partialSpList);
+    			
+    			//recurse
+    			cardinalityIndex += numGroups;
+    			createCatPartitions(splitList, cardinality,cardinalityIndex, numGroups);
+    		//more elements to consume	
         	} else if (cardinalityIndex < cardinality.size()){
         		List<List<List<String>>>  newSplitList = new ArrayList<List<List<String>>>(); 
         		String newElement = cardinality.get(cardinalityIndex);
@@ -284,8 +292,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         		}
         		
         		//generate partial splits
-        		List<List<String>> partialSp = createPartialSplit(cardinality,cardinalityIndex, numGroups);
-				newSplitList.add(partialSp);
+        		List<List<List<String>>> partialSpList = createPartialSplit(cardinality,cardinalityIndex, numGroups);
+				newSplitList.addAll(partialSpList);
         		
         		//replace old splits with new
 				splitList.clear();
@@ -304,13 +312,11 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         private List<List<String>> createInitialSplit(List<String> cardinality, int numGroups) {
         	List<List<String>> newSp = new ArrayList<List<String>>();
-        	if (numGroups == 2) {
-        		for (int i = 0; i < numGroups; ++i) {
-        			List<String> gr = new ArrayList<String>();
-        			gr.add(cardinality.get(i));
-        			newSp.add(gr);
-        		}
-        	}
+    		for (int i = 0; i < numGroups; ++i) {
+    			List<String> gr = new ArrayList<String>();
+    			gr.add(cardinality.get(i));
+    			newSp.add(gr);
+    		}
         	return newSp;
         }
         
@@ -320,18 +326,27 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          * @param numGroups
          * @return
          */
-        private List<List<String>> createPartialSplit(List<String> cardinality,
+        private List<List<List<String>>> createPartialSplit(List<String> cardinality,
         		int cardinalityIndex, int numGroups) {
-        	List<List<String>> newSp = new ArrayList<List<String>>();
+			List<List<List<String>>> partialSplitList = new ArrayList<List<List<String>>>();
         	if (numGroups == 2) {
+            	List<List<String>> newSp = new ArrayList<List<String>>();
         		List<String> gr = new ArrayList<String>();
         		for (int i = 0;i <= cardinalityIndex; ++i) {
         			gr.add(cardinality.get(i));
         		}
         		newSp.add(gr);
+        		partialSplitList.add(newSp);
+        	} else {
+        		//create split list with splits shorter in length by 1
+        		List<String> partialCardinality = new ArrayList<String>();
+        		for (int i = 0; i <= cardinalityIndex; ++i) {
+        			partialCardinality.add(cardinality.get(i));
+        		}
+    			createCatPartitions(partialSplitList,  partialCardinality, 0, numGroups-1);
         	}
         	
-        	return newSp;
+        	return partialSplitList;
         }
         
         /**
