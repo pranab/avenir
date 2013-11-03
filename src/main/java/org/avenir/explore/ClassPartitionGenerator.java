@@ -148,23 +148,23 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 				outKey.add(-1, "null", -1,classVal);
 				context.write(outKey, outVal);
             } else {
+            	//all attributes
 	            for (int attrOrd : splitAttrs) {
 	            	Integer attrOrdObj = attrOrd;
 	        		FeatureField featFld = schema.findFieldByOrdinal(attrOrd);
-	        		if (featFld.isInteger()) {
-	        			String attrValue = items[attrOrd];
-	        			splitHandler.selectAttribute(attrOrd);
-	        			String splitKey = null;
-	        			
-	        			//all splits
-	        			while((splitKey = splitHandler.next()) != null) {
-	        				Integer segmentIndex = splitHandler.getSegmentIndex(attrValue);
-	        				outKey.initialize();
-	        				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
-	        				context.write(outKey, outVal);
-	        				context.getCounter("Stats", "mapper output count").increment(1);
-	        			}
-	        		}            	
+	        		
+        			String attrValue = items[attrOrd];
+        			splitHandler.selectAttribute(attrOrd);
+        			String splitKey = null;
+        			
+        			//all splits
+        			while((splitKey = splitHandler.next()) != null) {
+        				Integer segmentIndex = splitHandler.getSegmentIndex(attrValue);
+        				outKey.initialize();
+        				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
+        				context.write(outKey, outVal);
+        				context.getCounter("Stats", "mapper output count").increment(1);
+        			}
 	            }
             }
         }
@@ -180,6 +180,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         			List<Integer[]> splitList = new ArrayList<Integer[]>();
         			Integer[] splits = null;
         			createNumPartitions(splits, featFld, splitList);
+        			
+        			//collect all splits
         			for (Integer[] thisSplit : splitList) {
         				splitHandler.addIntSplits(attrOrd, thisSplit);
         			}
@@ -190,8 +192,20 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				throw new IllegalArgumentException(
         					"more than " +  maxCatAttrSplitGroups + " split groups not allwed for categorical attr");
         			}
-        			List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
-        			createCatPartitions(splitList,  featFld.getCardinality(), 0, numGroups);
+        			
+        			//try all group count from 2 to max
+        			List<List<List<String>>> fialSplitList = new ArrayList<List<List<String>>>();
+        			for (int gr = 2; gr <= numGroups; ++gr) {
+        				List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
+        				createCatPartitions(splitList,  featFld.getCardinality(), 0, gr);
+        				fialSplitList.addAll(splitList);
+        			}
+        			
+        			//collect all splits
+        			for (List<List<String>> splitSets : fialSplitList) {
+        				splitHandler.addCategoricalSplits(attrOrd, splitSets);
+        			}
+        			
         		}
         	}
         }

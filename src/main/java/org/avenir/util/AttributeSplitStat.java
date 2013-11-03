@@ -47,11 +47,21 @@ public class AttributeSplitStat {
     	LOG.setLevel(Level.DEBUG);
     }
     
+	/**
+	 * @param attrOrdinal
+	 * @param algorithm
+	 */
 	public AttributeSplitStat(int attrOrdinal, String algorithm) {
 		this.attrOrdinal = attrOrdinal;
 		this.algorithm = algorithm;
 	}
 	
+	/**
+	 * @param key
+	 * @param segmentIndex
+	 * @param classVal
+	 * @param count
+	 */
 	public void countClassVal(String key, int segmentIndex, String classVal, int count) {
 		SplitStat splitStat = splitStats.get(key);
 		if (null == splitStat) {
@@ -68,6 +78,10 @@ public class AttributeSplitStat {
 		classValues.add(classVal);
 	}
 	
+	/**
+	 * @param algorithm
+	 * @return
+	 */
 	public Map<String, Double> processStat(String algorithm) {
 		Map<String, Double> stats =new HashMap<String, Double>();
 		
@@ -78,17 +92,26 @@ public class AttributeSplitStat {
 		return stats;
 	}
 	
+	/**
+	 * @param splitKey
+	 * @return
+	 */
 	public Map<Integer, Map<String, Double>> getClassProbab(String splitKey) {
 		SplitStat splitStat = splitStats.get(splitKey);
 		return splitStat.getClassProbab();
 	}
 	
+	/**
+	 * @param splitKey
+	 * @return
+	 */
 	public  double getInfoContent(String splitKey) {
 		SplitStat splitStat = splitStats.get(splitKey);
 		return splitStat.getInfoContent();
 	}
 	
 	/**
+	 * Stats for a split which consists of multiple segments
 	 * @author pranab
 	 *
 	 */
@@ -112,6 +135,9 @@ public class AttributeSplitStat {
 		
 		public abstract double processStat(String algorithm, Set<String> classValues);
 		
+		/**
+		 * @return
+		 */
 		public Map<Integer, Map<String, Double>>  getClassProbab() {
 			Map<Integer, Map<String, Double>> classProbab = new HashMap<Integer, Map<String, Double>>();
 			for (Integer segmentIndex : segments.keySet()) {
@@ -121,6 +147,9 @@ public class AttributeSplitStat {
 			return classProbab;
 		}
 		
+		/**
+		 * @return
+		 */
 		public double getInfoContent() {
 			int totalCount = 0;
 			for (Integer segmentIndex : segments.keySet()) {
@@ -143,15 +172,22 @@ public class AttributeSplitStat {
 	
 	
 	/**
+	 * Entropy or gini index based split stat
 	 * @author pranab
 	 * Entropy or gini index based
 	 */
 	private static class SplitInfoContent extends SplitStat {
+		/**
+		 * @param key
+		 */
 		public SplitInfoContent(String key) {
 			super(key);
 			LOG.debug("constructing SplitInfoContent key:" + key);
 		}
 		
+		/* (non-Javadoc)
+		 * @see org.avenir.util.AttributeSplitStat.SplitStat#processStat(java.lang.String, java.util.Set)
+		 */
 		public double processStat(String algorithm, Set<String> classValues) {
 			double stats = 0;
 			LOG.debug("processing SplitStat key:" + key);
@@ -167,6 +203,7 @@ public class AttributeSplitStat {
 				int count = statSegment.getTotalCount();
 				countArr[i] = count;
 				totalCount += count;
+				++i;
 			}	
 			
 			//weighted average
@@ -183,16 +220,23 @@ public class AttributeSplitStat {
 
 	
 	/**
+	 * Hellinger distance base split stat
 	 * @author pranab
 	 * Hellinger distance based crtieria
 	 *
 	 */
 	private static class SplitHellingerDistance extends SplitStat {
+		/**
+		 * @param key
+		 */
 		public SplitHellingerDistance(String key) {
 			super(key);
 			LOG.debug("constructing SplitHellingerDistance key:" + key);
 		}		
 		
+		/* (non-Javadoc)
+		 * @see org.avenir.util.AttributeSplitStat.SplitStat#processStat(java.lang.String, java.util.Set)
+		 */
 		public double processStat(String algorithm, Set<String> classValues) {
 			double stats = 0;
 			LOG.debug("processing SplitStat key:" + key);
@@ -240,6 +284,7 @@ public class AttributeSplitStat {
 	}	
 
 	/**
+	 * Confidence ration based split stat
 	 * @author pranab
 	 * Class confidence based criteria
 	 */
@@ -293,7 +338,8 @@ public class AttributeSplitStat {
 		
 	}	
 	
-	/**
+	/** Stats for a split segment i.e. range for numerical attribute and group of 
+	 * of attributes for categorical
 	 * @author pranab
 	 *
 	 */
@@ -305,11 +351,18 @@ public class AttributeSplitStat {
 		private Map<String, Double> classValConfidenceRatio = new HashMap<String, Double>();
 		private int totalCount = 0;
 		
+		/**
+		 * @param segmentIndex
+		 */
 		public SplitStatSegment(int segmentIndex) {
 			LOG.debug("constructing SplitStatSegment segmentIndex:" + segmentIndex);
 			this.segmentIndex = segmentIndex;
 		}
 		
+		/**
+		 * @param classVal
+		 * @param count
+		 */
 		public void countClassVal(String classVal, int count) {
 			LOG.debug("counting SplitStatSegment segmentIndex:" + segmentIndex + 
 					" classVal:" + classVal + " count:" + count);
@@ -319,6 +372,10 @@ public class AttributeSplitStat {
 			classValCount.put(classVal, classValCount.get(classVal) + count);
 		}
 		
+		/**
+		 * @param algorithm
+		 * @return
+		 */
 		public double processStat(String algorithm) {
 			double stat = 0.0;
 			totalCount = 0;
@@ -353,6 +410,9 @@ public class AttributeSplitStat {
 			return stat;
 		}
 
+		/**
+		 * @return
+		 */
 		public int getTotalCount() {
 			if (0 == totalCount) {
 				for (String key : classValCount.keySet()) {
@@ -362,19 +422,33 @@ public class AttributeSplitStat {
 			return totalCount;
 		}
 
+		/**
+		 * @return
+		 */
 		public Map<String, Double> getClassValPr() {
 			return classValPr;
 		}
 		
+		/**
+		 * @param classVal
+		 * @return
+		 */
 		public int getCountForClassVal(String classVal) {
 			Integer countObj = classValCount.get(classVal);
 			return countObj == null? 0 : countObj;
 		}
 		
+		/**
+		 * @param classVal
+		 * @param confidence
+		 */
 		public void setClassConfidence(String classVal, double confidence) {
 			classValConfidence.put(classVal, confidence);
 		}
 		
+		/**
+		 * @return
+		 */
 		public double processClassConfidenceRatio() {
 			double entropy = 0;
 			double totalClassConf = 0;
