@@ -116,7 +116,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	
-        	maxCatAttrSplitGroups = conf.getInt("nax.cat.attr.split.groups", 3);
+        	maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
         			
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
@@ -194,15 +194,16 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         			}
         			
         			//try all group count from 2 to max
-        			List<List<List<String>>> fialSplitList = new ArrayList<List<List<String>>>();
+        			List<List<List<String>>> finalSplitList = new ArrayList<List<List<String>>>();
         			for (int gr = 2; gr <= numGroups; ++gr) {
+        				LOG.debug("num of split sets:" + gr);
         				List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
         				createCatPartitions(splitList,  featFld.getCardinality(), 0, gr);
-        				fialSplitList.addAll(splitList);
+        				finalSplitList.addAll(splitList);
         			}
         			
         			//collect all splits
-        			for (List<List<String>> splitSets : fialSplitList) {
+        			for (List<List<String>> splitSets : finalSplitList) {
         				splitHandler.addCategoricalSplits(attrOrd, splitSets);
         			}
         			
@@ -256,6 +257,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         private void createCatPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
         		int cardinalityIndex, int numGroups) {
+        	LOG.debug("next round cardinalityIndex:" + cardinalityIndex);
     		//first time
         	if (0 == cardinalityIndex) {
     			//initial full splits
@@ -276,9 +278,9 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         		List<List<List<String>>>  newSplitList = new ArrayList<List<List<String>>>(); 
         		String newElement = cardinality.get(cardinalityIndex);
         		for (List<List<String>> sp : splitList) {
-        			
         			if (sp.size() == numGroups) {
         				//if full split, append new element to each group within split to create new splits
+        				LOG.debug("creating new split from full split");
         				for (int i = 0; i < numGroups; ++i) {
             				List<List<String>> newSp = new ArrayList<List<String>>();
         					for (int j = 0; j < sp.size(); ++j) {
@@ -293,6 +295,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				}
         			} else {
         				//if partial split, create new group with new element and add to split
+        				LOG.debug("creating new split from partial split");
         				List<List<String>> newSp = new ArrayList<List<String>>();
     					for (int i = 0; i < sp.size(); ++i) {
     						List<String> gr = cloneStringList(sp.get(i));
@@ -303,6 +306,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
     					newSp.add(newGr);
     					newSplitList.add(newSp);
         			}
+        			LOG.debug("newSplitList:" + newSplitList);
         		}
         		
         		//generate partial splits
@@ -331,6 +335,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
     			gr.add(cardinality.get(i));
     			newSp.add(gr);
     		}
+    		LOG.debug("initial split:" + newSp);
         	return newSp;
         }
         
@@ -360,6 +365,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
     			createCatPartitions(partialSplitList,  partialCardinality, 0, numGroups-1);
         	}
         	
+    		LOG.debug("partial split:" + partialSplitList);
         	return partialSplitList;
         }
         

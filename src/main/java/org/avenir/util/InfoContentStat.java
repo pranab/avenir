@@ -22,6 +22,11 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+/**
+ * Info content based stat for whole data set without split
+ * @author pranab
+ *
+ */
 public class InfoContentStat {
 	private Map<String, Integer> classValCount = new HashMap<String, Integer>();
 	private Map<String, Double> classValPr = new HashMap<String, Double>();
@@ -29,6 +34,10 @@ public class InfoContentStat {
     private static final Logger LOG = Logger.getLogger(InfoContentStat.class);
 	
 	
+	/**
+	 * @param classVal
+	 * @param count
+	 */
 	public void countClassVal(String classVal, int count) {
 		LOG.debug("counting InfoContentStat " + 
 				" classVal:" + classVal + " count:" + count);
@@ -38,6 +47,11 @@ public class InfoContentStat {
 		classValCount.put(classVal, classValCount.get(classVal) + count);
 	}
 	
+	/**
+	 * Calculate info stat
+	 * @param isAlgoEntropy
+	 * @return
+	 */
 	public double processStat(boolean isAlgoEntropy) {
 		double stat = 0.0;
 		totalCount = 0;
