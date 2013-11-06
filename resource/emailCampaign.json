@@ -1,0 +1,30 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "custID",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "campaignType",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true,
+			"maxSplit" : 2,
+			"cardinality" : ["1C", "1S", "1N", "2C", "2S", "2N", "3C", "3S", "3N"]
+		},
+		{
+			"name" : "amount",
+			"ordinal" : 2,
+			"dataType" : "int",
+			"feature" : true
+		},
+		{
+			"name" : "succeeded",
+			"ordinal" : 3,
+			"dataType" : "categorical"
+		}	
+	]
+}

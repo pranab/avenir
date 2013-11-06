@@ -310,8 +310,10 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         		}
         		
         		//generate partial splits
-        		List<List<List<String>>> partialSpList = createPartialSplit(cardinality,cardinalityIndex, numGroups);
-				newSplitList.addAll(partialSpList);
+        		if (cardinalityIndex < cardinality.size() -1){        		
+        			List<List<List<String>>> partialSpList = createPartialSplit(cardinality,cardinalityIndex, numGroups);
+    				newSplitList.addAll(partialSpList);
+        		}
         		
         		//replace old splits with new
 				splitList.clear();
