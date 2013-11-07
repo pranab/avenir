@@ -1,0 +1,42 @@
+This tutorial is for optimizing retargeting campaigns for abandoned shopping carts.
+
+Input
+=====
+
+Generate input tarining data
+
+./retarget.py 5000
+where 5000 is the number of campaigns
+
+Map reduce
+==========
+
+JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.explore.ClassPartitionGenerator
+
+echo "running mr"
+IN_PATH=/Users/pranab/retarget/input
+OUT_PATH=/Users/pranab/retarget/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/retarget.properties $IN_PATH $OUT_PATH
+
+For the first run comment out split.attributes=1 from retarget.properties. Get the root level value 
+from the reducer output and set the value for parent.info in retarget.properties. Uncomment split.attributes
+and make the second run
+
+Configuration
+=============
+
+field.delim.regex=,
+field.delim.out=,
+num.reducer=1
+feature.schema.file.path=/Users/pranab/retarget/meta/emailCampaign.json
+split.attributes=1
+max.cat.attr.split.groups=3
+split.algorithm=giniIndex
+parent.info=0.4755305856406957
+output.split.prob=true
+debug.on=true
