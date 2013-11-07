@@ -1,16 +1,24 @@
 This tutorial is for optimizing retargeting campaigns for abandoned shopping carts.
+Change path etc as needed for your environment
 
 Input
 =====
-
 Generate input tarining data
 
-./retarget.py 5000
+./retarget.py 5000 > retarget.txt
 where 5000 is the number of campaigns
+
+Copy input file to HDFS input path
+hadoop fs -put retarget.txt /Users/pranab/retarget/input
+
+Metadata
+========
+Copy JSOn meta data file to HDFS meta data path
+hadoop fs -put emailCampaign.json /Users/pranab/retarget/meta
+
 
 Map reduce
 ==========
-
 JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
 CLASS_NAME=org.avenir.explore.ClassPartitionGenerator
 
@@ -29,7 +37,6 @@ and make the second run
 
 Configuration
 =============
-
 field.delim.regex=,
 field.delim.out=,
 num.reducer=1
