@@ -25,20 +25,27 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.explore.ClassPartitionGenerator.AttributeSplitPartitioner;
 import org.avenir.util.AttributeSplitHandler;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
+import org.chombo.util.SecondarySort;
+import org.chombo.util.TextInt;
+import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -60,19 +67,25 @@ public class DataPartitioner extends Configured implements Tool {
 
         Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(DataPartitioner.PartitionerMapper.class);
+        job.setReducerClass(DataPartitioner.PartitionerReducer.class);
 
         //find best split
         String inPath = args[0];
-        String splitKey = findBestSplitKey(job, inPath);
-        String outPath = inPath + "/" + "split=" + splitKey;
+        Split split = findBestSplitKey(job, inPath);
+        String outPath = inPath + "/" + "split=" + split.getSplitKey();
         		
         FileInputFormat.addInputPath(job, new Path(inPath));
         FileOutputFormat.setOutputPath(job, new Path(outPath));
         
+        job.setMapOutputKeyClass(IntWritable.class);
+        job.setMapOutputValueClass(Text.class);
+        
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
         
-        job.setNumReduceTasks(0);
+        job.setPartitionerClass(SecondarySort.RawIntKeyTextPartitioner.class);
+        
+        job.setNumReduceTasks(split.getSegmentCount());
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
@@ -85,7 +98,7 @@ public class DataPartitioner extends Configured implements Tool {
 	 * @return
 	 * @throws IOException
 	 */
-	private String findBestSplitKey(Job job, String iplutPath) throws IOException {
+	private Split findBestSplitKey(Job job, String iplutPath) throws IOException {
 		String splitKey = null;
 		Configuration conf =  job.getConfiguration();
 		String splitSelectionStrategy = conf.get("split.selection.strategy", "best");
@@ -118,7 +131,7 @@ public class DataPartitioner extends Configured implements Tool {
 		conf.setInt("split.attribute", split.getAttributeOrdinal());
 		conf.set("split.key", splitKey);
 		
-        return splitKey;
+        return split;
 	}
 	
 	/**
@@ -151,16 +164,34 @@ public class DataPartitioner extends Configured implements Tool {
 		private int getAttributeOrdinal() {
 			return Integer.parseInt(items[0]);
 		}
+		
+		public int getSegmentCount() {
+			String[] segments = items[1].split(":");
+			return segments.length;
+		}
 	}
+	
+    /**
+     * @author pranab
+     *
+     */
+    public static class RawIntKeyTextPartitioner extends Partitioner<IntWritable, Text> {
+	     @Override
+	     public int getPartition(IntWritable key, Text value, int numPartitions) {
+	    	 //consider only base part of  key
+		     return key.get();
+	     }
+    }
 	
 	
 	/**
 	 * @author pranab
 	 *
 	 */
-	public static class PartitionerMapper extends Mapper<LongWritable, Text, NullWritable, Text> {
+	public static class PartitionerMapper extends Mapper<LongWritable, Text, IntWritable, Text> {
 		private String fieldDelimRegex;
 		private String[] items;
+		private IntWritable outKey = new IntWritable();
         private Text outVal = new Text();
         private FeatureSchema schema;
 		private int splitAttrOrd;
@@ -211,10 +242,25 @@ public class DataPartitioner extends Configured implements Tool {
             } else if (featureField.isCategorical()) {
             	catAttrVal = items[splitAttrOrd];
             	splitSegment = catSplit.getSegmentIndex(catAttrVal);
-            	outVal.set(value.toString() + fieldDelimRegex + catAttrVal);
+            	outKey.set(splitSegment);
             }
-			context.write(NullWritable.get(),outVal);
+			context.write(outKey,value);
         }        
+	}
+	
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class PartitionerReducer extends Reducer<IntWritable, Text, NullWritable, Text> {
+		
+        protected void reduce(IntWritable  key, Iterable<Text> values, Context context)
+        		throws IOException, InterruptedException {
+        	for (Text value : values) {
+        		context.write(NullWritable.get(), value);
+        	}
+        }
 	}
 	
 	/**
