@@ -22,10 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -63,10 +61,10 @@ public class ClassPartitionGenerator extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "Partition generator for attributes";
+        String jobName = "Candidate split generator for attributes";
         job.setJobName(jobName);
         
-        job.setJarByClass(CramerCorrelation.class);
+        job.setJarByClass(ClassPartitionGenerator.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));

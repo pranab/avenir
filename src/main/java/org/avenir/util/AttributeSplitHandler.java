@@ -128,13 +128,18 @@ public class AttributeSplitHandler {
 	 * @author pranab
 	 *
 	 */
-	private static class IntegerSplit extends  Split {
+	public static class IntegerSplit extends  Split {
 		private Integer[] splitPoints;
 
 		public IntegerSplit(String key, Integer[] splitPoints) {
 			super(key);
 			this.splitPoints = splitPoints;
 		}
+		
+		public IntegerSplit(String key) {
+			super(key);
+		}
+		
 		@Override
 		public int getSegmentIndex(String value) {
 			int i = 0;
@@ -153,12 +158,16 @@ public class AttributeSplitHandler {
 	 * @author pranab
 	 *
 	 */
-	private static class CategoricalSplit extends Split {
+	public static class CategoricalSplit extends Split {
 		private List<List<String>> splitSets;
 
 		public CategoricalSplit(List<List<String>> splitSets) {
 			this.splitSets = splitSets;
 			key = toString();
+		}
+
+		public CategoricalSplit(String key) {
+			super(key);
 		}
 		
 		public CategoricalSplit(String key, List<List<String>> splitSets) {
@@ -187,6 +196,23 @@ public class AttributeSplitHandler {
 			}
 			stBld.deleteCharAt(stBld.length()-1);
 			return stBld.toString();
+		}
+		
+		/**
+		 * 
+		 */
+		public void fromString() {
+			splitSets = new ArrayList<List<String>>(); 
+			String[] splitSetsSt = key.split(":");
+			for (String splitSetSt : splitSetsSt) {
+				splitSetSt = splitSetSt.substring(1, splitSetSt.length() -1);
+				String[] items = splitSetSt.split(",");
+				List<String>  splitSet = new ArrayList<String>();
+				for (int i = 0; i < items.length; ++i) {
+					splitSet.add(items[i].trim());
+				}
+				splitSets.add(splitSet);
+			}
 		}
 		
 	}
