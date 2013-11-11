@@ -1,0 +1,45 @@
+This tutorial is exploring correleation between feature attributes and class attributes
+for customer churn using mobile usage data. Make necessary changes to path etc depending on
+your environment
+
+Input
+=====
+Checkout the project visitante and put util.rb from that project in ../lib directory. Run this script
+to generate data
+
+./usage.rb 5000 > usage.txt
+where 5000  is the number of customers 
+
+Put the input file in HDFS input directory
+
+Metadata
+========
+Put the metadata file churn.json in HDFS path defined by feature.schema.file.path
+
+
+Map Reduce
+==========
+JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.explore.CramerCorrelation
+
+echo "running mr"
+IN_PATH=/user/pranab/chrn/usage
+OUT_PATH=/user/pranab/chrn/corr
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/churn.properties  $IN_PATH  $OUT_PATH
+
+Configuration
+=============
+field.delim.regex=,
+field.delim.out=,
+debug.on=true
+num.reducer=1
+feature.schema.file.path=/user/pranab/meta/chrn/churn.json
+source.attributes=1,2,3,4,5
+dest.attributes=6
+correlation.scale=1000
+
+
