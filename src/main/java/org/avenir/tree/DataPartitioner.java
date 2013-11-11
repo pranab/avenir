@@ -157,33 +157,33 @@ public class DataPartitioner extends Configured implements Tool {
 			return thisVal > thatVal ? -1 : (thisVal < thatVal ? 1 : 0);
 		}
 		
+		/**
+		 * Split segment
+		 * @return
+		 */
 		private String getSplitKey() {
 			return items[1];
 		}
 		
+		/**
+		 * Split attribute ordinal
+		 * @return
+		 */
 		private int getAttributeOrdinal() {
 			return Integer.parseInt(items[0]);
 		}
 		
+		/**
+		 * Number of segments in the split
+		 * @return
+		 */
 		public int getSegmentCount() {
 			String[] segments = items[1].split(":");
 			return segments.length;
 		}
 	}
 	
-    /**
-     * @author pranab
-     *
-     */
-    public static class RawIntKeyTextPartitioner extends Partitioner<IntWritable, Text> {
-	     @Override
-	     public int getPartition(IntWritable key, Text value, int numPartitions) {
-	    	 //consider only base part of  key
-		     return key.get();
-	     }
-    }
-	
-	
+ 	
 	/**
 	 * @author pranab
 	 *
@@ -196,9 +196,9 @@ public class DataPartitioner extends Configured implements Tool {
         private FeatureSchema schema;
 		private int splitAttrOrd;
 		private FeatureField featureField;
-		AttributeSplitHandler.CategoricalSplit catSplit;
+		private AttributeSplitHandler.Split split;
 		private int splitSegment;
-		private String catAttrVal;
+		private String attrVal;
 		
         private static final Logger LOG = Logger.getLogger(PartitionerMapper.class);
 		
@@ -223,28 +223,25 @@ public class DataPartitioner extends Configured implements Tool {
             schema = mapper.readValue(fs, FeatureSchema.class);
             featureField = schema.findFieldByOrdinal(splitAttrOrd);
             if (featureField.isInteger()) {
-            	
+            	split = new  AttributeSplitHandler.IntegerSplit(splitKey);
             } else if (featureField.isCategorical()) {
-            	catSplit = new AttributeSplitHandler.CategoricalSplit(splitKey);
-            	catSplit.fromString();
+            	split = new AttributeSplitHandler.CategoricalSplit(splitKey);
             }
+        	split.fromString();
         	
-            
-            //new MultipleOutputs(conf);
         }
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
-            if (featureField.isInteger()) {
-            	
-            } else if (featureField.isCategorical()) {
-            	catAttrVal = items[splitAttrOrd];
-            	splitSegment = catSplit.getSegmentIndex(catAttrVal);
-            	outKey.set(splitSegment);
-            }
-			context.write(outKey,value);
+            
+            //key is split segment
+        	attrVal = items[splitAttrOrd];
+        	splitSegment = split.getSegmentIndex(attrVal);
+        	outKey.set(splitSegment);
+
+            context.write(outKey,value);
         }        
 	}
 	
@@ -255,6 +252,9 @@ public class DataPartitioner extends Configured implements Tool {
 	 */
 	public static class PartitionerReducer extends Reducer<IntWritable, Text, NullWritable, Text> {
 		
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+         */
         protected void reduce(IntWritable  key, Iterable<Text> values, Context context)
         		throws IOException, InterruptedException {
         	for (Text value : values) {
