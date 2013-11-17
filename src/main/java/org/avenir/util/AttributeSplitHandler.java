@@ -150,6 +150,7 @@ public class AttributeSplitHandler {
 			int iValue = Integer.parseInt(value);
 			for ( ; i < splitPoints.length && iValue > splitPoints[i]; ++i) {
 			}
+			
 			return i;
 		}
 		
@@ -197,7 +198,10 @@ public class AttributeSplitHandler {
 					break;
 				}
 				++indx;
-			}			
+			}		
+			if (!found) {
+				throw new IllegalArgumentException("split segment not found for " + value);
+			}
 			return indx;
 		}
 		

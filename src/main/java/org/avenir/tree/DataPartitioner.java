@@ -77,7 +77,7 @@ public class DataPartitioner extends Configured implements Tool {
         if (debugOn)
         	System.out.println("inPath:" + inPath);
         Split split = findBestSplitKey(job, inPath);
-        String outPath = inPath + "/" + "split=" + split.getSplitKey();
+        String outPath = inPath + "/" + "split=" + split.getIndex();
         if (debugOn)
         	System.out.println("outPath:" + outPath);
         		
@@ -141,7 +141,8 @@ public class DataPartitioner extends Configured implements Tool {
 		Split[] splits = new Split[lines.size()];
 		int i = 0;
 		for (String line : lines) {
-			splits[i++] = new Split(line);
+			splits[i] = new Split(line,i);
+			++i;
 		}
 		
 		//sort splits
@@ -155,6 +156,8 @@ public class DataPartitioner extends Configured implements Tool {
 			splitIndex = (int)(Math.random() * numSplits);
 		}
 		Split split = splits[splitIndex];
+		
+		
 		
 		//set asplit attribute ordinal and split key
 		int splitAttribute = split.getAttributeOrdinal();
@@ -176,10 +179,12 @@ public class DataPartitioner extends Configured implements Tool {
 	 */
 	private static class Split implements  Comparable<Split> {
 		private String line;
+		private int index;
 		private String[] items;
 		
-		public Split(String line) {
+		public Split(String line, int index) {
 			this.line = line;
+			this.index = index;
 			items = line.split(";");
 		}
 		
@@ -191,15 +196,24 @@ public class DataPartitioner extends Configured implements Tool {
 			//descending order
 			return thisVal > thatVal ? -1 : (thisVal < thatVal ? 1 : 0);
 		}
-		
+
 		/**
 		 * Split segment
 		 * @return
 		 */
-		private String getSplitKey() {
+		public String getSplitKey() {
+			return items[1];
+		}
+
+		/**
+		 * Split segment
+		 * @return
+		 */
+		public String getNormalizedSplitKey() {
 			String key = items[1].replaceAll("\\s+", "");
 			key = key.replaceAll("\\[", "");
 			key = key.replaceAll("\\]", "");
+			key = key.replaceAll(":", "-");
 			return key;
 		}
 		
@@ -207,7 +221,7 @@ public class DataPartitioner extends Configured implements Tool {
 		 * Split attribute ordinal
 		 * @return
 		 */
-		private int getAttributeOrdinal() {
+		public int getAttributeOrdinal() {
 			return Integer.parseInt(items[0]);
 		}
 		
@@ -218,6 +232,14 @@ public class DataPartitioner extends Configured implements Tool {
 		public int getSegmentCount() {
 			String[] segments = items[1].split(":");
 			return segments.length;
+		}
+
+		public String getLine() {
+			return line;
+		}
+
+		public int getIndex() {
+			return index;
 		}
 	}
 	
@@ -251,10 +273,12 @@ public class DataPartitioner extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	
         	splitAttrOrd = conf.getInt("split.attribute", -1);
-        	if (splitAttrOrd == 1) {
+        	if (splitAttrOrd == -1) {
         		throw new IOException("split attribute not found");
         	}
+        	LOG.debug("splitAttrOrd:" + splitAttrOrd);
         	String splitKey = conf.get("split.key");
+        	LOG.debug("splitKey:" + splitKey);
         	
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
@@ -277,6 +301,8 @@ public class DataPartitioner extends Configured implements Tool {
             //key is split segment
         	attrVal = items[splitAttrOrd];
         	splitSegment = split.getSegmentIndex(attrVal);
+        	LOG.debug("splitSegment:" + splitSegment);
+        	
         	outKey.set(splitSegment);
 
             context.write(outKey,value);
