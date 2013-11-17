@@ -31,7 +31,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -39,13 +38,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.avenir.explore.ClassPartitionGenerator.AttributeSplitPartitioner;
 import org.avenir.util.AttributeSplitHandler;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.SecondarySort;
-import org.chombo.util.TextInt;
-import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -56,7 +52,9 @@ import org.codehaus.jackson.map.ObjectMapper;
  *
  */
 public class DataPartitioner extends Configured implements Tool {
-
+    private static final Logger LOG = Logger.getLogger(DataPartitioner.class);
+    private boolean debugOn;
+    
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
@@ -66,13 +64,22 @@ public class DataPartitioner extends Configured implements Tool {
         job.setJarByClass(DataPartitioner.class);
 
         Utility.setConfiguration(job.getConfiguration(), "avenir");
+        debugOn = job.getConfiguration().getBoolean("debug.on", false);
+        if (debugOn) {
+        	LOG.setLevel(Level.DEBUG);
+        }
+
         job.setMapperClass(DataPartitioner.PartitionerMapper.class);
         job.setReducerClass(DataPartitioner.PartitionerReducer.class);
 
-        //find best split
-        String inPath = args[0];
+        //find best split and create output path
+        String inPath = getNodePath(job);
+        if (debugOn)
+        	System.out.println("inPath:" + inPath);
         Split split = findBestSplitKey(job, inPath);
         String outPath = inPath + "/" + "split=" + split.getSplitKey();
+        if (debugOn)
+        	System.out.println("outPath:" + outPath);
         		
         FileInputFormat.addInputPath(job, new Path(inPath));
         FileOutputFormat.setOutputPath(job, new Path(outPath));
@@ -84,11 +91,32 @@ public class DataPartitioner extends Configured implements Tool {
         job.setOutputValueClass(Text.class);
         
         job.setPartitionerClass(SecondarySort.RawIntKeyTextPartitioner.class);
-        
-        job.setNumReduceTasks(split.getSegmentCount());
+        int numReducers = split.getSegmentCount();
+        if (debugOn)
+        	System.out.println("numReducers:" + numReducers);
+        job.setNumReduceTasks(numReducers);
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
+	}
+	
+	/**
+	 * @param job
+	 * @return
+	 */
+	private String getNodePath(Job job) {
+		String nodePath = null;
+		Configuration conf =  job.getConfiguration();
+		String basePath = conf.get("project.base.path");
+		if (Utility.isBlank(basePath)) {
+			throw new IllegalStateException("base path not defined");
+		}
+		String splitPath = conf.get("split.path");
+		if (debugOn)
+			System.out.println("basePath:" + basePath + " splitPath:" + splitPath);
+		nodePath = Utility.isBlank(splitPath) ? basePath + "/split=root/data" : 
+			basePath + "/" + splitPath;
+		return nodePath;
 	}
 	
 	/**
@@ -98,12 +126,14 @@ public class DataPartitioner extends Configured implements Tool {
 	 * @return
 	 * @throws IOException
 	 */
-	private Split findBestSplitKey(Job job, String iplutPath) throws IOException {
+	private Split findBestSplitKey(Job job, String inputPath) throws IOException {
 		String splitKey = null;
 		Configuration conf =  job.getConfiguration();
 		String splitSelectionStrategy = conf.get("split.selection.strategy", "best");
 		
-		String candidateSplitsPath = Utility.getSiblingPath(iplutPath, "candidateSplits/part-r-00000");
+		String candidateSplitsPath = Utility.getSiblingPath(inputPath, "splits/part-r-00000");
+        if (debugOn)
+        	System.out.println("candidateSplitsPath:" + candidateSplitsPath);
 		conf.set("candidate.splits.path", candidateSplitsPath);
 		List<String> lines = Utility.getFileLines(conf, "candidate.splits.path");
 		
@@ -125,10 +155,15 @@ public class DataPartitioner extends Configured implements Tool {
 			splitIndex = (int)(Math.random() * numSplits);
 		}
 		Split split = splits[splitIndex];
-		splitKey = split.getSplitKey();
 		
 		//set asplit attribute ordinal and split key
-		conf.setInt("split.attribute", split.getAttributeOrdinal());
+		int splitAttribute = split.getAttributeOrdinal();
+		conf.setInt("split.attribute", splitAttribute);
+        if (debugOn)
+        	System.out.println("splitAttribute:" + splitAttribute);
+		splitKey = split.getSplitKey();
+        if (debugOn)
+        	System.out.println("splitKey:" + splitKey);
 		conf.set("split.key", splitKey);
 		
         return split;
@@ -145,7 +180,7 @@ public class DataPartitioner extends Configured implements Tool {
 		
 		public Split(String line) {
 			this.line = line;
-			items = line.split(",");
+			items = line.split(";");
 		}
 		
 		@Override
@@ -162,7 +197,10 @@ public class DataPartitioner extends Configured implements Tool {
 		 * @return
 		 */
 		private String getSplitKey() {
-			return items[1];
+			String key = items[1].replaceAll("\\s+", "");
+			key = key.replaceAll("\\[", "");
+			key = key.replaceAll("\\]", "");
+			return key;
 		}
 		
 		/**
