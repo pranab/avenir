@@ -58,7 +58,7 @@ public class DataPartitioner extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "Candidate split generator for attributes";
+        String jobName = "Partitions data by some split";
         job.setJobName(jobName);
         
         job.setJarByClass(DataPartitioner.class);
@@ -115,7 +115,7 @@ public class DataPartitioner extends Configured implements Tool {
 		if (debugOn)
 			System.out.println("basePath:" + basePath + " splitPath:" + splitPath);
 		nodePath = Utility.isBlank(splitPath) ? basePath + "/split=root/data" : 
-			basePath + "/" + splitPath;
+			basePath + "/split=root/data/" + splitPath;
 		return nodePath;
 	}
 	

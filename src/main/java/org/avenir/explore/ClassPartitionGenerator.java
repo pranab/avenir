@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -63,13 +65,13 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         Job job = new Job(getConf());
         String jobName = "Candidate split generator for attributes";
         job.setJobName(jobName);
-        
         job.setJarByClass(ClassPartitionGenerator.class);
-
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
-
         Utility.setConfiguration(job.getConfiguration(), "avenir");
+
+        String[] paths = getPaths(args, job);
+        FileInputFormat.addInputPath(job, new Path(paths[0]));
+        FileOutputFormat.setOutputPath(job, new Path(paths[1]));
+        
         job.setMapperClass(ClassPartitionGenerator.PartitionGeneratorMapper.class);
         job.setReducerClass(ClassPartitionGenerator.PartitionGeneratorReducer.class);
         job.setCombinerClass(ClassPartitionGenerator.PartitionGeneratorCombiner.class);
@@ -87,6 +89,20 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
 	}
+	
+	/**
+	 * Uses user provided paths
+	 * @param args
+	 * @param job
+	 * @return
+	 */
+	protected String[] getPaths(String[] args, Job job) {
+		String[] paths = new String[2];
+		paths[0] = args[0];
+		paths[1] = args[1];
+		return paths;
+	}
+	
 	/**
 	 * @author pranab
 	 *
@@ -115,24 +131,70 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	
         	maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
-        			
+        	
+        	//schema
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
+            //attribute selection strategy
+            String attrSelectStrategy = conf.get("split.attribute.selection.strategy");
+            
+            //get split attributes
+            getSplitAttributes(attrSelectStrategy, conf);
+            
             //generate all attribute splits
-            String attrs = conf.get("split.attributes");
-            if (null != attrs) {
-            	splitAttrs = Utility.intArrayFromString(attrs, ",");
-            	createPartitions();
-            	LOG.debug("processing attribute splits");
-            } else {
-            	atRoot = true;
-            	LOG.debug("processing at root");
+            if (!atRoot) {
+	            createPartitions();
+	            LOG.debug("created split partitions");
             }
+            
             //class attribute
             classField = schema.findClassAttrField();
         }
+        
+        /**
+         * @param attrSelectStrategy
+         * @param conf
+         */
+        private void getSplitAttributes(String attrSelectStrategy, Configuration conf) {
+            atRoot = conf.getBoolean("at.root", false);
+            if (atRoot) {
+            	LOG.debug("processing at root");
+            } else if (attrSelectStrategy.equals("userSpecified")) {
+            	//user specified attributes
+	            String attrs = conf.get("split.attributes");
+	            splitAttrs = Utility.intArrayFromString(attrs, ",");
+            } else if (attrSelectStrategy.equals("all")) {
+            	//all attributes
+            	splitAttrs = schema.getFeatureFieldOrdinals();
+            } else if (attrSelectStrategy.equals("notUsedYet")) {
+            	//attributes that have not been used yet
+            	int[] allSplitAttrs = schema.getFeatureFieldOrdinals();
+            	int[] usedSplitAppributes = null; //TODO
+            	splitAttrs = Utility.removeItems(allSplitAttrs, usedSplitAppributes);
+            	
+            } else if (attrSelectStrategy.equals("random")) {
+            	//randomly selected k attributes
+            	int randomSplitSetSize = conf.getInt("random.split.set.size", 3);
+               	int[] allSplitAttrs = schema.getFeatureFieldOrdinals();
+               	Set<Integer> splitSet = new  HashSet<Integer>();
+               	while (splitSet.size() != randomSplitSetSize) {
+               		int splitIndex = (int)(Math.random() * allSplitAttrs.length);
+               		splitSet.add(allSplitAttrs[splitIndex]);
+               	}
+               	
+               	splitAttrs = new int[randomSplitSetSize];
+               	int i = 0;
+               	for (int spAttr : splitSet) {
+               		splitAttrs[i++] =  spAttr;
+               	}
+            } else {
+            	throw new IllegalArgumentException("invalid splitting attribute selection strategy");
+            }
+        	
+        }
+        
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
