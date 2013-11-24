@@ -43,6 +43,11 @@ import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
+/**
+ * Calculates all distributions for  bayesian classifier
+ * @author pranab
+ *
+ */
 public class BayesianDistribution extends Configured implements Tool {
 
 	@Override
@@ -74,6 +79,10 @@ public class BayesianDistribution extends Configured implements Tool {
         return status;
 	}
 
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class DistributionMapper extends Mapper<LongWritable, Text, Tuple, IntWritable> {
 		private String[] items;
 		private Tuple outKey = new Tuple();
@@ -90,6 +99,9 @@ public class BayesianDistribution extends Configured implements Tool {
         private boolean tabularInput;
         private Analyzer analyzer;
         
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
         	tabularInput = context.getConfiguration().getBoolean("tabular.input", true);
@@ -99,19 +111,17 @@ public class BayesianDistribution extends Configured implements Tool {
 	            schema = mapper.readValue(fs, FeatureSchema.class);
 	            
 	            //class attribute field
+	            classAttrField = schema.findClassAttrField();
 	        	fields = schema.getFields();
-	        	for (FeatureField field : fields) {
-	        		if (!field.isFeature() &&  !field.isId()) {
-	        			classAttrField = field;
-	        			break;
-	        		}
-	        	}
         	} else {
                 analyzer = new StandardAnalyzer(Version.LUCENE_35);
                 featureAttrOrdinal = 1;
         	}
         }
  
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
@@ -139,6 +149,12 @@ public class BayesianDistribution extends Configured implements Tool {
         	}
         }
         
+        /**
+         * @param value
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
         private void mapText(Text value, Context context) throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
             classAttrVal = items[1];
@@ -151,16 +167,26 @@ public class BayesianDistribution extends Configured implements Tool {
         }
 	}
 	
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class DistributionReducer extends Reducer<Tuple, IntWritable, NullWritable, Text> {
 		private Text outVal = new Text();
 		private String fieldDelim;
 		private int count;
 		private StringBuilder stBld = new  StringBuilder();
 		
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
+		 */
 		protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
        }
 
+    	/* (non-Javadoc)
+    	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+    	 */
     	protected void reduce(Tuple key, Iterable<IntWritable> values, Context context)
             	throws IOException, InterruptedException {
     		count = 0;
@@ -188,6 +214,10 @@ public class BayesianDistribution extends Configured implements Tool {
     	}
 	}
 	
+    /**
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
         int exitCode = ToolRunner.run(new BayesianDistribution(), args);
         System.exit(exitCode);

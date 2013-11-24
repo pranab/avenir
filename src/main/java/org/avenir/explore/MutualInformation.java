@@ -1,0 +1,331 @@
+/*
+ * avenir: Predictive analytic based on Hadoop Map Reduce
+ * Author: Pranab Ghosh
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package org.avenir.explore;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.avenir.bayesian.BayesianDistribution;
+import org.chombo.mr.FeatureField;
+import org.chombo.mr.FeatureSchema;
+import org.chombo.util.Pair;
+import org.chombo.util.Tuple;
+import org.chombo.util.Utility;
+import org.codehaus.jackson.map.ObjectMapper;
+
+/**
+ * @author pranab
+ *
+ */
+public class MutualInformation extends Configured implements Tool {
+
+	@Override
+	public int run(String[] args) throws Exception {
+        Job job = new Job(getConf());
+        String jobName = "prior and posterior distribution   MR";
+        job.setJobName(jobName);
+        
+        job.setJarByClass(MutualInformation.class);
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        Utility.setConfiguration(job.getConfiguration(), "avenir");
+        
+        job.setMapperClass(MutualInformation.DistributionMapper.class);
+        job.setReducerClass(MutualInformation.DistributionReducer.class);
+
+        job.setMapOutputKeyClass(Tuple.class);
+        job.setMapOutputValueClass(Tuple.class);
+
+        job.setOutputKeyClass(NullWritable.class);
+        job.setOutputValueClass(Text.class);
+
+
+        job.setNumReduceTasks(job.getConfiguration().getInt("num.reducer", 1));
+        
+        int status =  job.waitForCompletion(true) ? 0 : 1;
+        return status;
+	}
+
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class DistributionMapper extends Mapper<LongWritable, Text, Tuple, Tuple> {
+		private String[] items;
+		private Tuple outKey = new Tuple();
+		private Tuple outVal = new Tuple();
+        private String fieldDelimRegex;
+        private FeatureSchema schema;
+        private FeatureField classAttrField;
+        private List<FeatureField> featureFields;
+        private String classAttrVal;
+        private String featureAttrVal;
+        private Integer featureAttrOrdinal;
+        private String featureAttrBin;
+        private String firstFeatureAttrBin;
+        private int bin;
+        private static final int CLASS_DIST = 1;
+        private static final int FEATURE_DIST = 2;
+        private static final int FEATURE_PAIR_DIST = 3;
+        private static final int FEATURE_CLASS_DIST = 4;
+        private static final int FEATURE_PAIR_CLASS_COND_DIST = 5;
+
+        
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
+        protected void setup(Context context) throws IOException, InterruptedException {
+        	fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
+        	
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+            ObjectMapper mapper = new ObjectMapper();
+            schema = mapper.readValue(fs, FeatureSchema.class);
+            
+            classAttrField = schema.findClassAttrField();
+            featureFields = schema.getFeatureAttrFields();
+        }        
+        
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+         */
+        @Override
+        protected void map(LongWritable key, Text value, Context context)
+            throws IOException, InterruptedException {
+            items  =  value.toString().split(fieldDelimRegex);
+            classAttrVal = items[classAttrField.getOrdinal()];
+            
+            //class
+        	outKey.initialize();
+        	outVal.initialize();
+        	outKey.add(CLASS_DIST,classAttrField.getOrdinal());
+			outVal.add(classAttrVal, 1);
+	   		context.write(outKey, outVal);
+
+            //feature and feature class
+            for (FeatureField field : featureFields) {
+            	outKey.initialize();
+            	outVal.initialize();
+            	
+    			featureAttrVal = items[field.getOrdinal()];
+    			setDistrValue(field);
+
+    			//feature
+    			outKey.add(FEATURE_DIST, field.getOrdinal());
+    			outVal.add(featureAttrBin, 1);
+   	   			context.write(outKey, outVal);
+   	   			
+   	   			//feature class
+   	   			outKey.set(0,  FEATURE_CLASS_DIST);
+   	   			outKey.add(classAttrField.getOrdinal());
+   	   			outVal.initialize();
+   	   			outVal.add(featureAttrBin, classAttrVal, 1);
+   	   			context.write(outKey, outVal);
+            }
+            
+            //feature pair and feature pair class conditional
+            for (int i = 0; i < featureFields.size(); ++i) {
+    			featureAttrVal = items[featureFields.get(i).getOrdinal()];
+    			setDistrValue(featureFields.get(i));
+    			firstFeatureAttrBin = featureAttrBin;
+            	for (int j = i+1; j < featureFields.size(); ++j) {
+                	outKey.initialize();
+                	outVal.initialize();
+        			featureAttrVal = items[featureFields.get(j).getOrdinal()];
+        			setDistrValue(featureFields.get(j));
+
+        			//feature pairs
+        			outKey.add(FEATURE_PAIR_DIST, featureFields.get(i).getOrdinal(), 
+        					featureFields.get(j).getOrdinal());
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, 1);
+       	   			context.write(outKey, outVal);
+       	   			
+       	   			//feature pair class conditional
+       	   			outKey.set(0,  FEATURE_PAIR_CLASS_COND_DIST);
+       	   			outKey.add(classAttrVal);
+       	   			context.write(outKey, outVal);
+            	}
+            }
+
+        }     
+        
+    	/**
+    	 * @param field
+    	 */
+    	private void setDistrValue(FeatureField field) {
+    		if  (field.isCategorical()) {
+    			featureAttrBin= featureAttrVal;
+    		} else {
+    			bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
+    			featureAttrBin = "" + bin;
+    		}
+    	}
+        
+	}
+
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class DistributionReducer extends Reducer<Tuple, Tuple, NullWritable, Text> {
+		private Text outVal = new Text();
+		private String fieldDelim;
+		private int distrType;
+		private String attrValue;
+		private String secondAttrValue;
+		private Pair<String, String> attrValuePair;
+		private int attrCount;
+		private Integer curCount;
+		private Map<String, Integer> classDistr = new HashMap<String, Integer>();
+		private Map<Integer, Map<String, Integer>> allFeatureDistr = new HashMap<Integer, Map<String, Integer>>();
+		private Map<Pair<Integer, Integer>, Map<Pair<String, String>, Integer>> allFeaturePairDistr = 
+				new HashMap<Pair<Integer, Integer>, Map<Pair<String, String>, Integer>>();
+		private Map<Integer, Map<Pair<String, String>, Integer>> allFeatureClassDistr = 
+				new HashMap<Integer, Map<Pair<String, String>, Integer>>();
+		private Map<Tuple, Map<Pair<String, String>, Integer>> allFeaturePairClassCondDistr = 
+				new HashMap<Tuple, Map<Pair<String, String>, Integer>>();
+        private static final int CLASS_DIST = 1;
+        private static final int FEATURE_DIST = 2;
+        private static final int FEATURE_PAIR_DIST = 3;
+        private static final int FEATURE_CLASS_DIST = 4;
+        private static final int FEATURE_PAIR_CLASS_COND_DIST = 5;
+		
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
+		 */
+		protected void setup(Context context) throws IOException, InterruptedException {
+	    	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
+		}
+		
+	   	/* (non-Javadoc)
+	   	 * @see org.apache.hadoop.mapreduce.Reducer#cleanup(org.apache.hadoop.mapreduce.Reducer.Context)
+	   	 */
+	   	@Override
+	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
+	   	}
+	   	
+	   	/* (non-Javadoc)
+	   	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+	   	 */
+	   	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
+            	throws IOException, InterruptedException {
+	   		distrType = key.getInt(0);
+	   		if (distrType == CLASS_DIST) {
+	   			populateDistrMap(values, classDistr);
+	   		} else if (distrType == FEATURE_DIST) {
+	   			int featureOrdinal = key.getInt(1);
+	   			Map<String, Integer> featureDistr = allFeatureDistr.get(featureOrdinal);
+	   			if (null == featureDistr) {
+	   				featureDistr = new HashMap<String, Integer>();
+	   				allFeatureDistr.put(featureOrdinal, featureDistr);
+	   			}
+	   			populateDistrMap(values, featureDistr);
+	   		} else if (distrType == FEATURE_PAIR_DIST) {
+	   			Pair<Integer, Integer> featureOrdinals = new Pair<Integer, Integer>(key.getInt(1), key.getInt(2));
+	   			Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinals);
+	   			if (null == featurePairDistr) {
+	   				featurePairDistr = new HashMap<Pair<String, String>, Integer>();
+	   				allFeaturePairDistr.put(featureOrdinals, featurePairDistr);
+	   			}
+	   			populateJointDistrMap(values, featurePairDistr);
+	   		} else if (distrType == FEATURE_CLASS_DIST) {
+	   			int featureOrdinal = key.getInt(1);
+	   			Map<Pair<String, String>, Integer> featureClassDistr = allFeatureClassDistr.get(featureOrdinal);
+	   			if (null == featureClassDistr) {
+	   				featureClassDistr = new HashMap<Pair<String, String>, Integer>();
+	   				allFeatureClassDistr.put(featureOrdinal, featureClassDistr);
+	   			}
+	   			populateJointDistrMap(values, featureClassDistr);
+	   		} else if (distrType == FEATURE_PAIR_CLASS_COND_DIST) {
+	   			Tuple featureOrdinalsClassVal = key.subTuple(1, 4);
+	   			Map<Pair<String, String>, Integer> featurePairDistr = 
+	   					allFeaturePairClassCondDistr.get(featureOrdinalsClassVal);
+	   			if (null == featurePairDistr) {
+	   				featurePairDistr = new HashMap<Pair<String, String>, Integer>();
+	   				allFeaturePairClassCondDistr.put(featureOrdinalsClassVal, featurePairDistr);
+	   			}
+	   			populateJointDistrMap(values, featurePairDistr);
+	   		}
+	   		
+	   	}
+	   	
+	   	/**
+	   	 * @param values
+	   	 * @param distr
+	   	 */
+	   	private void populateDistrMap(Iterable<Tuple> values, Map<String, Integer> distr) {
+   			for (Tuple value : values) {
+   				attrValue = value.getString(0);
+  				attrCount = value.getInt(1);
+  				curCount = distr.get(attrValue);
+   				if (null == curCount) {
+   					distr.put(attrValue, attrCount);
+   				} else {
+   					distr.put(attrValue, curCount + attrCount);
+   				}
+   			}
+	   	}
+
+	   	/**
+	   	 * @param values
+	   	 * @param distr
+	   	 */
+	   	private void populateJointDistrMap(Iterable<Tuple> values, Map<Pair<String, String>, Integer> distr) {
+   			for (Tuple value : values) {
+   				attrValue = value.getString(0);
+   				secondAttrValue = value.getString(1);
+   				attrCount = value.getInt(2);
+   				attrValuePair = new Pair<String, String>(attrValue, secondAttrValue);
+  				   				
+  				curCount = distr.get(attrValuePair);
+   				if (null == curCount) {
+   					distr.put(attrValuePair, attrCount);
+   				} else {
+   					distr.put(attrValuePair, curCount + attrCount);
+   				}
+   			}	   		
+	   	}	   	
+	}
+	
+    /**
+     * @param args
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new MutualInformation(), args);
+        System.exit(exitCode);
+    }
+	
+}
