@@ -45,6 +45,8 @@ import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
+ * Calculates various mutual information between feature and class attributes. Can be used
+ * for relevant feature sub set selection
  * @author pranab
  *
  */
@@ -53,7 +55,7 @@ public class MutualInformation extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "prior and posterior distribution   MR";
+        String jobName = "mutual information   MR";
         job.setJobName(jobName);
         
         job.setJarByClass(MutualInformation.class);
@@ -208,6 +210,7 @@ public class MutualInformation extends Configured implements Tool {
 		private Pair<String, String> attrValuePair;
 		private int attrCount;
 		private Integer curCount;
+        private FeatureSchema schema;
 		private Map<String, Integer> classDistr = new HashMap<String, Integer>();
 		private Map<Integer, Map<String, Integer>> allFeatureDistr = new HashMap<Integer, Map<String, Integer>>();
 		private Map<Pair<Integer, Integer>, Map<Pair<String, String>, Integer>> allFeaturePairDistr = 
@@ -216,6 +219,8 @@ public class MutualInformation extends Configured implements Tool {
 				new HashMap<Integer, Map<Pair<String, String>, Integer>>();
 		private Map<Tuple, Map<Pair<String, String>, Integer>> allFeaturePairClassCondDistr = 
 				new HashMap<Tuple, Map<Pair<String, String>, Integer>>();
+		private StringBuilder stBld = new StringBuilder();
+		private int totalCount;
         private static final int CLASS_DIST = 1;
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
@@ -227,6 +232,10 @@ public class MutualInformation extends Configured implements Tool {
 		 */
 		protected void setup(Context context) throws IOException, InterruptedException {
 	    	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
+
+	    	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+            ObjectMapper mapper = new ObjectMapper();
+            schema = mapper.readValue(fs, FeatureSchema.class);
 		}
 		
 	   	/* (non-Javadoc)
@@ -234,7 +243,166 @@ public class MutualInformation extends Configured implements Tool {
 	   	 */
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
+	   		//emit distributions
+	   		outputDistr(context);
+	   		
+	   		//emit mutual information
+	   		outputMutualInfo(context);
 	   	}
+	   	
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 * @throws InterruptedException
+	   	 */
+	   	private void outputDistr(Context context) throws IOException, InterruptedException {
+	   		//class 
+	   		outVal.set("distribution:class");
+	   		context.write(NullWritable.get(), outVal);
+	   		totalCount = 0;
+	   		for (String classVal :  classDistr.keySet()) {
+	   			totalCount += classDistr.get(classVal);
+	   		}
+	   		for (String classVal :  classDistr.keySet()) {
+	   			stBld.delete(0, stBld.length());
+	   			stBld.append(classVal).append(fieldDelim).append(((double)classDistr.get(classVal)) / totalCount);;
+		   		outVal.set(stBld.toString());
+		   		context.write(NullWritable.get(), outVal);
+	   		}
+	   		
+	   		//feature
+	   		outVal.set("distribution:feature");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (int featureOrd : allFeatureDistr.keySet()) {
+	   			Map<String, Integer> featureDistr = allFeatureDistr.get(featureOrd);
+		   		for (String featureVal :  featureDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrd).append(fieldDelim).append(featureVal).append(fieldDelim).
+		   				append(((double)featureDistr.get(featureVal)) / totalCount);;
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+		   		}
+	   		}
+	   		
+	   		//feature pair
+	   		outVal.set("distribution:featurePair");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (Pair<Integer, Integer> featureOrdinals : allFeaturePairDistr.keySet()) {
+	   			Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinals);
+	   			for (Pair<String, String> values : featurePairDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrdinals.getLeft()).append(fieldDelim).append(featureOrdinals.getRight()).
+		   				append(fieldDelim).append(values.getLeft()).append(fieldDelim).append(values.getRight()).
+		   				append(fieldDelim).append(((double)featurePairDistr.get(values)) / totalCount);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}
+	   		
+	   		//feature class
+	   		outVal.set("distribution:featureClass");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (Integer featureOrd : allFeatureClassDistr.keySet()) {
+	   			Map<Pair<String, String>, Integer> featureClassDistr = allFeatureClassDistr.get(featureOrd);
+	   			for (Pair<String, String> values : featureClassDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrd).append(fieldDelim).append(values.getLeft()).append(fieldDelim).
+		   				append(values.getRight()). append(fieldDelim).append(((double)featureClassDistr.get(values)) / 
+		   				totalCount);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}	   		
+
+	   		//feature pair class conditional
+	   		outVal.set("distribution:featurePairClassConditional");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (Tuple featureOrdinalsClassVal : allFeaturePairClassCondDistr.keySet()) {
+	   			Map<Pair<String, String>, Integer> featurePairDistr = 
+	   					allFeaturePairClassCondDistr.get(featureOrdinalsClassVal);
+	   			for (Pair<String, String> values : featurePairDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrdinalsClassVal.getInt(0)).append(fieldDelim).
+		   				append(featureOrdinalsClassVal.getInt(1)).append(fieldDelim).
+		   				append(featureOrdinalsClassVal.getString(2)).append(fieldDelim).
+		   				append(values.getLeft()).append(fieldDelim).append(values.getRight()).
+		   				append(fieldDelim).append(((double)featurePairDistr.get(values)) / totalCount);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}
+	   		
+	   	}
+	   	
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 * @throws InterruptedException
+	   	 */
+	   	private void outputMutualInfo(Context context) throws IOException, InterruptedException {
+	   		//feature class
+	   		outVal.set("mutualInformation:feature");
+	   		context.write(NullWritable.get(), outVal);
+   			double sum = 0;
+   			double jointProb;
+   			double featureProb;
+   			double classProb;
+   			int[] featureOrdinals = schema.getFeatureFieldOrdinals();
+	   		for (int featureOrd : allFeatureDistr.keySet()) {
+	   			sum = 0;
+	   			Map<String, Integer> featureDistr = allFeatureDistr.get(featureOrd);
+		   		for (String featureVal :  featureDistr.keySet()) {
+		   			featureProb = ((double)featureDistr.get(featureVal)) / totalCount;
+			   		for (String classVal :  classDistr.keySet()) {
+			   			classProb = ((double)classDistr.get(classVal)) / totalCount;
+			   			Pair<String, String> values = new Pair(featureVal, classVal);
+			   			jointProb = ((double)allFeatureClassDistr.get(featureOrd).get(values)) / totalCount;
+			   			sum += jointProb * Math.log(jointProb / (featureProb * classProb));
+			   		}
+		   		}
+		   		double featureClassMI = sum / (featureDistr.size() * classDistr.size());
+	   			stBld.delete(0, stBld.length());
+	   			stBld.append(featureOrd).append(fieldDelim).append(featureClassMI);
+		   		outVal.set(stBld.toString());
+		   		context.write(NullWritable.get(), outVal);
+	   		}
+	   		
+	   		//feature pair
+	   		outVal.set("mutualInformation:featurePair");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (int i = 0; i < featureOrdinals.length; ++i) {
+	   			Map<String, Integer> featureDistrFirst = allFeatureDistr.get(featureOrdinals[i]);
+	   			for (int j = i+1; j < featureOrdinals.length; ++j) {
+	   				Pair<Integer, Integer> featureOrdinalPair = 
+	   						new Pair<Integer, Integer>(featureOrdinals[i], featureOrdinals[j]);
+	   				Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinals);
+		   			Map<String, Integer> featureDistrSecond = allFeatureDistr.get(featureOrdinals[j]);
+		   			sum = 0;
+			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
+			   			double featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
+				   		for (String featureValSecond :  featureDistrSecond.keySet()) {
+				   			double featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
+				   					totalCount;
+				   			Pair<String, String> values = new Pair(featureValFirst, featureValSecond);
+				   			jointProb = ((double)featurePairDistr.get(values)) / totalCount;
+				   			sum += jointProb * Math.log(jointProb / (featureProbFirst * featureProbSecond));
+				   		}
+			   		}
+			   		double featurePairMI = sum / 
+			   				(featureDistrFirst.keySet().size() * featureDistrSecond.keySet().size());
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
+		   				append(fieldDelim).append(featurePairMI);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}
+	   		
+	   		//feature pair class conditional
+	   		
+	   		
+	   	}
+	   	
 	   	
 	   	/* (non-Javadoc)
 	   	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
