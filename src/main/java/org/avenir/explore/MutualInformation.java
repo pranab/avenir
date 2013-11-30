@@ -400,15 +400,19 @@ public class MutualInformation extends Configured implements Tool {
 	   	 * @throws InterruptedException
 	   	 */
 	   	private void outputMutualInfo(Context context) throws IOException, InterruptedException {
-	   		//feature class
-	   		outVal.set("mutualInformation:feature");
-	   		context.write(NullWritable.get(), outVal);
    			double sum = 0;
    			double jointProb;
    			double featureProb;
+   			double featureProbFirst;
+   			double featureProbSecond;
    			double classProb;
    			Integer count;
    			int numSamples;
+   			Tuple featurePairClass = new Tuple();
+
+   			//feature class
+	   		outVal.set("mutualInformation:feature");
+	   		context.write(NullWritable.get(), outVal);
    			int[] featureOrdinals = schema.getFeatureFieldOrdinals();
 	   		for (int featureOrd : allFeatureDistr.keySet()) {
 	   			sum = 0;
@@ -442,19 +446,19 @@ public class MutualInformation extends Configured implements Tool {
 	   			for (int j = i+1; j < featureOrdinals.length; ++j) {
 	   				Pair<Integer, Integer> featureOrdinalPair = 
 	   						new Pair<Integer, Integer>(featureOrdinals[i], featureOrdinals[j]);
-	   				Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinals);
+	   				Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinalPair);
 		   			Map<String, Integer> featureDistrSecond = allFeatureDistr.get(featureOrdinals[j]);
 		   			sum = 0;
 		   			numSamples = 0;
 			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
-			   			double featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
+			   			featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
 				   		for (String featureValSecond :  featureDistrSecond.keySet()) {
-				   			double featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
+				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
 				   					totalCount;
 				   			Pair<String, String> values = new Pair(featureValFirst, featureValSecond);
 				   			count = featurePairDistr.get(values);
 				   			if (null != count) {
-				   				jointProb = ((double)featurePairDistr.get(values)) / totalCount;
+				   				jointProb = ((double)count) / totalCount;
 				   				sum += jointProb * Math.log(jointProb / (featureProbFirst * featureProbSecond));
 				   				++numSamples;
 				   			}
@@ -468,6 +472,48 @@ public class MutualInformation extends Configured implements Tool {
 			   		context.write(NullWritable.get(), outVal);
 	   			}
 	   		}
+	   		
+	   		//feature pair class
+	   		outVal.set("mutualInformation:featurePairClass");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (int i = 0; i < featureOrdinals.length; ++i) {
+	   			Map<String, Integer> featureDistrFirst = allFeatureDistr.get(featureOrdinals[i]);
+	   			for (int j = i+1; j < featureOrdinals.length; ++j) {
+		   			Map<String, Integer> featureDistrSecond = allFeatureDistr.get(featureOrdinals[j]);
+	   				Pair<Integer, Integer> featureOrdinalPair = 
+	   						new Pair<Integer, Integer>(featureOrdinals[i], featureOrdinals[j]);
+	   				Map<Tuple, Integer> featurePairClassDistr = allFeaturePairClassDistr.get(featureOrdinalPair);
+		   			sum = 0;
+		   			numSamples = 0;
+			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
+			   			featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
+				   		for (String featureValSecond :  featureDistrSecond.keySet()) {
+				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
+				   					totalCount;
+			   				for (String classVal : classDistr.keySet()) {
+			   					classProb = ((double)classDistr.get(classVal)) / totalCount;
+			   					featurePairClass.initialize();
+			   					featurePairClass.add(featureValFirst, featureValSecond, classVal);
+			   					count = featurePairClassDistr.get(featurePairClass);
+			   					if (null != count) {
+					   				jointProb = ((double)count) / totalCount;
+					   				sum += jointProb * Math.log(jointProb / 
+					   						(featureProbFirst * featureProbSecond * classProb));
+					   				++numSamples;
+			   					}
+			   				}
+				   		}
+			   		}
+			   		double featurePairClassMI = sum / numSamples;
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
+		   				append(fieldDelim).append(featurePairClassMI);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}
+	   			
+	   			
 	   		
 	   		//feature pair class conditional
 	   		outVal.set("mutualInformation:featurePairClassConditional");
