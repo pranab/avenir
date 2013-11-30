@@ -103,8 +103,9 @@ public class MutualInformation extends Configured implements Tool {
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
         private static final int FEATURE_CLASS_DIST = 4;
-        private static final int FEATURE_CLASS_COND_DIST = 5;
-        private static final int FEATURE_PAIR_CLASS_COND_DIST = 6;
+        private static final int FEATURE_PAIR_CLASS_DIST = 5;
+        private static final int FEATURE_CLASS_COND_DIST = 6;
+        private static final int FEATURE_PAIR_CLASS_COND_DIST = 7;
 
         
         /* (non-Javadoc)
@@ -182,9 +183,21 @@ public class MutualInformation extends Configured implements Tool {
          			outVal.add(firstFeatureAttrBin, featureAttrBin, 1);
        	   			context.write(outKey, outVal);
        	   			
+       	   			//feature pair class 
+                	outKey.initialize();
+                	outVal.initialize();
+        			outKey.add(FEATURE_PAIR_CLASS_DIST, featureFields.get(i).getOrdinal(), 
+        					featureFields.get(j).getOrdinal());
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, classAttrVal, 1);
+       	   			context.write(outKey, outVal);
+       	   			
+       	   			
        	   			//feature pair class conditional
-       	   			outKey.set(0,  FEATURE_PAIR_CLASS_COND_DIST);
-       	   			outKey.add(classAttrVal);
+                	outKey.initialize();
+                	outVal.initialize();
+       	   			outKey.add(FEATURE_PAIR_CLASS_COND_DIST, featureFields.get(i).getOrdinal(), 
+        					featureFields.get(j).getOrdinal(), classAttrVal);
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, 1);
        	   			context.write(outKey, outVal);
             	}
             }
@@ -216,6 +229,7 @@ public class MutualInformation extends Configured implements Tool {
 		private String attrValue;
 		private String secondAttrValue;
 		private Pair<String, String> attrValuePair;
+		private Tuple attrPairClassValue;
 		private int attrCount;
 		private Integer curCount;
         private FeatureSchema schema;
@@ -225,6 +239,8 @@ public class MutualInformation extends Configured implements Tool {
 				new HashMap<Pair<Integer, Integer>, Map<Pair<String, String>, Integer>>();
 		private Map<Integer, Map<Pair<String, String>, Integer>> allFeatureClassDistr = 
 				new HashMap<Integer, Map<Pair<String, String>, Integer>>();
+		private Map<Pair<Integer, Integer>, Map<Tuple, Integer>> allFeaturePairClassDistr = 
+				new HashMap<Pair<Integer, Integer>, Map<Tuple, Integer>>();
 		private Map<Pair<Integer,String>, Map<String, Integer>> allFeatureClassCondDistr = 
 				new HashMap<Pair<Integer,String>, Map<String, Integer>>();
 		private Map<Tuple, Map<Pair<String, String>, Integer>> allFeaturePairClassCondDistr = 
@@ -235,8 +251,9 @@ public class MutualInformation extends Configured implements Tool {
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
         private static final int FEATURE_CLASS_DIST = 4;
-        private static final int FEATURE_CLASS_COND_DIST = 5;
-        private static final int FEATURE_PAIR_CLASS_COND_DIST = 6;
+        private static final int FEATURE_PAIR_CLASS_DIST = 5;
+        private static final int FEATURE_CLASS_COND_DIST = 6;
+        private static final int FEATURE_PAIR_CLASS_COND_DIST = 7;
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -324,6 +341,23 @@ public class MutualInformation extends Configured implements Tool {
 			   		context.write(NullWritable.get(), outVal);
 	   			}
 	   		}	 
+	   		
+	   		//feature pair class
+	   		outVal.set("distribution:featurePairClass");
+	   		context.write(NullWritable.get(), outVal);
+	   		for (Pair<Integer, Integer> featureOrdinals : allFeaturePairClassDistr.keySet()) {
+	   			Map<Tuple, Integer> featurePairClassDistr = allFeaturePairClassDistr.get(featureOrdinals);
+	   			for (Tuple values : featurePairClassDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrdinals.getLeft()).append(fieldDelim).append(featureOrdinals.getRight()).
+		   				append(fieldDelim).append(values.getString(0)).append(fieldDelim).append(values.getString(1)).
+		   				append(fieldDelim).append(values.getString(2)).append(fieldDelim).
+		   				append(((double)featurePairClassDistr.get(values)) / totalCount);
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
+	   		}
+	   		
 	   		
 	   		//feature class conditional
 	   		outVal.set("distribution:featureClassConditional");
@@ -475,6 +509,14 @@ public class MutualInformation extends Configured implements Tool {
 	   				allFeatureClassDistr.put(featureOrdinal, featureClassDistr);
 	   			}
 	   			populateJointDistrMap(values, featureClassDistr);
+	   		}else if (distrType == FEATURE_PAIR_CLASS_DIST) {
+	   			Pair<Integer, Integer> featureOrdinals = new Pair<Integer, Integer>(key.getInt(1), key.getInt(2));
+	   			Map<Tuple, Integer> featurePairClassDistr = allFeaturePairClassDistr.get(featureOrdinals);
+	   			if (null == featurePairClassDistr) {
+	   				featurePairClassDistr = new HashMap<Tuple, Integer>();
+	   				allFeaturePairClassDistr.put(featureOrdinals, featurePairClassDistr);
+	   			}
+	   			populateJointClassDistrMap(values, featurePairClassDistr);
 	   		} else if (distrType == FEATURE_CLASS_COND_DIST) {
 	   			Pair<Integer, String> featureOrdinalClassVal = 
 	   					new Pair<Integer, String>(key.getInt(1), key.getString(2));
@@ -533,6 +575,25 @@ public class MutualInformation extends Configured implements Tool {
    				}
    			}	   		
 	   	}	   	
+
+	   	/**
+	   	 * @param values
+	   	 * @param distr
+	   	 */
+	   	private void populateJointClassDistrMap(Iterable<Tuple> values, Map<Tuple, Integer> distr) {
+   			for (Tuple value : values) {
+   				attrCount = value.getInt(3);
+   				attrPairClassValue = value.subTuple(0, 3);
+  				   				
+  				curCount = distr.get(attrPairClassValue);
+   				if (null == curCount) {
+   					distr.put(attrPairClassValue, attrCount);
+   				} else {
+   					distr.put(attrPairClassValue, curCount + attrCount);
+   				}
+   			}	   		
+	   	}	   	
+	
 	}
 	
     /**
