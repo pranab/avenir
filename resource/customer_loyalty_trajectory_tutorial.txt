@@ -2,6 +2,10 @@ This tutorial is for customer loyalty trajectory based on viterbi decoding using
 states are codified by two symbols. signifying the time elapsed since last transaction and amount spent
 compared to the amount spent in the last transaction
 
+Dependency
+==========
+Please refer to dependency.txt
+
 Input
 =====
 Generate transaction state data as below. The argument is the number of customers.

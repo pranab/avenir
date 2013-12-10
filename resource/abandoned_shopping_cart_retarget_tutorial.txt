@@ -1,6 +1,10 @@
 This tutorial is for optimizing retargeting campaigns for abandoned shopping carts.
 Change path etc as needed for your environment
 
+Dependency
+==========
+Please refer to dependency.txt
+
 Input
 =====
 Generate input tarining data

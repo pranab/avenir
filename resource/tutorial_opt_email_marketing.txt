@@ -1,8 +1,12 @@
 This tutorial for optmum email marketing time prediction based on Markov model. 
 
+Dependency
+==========
+Please refer to dependency.txt
 
 Test data
----------
+=========
+
 You can generate customer transaction  data using the script buy_xaction.rb. Make sure that utol.rb is in the path
 ../lib. util.rb can be checked out from the project visitante. It's under script/ruby/lib directory
 in that project.
@@ -11,7 +15,7 @@ generate training data as below
 ./buy_xaction.rb 80000 210 .05  > training.txt
 
 Transaction sequencing MR
--------------------------
+=========================
 Run Projection MR as below
 
 JAR_NAME=/Users/pranab/Projects/chombo/target/chombo-1.0.jar
@@ -28,7 +32,7 @@ hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/b
 
 
 Convert transaction sequence to state sequence
-----------------------------------------------
+==============================================
 Run the  following
 
 rm xaction_seq.txt 
@@ -36,7 +40,7 @@ hadoop fs -get /Users/pranab/buyhist/sequence/output/part-r-00000 xaction_seq.tx
 ./xaction_state.rb xaction_seq.txt > state_seq.txt
 
 Markov Model MR
----------------
+===============
 Run the MR as below
 
 hadoop fs -rm /Users/pranab/buyhist/input/*
@@ -54,12 +58,12 @@ echo "removed output dir"
 hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
 
 Generate validation data
-------------------------
+========================
 ./buy_xaction.rb 80000 30 .05 > validation.txt
 
 
 Predict email marketing time
-----------------------------
+============================
 Run as below
 
 ./mark_plan.rb validation.txt model.txt
@@ -67,7 +71,7 @@ Run as below
 The output of Markov model MR should be in model.txt
 
 Configuration
--------------
+=============
 field.delim.regex=,
 field.delim.out=,
 num.reducer=1

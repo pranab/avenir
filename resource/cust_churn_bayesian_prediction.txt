@@ -5,6 +5,10 @@ mobile service provider users. Make sure that utol.rb is in the path../lib. util
 can be checked out from the project visitante. It's under script/ruby/lib directory
 in that project.
 
+Dependency
+==========
+Please refer to dependency.txt
+
 Bayesian Model
 ==============
 This is the first MR. Here is a sample script to generate the bayesian model

@@ -2,6 +2,10 @@ This tutorial is exploring correleation between feature attributes and class att
 for customer churn using mobile usage data. Make necessary changes to path etc depending on
 your environment
 
+Dependency
+==========
+Please refer to dependency.txt
+
 Input
 =====
 Checkout the project visitante and put util.rb from that project in ../lib directory. Run this script

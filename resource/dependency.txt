@@ -1,0 +1,49 @@
+Build Time Dependency
+=====================
+There dependency on my  project chombo. Please checkout the chombo project from github 
+and build it first
+
+Run Time Dependency
+===================
+The following jars need to be available to Haddop at run time 
+
+commons-lang3-3.1.jar
+jackson-core-lgpl-1.6.3.jar
+jackson-mapper-lgpl-1.6.3.jar
+lucene-core-3.5.0.jar 
+chombo-1.0.jar
+aws-java-sdk-1.3.22.jar 
+
+Handling dependency
+===================
+There are many ways to handle dependency in Hadoop
+
+1. Use libjar command line options as below
+hadoop jar xyz.jar com.example.MyMapreduce -libjars path1/lib1.jar,path2/lib2.jar
+
+2. Use maven shade plugin to package all jars into one uber jar. The following needs to
+be added to the build element in pom.xml
+<build>
+.......
+	<plugins>
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-shade-plugin</artifactId>
+			<executions>
+				<execution>
+					<phase>package</phase>
+					<goals>
+						<goal>shade</goal>
+					</goals>
+				</execution>
+			</executions>
+			<configuration>
+				<finalName>uber-${artifactId}-${version}</finalName>
+			</configuration>
+		</plugin>
+	</plugins>
+.......
+</build>
+
+3. Copy all jars to hadoop lib directory in all nodes. This makes more sense if you have a single
+pseudo distributed Haddop installation.
