@@ -30,10 +30,6 @@ import java.util.Map;
 public class OptimisticSampsonSampler extends SampsonSampler {
 	private Map<String, Integer> meanRewards = new HashMap<String, Integer>();
 	
-	public OptimisticSampsonSampler(int minSampleSize, int maxReward) {
-		super(minSampleSize, maxReward);
-	}
-
 	/**
 	 * @param actionID
 	 */

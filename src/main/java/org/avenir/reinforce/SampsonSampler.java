@@ -22,30 +22,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.chombo.util.Utility;
+
 /**
  * Sampson sampler probabilistic matching reinforcement learning
  * @author pranab
  *
  */
-public class SampsonSampler {
+public class SampsonSampler extends ReinforcementLearner {
 	protected  Map<String, List<Integer>> rewardDistr = new HashMap<String, List<Integer>>();
 	private int minSampleSize;
 	private int maxReward;
 	
 	/**
-	 * @param minSampleSize
-	 * @param maxReward
-	 */
-	public SampsonSampler(int minSampleSize, int maxReward) {
-		this.minSampleSize =  minSampleSize;
-		this.maxReward = maxReward;
-	}
-	
-	/**
 	 * @param actionID
 	 * @param reward
 	 */
-	public void add(String actionID, int reward) {
+	@Override
+	public void setReward(String actionID, int reward) {
 		List<Integer> rewards = rewardDistr.get(actionID);
 		if (null == rewards) {
 			rewards = new ArrayList<Integer>();
@@ -58,7 +52,8 @@ public class SampsonSampler {
 	 * Select action
 	 * @return
 	 */
-	public String selectAction() {
+	@Override
+	public String[]  nextActions(int roundNum) {
 		String slectedActionID = null;
 		int maxRewardCurrent = 0;
 		int index = 0;
@@ -79,7 +74,8 @@ public class SampsonSampler {
 			}
 		}
 		
-		return slectedActionID;
+		selActions[0] = slectedActionID;
+		return selActions;
 	}
 	
 	/**
@@ -90,4 +86,11 @@ public class SampsonSampler {
 	public int enforce(String actionID, int reward) {
 		return reward;
 	}
+
+	@Override
+	public void initialize(Map<String, Object> config) {
+		minSampleSize = Utility.getInt(config, "min.sample.size");
+		maxReward = Utility.getInt(config, "max.reward");
+	}
+
 }

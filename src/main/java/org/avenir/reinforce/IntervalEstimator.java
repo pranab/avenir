@@ -37,7 +37,6 @@ public class IntervalEstimator extends ReinforcementLearner{
 	private int confidenceLimitReductionRoundInterval;
 	private int minDistrSample;
 	private Map<String, HistogramStat> rewardDistr = new HashMap<String, HistogramStat>(); 
-	private String[] selActions;
 	private int lastRoundNum;
 	
 	@Override
@@ -53,11 +52,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			rewardDistr.put(action, new HistogramStat(binWidth));
 		}
 		
-		if (batchSize == 0) {
-			selActions = new String[1];
-		} else {
-			selActions = new String[batchSize];
-		}
+		initSelectedActions();
 	}
 
 	@Override
@@ -95,6 +90,9 @@ public class IntervalEstimator extends ReinforcementLearner{
 		return selActions;
 	}
 
+	/**
+	 * @param roundNum
+	 */
 	private void adjustConfLimit(int roundNum) {
 		int redStep = (roundNum - lastRoundNum) / confidenceLimitReductionRoundInterval;
 		if (redStep > 0) {

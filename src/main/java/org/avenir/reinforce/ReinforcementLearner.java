@@ -28,7 +28,8 @@ import java.util.Map;
 public abstract class ReinforcementLearner {
 	protected String[] actions;
 	protected int batchSize;
-	
+	protected String[] selActions;
+
 	/**
 	 * sets actions
 	 * @param actions
@@ -46,6 +47,15 @@ public abstract class ReinforcementLearner {
 	public ReinforcementLearner withBatchSize(int batchSize) {
 		this.batchSize = batchSize;
 		return this;
+	}
+	
+	protected void initSelectedActions() {
+		if (batchSize == 0) {
+			selActions = new String[1];
+		} else {
+			selActions = new String[batchSize];
+		}
+		
 	}
 
 	/**
