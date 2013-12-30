@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -97,7 +98,34 @@ public class DataPartitioner extends Configured implements Tool {
         job.setNumReduceTasks(numReducers);
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
+        //move output to segment directories
+        if (status == 0) {
+        	moveOutputToSegmentDir( outPath,  split.getSegmentCount(), job.getConfiguration());
+        }
         return status;
+	}
+	
+	/**
+	 * @param outPath
+	 * @param segmentCount
+	 * @param conf
+	 * @throws IOException
+	 */
+	private void moveOutputToSegmentDir(String outPath,  int segmentCount, Configuration conf) throws IOException {
+		 FileSystem fileSystem = FileSystem.get(conf);
+		 for (int i = 0; i < segmentCount; ++i) {
+			 //create segment dir
+			String dir = outPath + "/segment=" + i + "/data";
+			Path segmentPath = new Path(dir);
+			fileSystem.mkdirs(segmentPath);
+			
+			//move output to segment dir
+			Path srcFile = new Path(outPath + "/part-r-0000" + i);
+			Path dstFile = new Path(outPath + "/segment=" + i + "/data/partition.txt");
+			fileSystem.rename(srcFile, dstFile);
+		}
+		
+		fileSystem.close();
 	}
 	
 	/**
