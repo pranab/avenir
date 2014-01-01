@@ -20,6 +20,8 @@ package org.avenir.reinforce;
 import java.io.FileInputStream;
 import java.util.Properties;
 
+import org.chombo.util.ConfigUtility;
+
 
 
 import backtype.storm.Config;
@@ -27,16 +29,21 @@ import backtype.storm.StormSubmitter;
 import backtype.storm.topology.TopologyBuilder;
 
 /**
+ * Builds and submits storm topology for reinforcement learning
  * @author pranab
  *
  */
 public class ReinforcementLearnerTopology {
 
+    /**
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
     	String topologyName = args[0];
     	String configFilePath = args[1];
     	if (args.length != 2) {
-    		throw new IllegalArgumentException("Nedd two arguments: topology name and config file path");
+    		throw new IllegalArgumentException("Need two arguments: topology name and config file path");
     	}
     	
         FileInputStream fis = new FileInputStream(configFilePath);
@@ -54,22 +61,27 @@ public class ReinforcementLearnerTopology {
         
         //spout
         TopologyBuilder builder = new TopologyBuilder();
-        int spoutThreads = Integer.parseInt(configProps.getProperty("spout.threads"));
+        int spoutThreads = ConfigUtility.getInt(configProps, "spout.threads", 1);
         RedisSpout spout  = new RedisSpout();
-        spout.withStreamTupleFields(RedisSpout.EVENT_STREAM, ReinforcementLearnerBolt.EVENT_ID,  
-        		ReinforcementLearnerBolt.ROUND_NUM).withStreamTupleFields(RedisSpout.REWARD_STREAM, 
-        				ReinforcementLearnerBolt.ACTION_ID,  ReinforcementLearnerBolt.REWARD);
+        spout.
+        	withStreamTupleFields(RedisSpout.EVENT_STREAM, ReinforcementLearnerBolt.EVENT_ID,ReinforcementLearnerBolt.ROUND_NUM).
+        	withStreamTupleFields(RedisSpout.REWARD_STREAM,ReinforcementLearnerBolt.ACTION_ID,  ReinforcementLearnerBolt.REWARD);
         builder.setSpout("reinforcementLearnerRedisSpout", spout, spoutThreads);
         
         //bolt
         ReinforcementLearnerBolt  bolt = new  ReinforcementLearnerBolt();
-        int boltThreads = Integer.parseInt(configProps.getProperty("bolt.threads"));
-        builder.setBolt("reinforcementLearnerRedisBolt", bolt, boltThreads).shuffleGrouping("reinforcementLearnerRedisSpout",
-        		RedisSpout.EVENT_STREAM).allGrouping("reinforcementLearnerRedisSpout", RedisSpout.REWARD_STREAM);
+        int boltThreads = ConfigUtility.getInt(configProps, "bolt.threads", 1);
+        builder.setBolt("reinforcementLearnerRedisBolt", bolt, boltThreads).
+        	shuffleGrouping("reinforcementLearnerRedisSpout",RedisSpout.EVENT_STREAM).
+        	allGrouping("reinforcementLearnerRedisSpout", RedisSpout.REWARD_STREAM);
 
         //submit topology
-        int numWorkers = Integer.parseInt(configProps.getProperty("num.workers"));
+        int numWorkers = ConfigUtility.getInt(configProps, "num.workers", 1);
+        int maxSpoutPending = ConfigUtility.getInt(configProps, "max.spout.pending", 1000);
+        int maxTaskParalleism = ConfigUtility.getInt(configProps, "max.task.parallelism", 100);
         conf.setNumWorkers(numWorkers);
+        conf.setMaxSpoutPending(maxSpoutPending);
+        conf.setMaxTaskParallelism(maxTaskParalleism);
         StormSubmitter.submitTopology(topologyName, conf, builder.createTopology());
 
     }	

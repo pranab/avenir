@@ -1,0 +1,14 @@
+
+<project name="avenir_for_storm" default="uber-jar" basedir=".">
+<target name="uber-jar">
+    <echo>Packaging into a single uber JAR</echo>
+	<jar destfile="uber-avenir-1.0.jar">
+		<zipgroupfileset dir="/home/pranab/Projects/lib" includes="jedis-2.1.0.jar,commons-pool-1.5.5.jar" /> 
+		<zipgroupfileset dir="/home/pranab/Projects/avenir/target" includes="avenir-1.0.jar, " /> 
+		<zipgroupfileset dir="/home/pranab/Projects/chombo/target" includes="chombo-1.0.jar, " /> 
+		<manifest>
+			<attribute name="Main-Class" value=" org.avenir.reinforce.ReinforcementLearnerTopology" />
+		</manifest>
+	</jar>
+</target>
+</project>

@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.util.HistogramStat;
-import org.chombo.util.Utility;
+import org.chombo.util.ConfigUtility;
 
 
 /**
@@ -32,6 +32,7 @@ import org.chombo.util.Utility;
 public class IntervalEstimator extends ReinforcementLearner{
 	private int binWidth;
 	private int confidenceLimit;
+	private int minConfidenceLimit;
 	private int curConfidenceLimit;
 	private int confidenceLimitReductionStep;
 	private int confidenceLimitReductionRoundInterval;
@@ -41,12 +42,13 @@ public class IntervalEstimator extends ReinforcementLearner{
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
-		binWidth = Utility.getInt(config, "bin.width");
-		confidenceLimit = Utility.getInt(config, "confidence.limit");
+		binWidth = ConfigUtility.getInt(config, "bin.width");
+		confidenceLimit = ConfigUtility.getInt(config, "confidence.limit");
+		minConfidenceLimit = ConfigUtility.getInt(config, "min.confidence.limit");
 		curConfidenceLimit = confidenceLimit;
-		confidenceLimitReductionStep = Utility.getInt(config, "confidence.limit.reduction.step");
-		confidenceLimitReductionRoundInterval = Utility.getInt(config, "confidence.limit.reduction.round.interval");
-		minDistrSample = Utility.getInt(config, "min.distr.sample");
+		confidenceLimitReductionStep = ConfigUtility.getInt(config, "confidence.limit.reduction.step");
+		confidenceLimitReductionRoundInterval = ConfigUtility.getInt(config, "confidence.limit.reduction.round.interval");
+		minDistrSample = ConfigUtility.getInt(config, "min.reward.distr.sample");
 		
 		for (String action : actions) {
 			rewardDistr.put(action, new HistogramStat(binWidth));
@@ -94,11 +96,16 @@ public class IntervalEstimator extends ReinforcementLearner{
 	 * @param roundNum
 	 */
 	private void adjustConfLimit(int roundNum) {
-		int redStep = (roundNum - lastRoundNum) / confidenceLimitReductionRoundInterval;
-		if (redStep > 0) {
-			curConfidenceLimit -= confidenceLimitReductionStep;
+		if (curConfidenceLimit > minConfidenceLimit) {
+			int redStep = (roundNum - lastRoundNum) / confidenceLimitReductionRoundInterval;
+			if (redStep > 0) {
+				curConfidenceLimit -= confidenceLimitReductionStep;
+				if (curConfidenceLimit > minConfidenceLimit) {
+					curConfidenceLimit = minConfidenceLimit;
+				}
+			}
+			lastRoundNum = roundNum;
 		}
-		lastRoundNum = roundNum;
 	}
 	
 	@Override

@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.chombo.util.Utility;
+import org.chombo.util.ConfigUtility;
 
 /**
  * Sampson sampler probabilistic matching reinforcement learning
@@ -89,8 +89,8 @@ public class SampsonSampler extends ReinforcementLearner {
 
 	@Override
 	public void initialize(Map<String, Object> config) {
-		minSampleSize = Utility.getInt(config, "min.sample.size");
-		maxReward = Utility.getInt(config, "max.reward");
+		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
+		maxReward = ConfigUtility.getInt(config, "max.reward");
 	}
 
 }

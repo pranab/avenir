@@ -14,13 +14,15 @@ actionCtrDistr = {'page1' ; (30, 12), 'page2' ; (60, 25), 'page3' ; (80, 10)}
 actionSelCountThreshold = 100
 eventCount = 0
 actionCount = 0
-
+roundNum = 1
 
 # send event, for example page visit
 def sendEvent(intv):
 	while True:
 		sessionID = uuid.uuid1()
-		r.lpush("eventQueue", sessionID)
+		msg = "%s,%d" %(sessionID, roundNum)
+		r.lpush("eventQueue", msg)
+		roundNum = roundNum + 1
 		eventCount = eventCount + 1;
 		if (eventCount % 20 == 0):
 			print "generated %d events" % (eventCount)
@@ -34,6 +36,9 @@ def receiveAction(intv):
         if data is not None:
         	action = data.split(":")[1]
             updateClickRate(action)
+            actionCount = actionCount + 1
+			if (actionCount % 20 == 0):
+				print "got %d actions" % (actionCount)
 		time.sleep(intv)
 
 #update CTR when enough samples are available 
@@ -48,7 +53,7 @@ def updateClickRate(action):
 		r = int(r * distr[1] + distr[0])
 		actionSel[action] = 0
 		ctr = "%s:%d" % (action, r)
-		r.lpush("ctrQueue", ctr)            
+		r.lpush("rewardQueue", ctr)            
 	            
 eventIntv = float(sys.argv[1])
 

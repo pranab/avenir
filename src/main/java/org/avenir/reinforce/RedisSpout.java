@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.chombo.storm.GenericSpout;
 import org.chombo.storm.MessageHolder;
+import org.chombo.util.ConfigUtility;
 
 import redis.clients.jedis.Jedis;
 
@@ -33,6 +34,7 @@ public class RedisSpout extends GenericSpout {
 	private Jedis jedis;
 	private String eventQueue;
 	private String rewardQueue;
+	private MessageHolder pendingMsgHolder = null;
 	private static final String NIL = "nil";
 	public static final String EVENT_STREAM = "eventStream";
 	public static final String REWARD_STREAM = "rewardStream";
@@ -47,13 +49,11 @@ public class RedisSpout extends GenericSpout {
 	@Override
 	public void activate() {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void deactivate() {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -64,30 +64,44 @@ public class RedisSpout extends GenericSpout {
 
 	@Override
 	public void intialize(Map stormConf, TopologyContext context) {
-		String redisHost = stormConf.get("redis.server.host").toString();
-		int redisPort = new Integer(stormConf.get("redis.server.port").toString());
+		String redisHost = ConfigUtility.getString(stormConf, "redis.server.host");
+		int redisPort = ConfigUtility.getInt(stormConf,"redis.server.port");
 		jedis = new Jedis(redisHost, redisPort);
-		eventQueue =  stormConf.get("redis.event.queue").toString();
-		rewardQueue =  stormConf.get("redis.reward.queue").toString();
-		
+		eventQueue = ConfigUtility.getString(stormConf, "redis.event.queue");
+		rewardQueue = ConfigUtility.getString(stormConf, "redis.reward.queue");
 	}
 
 	@Override
 	public MessageHolder nextSpoutMessage() {
 		MessageHolder msgHolder = null;
-		String message  = jedis.rpop(eventQueue);		
-		if(null != message  && !message.equals(NIL)) {
-			String[] items = message.split(",");
-			Values values = new Values(items[0],items[1]);
-			msgHolder = new  MessageHolder(values);
-			msgHolder.setStream(EVENT_STREAM);
+		if (null != pendingMsgHolder) {
+			//anything pending
+			msgHolder = pendingMsgHolder;
+			pendingMsgHolder = null;
 		} else {
-			message  = jedis.rpop(rewardQueue);
+			String message  = jedis.rpop(eventQueue);		
 			if(null != message  && !message.equals(NIL)) {
+				//message in event queue
 				String[] items = message.split(",");
 				Values values = new Values(items[0],items[1]);
 				msgHolder = new  MessageHolder(values);
-				msgHolder.setStream(REWARD_STREAM);
+				msgHolder.setStream(EVENT_STREAM);
+			} 
+			
+			message  = jedis.rpop(rewardQueue);
+			if(null != message  && !message.equals(NIL)) {
+					//message in reward queue
+					String[] items = message.split(",");
+					Values values = new Values(items[0],items[1]);
+					if (null == msgHolder) {
+						//nothing in event queue, return this message
+						msgHolder = new  MessageHolder(values);
+						msgHolder.setStream(REWARD_STREAM);
+					} else {
+						//message from event queue, make this message pending
+						pendingMsgHolder = new  MessageHolder(values);
+						pendingMsgHolder.setStream(REWARD_STREAM);
+					}
 			}
 		}
 		return msgHolder;

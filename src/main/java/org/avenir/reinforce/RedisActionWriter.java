@@ -20,7 +20,8 @@ package org.avenir.reinforce;
 
 import java.util.Map;
 
-import org.chombo.util.Utility;
+import org.chombo.util.ConfigUtility;
+import org.apache.commons.lang3.StringUtils;
 
 import redis.clients.jedis.Jedis;
 
@@ -35,15 +36,15 @@ public  class RedisActionWriter extends  ActionWriter {
 	@Override
 	public void intialize(Map stormConf) {
 		//action output queue		
-		String redisHost = stormConf.get("redis.server.host").toString();
-		int redisPort = new Integer(stormConf.get("redis.server.port").toString());
+		String redisHost = ConfigUtility.getString(stormConf, "redis.server.host");
+		int redisPort = ConfigUtility.getInt(stormConf,"redis.server.port");
 		jedis = new Jedis(redisHost, redisPort);
-		actionQueue =  stormConf.get("redis.action.queue").toString();
+		actionQueue = ConfigUtility.getString(stormConf, "redis.action.queue");
 	}
 
 	@Override
 	public void write(String eventID, String[] actions) {
-		String actionList = actions.length > 1 ? Utility.join(actions) : actions[0] ;
+		String actionList = actions.length > 1 ? StringUtils.join(actions) : actions[0] ;
 		jedis.lpush(actionQueue, eventID + "," + actionList);
 	}
 

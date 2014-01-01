@@ -23,7 +23,7 @@ import java.util.Map;
 
 import org.chombo.storm.GenericBolt;
 import org.chombo.storm.MessageHolder;
-import org.chombo.util.Utility;
+import org.chombo.util.ConfigUtility;
 
 import redis.clients.jedis.Jedis;
 
@@ -59,13 +59,13 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	@Override
 	public void intialize(Map stormConf, TopologyContext context) {
 		//intialize learner
-		String learnerType = Utility.getString(stormConf, "reinforcement.lrearner.type");
-		String[] actions = Utility.getString(stormConf, "reinforcement.lrearneractions").split(",");
-		Map<String, Object> typedConf = Utility.toTypedMap(stormConf);
+		String learnerType = ConfigUtility.getString(stormConf, "reinforcement.learrner.type");
+		String[] actions = ConfigUtility.getString(stormConf, "reinforcement.learrner.actions").split(",");
+		Map<String, Object> typedConf = ConfigUtility.toTypedMap(stormConf);
 		learner =  ReinforcementLearnerFactory.create(learnerType, actions, typedConf);
 		
 		//action output queue		
-		if (Utility.getString(stormConf, "reinforcement.lrearner.action.writer").equals("redis")) {
+		if (ConfigUtility.getString(stormConf, "reinforcement.learrner.action.writer").equals("redis")) {
 			actionWriter = new RedisActionWriter();
 			actionWriter.intialize(stormConf);
 		}
