@@ -10,33 +10,34 @@ import random
 r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 actionSel = {'page1' : 0, 'page2' : 0, 'page3' : 0}
-actionCtrDistr = {'page1' ; (30, 12), 'page2' ; (60, 25), 'page3' ; (80, 10)}
+actionCtrDistr = {'page1' : (30, 12), 'page2' : (60, 25), 'page3' : (80, 10)}
 actionSelCountThreshold = 100
-eventCount = 0
-actionCount = 0
-roundNum = 1
+
 
 # send event, for example page visit
 def sendEvent(intv):
+	roundNum = 1
+	eventCount = 0
 	while True:
 		sessionID = uuid.uuid1()
 		msg = "%s,%d" %(sessionID, roundNum)
 		r.lpush("eventQueue", msg)
 		roundNum = roundNum + 1
 		eventCount = eventCount + 1;
-		if (eventCount % 20 == 0):
+		if (eventCount % 50 == 0):
 			print "generated %d events" % (eventCount)
-		intv = intv + random.randrange(-3, 3)
+		intv = intv * (float(random.randrange(80, 120)) / 100.0)
 		time.sleep(intv)
 
 # receive action, for example page to be displayed
-def receiveAction(intv):		
+def receiveAction(intv):
+	actionCount = 0		
 	while True:
-    	data = r.rpop("actionQueue")
-        if data is not None:
-        	action = data.split(":")[1]
-            updateClickRate(action)
-            actionCount = actionCount + 1
+		data = r.rpop("actionQueue")
+		if data is not None:
+			action = data.split(":")[1]
+			updateClickRate(action)
+			actionCount = actionCount + 1
 			if (actionCount % 20 == 0):
 				print "got %d actions" % (actionCount)
 		time.sleep(intv)
@@ -53,15 +54,36 @@ def updateClickRate(action):
 		r = int(r * distr[1] + distr[0])
 		actionSel[action] = 0
 		ctr = "%s:%d" % (action, r)
-		r.lpush("rewardQueue", ctr)            
-	            
-eventIntv = float(sys.argv[1])
+		r.lpush("rewardQueue", ctr)      
+		print "action %s ctr %d" %(action, r)      
 
-try:
-   thread.start_new_thread(sendEvent, (eventIntv, ))
-   thread.start_new_thread(receiveAction, (eventIntv / 2 , ))
-except:
-   print "Error: unable to start thread"
-   
-while True:
-	pass
+def flushQueue(queue):
+	count = 0
+	while True:
+		out = r.rpop(queue)
+		if out is not None:
+			count = count + 1
+		else:
+			break
+	print "%d items flushed from %s" %(count, queue)
+	
+	
+#commands	
+op = sys.argv[1]
+if (op == "simulate"):	            
+	eventIntv = float(sys.argv[2])
+
+	try:
+	   thread.start_new_thread(sendEvent, (eventIntv, ))
+	   thread.start_new_thread(receiveAction, (eventIntv / 2 , ))
+	except:
+	   print "Error: unable to start thread"
+
+	com = "continue"
+	while (com == "continue"):
+		com = raw_input("enter quit to quit\n")
+		pass
+elif (op == "flushQueue"):
+	flushQueue("eventQueue")
+	flushQueue("actionQueue")
+	flushQueue("rewardQueue")
