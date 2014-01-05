@@ -29,8 +29,7 @@ import redis.clients.jedis.Jedis;
 public class RedisRewardReader implements RewardReader {
 	private Jedis jedis;
 	private String rewardQueue;
-	private long lastMessageSeq;
-	private static final String NIL = "nil";
+	private long startOffset;
 	private static final String FIELD_DELIM  =  ",";
 
 	@Override
@@ -40,52 +39,18 @@ public class RedisRewardReader implements RewardReader {
 		int redisPort = ConfigUtility.getInt(stormConf,"redis.server.port");
 		jedis = new Jedis(redisHost, redisPort);
 		rewardQueue = ConfigUtility.getString(stormConf, "redis.reward.queue");
-		
 	}
 
 	@Override
 	public List<Pair<String, Integer>> readRewards() {
 		List<Pair<String, Integer>> rewards = new ArrayList<Pair<String, Integer>>();
-		List<String> messages = new ArrayList<String>();
-		long latestMessageSeq = 0;
-		
-		while (true) {
-			String message  = jedis.rpop(rewardQueue);		
-			if(null != message  && !message.equals(NIL)) {
-				String[] items =  message.split(",");
-				long messageSeq = Long.parseLong(items[2]);
-				if (messageSeq <= lastMessageSeq) {
-					//already read, put back
-					messages.add(message);
-				} else {
-					Pair<String, Integer> reward = new Pair<String, Integer>(items[0], Integer.parseInt(items[1]));
-					rewards.add(reward);
-					if (messageSeq > latestMessageSeq) {
-						latestMessageSeq = messageSeq;
-					}
-					
-					//decrement subscriber count and put back
-					int  messageSubsCount = Integer.parseInt(items[3]);
-					--messageSubsCount;
-					if (messageSubsCount  > 0) {
-						message = items[0] + FIELD_DELIM + items[1] + FIELD_DELIM + items[2] + FIELD_DELIM  +  messageSubsCount;
-						messages.add(message);
-					}
-				}
-			} else {
-				break;
-			}
+		List<String> messages = jedis.lrange(rewardQueue, startOffset, Long.MAX_VALUE);
+		for (String message : messages) {
+			String[] items =  message.split(FIELD_DELIM);
+			Pair<String, Integer> reward = new Pair<String, Integer>(items[0], Integer.parseInt(items[1]));
+			rewards.add(reward);
 		}
-		
-		//put messages back
-		for (int i =  messages.size() -1 ; i >= 0; --i) {
-			jedis.rpush(rewardQueue, messages.get(i));
-		}
-		
-		//update latest sequence
-		if (rewards.size() > 0) {
-			lastMessageSeq = latestMessageSeq;
-		}
+		startOffset += messages.size();
 		return rewards;
 	}
 
