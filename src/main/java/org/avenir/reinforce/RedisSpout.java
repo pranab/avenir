@@ -20,6 +20,7 @@ package org.avenir.reinforce;
 
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.chombo.storm.GenericSpout;
 import org.chombo.storm.MessageHolder;
 import org.chombo.util.ConfigUtility;
@@ -38,8 +39,9 @@ public class RedisSpout extends GenericSpout {
 	private static final String NIL = "nil";
 	public static final String EVENT_STREAM = "eventStream";
 	public static final String REWARD_STREAM = "rewardStream";
+	private static final Logger LOG = Logger.getLogger(RedisSpout.class);
 	
-
+	
 	@Override
 	public void close() {
 		// TODO Auto-generated method stub
@@ -69,39 +71,24 @@ public class RedisSpout extends GenericSpout {
 		jedis = new Jedis(redisHost, redisPort);
 		eventQueue = ConfigUtility.getString(stormConf, "redis.event.queue");
 		rewardQueue = ConfigUtility.getString(stormConf, "redis.reward.queue");
+		
+		debugOn = ConfigUtility.getBoolean(stormConf,"debug.on", false);
+		messageCountInterval = ConfigUtility.getInt(stormConf,"log.message.count.interval", 100);
+		LOG.info("debugOn:" + debugOn);
 	}
 
 	@Override
 	public MessageHolder nextSpoutMessage() {
 		MessageHolder msgHolder = null;
-		if (null != pendingMsgHolder) {
-			//anything pending
-			msgHolder = pendingMsgHolder;
-			pendingMsgHolder = null;
-		} else {
-			String message  = jedis.rpop(eventQueue);		
-			if(null != message  && !message.equals(NIL)) {
-				//message in event queue
-				String[] items = message.split(",");
-				Values values = new Values(items[0],items[1]);
-				msgHolder = new  MessageHolder(values);
-				msgHolder.setStream(EVENT_STREAM);
-			} 
-			
-			message  = jedis.rpop(rewardQueue);
-			if(null != message  && !message.equals(NIL)) {
-					//message in reward queue
-					String[] items = message.split(",");
-					Values values = new Values(items[0],items[1]);
-					if (null == msgHolder) {
-						//nothing in event queue, return this message
-						msgHolder = new  MessageHolder(values);
-						msgHolder.setStream(REWARD_STREAM);
-					} else {
-						//message from event queue, make this message pending
-						pendingMsgHolder = new  MessageHolder(values);
-						pendingMsgHolder.setStream(REWARD_STREAM);
-					}
+		String message  = jedis.rpop(eventQueue);		
+		if(null != message  && !message.equals(NIL)) {
+			//message in event queue
+			String[] items = message.split(",");
+			Values values = new Values(items[0],items[1]);
+			msgHolder = new  MessageHolder(values);
+			if (debugOn) {
+				if (messageCounter % messageCountInterval == 0)
+					LOG.info("event message - message counter:" + messageCounter );
 			}
 		}
 		return msgHolder;

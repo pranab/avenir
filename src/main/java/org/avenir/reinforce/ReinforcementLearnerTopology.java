@@ -63,17 +63,15 @@ public class ReinforcementLearnerTopology {
         TopologyBuilder builder = new TopologyBuilder();
         int spoutThreads = ConfigUtility.getInt(configProps, "spout.threads", 1);
         RedisSpout spout  = new RedisSpout();
-        spout.
-        	withStreamTupleFields(RedisSpout.EVENT_STREAM, ReinforcementLearnerBolt.EVENT_ID,ReinforcementLearnerBolt.ROUND_NUM).
-        	withStreamTupleFields(RedisSpout.REWARD_STREAM,ReinforcementLearnerBolt.ACTION_ID,  ReinforcementLearnerBolt.REWARD);
+        spout.withTupleFields( ReinforcementLearnerBolt.EVENT_ID,ReinforcementLearnerBolt.ROUND_NUM);
         builder.setSpout("reinforcementLearnerRedisSpout", spout, spoutThreads);
         
         //bolt
         ReinforcementLearnerBolt  bolt = new  ReinforcementLearnerBolt();
         int boltThreads = ConfigUtility.getInt(configProps, "bolt.threads", 1);
-        builder.setBolt("reinforcementLearnerRedisBolt", bolt, boltThreads).
-        	shuffleGrouping("reinforcementLearnerRedisSpout",RedisSpout.EVENT_STREAM).
-        	allGrouping("reinforcementLearnerRedisSpout", RedisSpout.REWARD_STREAM);
+        builder.
+        	setBolt("reinforcementLearnerRedisBolt", bolt, boltThreads).
+        	shuffleGrouping("reinforcementLearnerRedisSpout");
 
         //submit topology
         int numWorkers = ConfigUtility.getInt(configProps, "num.workers", 1);

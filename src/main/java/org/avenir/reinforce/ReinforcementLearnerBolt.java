@@ -21,9 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.chombo.storm.GenericBolt;
 import org.chombo.storm.MessageHolder;
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.Pair;
 
 import redis.clients.jedis.Jedis;
 
@@ -45,8 +47,11 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	private ReinforcementLearner  learner = null;
 	private Jedis jedis;
 	private String actionQueue;
-	private ActionWriter  actionWriter;;
-	
+	private ActionWriter  actionWriter;
+	private RewardReader rewardReader; 
+	private static final Logger LOG = Logger.getLogger(ReinforcementLearnerBolt.class);
+			
+			
 	@Override
 	public Map<String, Object> getComponentConfiguration() {
 		// TODO Auto-generated method stub
@@ -68,8 +73,13 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 		if (ConfigUtility.getString(stormConf, "reinforcement.learrner.action.writer").equals("redis")) {
 			actionWriter = new RedisActionWriter();
 			actionWriter.intialize(stormConf);
+			
+			rewardReader = new RedisRewardReader();
+			rewardReader.intialize(stormConf);
 		}
-		
+		debugOn = ConfigUtility.getBoolean(stormConf,"debug.on", false);
+		messageCountInterval = ConfigUtility.getInt(stormConf,"log.message.count.interval", 100);
+		LOG.info("debugOn:" + debugOn);
 	}
 
 	/* (non-Javadoc)
@@ -78,16 +88,33 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	@Override
 	public boolean process(Tuple input) {
 		if (input.contains(ROUND_NUM)) {
+			//get rewards
+			List<Pair<String, Integer>> rewards =  rewardReader.readRewards();
+			for (Pair<String, Integer> reward : rewards) {
+				learner.setReward(reward.getLeft(), reward.getRight());
+			}
+			if (debugOn && rewards.size() > 0) {
+				LOG.info("number of reward data:" + rewards.size() );
+			}			
+			
 			//select action for next round
 			String eventID = input.getStringByField(EVENT_ID);
 			int roundNum = input.getIntegerByField(ROUND_NUM);
 			String[] actions = learner.nextActions(roundNum);
 			actionWriter.write(eventID, actions);
+			if (debugOn) {
+				if (messageCounter % messageCountInterval == 0)
+					LOG.info("processed event message - message counter:" + messageCounter );
+			}
 		} else {
 			//reward feedback
 			String action = input.getStringByField(ACTION_ID);
 			int reward = input.getIntegerByField(REWARD);
 			learner.setReward(action, reward);
+			if (debugOn) {
+				if (messageCounter % messageCountInterval == 0)
+					LOG.info("processed reward message - message counter:" + messageCounter );
+			}
 		}
 		return true;
 	}

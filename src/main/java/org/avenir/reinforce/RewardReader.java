@@ -17,23 +17,25 @@
 
 package org.avenir.reinforce;
 
+import java.util.List;
 import java.util.Map;
 
+import org.chombo.util.Pair;
+
 /**
- * Abstract base class for storing actions selected by RL
+ * Reads action rewards from messaging or database systems
  * @author pranab
  *
  */
-public interface ActionWriter {
-	
+public interface RewardReader {
 	/**
 	 * @param stormConf
 	 */
 	public  void intialize(Map stormConf) ;
 	
 	/**
-	 * @param eventID
-	 * @param actions
+	 * @return
 	 */
-	public  void write(String eventID, String[] actions);
+	public List<Pair<String, Integer>> readRewards();
+
 }

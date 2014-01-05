@@ -29,7 +29,7 @@ import redis.clients.jedis.Jedis;
  * @author pranab
  *
  */
-public  class RedisActionWriter extends  ActionWriter {
+public  class RedisActionWriter implements  ActionWriter {
 	private Jedis jedis;
 	private String actionQueue;
 
