@@ -31,11 +31,12 @@ import redis.clients.jedis.Jedis;
 public class RedisRewardReader implements RewardReader {
 	private Jedis jedis;
 	private String rewardQueue;
-	private long startOffset;
+	private long startOffset = -1;
 	private boolean debugOn;
 	private static final String FIELD_DELIM  =  ",";
 	private static final Logger LOG = Logger.getLogger(RedisRewardReader.class);
-	
+	private static final String NIL = "nil";
+
 	@Override
 	public void intialize(Map stormConf) {
 		//action output queue		
@@ -52,6 +53,7 @@ public class RedisRewardReader implements RewardReader {
 	@Override
 	public List<Pair<String, Integer>> readRewards() {
 		List<Pair<String, Integer>> rewards = new ArrayList<Pair<String, Integer>>();
+		/*
 		List<String> messages = jedis.lrange(rewardQueue, startOffset,  startOffset+1000000L);
 		if (debugOn) {
 			LOG.info("startOffset:" + startOffset + " num of reward records:" + messages.size());
@@ -65,6 +67,23 @@ public class RedisRewardReader implements RewardReader {
 			}
 		}
 		startOffset += messages.size();
+		*/
+		
+		String message = null;
+		while(true) {
+			message = jedis.lindex(rewardQueue, startOffset);
+			if(null != message  && !message.equals(NIL)) {
+				if (debugOn) {
+					LOG.info("next reward:" + message + " startOffset:" + startOffset);
+				}
+				String[] items =  message.split(FIELD_DELIM);
+				Pair<String, Integer> reward = new Pair<String, Integer>(items[0], Integer.parseInt(items[1]));
+				rewards.add(reward);
+				--startOffset;
+			} else {
+				break;
+			}
+		}
 		return rewards;
 	}
 

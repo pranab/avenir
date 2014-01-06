@@ -129,7 +129,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 	<dependency>
     	<groupId>redis.clients</groupId>
     	<artifactId>jedis</artifactId>
-    	<version>2.1.0</version>
+    	<version>2.2.1</version>
     	<type>jar</type>
     	<scope>compile</scope>
 	</dependency>
