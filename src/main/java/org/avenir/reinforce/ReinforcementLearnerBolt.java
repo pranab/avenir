@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.chombo.storm.GenericBolt;
 import org.chombo.storm.MessageHolder;
@@ -78,6 +79,9 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 			rewardReader.intialize(stormConf);
 		}
 		debugOn = ConfigUtility.getBoolean(stormConf,"debug.on", false);
+		if (debugOn) {
+			LOG.setLevel(Level.INFO);;
+		}
 		messageCountInterval = ConfigUtility.getInt(stormConf,"log.message.count.interval", 100);
 		LOG.info("debugOn:" + debugOn);
 	}
@@ -105,6 +109,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 			if (debugOn) {
 				if (messageCounter % messageCountInterval == 0)
 					LOG.info("processed event message - message counter:" + messageCounter );
+					LOG.info("learner stat:" + learner.getStat());
 			}
 		} else {
 			//reward feedback

@@ -20,6 +20,8 @@ package org.avenir.reinforce;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.chombo.util.HistogramStat;
 import org.chombo.util.ConfigUtility;
 
@@ -39,6 +41,11 @@ public class IntervalEstimator extends ReinforcementLearner{
 	private int minDistrSample;
 	private Map<String, HistogramStat> rewardDistr = new HashMap<String, HistogramStat>(); 
 	private int lastRoundNum;
+	private long randomSelectCount;
+	private long intvEstSelectCount;
+	private boolean debugOn;
+	private long logCounter;
+	private static final Logger LOG = Logger.getLogger(IntervalEstimator.class);
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
@@ -55,16 +62,28 @@ public class IntervalEstimator extends ReinforcementLearner{
 		}
 		
 		initSelectedActions();
+		
+		debugOn = ConfigUtility.getBoolean(config,"debug.on", false);
+		if (debugOn) {
+			LOG.setLevel(Level.INFO);
+			LOG.info("confidenceLimit:" + confidenceLimit + " minConfidenceLimit:" + minConfidenceLimit + 
+					" confidenceLimitReductionStep:" + confidenceLimitReductionStep + " confidenceLimitReductionRoundInterval:" +
+					confidenceLimitReductionRoundInterval + " minDistrSample:" + minDistrSample);
+		}
 	}
 
 	@Override
 	public String[] nextActions(int roundNum) {
 		String selAction = null;
-		
+		++logCounter;
 		//make sure reward distributions have enough sample
 		boolean lowSample = false;
 		for (String action : rewardDistr.keySet()) {
-			if (rewardDistr.get(action).getCount() < minDistrSample) {
+			int sampleCount = rewardDistr.get(action).getCount();
+			if (debugOn && logCounter % 100 == 0) {
+				LOG.info("action:" + action + " distr sampleCount: " + sampleCount);
+			}
+			if (sampleCount < minDistrSample) {
 				lowSample = true;
 				break;
 			}
@@ -73,6 +92,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 		if (lowSample) {
 			//select randomly
 			selAction = actions[(int)(Math.random() * actions.length)];
+			++randomSelectCount;
 		} else {
 			//reduce confidence limit
 			adjustConfLimit(roundNum);
@@ -87,6 +107,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 					selAction = action;
 				}
 			}
+			++intvEstSelectCount;
 		}
 		selActions[0] = selAction;
 		return selActions;
@@ -115,6 +136,13 @@ public class IntervalEstimator extends ReinforcementLearner{
 			throw new IllegalArgumentException("invalid action:" + action);
 		}
 		stat.add(reward);
+		
+		if (debugOn) {
+			LOG.info("setReward action:" + action + " reward:" + reward + " sample count:" + stat.getCount());
+		}
 	}
 
+	public String getStat() {
+		return "randomSelectCount:" + randomSelectCount + " intvEstSelectCount:" + intvEstSelectCount; 
+	}
 }

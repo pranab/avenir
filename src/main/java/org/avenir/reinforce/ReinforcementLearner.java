@@ -75,4 +75,12 @@ public abstract class ReinforcementLearner {
 	 * @param reward
 	 */
 	public abstract void setReward(String action, int reward);
+	
+	/**
+	 * @return
+	 */
+	public  String getStat() {
+		return "";
+	}
+	
 }

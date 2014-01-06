@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Pair;
 
@@ -30,8 +32,10 @@ public class RedisRewardReader implements RewardReader {
 	private Jedis jedis;
 	private String rewardQueue;
 	private long startOffset;
+	private boolean debugOn;
 	private static final String FIELD_DELIM  =  ",";
-
+	private static final Logger LOG = Logger.getLogger(RedisRewardReader.class);
+	
 	@Override
 	public void intialize(Map stormConf) {
 		//action output queue		
@@ -39,16 +43,26 @@ public class RedisRewardReader implements RewardReader {
 		int redisPort = ConfigUtility.getInt(stormConf,"redis.server.port");
 		jedis = new Jedis(redisHost, redisPort);
 		rewardQueue = ConfigUtility.getString(stormConf, "redis.reward.queue");
+		debugOn = ConfigUtility.getBoolean(stormConf,"debug.on", false);
+		if (debugOn) {
+			LOG.setLevel(Level.INFO);
+		}	
 	}
 
 	@Override
 	public List<Pair<String, Integer>> readRewards() {
 		List<Pair<String, Integer>> rewards = new ArrayList<Pair<String, Integer>>();
-		List<String> messages = jedis.lrange(rewardQueue, startOffset, Long.MAX_VALUE);
+		List<String> messages = jedis.lrange(rewardQueue, startOffset,  startOffset+1000000L);
+		if (debugOn) {
+			LOG.info("startOffset:" + startOffset + " num of reward records:" + messages.size());
+		}
 		for (String message : messages) {
 			String[] items =  message.split(FIELD_DELIM);
 			Pair<String, Integer> reward = new Pair<String, Integer>(items[0], Integer.parseInt(items[1]));
 			rewards.add(reward);
+			if (debugOn) {
+				LOG.info("reward:" + message);
+			}
 		}
 		startOffset += messages.size();
 		return rewards;

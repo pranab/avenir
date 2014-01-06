@@ -20,6 +20,7 @@ package org.avenir.reinforce;
 
 import java.util.Map;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.chombo.storm.GenericSpout;
 import org.chombo.storm.MessageHolder;
@@ -73,6 +74,10 @@ public class RedisSpout extends GenericSpout {
 		rewardQueue = ConfigUtility.getString(stormConf, "redis.reward.queue");
 		
 		debugOn = ConfigUtility.getBoolean(stormConf,"debug.on", false);
+		if (debugOn) {
+			LOG.setLevel(Level.INFO);;
+		}
+		
 		messageCountInterval = ConfigUtility.getInt(stormConf,"log.message.count.interval", 100);
 		LOG.info("debugOn:" + debugOn);
 	}
@@ -84,7 +89,7 @@ public class RedisSpout extends GenericSpout {
 		if(null != message  && !message.equals(NIL)) {
 			//message in event queue
 			String[] items = message.split(",");
-			Values values = new Values(items[0],items[1]);
+			Values values = new Values(items[0], Integer.parseInt(items[1]));
 			msgHolder = new  MessageHolder(values);
 			if (debugOn) {
 				if (messageCounter % messageCountInterval == 0)
