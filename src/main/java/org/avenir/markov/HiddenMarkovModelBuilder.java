@@ -210,15 +210,21 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         		
         		//at ends
         		if (leftBound == -1 && rightBound != -1) {
+        			//first state
         			leftBound =stateIndexes.get(i) - rightWindow; 
         			if (leftBound < 0) {
         				leftBound = 0;
         			}
         		} else if    (rightBound == -1 && leftBound != -1) {
+        			//last state
         			rightBound =stateIndexes.get(i) + leftWindow; 
         			if (rightBound >= items.length) {
         				rightBound =  items.length-1;
         			}
+        		} else if (leftBound == -1 && rightBound == -1) {
+        			//only one state
+        			leftBound =stateIndexes.get(i) / 2;
+        			rightBound = stateIndexes.get(i) + (items.length - 1 - stateIndexes.get(i)) / 2;
         		}
         		
         		//state observation count to left
@@ -227,7 +233,8 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         			String obs = items[j];
             		outKey.initialize();
             		outKey.add(STATE_OBS, state, obs);
-            		outVal.set(windowFunction[k]);
+            		int val = k < windowFunction.length ?  windowFunction[k]  :   windowFunction[ windowFunction.length -1];  
+            		outVal.set(val);
             		context.write(outKey, outVal);
         		}
         		
@@ -236,7 +243,8 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         			String obs = items[j];
             		outKey.initialize();
             		outKey.add(STATE_OBS, state, obs);
-            		outVal.set(windowFunction[k]);
+            		int val = k < windowFunction.length ?  windowFunction[k]  :   windowFunction[ windowFunction.length -1];  
+            		outVal.set(val);
             		context.write(outKey, outVal);
         		}
         		
