@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +43,7 @@ import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 
 /**
- * Builds HMM from labeled data
+ * Builds HMM from labeled data. Data could be fully or partially tagged
  * @author pranab
  *
  */
@@ -87,11 +88,18 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
 		private IntWritable outVal  = new IntWritable(1);
 		private List<String[]> obsStateList = new ArrayList<String[]>();
 		private String subFieldDelim;
+		private boolean partiallyTagged;
+		private String[] states;
+		private int[] windowFunction;
+		private List<Integer> stateIndexes = new ArrayList<Integer>();
 		private static Integer STATE_TRANS = 0;
 		private static Integer STATE_OBS = 1;
 		private static Integer INITIAL_STATE = 2;
         private static final Logger LOG = Logger.getLogger(StateTransitionMapper.class);
 
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
             if (conf.getBoolean("debug.on", false)) {
@@ -100,11 +108,32 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
             skipFieldCount = conf.getInt("skip.field.count", 0);
         	subFieldDelim = conf.get("sub.field.delim", ":");
+        	partiallyTagged = conf.getBoolean("partially.tagged", false);
+        	states = conf.get("model.states").split(",");
+        	if (partiallyTagged) {
+        		windowFunction = Utility.intArrayFromString(conf.get("window.function"), ",");
+        	}
         }
         
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void map(LongWritable key, Text value, Context context)
         		throws IOException, InterruptedException {
         	items  =  value.toString().split(fieldDelimRegex);
+        	if (partiallyTagged) {
+        		processPartiallyTagged(context);
+        	} else {
+        		processFullyTagged(context);
+        	}
+        }        
+        
+        /**
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void processFullyTagged(Context context) throws IOException, InterruptedException {
         	obsStateList.clear();
         	if (items.length >= (skipFieldCount + 2)) {
 	        	for (int i = skipFieldCount; i < items.length; ++i) {
@@ -134,9 +163,94 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
             		context.write(outKey, outVal);
         		}
         	}
-        }        
+        }
         
-	}
+        
+        /**
+         * @param context
+         * @throws InterruptedException 
+         * @throws IOException 
+         */
+        private void processPartiallyTagged(Context context) throws IOException, InterruptedException {
+        	//identify states
+        	stateIndexes.clear();
+        	for (int i = 0; i <  items.length; ++i) {
+        		if (ArrayUtils.contains(states, items[i])) {
+        			stateIndexes.add(i);
+        		}
+        	}
+
+ 			//intial state
+    		outKey.initialize();
+    		outKey.add(INITIAL_STATE, items[stateIndexes.get(0)], items[stateIndexes.get(0)]);
+    		outVal.set(1);
+    		context.write(outKey, outVal);
+ 
+    		//state to observation 
+        	int leftBound = 0;
+        	int rightBound = 0;
+        	int leftWindow = 0;
+        	int rightWindow = 0;
+        	for (int i = 0; i < stateIndexes.size(); ++i ) {
+        		//boundary on left
+        		if (i > 0) {
+        			leftWindow = stateIndexes.get(i) - stateIndexes.get(i-1) / 2;
+        			leftBound =stateIndexes.get(i) - leftWindow; 
+        		} else {
+        			leftBound = -1;
+        		}
+        		
+        		//boundary on right
+        		if (i  < stateIndexes.size() -1) {
+        			rightWindow = stateIndexes.get(i+1) - stateIndexes.get(i) / 2; 
+        			rightBound =  stateIndexes.get(i) + rightWindow;
+        		} else {
+        			rightBound = -1;
+        		}
+        		
+        		//at ends
+        		if (leftBound == -1 && rightBound != -1) {
+        			leftBound =stateIndexes.get(i) - rightWindow; 
+        			if (leftBound < 0) {
+        				leftBound = 0;
+        			}
+        		} else if    (rightBound == -1 && leftBound != -1) {
+        			rightBound =stateIndexes.get(i) + leftWindow; 
+        			if (rightBound >= items.length) {
+        				rightBound =  items.length-1;
+        			}
+        		}
+        		
+        		//state observation count to left
+        		String state = items[stateIndexes.get(i)];
+        		for (int j = stateIndexes.get(i)-1, k=0;  j >= leftBound;  --j,++k ) {
+        			String obs = items[j];
+            		outKey.initialize();
+            		outKey.add(STATE_OBS, state, obs);
+            		outVal.set(windowFunction[k]);
+            		context.write(outKey, outVal);
+        		}
+        		
+           		//state observation count to left
+        		for (int j = stateIndexes.get(i)+1, k=0;  j <= rightBound;  ++j,++k ) {
+        			String obs = items[j];
+            		outKey.initialize();
+            		outKey.add(STATE_OBS, state, obs);
+            		outVal.set(windowFunction[k]);
+            		context.write(outKey, outVal);
+        		}
+        		
+        	}
+        	
+        	//state to state
+        	for (int i = 0;  i < stateIndexes.size() -1; ++i) {
+        		outKey.initialize();
+        		outKey.add(STATE_TRANS, items[stateIndexes.get(i)],  items[stateIndexes.get(i+1)]);
+        		outVal.set(1);
+        		context.write(outKey, outVal);
+        	}
+        }	
+ 	}
 	
 	
 	/**
@@ -169,7 +283,7 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
         	states = conf.get("model.states").split(",");
         	observations = conf.get("model.observations").split(",");
         	int transProbScale = conf.getInt("trans.prob.scale", 1000);
-
+        	
         	//state transition
         	stateTransProb = new StateTransitionProbability(states, states);
         	stateTransProb.setScale(transProbScale);
