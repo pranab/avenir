@@ -1,0 +1,44 @@
+This tutorial is for real time fraud detection using Haddop Storm. It uses markov chanin
+as the predictive model. Make necessary changes to path etc to suit your environment.
+
+Build uber jar
+==============
+Build a jar with the dependients included by running
+ant -f build_storm.xml
+
+Deploy Storm topology
+=====================
+/../../bin/storm  jar uber-avenir-1.0.jar  org.avenir.reinforce.ReinforcementLearnerTopology  rl reinforce_rt.properties
+
+The last argument is the property file will all configurations
+
+Start python script
+===================
+It will simulate page request and process impression data
+
+./lead_gen.py simulate 0.02 
+
+The last argument is the average interval between page request in sec
+
+Configuration
+=============
+debug.on=true
+log.message.count.interval=100
+replay.failed.message=false
+num.workers=1
+spout.threads=1
+bolt.threads=2
+redis.server.host=localhost
+redis.server.port=6379
+redis.event.queue=eventQueue
+redis.action.queue=actionQueue
+redis.reward.queue=rewardQueue
+reinforcement.learrner.type=intervalEstimator
+reinforcement.learrner.actions=page1,page2,page3
+reinforcement.learrner.action.writer=redis
+bin.width=1
+confidence.limit=95
+min.confidence.limit=50
+confidence.limit.reduction.step=5
+confidence.limit.reduction.round.interval=50
+min.reward.distr.sample=30

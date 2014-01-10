@@ -39,6 +39,7 @@ def receiveAction(intv):
 	while True:
 		data = rc.rpop("actionQueue")
 		if data is not None:
+			#print data
 			action = data.split(",")[1]
 			updateClickRate(rc,action)
 			actionCount = actionCount + 1
