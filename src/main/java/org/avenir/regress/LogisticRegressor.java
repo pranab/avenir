@@ -28,6 +28,9 @@ public class LogisticRegressor {
 	 private double convergeThreshold;
 	 private String posClassVal;
 
+	 public LogisticRegressor() {
+	 }
+	 
 	/**
 	 * @param coefficients
 	 * @param posClassVal
@@ -76,6 +79,13 @@ public class LogisticRegressor {
 	}
 
 	public void addAggregates(double[] aggregates) {
+		if (null == this.aggregates) {
+			this.aggregates = new double[aggregates.length];
+			for (int i = 0; i < this.aggregates.length; ++i) {
+				this.aggregates[i] = 0;
+			}
+		} 
+		
 		for (int i = 0; i < aggregates.length;  ++i ) {
 			this.aggregates[i]  += aggregates[i];
 		}

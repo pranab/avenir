@@ -20,6 +20,7 @@ package org.avenir.regress;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -30,6 +31,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -55,7 +57,7 @@ public class LogisticRegressionJob  extends Configured implements Tool {
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         
         job.setMapperClass(LogisticRegressionJob.RegressionMapper.class);
-       // job.setReducerClass(LogisticRegressionJob.PartitionGeneratorReducer.class);
+        job.setReducerClass(LogisticRegressionJob.RegressionReducer.class);
         
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
@@ -76,14 +78,16 @@ public class LogisticRegressionJob  extends Configured implements Tool {
 	public static class RegressionMapper extends Mapper<LongWritable, Text, Text, Tuple> {
 		private String fieldDelimRegex;
 		private String[] items;
-		private Text outVal  = new Text();
+		private Text outKey  = new Text();
+		private Tuple outVal  = new Tuple();
         private FeatureSchema schema;
         private int[] featureValues;
         private int[] featureOrdinals;
         private int classOrdinal;
-        private String classVal;
+        private String classValue;
         private int  iterCount;
         private double[] coefficients;
+        private LogisticRegressor regressor;
         private static final Logger LOG = Logger.getLogger(RegressionMapper.class);
        
         /* (non-Javadoc)
@@ -95,7 +99,7 @@ public class LogisticRegressionJob  extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(conf, "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
@@ -107,12 +111,21 @@ public class LogisticRegressionJob  extends Configured implements Tool {
             for (int i = 0; i < items.length; ++i) {
             	coefficients[i] = Double.parseDouble(items[i]);
             }
+            
+            String posClassVal = conf.get("positive.class.value");
+            regressor = new  LogisticRegressor(coefficients,  posClassVal);
         }       
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void cleanup(Context context)  throws IOException, InterruptedException {
+        	double[] aggregate = regressor.getAggregates();
+        	for (int i = 0; i < aggregate.length; ++i) {
+        		outVal.append(aggregate[i]);
+        	}
+        	outKey.set(UUID.randomUUID().toString());
+        	context.write(outKey, outVal);
         }
         
         @Override
@@ -127,11 +140,55 @@ public class LogisticRegressionJob  extends Configured implements Tool {
             }
             
             for (int i=0;  i <  featureOrdinals.length; ++i) {
-            	featureValues[i] = Integer.parseInt(items[featureOrdinals[i]]);
+            	featureValues[i+1] = Integer.parseInt(items[featureOrdinals[i]]);
             }
-            classVal = items[classOrdinal];
-            
+            classValue = items[classOrdinal];
+            regressor.aggregate(featureValues, classValue);
             
         }       
+	}	
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class RegressionReducer extends Reducer<Text, Tuple, NullWritable, Text> {
+        private FeatureSchema schema;
+        private LogisticRegressor regressor; 
+        private double[] aggregate;
+        private String fieldDelimOut;
+        private Text outVal = new Text();
+        
+	   	protected void setup(Context context) throws IOException, InterruptedException {
+        	Configuration conf = context.getConfiguration();
+        	fieldDelimOut = conf.get("field.delim.out", ",");
+	   	}
+	   	
+	    protected void cleanup(Context context)  throws IOException, InterruptedException {
+	    	  double[] aggregates = regressor.getAggregates();
+	    	  StringBuilder stBld = new StringBuilder();
+	    	  stBld.append(aggregates[0]);
+	    	  for (int i = 1; i < aggregates.length; ++i ) {
+	    		  stBld.append(fieldDelimOut).append(aggregates[i]);
+	    	  }
+	    	  outVal.set(stBld.toString());
+	     }
+	      
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+         */
+        protected void reduce(Text  key, Iterable<Tuple> values, Context context)
+        throws IOException, InterruptedException {
+    		for (Tuple value : values) {
+    			if (null == regressor) {
+    				regressor = new LogisticRegressor();
+    				aggregate = new double[value.getSize()];
+    			}
+    			for (int i = 0; i < value.getSize(); ++i) {
+    				aggregate[i] = value.getDouble(i);
+    			}
+    			regressor.addAggregates(aggregate);
+    		}
+        }	   	
 	}	
 }
