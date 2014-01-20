@@ -17,13 +17,17 @@
 
 package org.avenir.regress;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -159,11 +163,17 @@ public class LogisticRegressionJob  extends Configured implements Tool {
         private String fieldDelimOut;
         private Text outVal = new Text();
         
+	   	/* (non-Javadoc)
+	   	 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
+	   	 */
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
         	fieldDelimOut = conf.get("field.delim.out", ",");
 	   	}
 	   	
+	    /* (non-Javadoc)
+	     * @see org.apache.hadoop.mapreduce.Reducer#cleanup(org.apache.hadoop.mapreduce.Reducer.Context)
+	     */
 	    protected void cleanup(Context context)  throws IOException, InterruptedException {
 	    	  double[] aggregates = regressor.getAggregates();
 	    	  StringBuilder stBld = new StringBuilder();
@@ -172,8 +182,36 @@ public class LogisticRegressionJob  extends Configured implements Tool {
 	    		  stBld.append(fieldDelimOut).append(aggregates[i]);
 	    	  }
 	    	  outVal.set(stBld.toString());
+	    	  
+	         Configuration conf = context.getConfiguration();
+	         saveCoefficients( conf,  stBld.toString());
 	     }
 	      
+	    /**
+	     * @param conf
+	     * @param newCoefficients
+	     * @throws IOException
+	     */
+	    private void saveCoefficients(Configuration conf, String newCoefficients) throws IOException {
+	         List<String>   lines = Utility.getFileLines(conf, "coeff.file.path");
+	         lines.add(newCoefficients);
+	         
+	         //delete file
+	         FileSystem fs = FileSystem.get(conf); 
+	         Path filenamePath = new Path(conf.get("coeff.file.path"));     	
+	         fs.delete(filenamePath, true);
+	         
+	         //recreate with new data
+	         OutputStream os = fs.create( filenamePath);
+	         BufferedWriter br = new BufferedWriter( new OutputStreamWriter( os, "UTF-8" ) );
+	         for (String line : lines) {
+	        	 br.write(line + "\n");
+	         }
+	         br.close();
+	         fs.close();
+	    }
+	    
+	    
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
          */
