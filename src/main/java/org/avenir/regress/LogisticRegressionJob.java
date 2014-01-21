@@ -36,19 +36,26 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.explore.CramerCorrelation;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
 public class LogisticRegressionJob  extends Configured implements Tool {
-
+	private static final String ITER_LIMIT = "iterLimit";
+	private static final String ALL_BELOW_THRESHOLD = "allBelowThreshold";
+	private static final String AVERAGE_BELOW_THRESHOLD = "averageBelowThreshold";
+	private static final int CONVERGED = 100;
+	private static final int NOT_CONVERGED = 101;
+	
+	
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
@@ -70,9 +77,45 @@ public class LogisticRegressionJob  extends Configured implements Tool {
         job.setOutputValueClass(Text.class);
 
         job.setNumReduceTasks(job.getConfiguration().getInt("num.reducer", 1));
-
         int status =  job.waitForCompletion(true) ? 0 : 1;
+        
+        Configuration conf = job.getConfiguration();
+        if (status == 0) {
+        	status = checkConvergence(conf);
+        }
+        
         return status;
+	}
+	
+	/**
+	 * @param conf
+	 * @return
+	 * @throws IOException
+	 */
+	private int checkConvergence(Configuration conf) throws IOException {
+		int status = 0;
+        List<String>   lines = Utility.getFileLines(conf, "coeff.file.path");
+		
+		String convCriteria =   conf.get("convergence.criteria",  ITER_LIMIT);
+		if (convCriteria.equals(ITER_LIMIT)) {
+			int iterLimit = conf.getInt("iteration.limit",  10);
+	         status = lines.size() < iterLimit  ? NOT_CONVERGED : CONVERGED;
+		} else  {
+			double[] prevCoeff = Utility.doubleArrayFromString(lines.get(lines.size()-2));
+			double[] curCoeff = Utility.doubleArrayFromString(lines.get(lines.size()-1));
+			LogisticRegressor regressor = new LogisticRegressor(prevCoeff);
+			regressor.setAggregates(curCoeff);
+			regressor.setConvergeThreshold((double)conf.getFloat("convergence.threshold", (float)5.0));
+			if (convCriteria.equals(ALL_BELOW_THRESHOLD)) {
+				status = regressor.isAllConverged() ? CONVERGED : NOT_CONVERGED;
+			} else if (convCriteria.equals(AVERAGE_BELOW_THRESHOLD)) {
+				status = regressor.isAverageConverged() ? CONVERGED : NOT_CONVERGED;
+			} else {
+				throw new IllegalArgumentException("Invalid convergence criteria:" + convCriteria);
+			}
+		} 		
+		
+		return status;
 	}
 	
 	/**
@@ -229,4 +272,20 @@ public class LogisticRegressionJob  extends Configured implements Tool {
     		}
         }	   	
 	}	
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = NOT_CONVERGED;
+        int iterCount = 1;
+        do {
+        	System.out.println("job iteration count:" + iterCount);
+        	exitCode = ToolRunner.run(new LogisticRegressionJob(), args);
+        	++iterCount;
+        } while (exitCode == NOT_CONVERGED);
+        
+        System.exit(exitCode);
+	}
+	
 }

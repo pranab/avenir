@@ -30,7 +30,16 @@ public class LogisticRegressor {
 
 	 public LogisticRegressor() {
 	 }
-	 
+
+	public LogisticRegressor(double[] coefficients) {
+			super();
+			this.coefficients = coefficients;
+			aggregates = new double[coefficients.length];
+			for ( int i = 0; i < aggregates.length;  ++i) {
+				aggregates[i] = 0;
+			}
+		}
+
 	/**
 	 * @param coefficients
 	 * @param posClassVal
@@ -40,7 +49,6 @@ public class LogisticRegressor {
 		this.coefficients = coefficients;
 		this.posClassVal = posClassVal;  
 		aggregates = new double[coefficients.length];
-		coeffDiff = new double[coefficients.length];
 		for ( int i = 0; i < aggregates.length;  ++i) {
 			aggregates[i] = 0;
 		}
@@ -94,14 +102,21 @@ public class LogisticRegressor {
 	/**
 	 * 
 	 */
-	public void updateCoefficients() {
+	public void setCoefficientDiff() {
 		for (int i = 0; i < coefficients.length; ++i) {
-			coeffDiff[i] =  (aggregates[i]  * 100.0) / coefficients[i];
+			coeffDiff[i] =  ((aggregates[i] - coefficients[i]) * 100.0) / coefficients[i];
 			if (coeffDiff[i] < 0) {
 				coeffDiff[i]  =  - coeffDiff[i];
 			}
-			coeffDiff[i] += aggregates[i];
 		}
+	}
+
+	public double[] getCoefficients() {
+		return coefficients;
+	}
+
+	public void setCoefficients(double[] coefficients) {
+		this.coefficients = coefficients;
 	}
 
 	/**
@@ -116,6 +131,10 @@ public class LogisticRegressor {
 	 */
 	public boolean isAllConverged() {
 		boolean converged = true;
+		if (null == coeffDiff) {
+			coeffDiff = new double[coefficients.length];
+			setCoefficientDiff();
+		}
 		for (int i = 0; i <  coeffDiff.length; ++i) {
 			if (coeffDiff[i] > convergeThreshold) {
 				converged = false;
@@ -130,6 +149,10 @@ public class LogisticRegressor {
 	 */
 	public boolean isAverageConverged() {
 		boolean converged = true;
+		if (null == coeffDiff) {
+			coeffDiff = new double[coefficients.length];
+			setCoefficientDiff();
+		}
 		double sum = 0;
 		for (int i = 0; i <  coeffDiff.length; ++i) {
 			sum += coeffDiff[i];
