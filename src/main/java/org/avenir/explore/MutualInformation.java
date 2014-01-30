@@ -204,6 +204,7 @@ public class MutualInformation extends Configured implements Tool {
         }     
         
     	/**
+    	 * sets feature attribute  bin value
     	 * @param field
     	 */
     	private void setDistrValue(FeatureField field) {
@@ -247,6 +248,8 @@ public class MutualInformation extends Configured implements Tool {
 		private StringBuilder stBld = new StringBuilder();
 		private int totalCount;
 		private boolean outputMutualInfo;
+		private  String mututalInfoScoreAlg;
+		private Map<Integer, Double> featureClassMutualInfo = new HashMap<Integer, Double>();
         private static final int CLASS_DIST = 1;
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
@@ -266,6 +269,8 @@ public class MutualInformation extends Configured implements Tool {
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             outputMutualInfo = conf.getBoolean("output.mutual.info", true);
+            
+            mututalInfoScoreAlg =  conf.get("mutual.info.score.algorithms", "mutual.info.maximization");
 		}
 		
 	   	/* (non-Javadoc)
@@ -280,6 +285,8 @@ public class MutualInformation extends Configured implements Tool {
 	   		if (outputMutualInfo) {
 	   			outputMutualInfo(context);
 	   		}
+	   		
+	   		outputMutualInfoScore(context);
 	   	}
 	   	
 	   	/**
@@ -436,11 +443,14 @@ public class MutualInformation extends Configured implements Tool {
 			   			}
 			   		}
 		   		}
-		   		double featureClassMI = sum;
-	   			stBld.delete(0, stBld.length());
-	   			stBld.append(featureOrd).append(fieldDelim).append(featureClassMI);
-		   		outVal.set(stBld.toString());
-		   		context.write(NullWritable.get(), outVal);
+		   		double featureClassMuInfo = sum;
+		   		if (outputMutualInfo) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureOrd).append(fieldDelim).append(featureClassMuInfo);
+		   			outVal.set(stBld.toString());
+		   			context.write(NullWritable.get(), outVal);
+		   		}
+		   		featureClassMutualInfo.put(featureOrd, featureClassMuInfo);
 	   		}
 	   		
 	   		//feature pair
@@ -458,10 +468,8 @@ public class MutualInformation extends Configured implements Tool {
 			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
 			   			featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
 				   		for (String featureValSecond :  featureDistrSecond.keySet()) {
-				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
-				   					totalCount;
-				   			Pair<String, String> values = 
-				   					new Pair<String, String>(featureValFirst, featureValSecond);
+				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / totalCount;
+				   			Pair<String, String> values = new Pair<String, String>(featureValFirst, featureValSecond);
 				   			count = featurePairDistr.get(values);
 				   			if (null != count) {
 				   				jointProb = ((double)count) / totalCount;
@@ -486,16 +494,14 @@ public class MutualInformation extends Configured implements Tool {
 	   			Map<String, Integer> featureDistrFirst = allFeatureDistr.get(featureOrdinals[i]);
 	   			for (int j = i+1; j < featureOrdinals.length; ++j) {
 		   			Map<String, Integer> featureDistrSecond = allFeatureDistr.get(featureOrdinals[j]);
-	   				Pair<Integer, Integer> featureOrdinalPair = 
-	   						new Pair<Integer, Integer>(featureOrdinals[i], featureOrdinals[j]);
+	   				Pair<Integer, Integer> featureOrdinalPair = new Pair<Integer, Integer>(featureOrdinals[i], featureOrdinals[j]);
 	   				Map<Tuple, Integer> featurePairClassDistr = allFeaturePairClassDistr.get(featureOrdinalPair);
 		   			sum = 0;
 		   			numSamples = 0;
 			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
 			   			featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
 				   		for (String featureValSecond :  featureDistrSecond.keySet()) {
-				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
-				   					totalCount;
+				   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / totalCount;
 			   				for (String classVal : classDistr.keySet()) {
 			   					classProb = ((double)classDistr.get(classVal)) / totalCount;
 			   					featurePairClass.initialize();
@@ -503,17 +509,16 @@ public class MutualInformation extends Configured implements Tool {
 			   					count = featurePairClassDistr.get(featurePairClass);
 			   					if (null != count) {
 					   				jointProb = ((double)count) / totalCount;
-					   				sum += jointProb * Math.log(jointProb / 
-					   						(featureProbFirst * featureProbSecond * classProb));
+					   				sum += jointProb * Math.log(jointProb / (featureProbFirst * featureProbSecond * classProb));
 					   				++numSamples;
 			   					}
 			   				}
 				   		}
 			   		}
-			   		double featurePairClassMI = sum;
+			   		double featurePairClassMuInfo = sum;
 		   			stBld.delete(0, stBld.length());
 		   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
-		   				append(fieldDelim).append(featurePairClassMI);
+		   				append(fieldDelim).append(featurePairClassMuInfo);
 			   		outVal.set(stBld.toString());
 			   		context.write(NullWritable.get(), outVal);
 	   			}
@@ -524,14 +529,12 @@ public class MutualInformation extends Configured implements Tool {
 	   		context.write(NullWritable.get(), outVal);
 	   		for (int i = 0; i < featureOrdinals.length; ++i) {
 	   			for (int j = i+1; j < featureOrdinals.length; ++j) {
-	   		   		double featurePairClassCondMI = 0;
+	   		   		double featurePairClassCondMuInfo = 0;
 	   				for (String classVal :  classDistr.keySet()) {
 	   					classProb = ((double)classDistr.get(classVal)) / totalCount;
-	   					Pair<Integer,String> firstFeatureClassCond = 
-		   					new Pair<Integer,String>(featureOrdinals[i], classVal); 
+	   					Pair<Integer,String> firstFeatureClassCond = new Pair<Integer,String>(featureOrdinals[i], classVal); 
 	   					Map<String, Integer> featureDistrFirst = allFeatureClassCondDistr.get(firstFeatureClassCond);
-			   			Pair<Integer,String> secondFeatureClassCond = 
-			   					new Pair<Integer,String>(featureOrdinals[i], classVal); 
+			   			Pair<Integer,String> secondFeatureClassCond = new Pair<Integer,String>(featureOrdinals[j], classVal); 
 			   			Map<String, Integer> featureDistrSecond = allFeatureClassCondDistr.get(secondFeatureClassCond);
 
 			   			//joint distr
@@ -544,24 +547,21 @@ public class MutualInformation extends Configured implements Tool {
 				   		for (String featureValFirst :  featureDistrFirst.keySet()) {
 				   			featureProbFirst = ((double)featureDistrFirst.get(featureValFirst)) / totalCount;
 					   		for (String featureValSecond :  featureDistrSecond.keySet()) {
-					   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / 
-					   					totalCount;
-					   			Pair<String, String> values = 
-					   					new Pair<String, String>(featureValFirst, featureValSecond);
+					   			featureProbSecond = ((double)featureDistrSecond.get(featureValSecond)) / totalCount;
+					   			Pair<String, String> values = new Pair<String, String>(featureValFirst, featureValSecond);
 					   			count = featurePairDistr.get(values);
 					   			if (null != count) {
 					   				jointProb = ((double)count) / totalCount;
-					   				sum += jointProb * Math.log(jointProb / 
-					   						(featureProbFirst * featureProbSecond));
+					   				sum += jointProb * Math.log(jointProb / (featureProbFirst * featureProbSecond));
 					   				++numSamples;
 					   			}
 					   		}			 
 				   		}
-				   		featurePairClassCondMI += sum * classProb;
+				   		featurePairClassCondMuInfo += sum * classProb;
 	   				}
 		   			stBld.delete(0, stBld.length());
 		   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
-		   				append(fieldDelim).append(featurePairClassCondMI);
+		   				append(fieldDelim).append(featurePairClassCondMuInfo);
 			   		outVal.set(stBld.toString());
 			   		context.write(NullWritable.get(), outVal);
 	   			} 
@@ -569,6 +569,12 @@ public class MutualInformation extends Configured implements Tool {
 	   		
 	   	}
 	   	
+	   	private void outputMutualInfoScore(Context context) throws IOException, InterruptedException {
+	   		if (mututalInfoScoreAlg.equals("mutual.info.maximization")) {
+	   			
+	   		}
+	   		
+	   	}
 	   	
 	   	/* (non-Javadoc)
 	   	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
