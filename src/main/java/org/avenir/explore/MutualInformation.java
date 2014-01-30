@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.avenir.explore.MutualInformationScore.FeatureClassMutualInfo;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Pair;
@@ -249,7 +250,7 @@ public class MutualInformation extends Configured implements Tool {
 		private int totalCount;
 		private boolean outputMutualInfo;
 		private  String mututalInfoScoreAlg;
-		private Map<Integer, Double> featureClassMutualInfo = new HashMap<Integer, Double>();
+		private MutualInformationScore mutualInformationScore = new MutualInformationScore();
         private static final int CLASS_DIST = 1;
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
@@ -450,7 +451,7 @@ public class MutualInformation extends Configured implements Tool {
 		   			outVal.set(stBld.toString());
 		   			context.write(NullWritable.get(), outVal);
 		   		}
-		   		featureClassMutualInfo.put(featureOrd, featureClassMuInfo);
+		   		mutualInformationScore.addFeatureClassMutualInfo(featureOrd, featureClassMuInfo);
 	   		}
 	   		
 	   		//feature pair
@@ -569,9 +570,24 @@ public class MutualInformation extends Configured implements Tool {
 	   		
 	   	}
 	   	
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 * @throws InterruptedException
+	   	 */
 	   	private void outputMutualInfoScore(Context context) throws IOException, InterruptedException {
 	   		if (mututalInfoScoreAlg.equals("mutual.info.maximization")) {
-	   			
+		   		outVal.set("mutualInformationScore:mutual.info.maximization");
+		   		context.write(NullWritable.get(), outVal);
+
+		   		mutualInformationScore.sortFeatureClassMutualInfo();
+	   			List<FeatureClassMutualInfo>  featureClassMutualInfoList = mutualInformationScore.getFeatureClassMutualInfoList();
+	   			for (FeatureClassMutualInfo  featureClassMutualInfo :  featureClassMutualInfoList) {
+		   			stBld.delete(0, stBld.length());
+		   			stBld.append(featureClassMutualInfo.getRight()).append(fieldDelim).append(featureClassMutualInfo.getLeft());
+			   		outVal.set(stBld.toString());
+			   		context.write(NullWritable.get(), outVal);
+	   			}
 	   		}
 	   		
 	   	}
