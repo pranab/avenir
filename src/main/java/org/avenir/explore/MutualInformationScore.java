@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.chombo.util.Pair;
+import org.chombo.util.Triplet;
 
 /**
  * Processes mutual info score
@@ -29,20 +30,31 @@ import org.chombo.util.Pair;
  *
  */
 public class MutualInformationScore {
-	private List<FeatureClassMutualInfo>  featureClassMutualInfoList = new ArrayList<FeatureClassMutualInfo>();
+	private List<FeatureMutualInfo>  featureClassMutualInfoList = new ArrayList<FeatureMutualInfo>();
+	private List<FeaturePairMutualInfo> featurePairMutualInfoList = new ArrayList<FeaturePairMutualInfo>();
 	
 	/**
 	 * @author pranab
 	 *
 	 */
-	public  static class FeatureClassMutualInfo extends  Pair<Double, Integer>  implements  Comparable<FeatureClassMutualInfo> {
-		public FeatureClassMutualInfo(double mutualInfo, int featureOrdinal) {
-			super(mutualInfo,  featureOrdinal);
+	public  static class FeatureMutualInfo extends  Pair<Integer, Double>  implements  Comparable<FeatureMutualInfo> {
+		public FeatureMutualInfo( int featureOrdinal, double mutualInfo) {
+			super( featureOrdinal, mutualInfo);
 		}
 		
 		@Override
-		public int compareTo(FeatureClassMutualInfo that) {
-			return that.getLeft().compareTo(this.getLeft());
+		public int compareTo(FeatureMutualInfo that) {
+			return that.getRight().compareTo(this.getRight());
+		}
+	}
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class FeaturePairMutualInfo extends Triplet<Integer, Integer, Double> {
+		public FeaturePairMutualInfo(int firstFeatureOrdinal, int secondFeatureOrdinal, double mutualInfo) {
+			super(firstFeatureOrdinal, secondFeatureOrdinal, mutualInfo);
 		}
 	}
 	
@@ -51,19 +63,57 @@ public class MutualInformationScore {
 	 * @param mutualInfo
 	 */
 	public void addFeatureClassMutualInfo(int featureOrdinal, double mutualInfo) {
-		FeatureClassMutualInfo featureClassMutualInfo = new FeatureClassMutualInfo(mutualInfo, featureOrdinal);
+		FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( featureOrdinal, mutualInfo);
 		featureClassMutualInfoList.add(featureClassMutualInfo);
 	}
 	
 	/**
 	 * 
 	 */
-	public void sortFeatureClassMutualInfo() {
+	public void sortFeatureMutualInfo() {
 		Collections.sort(featureClassMutualInfoList);
 	}
 
-	public List<FeatureClassMutualInfo> getFeatureClassMutualInfoList() {
+	/**
+	 * Mutua lInformation Maximization (MIM)
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getMutualInfoMaximizer() {
+		sortFeatureMutualInfo();
 		return featureClassMutualInfoList;
 	}
+
+	/**
+	 * @param featureOrdinal
+	 * @param mutualInfo
+	 */
+	public void addFeaturePairMutualInfo(int firstFeatureOrdinal, int secondFeatureOrdinal, double mutualInfo) {
+		FeaturePairMutualInfo featurepairMutualInfo = new FeaturePairMutualInfo( firstFeatureOrdinal, secondFeatureOrdinal, mutualInfo);
+		featurePairMutualInfoList.add(featurepairMutualInfo);
+	}
+	
+	/**
+	 * Mutual Information Feature Selection (MIFS)
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getMutualInfoFeatureSelection(double redunacyFactor) {
+		List<FeatureMutualInfo>  mutualInfoFeatureSelection = new ArrayList<FeatureMutualInfo>();
+		
+		for (FeatureMutualInfo muInfo :  featureClassMutualInfoList) {
+			int feature = muInfo.getLeft();
+			double sum = 0;
+			for (FeaturePairMutualInfo  otherMuInfo :  featurePairMutualInfoList) {
+				if (otherMuInfo.getLeft() == feature || otherMuInfo.getCenter() == feature) {
+					sum +=  otherMuInfo.getRight();
+				}
+			}
+			double score = muInfo.getRight() - redunacyFactor * sum;
+			FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( feature,score);
+			mutualInfoFeatureSelection.add(featureClassMutualInfo);
+		}
+		Collections.sort(mutualInfoFeatureSelection);
+		return mutualInfoFeatureSelection;
+	}
+	
 	
 }

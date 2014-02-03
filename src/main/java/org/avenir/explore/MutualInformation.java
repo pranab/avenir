@@ -36,7 +36,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.avenir.explore.MutualInformationScore.FeatureClassMutualInfo;
+import org.avenir.explore.MutualInformationScore.FeatureMutualInfo;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Pair;
@@ -251,6 +251,7 @@ public class MutualInformation extends Configured implements Tool {
 		private boolean outputMutualInfo;
 		private  String mututalInfoScoreAlg;
 		private MutualInformationScore mutualInformationScore = new MutualInformationScore();
+		private double redundancyFactor;
         private static final int CLASS_DIST = 1;
         private static final int FEATURE_DIST = 2;
         private static final int FEATURE_PAIR_DIST = 3;
@@ -272,6 +273,7 @@ public class MutualInformation extends Configured implements Tool {
             outputMutualInfo = conf.getBoolean("output.mutual.info", true);
             
             mututalInfoScoreAlg =  conf.get("mutual.info.score.algorithms", "mutual.info.maximization");
+            redundancyFactor = Double.parseDouble(conf.get("mutual.info.redundancy.factor", "1.0"));
 		}
 		
 	   	/* (non-Javadoc)
@@ -479,12 +481,16 @@ public class MutualInformation extends Configured implements Tool {
 				   			}
 				   		}
 			   		}
-			   		double featurePairMI = sum;
-		   			stBld.delete(0, stBld.length());
-		   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
-		   				append(fieldDelim).append(featurePairMI);
-			   		outVal.set(stBld.toString());
-			   		context.write(NullWritable.get(), outVal);
+			   		double featurePairMuInfo = sum;
+			   		if (outputMutualInfo) {
+			   			stBld.delete(0, stBld.length());
+			   			stBld.append(featureOrdinals[i]).append(fieldDelim).append(featureOrdinals[j]).
+			   				append(fieldDelim).append(featurePairMuInfo);
+				   		outVal.set(stBld.toString());
+				   		context.write(NullWritable.get(), outVal);
+			   		}
+			   		
+			   		mutualInformationScore.addFeaturePairMutualInfo(featureOrdinals[i], featureOrdinals[j], featurePairMuInfo);
 	   			}
 	   		}
 	   		
@@ -580,15 +586,26 @@ public class MutualInformation extends Configured implements Tool {
 		   		outVal.set("mutualInformationScore:mutual.info.maximization");
 		   		context.write(NullWritable.get(), outVal);
 
-		   		mutualInformationScore.sortFeatureClassMutualInfo();
-	   			List<FeatureClassMutualInfo>  featureClassMutualInfoList = mutualInformationScore.getFeatureClassMutualInfoList();
-	   			for (FeatureClassMutualInfo  featureClassMutualInfo :  featureClassMutualInfoList) {
-		   			stBld.delete(0, stBld.length());
-		   			stBld.append(featureClassMutualInfo.getRight()).append(fieldDelim).append(featureClassMutualInfo.getLeft());
-			   		outVal.set(stBld.toString());
-			   		context.write(NullWritable.get(), outVal);
-	   			}
+	   			List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = mutualInformationScore.getMutualInfoMaximizer();
+	   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
+	   		} else if (mututalInfoScoreAlg.equals("mutual.info.selection")) {
+		   		outVal.set("mutualInformationScore:mutual.info.xelection");
+		   		context.write(NullWritable.get(), outVal);
+		   		
+		   		List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = 
+		   				mutualInformationScore.getMutualInfoFeatureSelection(redundancyFactor);
+	   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
 	   		}
+	   	}
+
+	   	private void outputMutualInfoScoreHelper(List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList, 
+	   			Context context) throws IOException, InterruptedException {
+   			for (MutualInformationScore.FeatureMutualInfo  featureClassMutualInfo :  featureClassMutualInfoList) {
+	   			stBld.delete(0, stBld.length());
+	   			stBld.append(featureClassMutualInfo.getRight()).append(fieldDelim).append(featureClassMutualInfo.getLeft());
+		   		outVal.set(stBld.toString());
+		   		context.write(NullWritable.get(), outVal);
+   			}
 	   		
 	   	}
 	   	
