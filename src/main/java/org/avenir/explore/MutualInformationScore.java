@@ -19,8 +19,11 @@ package org.avenir.explore;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.chombo.mr.FeatureField;
 import org.chombo.util.Pair;
 import org.chombo.util.Triplet;
 
@@ -32,6 +35,7 @@ import org.chombo.util.Triplet;
 public class MutualInformationScore {
 	private List<FeatureMutualInfo>  featureClassMutualInfoList = new ArrayList<FeatureMutualInfo>();
 	private List<FeaturePairMutualInfo> featurePairMutualInfoList = new ArrayList<FeaturePairMutualInfo>();
+	private List<FeaturePairMutualInfo> featurePairClassMutualInfoList = new ArrayList<FeaturePairMutualInfo>();
 	
 	/**
 	 * @author pranab
@@ -115,5 +119,45 @@ public class MutualInformationScore {
 		return mutualInfoFeatureSelection;
 	}
 	
+	/**
+	 * @param featureOrdinal
+	 * @param mutualInfo
+	 */
+	public void addFeaturePairClassMutualInfo(int firstFeatureOrdinal, int secondFeatureOrdinal, double mutualInfo) {
+		FeaturePairMutualInfo featurepairMutualInfo = new FeaturePairMutualInfo( firstFeatureOrdinal, secondFeatureOrdinal, mutualInfo);
+		featurePairClassMutualInfoList.add(featurepairMutualInfo);
+	}
+	
+	/**
+	 * @param featureFields
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getJointMutualInfo( List<FeatureField> featureFields) {
+		List<FeatureMutualInfo>  featureJointMutualInfoList  = new ArrayList<FeatureMutualInfo>();
+		Double score;
+		Map <Integer, Double > jointMutualInfo = new HashMap <Integer, Double >();
+		//all features
+		for (FeatureField field : featureFields ) {
+			int fieldOrd = field.getOrdinal();
+			score = 0.0;
+			jointMutualInfo.put(fieldOrd, score);
+			for (FeaturePairMutualInfo featurePairMuInfo :  featurePairClassMutualInfoList) {
+				//if paired with another feature
+				if (featurePairMuInfo.getLeft() == fieldOrd || featurePairMuInfo.getCenter() == fieldOrd) {
+					 score = jointMutualInfo.get(fieldOrd) + featurePairMuInfo.getRight();
+					jointMutualInfo.put(fieldOrd, score );
+				}
+			}
+		}
+		
+		//collect in a list and sort
+		for (Integer feature : jointMutualInfo.keySet()) {
+			FeatureMutualInfo featureJointMutualInfo = new FeatureMutualInfo( feature, jointMutualInfo.get(feature));
+			featureJointMutualInfoList.add(featureJointMutualInfo);
+		}
+		Collections.sort(featureJointMutualInfoList);
+
+		return featureJointMutualInfoList;
+	}
 	
 }
