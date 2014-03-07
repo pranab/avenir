@@ -136,6 +136,7 @@ public class MutualInformationScore {
 		List<FeatureMutualInfo>  featureJointMutualInfoList  = new ArrayList<FeatureMutualInfo>();
 		Double score;
 		Map <Integer, Double > jointMutualInfo = new HashMap <Integer, Double >();
+		
 		//all features
 		for (FeatureField field : featureFields ) {
 			int fieldOrd = field.getOrdinal();
@@ -158,6 +159,31 @@ public class MutualInformationScore {
 		Collections.sort(featureJointMutualInfoList);
 
 		return featureJointMutualInfoList;
+	}
+
+	/**
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getMinRedundancyMaxrelevanceScore( ) {
+		List<FeatureMutualInfo>  minRedundancyMaxrelevance  = new ArrayList<FeatureMutualInfo>();
+		int featureSetSize = featureClassMutualInfoList.size();
+
+		for (FeatureMutualInfo featureMuInfo : featureClassMutualInfoList) {
+			int feature = featureMuInfo.getLeft();
+			double feMuInfo = featureMuInfo.getRight();
+			
+			double sum = 0;
+			for (FeaturePairMutualInfo featurePairMuInfo : featurePairMutualInfoList) {
+				if (featurePairMuInfo.getLeft() == feature || featurePairMuInfo.getCenter() == feature) {
+					sum += featurePairMuInfo.getRight();
+				}
+			}
+			
+			double score = feMuInfo - sum / featureSetSize;
+			FeatureMutualInfo muInfoScore = new  FeatureMutualInfo(feature, score);
+			minRedundancyMaxrelevance.add(muInfoScore);
+		}
+		return minRedundancyMaxrelevance;
 	}
 	
 }

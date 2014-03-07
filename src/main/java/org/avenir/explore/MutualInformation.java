@@ -630,6 +630,11 @@ public class MutualInformation extends Configured implements Tool {
 		   		List<MutualInformationScore.FeatureMutualInfo>  jointFeatureClassMutualInfoList = 
 		   				mutualInformationScore.getJointMutualInfo(featureFields);
 	   			outputMutualInfoScoreHelper( jointFeatureClassMutualInfoList,context);
+	   		} else if (mututalInfoScoreAlg.equals("min.redundancy.max.relevance")) {
+		   		outVal.set("mutualInformationScore:minRedundancyMaxRelevance");
+		   		context.write(NullWritable.get(), outVal);
+	   			
+	   			List<FeatureMutualInfo>  minredMaxRelList = mutualInformationScore.getMinRedundancyMaxrelevanceScore( );
 	   		}
 	   	}
 
