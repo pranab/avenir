@@ -252,7 +252,7 @@ public class MutualInformation extends Configured implements Tool {
 		private StringBuilder stBld = new StringBuilder();
 		private int totalCount;
 		private boolean outputMutualInfo;
-		private  String mututalInfoScoreAlg;
+		private String[] mututalInfoScoreAlgList;
 		private MutualInformationScore mutualInformationScore = new MutualInformationScore();
 		private double redundancyFactor;
         private static final int CLASS_DIST = 1;
@@ -273,11 +273,11 @@ public class MutualInformation extends Configured implements Tool {
 	    	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
-            outputMutualInfo = conf.getBoolean("output.mutual.info", true);
-            
             featureFields = schema.getFeatureAttrFields();
 
-            mututalInfoScoreAlg =  conf.get("mutual.info.score.algorithms", "mutual.info.maximization");
+            outputMutualInfo = conf.getBoolean("output.mutual.info", true);
+            String mututalInfoScoreAlg =  conf.get("mutual.info.score.algorithms", "mutual.info.maximization");
+            mututalInfoScoreAlgList = mututalInfoScoreAlg.split(",");
             redundancyFactor = Double.parseDouble(conf.get("mutual.info.redundancy.factor", "1.0"));
 		}
 		
@@ -303,7 +303,7 @@ public class MutualInformation extends Configured implements Tool {
 	   	 * @throws InterruptedException
 	   	 */
 	   	private void outputDistr(Context context) throws IOException, InterruptedException {
-	   		//class 
+	   		//class distr
 	   		outVal.set("distribution:class");
 	   		context.write(NullWritable.get(), outVal);
 	   		totalCount = 0;
@@ -317,7 +317,7 @@ public class MutualInformation extends Configured implements Tool {
 		   		context.write(NullWritable.get(), outVal);
 	   		}
 	   		
-	   		//feature
+	   		//feature distr
 	   		outVal.set("distribution:feature");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (int featureOrd : allFeatureDistr.keySet()) {
@@ -331,7 +331,7 @@ public class MutualInformation extends Configured implements Tool {
 		   		}
 	   		}
 	   		
-	   		//feature pair
+	   		//feature pair distr
 	   		outVal.set("distribution:featurePair");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Pair<Integer, Integer> featureOrdinals : allFeaturePairDistr.keySet()) {
@@ -346,7 +346,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   		}
 	   		
-	   		//feature class
+	   		//feature class distr
 	   		outVal.set("distribution:featureClass");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Integer featureOrd : allFeatureClassDistr.keySet()) {
@@ -361,7 +361,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   		}	 
 	   		
-	   		//feature pair class
+	   		//feature pair class distr
 	   		outVal.set("distribution:featurePairClass");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Pair<Integer, Integer> featureOrdinals : allFeaturePairClassDistr.keySet()) {
@@ -378,7 +378,7 @@ public class MutualInformation extends Configured implements Tool {
 	   		}
 	   		
 	   		
-	   		//feature class conditional
+	   		//feature class conditional distr
 	   		outVal.set("distribution:featureClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
@@ -393,7 +393,7 @@ public class MutualInformation extends Configured implements Tool {
 		   		}
 	   		}
 	  
-	   		//feature pair class conditional
+	   		//feature pair class conditional distr
 	   		outVal.set("distribution:featurePairClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Tuple featureOrdinalsClassVal : allFeaturePairClassCondDistr.keySet()) {
@@ -432,7 +432,7 @@ public class MutualInformation extends Configured implements Tool {
    			Tuple featurePairClass = new Tuple();
    			Tuple featureOrdinalsClassCond = new Tuple();
 
-   			//feature class
+   			//feature class mutual info
 	   		outVal.set("mutualInformation:feature");
 	   		context.write(NullWritable.get(), outVal);
    			int[] featureOrdinals = schema.getFeatureFieldOrdinals();
@@ -444,7 +444,7 @@ public class MutualInformation extends Configured implements Tool {
 		   			featureProb = ((double)featureDistr.get(featureVal)) / totalCount;
 			   		for (String classVal :  classDistr.keySet()) {
 			   			classProb = ((double)classDistr.get(classVal)) / totalCount;
-			   			Pair<String, String> values = new Pair(featureVal, classVal);
+			   			Pair<String, String> values = new Pair<String, String>(featureVal, classVal);
 			   			count = allFeatureClassDistr.get(featureOrd).get(values);
 			   			if (null != count) {
 			   				jointProb = ((double)count) / totalCount;
@@ -501,7 +501,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   		}
 	   		
-	   		//feature pair class
+	   		//feature pair class mutual info
 	   		outVal.set("mutualInformation:featurePairClass");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (int i = 0; i < featureOrdinals.length; ++i) {
@@ -549,7 +549,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   		}
 	   		
-	   		//feature pair class conditional
+	   		//feature pair class conditional mutual info
 	   		outVal.set("mutualInformation:featurePairClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (int i = 0; i < featureOrdinals.length; ++i) {
@@ -604,37 +604,36 @@ public class MutualInformation extends Configured implements Tool {
 	   	}
 	   	
 	   	/**
-	   	 * Stores mutual information for feature wise score
+	   	 * Outputs various mutual information based  scores depending on the configured algorithms
 	   	 * @param context
 	   	 * @throws IOException
 	   	 * @throws InterruptedException
 	   	 */
 	   	private void outputMutualInfoScore(Context context) throws IOException, InterruptedException {
-	   		if (mututalInfoScoreAlg.equals("mutual.info.maximization")) {
-		   		outVal.set("mutualInformationScore:mutual.info.maximization");
+	   		//all configured algorithms
+	   		for (String scoreAlg : mututalInfoScoreAlgList) {
+		   		outVal.set("mutualInformationScoreAlgorithm: "+scoreAlg);
 		   		context.write(NullWritable.get(), outVal);
-
-	   			List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = mutualInformationScore.getMutualInfoMaximizer();
-	   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
-	   		} else if (mututalInfoScoreAlg.equals("mutual.info.selection")) {
-		   		outVal.set("mutualInformationScore:mutual.info.selection");
-		   		context.write(NullWritable.get(), outVal);
-		   		
-		   		List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = 
-		   				mutualInformationScore.getMutualInfoFeatureSelection(redundancyFactor);
-	   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
-	   		} else if (mututalInfoScoreAlg.equals("joint.mutual.info")) {
-		   		outVal.set("mutualInformationScore:joint.mutual.info");
-		   		context.write(NullWritable.get(), outVal);
-		   		
-		   		List<MutualInformationScore.FeatureMutualInfo>  jointFeatureClassMutualInfoList = 
-		   				mutualInformationScore.getJointMutualInfo(featureFields);
-	   			outputMutualInfoScoreHelper( jointFeatureClassMutualInfoList,context);
-	   		} else if (mututalInfoScoreAlg.equals("min.redundancy.max.relevance")) {
-		   		outVal.set("mutualInformationScore:minRedundancyMaxRelevance");
-		   		context.write(NullWritable.get(), outVal);
-	   			
-	   			List<FeatureMutualInfo>  minredMaxRelList = mutualInformationScore.getMinRedundancyMaxrelevanceScore( );
+		   		if (scoreAlg.equals("mutual.info.maximization")) {
+		   			//MIM
+		   			List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = 
+		   					mutualInformationScore.getMutualInfoMaximizerScore();
+		   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
+		   		} else if (scoreAlg.equals("mutual.info.selection")) {
+		   			//MIFS
+			   		List<MutualInformationScore.FeatureMutualInfo>  featureClassMutualInfoList = 
+			   				mutualInformationScore.getMutualInfoFeatureSelectionScore(redundancyFactor);
+		   			outputMutualInfoScoreHelper( featureClassMutualInfoList,context);
+		   		} else if (scoreAlg.equals("joint.mutual.info")) {
+		   			//JMI
+			   		List<MutualInformationScore.FeatureMutualInfo>  jointFeatureClassMutualInfoList = 
+			   				mutualInformationScore.getJointMutualInfoScore(featureFields);
+		   			outputMutualInfoScoreHelper( jointFeatureClassMutualInfoList,context);
+		   		} else if (scoreAlg.equals("min.redundancy.max.relevance")) {
+		   			//MRMR
+		   			List<FeatureMutualInfo>  minredMaxRelList = mutualInformationScore.getMinRedundancyMaxrelevanceScore( );
+		   			outputMutualInfoScoreHelper( minredMaxRelList,context);
+		   		}
 	   		}
 	   	}
 
@@ -662,8 +661,10 @@ public class MutualInformation extends Configured implements Tool {
             	throws IOException, InterruptedException {
 	   		distrType = key.getInt(0);
 	   		if (distrType == CLASS_DIST) {
+	   			//class
 	   			populateDistrMap(values, classDistr);
 	   		} else if (distrType == FEATURE_DIST) {
+	   			//feature
 	   			int featureOrdinal = key.getInt(1);
 	   			Map<String, Integer> featureDistr = allFeatureDistr.get(featureOrdinal);
 	   			if (null == featureDistr) {
@@ -672,6 +673,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			populateDistrMap(values, featureDistr);
 	   		} else if (distrType == FEATURE_PAIR_DIST) {
+	   			//feature pair
 	   			Pair<Integer, Integer> featureOrdinals = new Pair<Integer, Integer>(key.getInt(1), key.getInt(2));
 	   			Map<Pair<String, String>, Integer> featurePairDistr = allFeaturePairDistr.get(featureOrdinals);
 	   			if (null == featurePairDistr) {
@@ -680,6 +682,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			populateJointDistrMap(values, featurePairDistr);
 	   		} else if (distrType == FEATURE_CLASS_DIST) {
+	   			//feature and class
 	   			int featureOrdinal = key.getInt(1);
 	   			Map<Pair<String, String>, Integer> featureClassDistr = allFeatureClassDistr.get(featureOrdinal);
 	   			if (null == featureClassDistr) {
@@ -688,6 +691,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			populateJointDistrMap(values, featureClassDistr);
 	   		}else if (distrType == FEATURE_PAIR_CLASS_DIST) {
+	   			//feature pair and class
 	   			Pair<Integer, Integer> featureOrdinals = new Pair<Integer, Integer>(key.getInt(1), key.getInt(2));
 	   			Map<Tuple, Integer> featurePairClassDistr = allFeaturePairClassDistr.get(featureOrdinals);
 	   			if (null == featurePairClassDistr) {
@@ -696,6 +700,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			populateJointClassDistrMap(values, featurePairClassDistr);
 	   		} else if (distrType == FEATURE_CLASS_COND_DIST) {
+	   			//feature class conditional
 	   			Pair<Integer, String> featureOrdinalClassVal = 
 	   					new Pair<Integer, String>(key.getInt(1), key.getString(2));
 	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
@@ -705,6 +710,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			populateDistrMap(values, featureDistr);
 	   		} else if (distrType == FEATURE_PAIR_CLASS_COND_DIST) {
+	   			//feature pair class conditional
 	   			Tuple featureOrdinalsClassVal = key.subTuple(1, 4);
 	   			Map<Pair<String, String>, Integer> featurePairDistr = 
 	   					allFeaturePairClassCondDistr.get(featureOrdinalsClassVal);

@@ -79,10 +79,10 @@ public class MutualInformationScore {
 	}
 
 	/**
-	 * Mutua lInformation Maximization (MIM)
+	 * Mutual lInformation Maximization (MIM)
 	 * @return
 	 */
-	public List<FeatureMutualInfo> getMutualInfoMaximizer() {
+	public List<FeatureMutualInfo> getMutualInfoMaximizerScore() {
 		sortFeatureMutualInfo();
 		return featureClassMutualInfoList;
 	}
@@ -100,7 +100,7 @@ public class MutualInformationScore {
 	 * Mutual Information Feature Selection (MIFS)
 	 * @return
 	 */
-	public List<FeatureMutualInfo> getMutualInfoFeatureSelection(double redunacyFactor) {
+	public List<FeatureMutualInfo> getMutualInfoFeatureSelectionScore(double redunacyFactor) {
 		List<FeatureMutualInfo>  mutualInfoFeatureSelection = new ArrayList<FeatureMutualInfo>();
 		
 		for (FeatureMutualInfo muInfo :  featureClassMutualInfoList) {
@@ -129,10 +129,11 @@ public class MutualInformationScore {
 	}
 	
 	/**
+	 * Joint Mutual Info (JMI)
 	 * @param featureFields
 	 * @return
 	 */
-	public List<FeatureMutualInfo> getJointMutualInfo( List<FeatureField> featureFields) {
+	public List<FeatureMutualInfo> getJointMutualInfoScore( List<FeatureField> featureFields) {
 		List<FeatureMutualInfo>  featureJointMutualInfoList  = new ArrayList<FeatureMutualInfo>();
 		Double score;
 		Map <Integer, Double > jointMutualInfo = new HashMap <Integer, Double >();
@@ -162,6 +163,7 @@ public class MutualInformationScore {
 	}
 
 	/**
+	 * Min redundancy Max Relevance (MRMR)
 	 * @return
 	 */
 	public List<FeatureMutualInfo> getMinRedundancyMaxrelevanceScore( ) {
