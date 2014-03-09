@@ -382,12 +382,13 @@ public class MutualInformation extends Configured implements Tool {
 	   		outVal.set("distribution:featureClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
+	   			String classVal = featureOrdinalClassVal.getRight();
 	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
 		   		for (String featureVal :  featureDistr.keySet()) {
 		   			stBld.delete(0, stBld.length());
 		   			stBld.append(featureOrdinalClassVal.getLeft()).append(fieldDelim).
 		   				append(featureOrdinalClassVal.getRight()).append(fieldDelim).append(featureVal).append(fieldDelim).
-		   				append(((double)featureDistr.get(featureVal)) / totalCount);;
+		   				append(((double)featureDistr.get(featureVal)) / classDistr.get(classVal));
 			   		outVal.set(stBld.toString());
 			   		context.write(NullWritable.get(), outVal);
 		   		}
@@ -397,6 +398,7 @@ public class MutualInformation extends Configured implements Tool {
 	   		outVal.set("distribution:featurePairClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Tuple featureOrdinalsClassVal : allFeaturePairClassCondDistr.keySet()) {
+	   			String classVal = featureOrdinalsClassVal.getString(2);
 	   			Map<Pair<String, String>, Integer> featurePairDistr = 
 	   					allFeaturePairClassCondDistr.get(featureOrdinalsClassVal);
 	   			for (Pair<String, String> values : featurePairDistr.keySet()) {
@@ -405,7 +407,7 @@ public class MutualInformation extends Configured implements Tool {
 		   				append(featureOrdinalsClassVal.getInt(1)).append(fieldDelim).
 		   				append(featureOrdinalsClassVal.getString(2)).append(fieldDelim).
 		   				append(values.getLeft()).append(fieldDelim).append(values.getRight()).
-		   				append(fieldDelim).append(((double)featurePairDistr.get(values)) / totalCount);
+		   				append(fieldDelim).append(((double)featurePairDistr.get(values)) / classDistr.get(classVal));
 			   		outVal.set(stBld.toString());
 			   		context.write(NullWritable.get(), outVal);
 	   			}
