@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -53,6 +54,13 @@ import org.codehaus.jackson.map.ObjectMapper;
  *
  */
 public class MutualInformation extends Configured implements Tool {
+    private static final int CLASS_DIST = 1;
+    private static final int FEATURE_DIST = 2;
+    private static final int FEATURE_PAIR_DIST = 3;
+    private static final int FEATURE_CLASS_DIST = 4;
+    private static final int FEATURE_PAIR_CLASS_DIST = 5;
+    private static final int FEATURE_CLASS_COND_DIST = 6;
+    private static final int FEATURE_PAIR_CLASS_COND_DIST = 7;
 
 	@Override
 	public int run(String[] args) throws Exception {
@@ -69,7 +77,8 @@ public class MutualInformation extends Configured implements Tool {
         
         job.setMapperClass(MutualInformation.DistributionMapper.class);
         job.setReducerClass(MutualInformation.DistributionReducer.class);
-
+        job.setCombinerClass(MutualInformation.DistributionCombiner.class);
+        
         job.setMapOutputKeyClass(Tuple.class);
         job.setMapOutputValueClass(Tuple.class);
 
@@ -101,14 +110,6 @@ public class MutualInformation extends Configured implements Tool {
         private String featureAttrBin;
         private String firstFeatureAttrBin;
         private int bin;
-        private static final int CLASS_DIST = 1;
-        private static final int FEATURE_DIST = 2;
-        private static final int FEATURE_PAIR_DIST = 3;
-        private static final int FEATURE_CLASS_DIST = 4;
-        private static final int FEATURE_PAIR_CLASS_DIST = 5;
-        private static final int FEATURE_CLASS_COND_DIST = 6;
-        private static final int FEATURE_PAIR_CLASS_COND_DIST = 7;
-
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -132,7 +133,8 @@ public class MutualInformation extends Configured implements Tool {
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
             classAttrVal = items[classAttrField.getOrdinal()];
-            
+			context.getCounter("Basic", "Records").increment(1);
+
             //class
         	outKey.initialize();
         	outVal.initialize();
@@ -160,8 +162,8 @@ public class MutualInformation extends Configured implements Tool {
    	   			context.write(outKey, outVal);
    	   			
    	   			//feature class conditional
-   	   			outKey.set(0,  FEATURE_CLASS_COND_DIST);
-   	   			outKey.add(classAttrVal);
+   	           	outKey.initialize();
+   	   			outKey.add(FEATURE_CLASS_COND_DIST, field.getOrdinal(), classAttrVal);
   	   			outVal.initialize();
    	   			outVal.add(featureAttrBin,  1);
    	   			context.write(outKey, outVal);
@@ -222,6 +224,166 @@ public class MutualInformation extends Configured implements Tool {
 	}
 
 	/**
+	 * Combiner
+	 * @author pranab
+	 *
+	 */
+	public static class DistributionCombiner extends Reducer<Tuple, Tuple, Tuple, Tuple> {
+		private Tuple outVal = new Tuple();
+		private String attrValue;
+		private int attrCount;
+		private Integer curCount;
+		private Map<String,Integer> distr = new HashMap<String,Integer>();
+		private String secondAttrValue;
+		private Pair<String, String> attrValuePair;
+		private Map<Pair<String, String>, Integer> jointDistr = new HashMap<Pair<String, String>, Integer>();
+		private Tuple attrPairClassValue;
+		private Map<Tuple, Integer> jointClassdistr = new HashMap<Tuple, Integer>();
+		
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+		 */
+		protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
+            	throws IOException, InterruptedException {
+	   		int distrType = key.getInt(0);
+   			distr.clear();
+   			jointDistr.clear();
+   			jointClassdistr.clear();
+   			
+	   		if (distrType == CLASS_DIST) {
+	   			//class
+	   			populateDistrMap(values, distr);
+	   			emitDistrMap(key,  context);
+	   		} else if (distrType == FEATURE_DIST) {
+	   			//feature
+	   			populateDistrMap(values, distr);
+	   			emitDistrMap(key,  context);
+	   		} else if (distrType == FEATURE_PAIR_DIST) {
+	   			//feature pair
+	   			populateJointDistrMap(values);
+	   			emitJointDistrMap(key,  context);
+	   		}  else if (distrType == FEATURE_CLASS_DIST) {
+	   			//feature class
+	   			populateJointDistrMap(values);
+	   			emitJointDistrMap(key,  context);
+	   		} else if (distrType == FEATURE_PAIR_CLASS_DIST) {
+	   			//feature pair class
+	   			populateJointClassDistrMap(values);
+	   			emitJointClassDistrMap(key,  context);
+	   		} else if (distrType == FEATURE_CLASS_COND_DIST) {
+	   			//feature class conditional
+	   			populateDistrMap(values, distr);
+	   			emitDistrMap(key,  context);
+	   		}else if (distrType == FEATURE_PAIR_CLASS_COND_DIST) {
+	   			//feature pair class conditional
+	   			populateJointDistrMap(values);
+	   			emitJointDistrMap(key,  context);
+	   		}
+		}
+		
+	   	/**
+	   	 * Populates distribution map
+	   	 * @param values
+	   	 * @param distr
+	   	 */
+	   	private void populateDistrMap(Iterable<Tuple> values, Map<String, Integer> distr) {
+   			for (Tuple value : values) {
+   				attrValue = value.getString(0);
+  				attrCount = value.getInt(1);
+  				curCount = distr.get(attrValue);
+   				if (null == curCount) {
+   					distr.put(attrValue, attrCount);
+   				} else {
+   					distr.put(attrValue, curCount + attrCount);
+   				}
+   			}
+	   	}
+
+	   	/**
+	   	 * @param key
+	   	 * @param context
+	   	 * @throws IOException
+	   	 * @throws InterruptedException
+	   	 */
+	   	private void emitDistrMap(Tuple key,  Context context) throws IOException, InterruptedException {
+   			for (String val : distr.keySet()) {
+   				outVal.initialize();
+   				outVal.add(val, distr.get(val));
+   		   		context.write(key, outVal);
+   			}
+	   		
+	   	}
+	   	
+	   	/**
+	   	 * Populates joint distribution map
+	   	 * @param values
+	   	 * @param distr
+	   	 */
+	   	private void populateJointDistrMap(Iterable<Tuple> values) {
+   			for (Tuple value : values) {
+   				attrValue = value.getString(0);
+   				secondAttrValue = value.getString(1);
+   				attrCount = value.getInt(2);
+   				attrValuePair = new Pair<String, String>(attrValue, secondAttrValue);
+  				   				
+  				curCount = jointDistr.get(attrValuePair);
+   				if (null == curCount) {
+   					jointDistr.put(attrValuePair, attrCount);
+   				} else {
+   					jointDistr.put(attrValuePair, curCount + attrCount);
+   				}
+   			}	   		
+	   	}
+
+	   	/**
+	   	 * @param key
+	   	 * @param context
+	   	 * @throws IOException
+	   	 * @throws InterruptedException
+	   	 */
+	   	private void emitJointDistrMap(Tuple key,  Context context) throws IOException, InterruptedException {
+   			for (Pair<String,String> valPair  : jointDistr.keySet()) {
+   				outVal.initialize();
+   				outVal.add(valPair.getLeft(), valPair.getRight(), jointDistr.get(valPair));
+   		   		context.write(key, outVal);
+   			}	   		
+	   	}	   	
+	   	
+   		/**
+   		   * @param values
+   		   * @param distr
+   		   */
+   		 private void populateJointClassDistrMap(Iterable<Tuple> values) {
+   	   			for (Tuple value : values) {
+   	   				attrCount = value.getInt(3);
+   	   				attrPairClassValue = value.subTuple(0, 3);
+   	  				   				
+   	  				curCount = jointClassdistr.get(attrPairClassValue);
+   	   				if (null == curCount) {
+   	   					jointClassdistr.put(attrPairClassValue, attrCount);
+   	   				} else {
+   	   					jointClassdistr.put(attrPairClassValue, curCount + attrCount);
+   	   				}
+   	   			}	   		
+   		  }	   	
+
+ 	   	/**
+ 	   	 * @param key
+ 	   	 * @param context
+ 	   	 * @throws IOException
+ 	   	 * @throws InterruptedException
+ 	   	 */
+ 	   	private void emitJointClassDistrMap(Tuple key,  Context context) throws IOException, InterruptedException {
+   			for (Tuple valTuple  : jointClassdistr.keySet()) {
+   				outVal.initialize();
+   				outVal.add(valTuple.getString(0), valTuple.getString(1), valTuple.getString(2), jointClassdistr.get(valTuple));
+   		   		context.write(key, outVal);
+   			}	   		
+	   	}	   	
+	   	
+	}
+	
+	/**
 	 * @author pranab
 	 *
 	 */
@@ -255,14 +417,7 @@ public class MutualInformation extends Configured implements Tool {
 		private String[] mututalInfoScoreAlgList;
 		private MutualInformationScore mutualInformationScore = new MutualInformationScore();
 		private double redundancyFactor;
-        private static final int CLASS_DIST = 1;
-        private static final int FEATURE_DIST = 2;
-        private static final int FEATURE_PAIR_DIST = 3;
-        private static final int FEATURE_CLASS_DIST = 4;
-        private static final int FEATURE_PAIR_CLASS_DIST = 5;
-        private static final int FEATURE_CLASS_COND_DIST = 6;
-        private static final int FEATURE_PAIR_CLASS_COND_DIST = 7;
-		
+ 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
 		 */
