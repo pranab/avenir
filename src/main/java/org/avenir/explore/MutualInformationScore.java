@@ -185,6 +185,7 @@ public class MutualInformationScore {
 			FeatureMutualInfo muInfoScore = new  FeatureMutualInfo(feature, score);
 			minRedundancyMaxrelevance.add(muInfoScore);
 		}
+		Collections.sort(minRedundancyMaxrelevance);
 		return minRedundancyMaxrelevance;
 	}
 	

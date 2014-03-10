@@ -34,10 +34,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.avenir.explore.MutualInformationScore.FeatureMutualInfo;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
@@ -107,10 +110,10 @@ public class MutualInformation extends Configured implements Tool {
         private List<FeatureField> featureFields;
         private String classAttrVal;
         private String featureAttrVal;
-        private Integer featureAttrOrdinal;
         private String featureAttrBin;
         private String firstFeatureAttrBin;
         private int bin;
+        private static final int ONE = 1;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -140,7 +143,7 @@ public class MutualInformation extends Configured implements Tool {
         	outKey.initialize();
         	outVal.initialize();
         	outKey.add(CLASS_DIST,classAttrField.getOrdinal());
-			outVal.add(classAttrVal, 1);
+			outVal.add(classAttrVal, ONE);
 	   		context.write(outKey, outVal);
 
             //feature and feature class
@@ -153,21 +156,21 @@ public class MutualInformation extends Configured implements Tool {
 
     			//feature
     			outKey.add(FEATURE_DIST, field.getOrdinal());
-    			outVal.add(featureAttrBin, 1);
+    			outVal.add(featureAttrBin, ONE);
    	   			context.write(outKey, outVal);
    	   			
    	   			//feature class
             	outKey.initialize();
   	   			outVal.initialize();
-  	   		   	outKey.add(FEATURE_CLASS_DIST);
-   	   			outVal.add(featureAttrBin, classAttrVal, 1);
+  	   		   	outKey.add(FEATURE_CLASS_DIST, field.getOrdinal());
+   	   			outVal.add(featureAttrBin, classAttrVal, ONE);
    	   			context.write(outKey, outVal);
    	   			
    	   			//feature class conditional
    	           	outKey.initialize();
  	   			outVal.initialize();
  	   		   	outKey.add(FEATURE_CLASS_COND_DIST, field.getOrdinal(), classAttrVal);
-   	   			outVal.add(featureAttrBin,  1);
+   	   			outVal.add(featureAttrBin,  ONE);
    	   			context.write(outKey, outVal);
    	   			
             }
@@ -186,7 +189,7 @@ public class MutualInformation extends Configured implements Tool {
         			//feature pairs
         			outKey.add(FEATURE_PAIR_DIST, featureFields.get(i).getOrdinal(), 
         					featureFields.get(j).getOrdinal());
-         			outVal.add(firstFeatureAttrBin, featureAttrBin, 1);
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, ONE);
        	   			context.write(outKey, outVal);
        	   			
        	   			//feature pair class 
@@ -194,7 +197,7 @@ public class MutualInformation extends Configured implements Tool {
                 	outVal.initialize();
         			outKey.add(FEATURE_PAIR_CLASS_DIST, featureFields.get(i).getOrdinal(), 
         					featureFields.get(j).getOrdinal());
-         			outVal.add(firstFeatureAttrBin, featureAttrBin, classAttrVal, 1);
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, classAttrVal, ONE);
        	   			context.write(outKey, outVal);
        	   			
        	   			
@@ -203,7 +206,7 @@ public class MutualInformation extends Configured implements Tool {
                 	outVal.initialize();
        	   			outKey.add(FEATURE_PAIR_CLASS_COND_DIST, featureFields.get(i).getOrdinal(), 
         					featureFields.get(j).getOrdinal(), classAttrVal);
-         			outVal.add(firstFeatureAttrBin, featureAttrBin, 1);
+         			outVal.add(firstFeatureAttrBin, featureAttrBin, ONE);
        	   			context.write(outKey, outVal);
             	}
             }
@@ -241,24 +244,37 @@ public class MutualInformation extends Configured implements Tool {
 		private Map<Pair<String, String>, Integer> jointDistr = new HashMap<Pair<String, String>, Integer>();
 		private Tuple attrPairClassValue;
 		private Map<Tuple, Integer> jointClassdistr = new HashMap<Tuple, Integer>();
-		
+		private static final Logger LOG = Logger.getLogger(MutualInformation.DistributionCombiner.class);
+				
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
+        protected void setup(Context context) throws IOException, InterruptedException {
+			Configuration conf = context.getConfiguration();
+            if (conf.getBoolean("debug.on", false)) {
+             	LOG.setLevel(Level.DEBUG);
+             	System.out.println("in debug mode");
+            }
+        }		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
 		 */
 		protected void reduce(TextTuple key, Iterable<Tuple> values, Context context)
             	throws IOException, InterruptedException {
+			key.prepareForRead();
 	   		int distrType = key.getInt(0);
    			distr.clear();
    			jointDistr.clear();
    			jointClassdistr.clear();
+   			LOG.debug("key:" + key.toString()  + " distrType:" + distrType);
    			
 	   		if (distrType == CLASS_DIST) {
 	   			//class
-	   			populateDistrMap(values, distr);
+	   			populateDistrMap(values);
 	   			emitDistrMap(key,  context);
 	   		} else if (distrType == FEATURE_DIST) {
 	   			//feature
-	   			populateDistrMap(values, distr);
+	   			populateDistrMap(values);
 	   			emitDistrMap(key,  context);
 	   		} else if (distrType == FEATURE_PAIR_DIST) {
 	   			//feature pair
@@ -274,7 +290,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			emitJointClassDistrMap(key,  context);
 	   		} else if (distrType == FEATURE_CLASS_COND_DIST) {
 	   			//feature class conditional
-	   			populateDistrMap(values, distr);
+	   			populateDistrMap(values);
 	   			emitDistrMap(key,  context);
 	   		}else if (distrType == FEATURE_PAIR_CLASS_COND_DIST) {
 	   			//feature pair class conditional
@@ -288,8 +304,9 @@ public class MutualInformation extends Configured implements Tool {
 	   	 * @param values
 	   	 * @param distr
 	   	 */
-	   	private void populateDistrMap(Iterable<Tuple> values, Map<String, Integer> distr) {
+	   	private void populateDistrMap(Iterable<Tuple> values) {
    			for (Tuple value : values) {
+   				//LOG.debug(value.toString());
    				attrValue = value.getString(0);
   				attrCount = value.getInt(1);
   				curCount = distr.get(attrValue);
@@ -806,7 +823,7 @@ public class MutualInformation extends Configured implements Tool {
 	   			Context context) throws IOException, InterruptedException {
    			for (MutualInformationScore.FeatureMutualInfo  featureClassMutualInfo :  featureClassMutualInfoList) {
 	   			stBld.delete(0, stBld.length());
-	   			stBld.append(featureClassMutualInfo.getRight()).append(fieldDelim).append(featureClassMutualInfo.getLeft());
+	   			stBld.append(featureClassMutualInfo.getLeft()).append(fieldDelim).append(featureClassMutualInfo.getRight());
 		   		outVal.set(stBld.toString());
 		   		context.write(NullWritable.get(), outVal);
    			}
@@ -818,6 +835,7 @@ public class MutualInformation extends Configured implements Tool {
 	   	 */
 	   	protected void reduce(TextTuple key, Iterable<Tuple> values, Context context)
             	throws IOException, InterruptedException {
+	   		key.prepareForRead();
 	   		distrType = key.getInt(0);
 	   		if (distrType == CLASS_DIST) {
 	   			//class
@@ -871,7 +889,7 @@ public class MutualInformation extends Configured implements Tool {
 	   		} else if (distrType == FEATURE_PAIR_CLASS_COND_DIST) {
 	   			//feature pair class conditional
 	   			Tuple featureOrdinalsClassVal = new Tuple();
-	   			featureOrdinalsClassVal.add(key.getString(1), key.getString(2), key.getString(3));
+	   			featureOrdinalsClassVal.add(key.getInt(1), key.getInt(2), key.getString(3));
 	   			Map<Pair<String, String>, Integer> featurePairDistr = 
 	   					allFeaturePairClassCondDistr.get(featureOrdinalsClassVal);
 	   			if (null == featurePairDistr) {
