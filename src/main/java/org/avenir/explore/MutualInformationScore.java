@@ -20,8 +20,10 @@ package org.avenir.explore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.chombo.mr.FeatureField;
 import org.chombo.util.Pair;
@@ -102,20 +104,40 @@ public class MutualInformationScore {
 	 */
 	public List<FeatureMutualInfo> getMutualInfoFeatureSelectionScore(double redunacyFactor) {
 		List<FeatureMutualInfo>  mutualInfoFeatureSelection = new ArrayList<FeatureMutualInfo>();
+		Set<Integer> selectedFeatures = new HashSet<Integer>();
 		
-		for (FeatureMutualInfo muInfo :  featureClassMutualInfoList) {
-			int feature = muInfo.getLeft();
-			double sum = 0;
-			for (FeaturePairMutualInfo  otherMuInfo :  featurePairMutualInfoList) {
-				if (otherMuInfo.getLeft() == feature || otherMuInfo.getCenter() == feature) {
-					sum +=  otherMuInfo.getRight();
+		while (selectedFeatures.size() < featureClassMutualInfoList.size() ) {
+			double maxScore = Double.NEGATIVE_INFINITY;
+			int selectedFeature = 0;
+			//all features
+			for (FeatureMutualInfo muInfo :  featureClassMutualInfoList) {
+				int feature = muInfo.getLeft();
+				if (selectedFeatures.contains(feature)) {
+					continue;
+				}
+				
+				//all feature pair mutual info
+				double sum = 0;
+				for (FeaturePairMutualInfo  otherMuInfo :  featurePairMutualInfoList) {
+					//pair with feature already selected
+					if ( otherMuInfo.getLeft() == feature && selectedFeatures.contains(otherMuInfo.getCenter())) {
+						sum +=  otherMuInfo.getRight();
+					} else if ( otherMuInfo.getCenter() == feature && selectedFeatures.contains(otherMuInfo.getLeft())) {
+						sum +=  otherMuInfo.getRight();
+					} 
+				}
+				double score = muInfo.getRight() - redunacyFactor * sum;
+				if (score > maxScore) {
+					maxScore = score;
+					selectedFeature = feature;
 				}
 			}
-			double score = muInfo.getRight() - redunacyFactor * sum;
-			FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( feature,score);
+			
+			//add the feature with max score
+			FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( selectedFeature, maxScore);
 			mutualInfoFeatureSelection.add(featureClassMutualInfo);
+			selectedFeatures.add(selectedFeature);
 		}
-		Collections.sort(mutualInfoFeatureSelection);
 		return mutualInfoFeatureSelection;
 	}
 	
@@ -168,24 +190,38 @@ public class MutualInformationScore {
 	 */
 	public List<FeatureMutualInfo> getMinRedundancyMaxrelevanceScore( ) {
 		List<FeatureMutualInfo>  minRedundancyMaxrelevance  = new ArrayList<FeatureMutualInfo>();
-		int featureSetSize = featureClassMutualInfoList.size();
+		Set<Integer> selectedFeatures = new HashSet<Integer>();
 
-		for (FeatureMutualInfo featureMuInfo : featureClassMutualInfoList) {
-			int feature = featureMuInfo.getLeft();
-			double feMuInfo = featureMuInfo.getRight();
-			
-			double sum = 0;
-			for (FeaturePairMutualInfo featurePairMuInfo : featurePairMutualInfoList) {
-				if (featurePairMuInfo.getLeft() == feature || featurePairMuInfo.getCenter() == feature) {
-					sum += featurePairMuInfo.getRight();
+		while (selectedFeatures.size() < featureClassMutualInfoList.size() ) {
+			double maxScore = Double.NEGATIVE_INFINITY;
+			int selectedFeature = 0;
+			for (FeatureMutualInfo featureMuInfo : featureClassMutualInfoList) {
+				int feature = featureMuInfo.getLeft();
+				if (selectedFeatures.contains(feature)) {
+					continue;
+				}
+				double feMuInfo = featureMuInfo.getRight();
+				double sum = 0;
+				for (FeaturePairMutualInfo featurePairMuInfo : featurePairMutualInfoList) {
+					//pair with feature already selected
+					if ( featurePairMuInfo.getLeft() == feature && selectedFeatures.contains(featurePairMuInfo.getCenter())) {
+						sum +=  featurePairMuInfo.getRight();
+					} else if ( featurePairMuInfo.getCenter() == feature && selectedFeatures.contains(featurePairMuInfo.getLeft())) {
+						sum +=  featurePairMuInfo.getRight();
+					} 
+				}
+				
+				double score =   selectedFeatures.size() > 0 ?  feMuInfo - sum / selectedFeatures.size() : feMuInfo ;
+				if (score > maxScore) {
+					maxScore = score;
+					selectedFeature = feature;
 				}
 			}
-			
-			double score = feMuInfo - sum / featureSetSize;
-			FeatureMutualInfo muInfoScore = new  FeatureMutualInfo(feature, score);
-			minRedundancyMaxrelevance.add(muInfoScore);
+			//add the feature with max score
+			FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( selectedFeature, maxScore);
+			minRedundancyMaxrelevance.add(featureClassMutualInfo);
+			selectedFeatures.add(selectedFeature);
 		}
-		Collections.sort(minRedundancyMaxrelevance);
 		return minRedundancyMaxrelevance;
 	}
 	

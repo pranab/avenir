@@ -1,0 +1,48 @@
+This tutorial for finding relevant features using various mutual information based statistical criteria.
+Hospital readmission is ised as the use case
+
+Dependency
+==========
+Please refer to dependency.txt
+
+Test data
+=========
+You can generate patient data using the script hosp_readmit.rb. Make sure that util.rb is in the path
+../lib. util.rb can be checked out from the project visitante.
+
+Scehma
+======
+Put JSOn schema file hosp_readmit.json in the HDFS path specified by the configuration parameter 
+feature.schema.file.path as below
+
+Script for MR
+=============
+JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.explore.MutualInformation
+
+echo "running mr"
+IN_PATH=/user/pranab/hosp/input
+OUT_PATH=/user/pranab/hosp/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/hosp.properties  $IN_PATH  $OUT_PATH
+
+Configuration
+=============
+Here is the content of hosp.properties
+
+mapred.map.max.attempts=2
+mapred.reduce.max.attempts=2
+
+field.delim.regex=,
+field.delim.out=,
+debug.on=true
+num.reducer=1
+feature.schema.file.path=/user/pranab/meta/hosp/patient.json
+output.mutual.info=true
+mutual.info.score.algorithms=min.redundancy.max.relevance
+
+
+

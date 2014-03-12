@@ -1,0 +1,79 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "age",
+			"ordinal" : 1,
+			"dataType" : "int",
+			"feature" : true,
+			"bucketWidth" : 10
+		},
+		{
+			"name" : "weight",
+			"ordinal" : 2,
+			"dataType" : "int",
+			"feature" : true,
+			"bucketWidth" : 10
+		},
+		{
+			"name" : "height",
+			"ordinal" : 3,
+			"dataType" : "int",
+			"feature" : true,
+			"bucketWidth" : 5
+		},
+		{
+			"name" : "employmentStatus",
+			"ordinal" : 4,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "familyStatus",
+			"ordinal" : 5,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "diet",
+			"ordinal" : 6,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "exercise",
+			"ordinal" : 7,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "followUp",
+			"ordinal" : 8,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "smoking",
+			"ordinal" : 9,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "alcohol",
+			"ordinal" : 10,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "readmit",
+			"ordinal" : 11,
+			"dataType" : "categorical"
+		}
+	]
+}
