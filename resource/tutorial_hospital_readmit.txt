@@ -1,5 +1,6 @@
 This tutorial for finding relevant features using various mutual information based statistical criteria.
-Hospital readmission is ised as the use case
+Hospital readmission is used as the use case. Please make necssary changes to path etc depending on your
+environment
 
 Dependency
 ==========
@@ -7,8 +8,11 @@ Please refer to dependency.txt
 
 Test data
 =========
-You can generate patient data using the script hosp_readmit.rb. Make sure that util.rb is in the path
+You can generate hospital readmission data using the script hosp_readmit.rb. Make sure that util.rb is in the path
 ../lib. util.rb can be checked out from the project visitante.
+
+To generate 20000 readmission records run the script  as follows and copy the data file to HDFS  input directory
+./hosp_readmit.rb 20000 > host_readmit.txt
 
 Scehma
 ======
@@ -42,7 +46,7 @@ debug.on=true
 num.reducer=1
 feature.schema.file.path=/user/pranab/meta/hosp/patient.json
 output.mutual.info=true
-mutual.info.score.algorithms=min.redundancy.max.relevance
+mutual.info.score.algorithms=joint.mutual.info,min.redundancy.max.relevance
 
 
 
