@@ -23,7 +23,7 @@ idGen = IdGenerator.new
 	
 	age = agetDist.value
 	if (age > 80)
-		readmitProb = readmitProb + 8
+		readmitProb = readmitProb + 10
 	elsif (age > 70)
 		readmitProb = readmitProb + 5
 	elsif (age > 60)
@@ -39,6 +39,9 @@ idGen = IdGenerator.new
 	end
 	
 	emp = empDist.value
+	if (age > 68 and rand(10) < 8)
+		emp = 'retired'
+	end
 	if (emp == 'unemployed')
 		readmitProb = readmitProb + 6
 	elsif (emp == 'retired')
@@ -51,6 +54,9 @@ idGen = IdGenerator.new
 	end
 		
 	diet = dietDist.value
+	if (emp == 'unemployed' and rand(10) < 7)
+		diet = 'poor'
+	end
 	if (diet == 'poor')
 		readmitProb = readmitProb + 4
 	elsif (diet == 'average')
