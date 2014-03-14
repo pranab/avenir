@@ -38,6 +38,7 @@ public class MutualInformationScore {
 	private List<FeatureMutualInfo>  featureClassMutualInfoList = new ArrayList<FeatureMutualInfo>();
 	private List<FeaturePairMutualInfo> featurePairMutualInfoList = new ArrayList<FeaturePairMutualInfo>();
 	private List<FeaturePairMutualInfo> featurePairClassMutualInfoList = new ArrayList<FeaturePairMutualInfo>();
+	private List<FeaturePairEntropy> featurePairClassEntropyList = new ArrayList<FeaturePairEntropy>();
 	
 	/**
 	 * @author pranab
@@ -64,6 +65,16 @@ public class MutualInformationScore {
 		}
 	}
 	
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class FeaturePairEntropy extends Triplet<Integer, Integer, Double> {
+		public FeaturePairEntropy(int firstFeatureOrdinal, int secondFeatureOrdinal, double entropy) {
+			super(firstFeatureOrdinal, secondFeatureOrdinal, entropy);
+		}
+	}
+
 	/**
 	 * @param featureOrdinal
 	 * @param mutualInfo
@@ -146,8 +157,33 @@ public class MutualInformationScore {
 	 * @param mutualInfo
 	 */
 	public void addFeaturePairClassMutualInfo(int firstFeatureOrdinal, int secondFeatureOrdinal, double mutualInfo) {
-		FeaturePairMutualInfo featurepairMutualInfo = new FeaturePairMutualInfo( firstFeatureOrdinal, secondFeatureOrdinal, mutualInfo);
-		featurePairClassMutualInfoList.add(featurepairMutualInfo);
+		FeaturePairMutualInfo featurePairMutualInfo = new FeaturePairMutualInfo( firstFeatureOrdinal, secondFeatureOrdinal, mutualInfo);
+		featurePairClassMutualInfoList.add(featurePairMutualInfo);
+	}
+	
+	/**
+	 * @param featureOrdinal
+	 * @param mutualInfo
+	 */
+	public void addFeaturePairClassEntropy(int firstFeatureOrdinal, int secondFeatureOrdinal, double entropy) {
+		FeaturePairEntropy featurePairEntropy = new FeaturePairEntropy( firstFeatureOrdinal, secondFeatureOrdinal, entropy);
+		featurePairClassEntropyList.add(featurePairEntropy);
+	}
+
+	/**
+	 * Joint Mutual Info (JMI)
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getJointMutualInfoScore() {
+		return getJointMutualInfoScoreHelper(true);
+	}
+
+	/**
+	 * Double Input Symetrical Relevance  (DISR)
+	 * @return
+	 */
+	public List<FeatureMutualInfo> getDoubleInputSymmetricalRelevanceScore() {
+		return getJointMutualInfoScoreHelper(false);
 	}
 	
 	/**
@@ -155,35 +191,73 @@ public class MutualInformationScore {
 	 * @param featureFields
 	 * @return
 	 */
-	public List<FeatureMutualInfo> getJointMutualInfoScore( List<FeatureField> featureFields) {
+	private List<FeatureMutualInfo> getJointMutualInfoScoreHelper(boolean joinMutInfo ) {
 		List<FeatureMutualInfo>  featureJointMutualInfoList  = new ArrayList<FeatureMutualInfo>();
-		Double score;
-		Map <Integer, Double > jointMutualInfo = new HashMap <Integer, Double >();
+		Set<Integer> selectedFeatures = new HashSet<Integer>();
 		
-		//all features
-		for (FeatureField field : featureFields ) {
-			int fieldOrd = field.getOrdinal();
-			score = 0.0;
-			jointMutualInfo.put(fieldOrd, score);
-			for (FeaturePairMutualInfo featurePairMuInfo :  featurePairClassMutualInfoList) {
-				//if paired with another feature
-				if (featurePairMuInfo.getLeft() == fieldOrd || featurePairMuInfo.getCenter() == fieldOrd) {
-					 score = jointMutualInfo.get(fieldOrd) + featurePairMuInfo.getRight();
-					jointMutualInfo.put(fieldOrd, score );
+		//boot strap selected feature set with  one based on max relevancy
+		FeatureMutualInfo mostRelevantFeature = getMutualInfoMaximizerScore().get(0);
+		FeatureMutualInfo featureClassMutualInfo = new FeatureMutualInfo( mostRelevantFeature.getLeft(), mostRelevantFeature.getRight());
+		featureJointMutualInfoList.add(featureClassMutualInfo);
+		selectedFeatures.add(mostRelevantFeature.getLeft());
+
+		//select features
+		while (selectedFeatures.size() < featureClassMutualInfoList.size() ) {
+			double maxScore = Double.NEGATIVE_INFINITY;
+			int selectedFeature = 0;
+
+			//all features
+			for (FeatureMutualInfo featureMuInfo : featureClassMutualInfoList ) {
+				int feature = featureMuInfo.getLeft();
+				if (selectedFeatures.contains(feature)) {
+					continue;
+				}
+				double sum = 0;
+				for (FeaturePairMutualInfo featurePairMuInfo :  featurePairClassMutualInfoList) {
+					//pair with feature already selected
+					if ( featurePairMuInfo.getLeft() == feature && selectedFeatures.contains(featurePairMuInfo.getCenter()) || 
+							featurePairMuInfo.getCenter() == feature && selectedFeatures.contains(featurePairMuInfo.getLeft()) ) {
+						if (joinMutInfo) {
+							sum +=  featurePairMuInfo.getRight();
+						} else {
+							FeaturePairEntropy featurePairEntropy = getFeaturePairClassEntropy(featurePairMuInfo.getLeft(), featurePairMuInfo.getCenter());
+							sum +=  featurePairMuInfo.getRight() / featurePairEntropy.getRight() ;
+						}
+					} 
+				}
+					
+				double score =   sum ;
+				if (score > maxScore) {
+					maxScore = score;
+					selectedFeature = feature;
 				}
 			}
+			//add the feature with max score
+			featureClassMutualInfo = new FeatureMutualInfo( selectedFeature, maxScore);
+			featureJointMutualInfoList.add(featureClassMutualInfo);
+			selectedFeatures.add(selectedFeature);
 		}
-		
-		//collect in a list and sort
-		for (Integer feature : jointMutualInfo.keySet()) {
-			FeatureMutualInfo featureJointMutualInfo = new FeatureMutualInfo( feature, jointMutualInfo.get(feature));
-			featureJointMutualInfoList.add(featureJointMutualInfo);
-		}
-		Collections.sort(featureJointMutualInfoList);
-
 		return featureJointMutualInfoList;
 	}
-
+	
+	/**
+	 * @param featureOne
+	 * @param featureTwo
+	 * @return
+	 */
+	private FeaturePairEntropy getFeaturePairClassEntropy(int featureOne, int featureTwo) {
+		FeaturePairEntropy featurePairEntropy = null;
+		for (FeaturePairEntropy  thisFeaturePairEntropy : featurePairClassEntropyList) {
+			if (thisFeaturePairEntropy.getLeft() == featureOne && thisFeaturePairEntropy.getCenter() == featureTwo || 
+					thisFeaturePairEntropy.getLeft() == featureTwo && thisFeaturePairEntropy.getCenter() == featureOne ) {
+				featurePairEntropy = thisFeaturePairEntropy;
+				break;
+			}
+		}
+		return featurePairEntropy;
+	}
+	
+	
 	/**
 	 * Min redundancy Max Relevance (MRMR)
 	 * @return

@@ -690,6 +690,7 @@ public class MutualInformation extends Configured implements Tool {
 	   				
 		   			sum = 0;
 		   			numSamples = 0;
+		   			double featurePairClassEntropy = 0;
 		   			//first feature values
 			   		for (String featureValFirst :  featureDistrFirst.keySet()) {
 			   			//second feature values
@@ -707,6 +708,8 @@ public class MutualInformation extends Configured implements Tool {
 				   					if (null != count) {
 						   				jointProb = ((double)count) / totalCount;
 						   				sum += jointProb * Math.log(jointProb / (jointFeatureProb * classProb));
+						   				
+						   				featurePairClassEntropy -=  jointProb * Math.log(jointProb); 
 						   				++numSamples;
 				   					}
 				   				}
@@ -722,6 +725,7 @@ public class MutualInformation extends Configured implements Tool {
 				   		context.write(NullWritable.get(), outVal);
 			   		}
 			   		mutualInformationScore.addFeaturePairClassMutualInfo(featureOrdinals[i], featureOrdinals[j], featurePairClassMuInfo);
+			   		mutualInformationScore.addFeaturePairClassEntropy(featureOrdinals[i], featureOrdinals[j], featurePairClassEntropy);
 	   			}
 	   		}
 	   		
@@ -803,8 +807,13 @@ public class MutualInformation extends Configured implements Tool {
 		   		} else if (scoreAlg.equals("joint.mutual.info")) {
 		   			//JMI
 			   		List<MutualInformationScore.FeatureMutualInfo>  jointFeatureClassMutualInfoList = 
-			   				mutualInformationScore.getJointMutualInfoScore(featureFields);
+			   				mutualInformationScore.getJointMutualInfoScore();
 		   			outputMutualInfoScoreHelper( jointFeatureClassMutualInfoList,context);
+		   		} else if (scoreAlg.equals("double.input.symmetric.relevance")) {
+		   			//DISR
+			   		List<MutualInformationScore.FeatureMutualInfo>  doubleInputSymmetricalRelevanceList = 
+			   				mutualInformationScore.getDoubleInputSymmetricalRelevanceScore();
+		   			outputMutualInfoScoreHelper( doubleInputSymmetricalRelevanceList,context);
 		   		} else if (scoreAlg.equals("min.redundancy.max.relevance")) {
 		   			//MRMR
 		   			List<FeatureMutualInfo>  minredMaxRelList = mutualInformationScore.getMinRedundancyMaxrelevanceScore( );
