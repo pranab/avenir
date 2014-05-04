@@ -18,6 +18,7 @@
 package org.avenir.knn;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -144,6 +145,10 @@ public class NearestNeighbor extends Configured implements Tool {
         private Neighborhood neighborhood;
         private String kernelFunction;
         private int kernelParam;
+        private boolean outputClassDistr;
+    	private StringBuilder stBld = new StringBuilder();
+    	private String testClassValActual;
+    	private String testClassValPredicted;
         
         
         /* (non-Javadoc)
@@ -157,6 +162,7 @@ public class NearestNeighbor extends Configured implements Tool {
             kernelFunction = config.get("kernel.function", "none");
         	kernelParam = config.getInt("kernel.param", -1);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam);
+        	outputClassDistr = config.getBoolean("output.class.distr", false);
         }
     	
     	/* (non-Javadoc)
@@ -164,7 +170,13 @@ public class NearestNeighbor extends Configured implements Tool {
     	 */
     	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
         	throws IOException, InterruptedException {
+        	if (stBld.length() > 0) {
+        		stBld.delete(0,  stBld.length() -1);
+        	}
     		testEntityId  = key.getString(0);
+			stBld.append(testEntityId).append(fieldDelim);
+
+        	//collect nearest neighbors
     		count = 0;
         	for (Tuple value : values){
         		trainEntityId = value.getString(0);
@@ -175,16 +187,29 @@ public class NearestNeighbor extends Configured implements Tool {
         			break;
         		}
 			} 
+
+			 //class distribution
+			 Map<String, Integer>  classDistr = neighborhood.getClassDitribution();
+			 if (outputClassDistr) {
+				 	int thisScore;
+					for (String classVal : classDistr.keySet()) {
+						thisScore = classDistr.get(classVal);
+		    			 stBld.append(classVal).append(fieldDelim).append(thisScore);
+					}
+			 }
     		if (isValidationMode) {
-		        	//classify and compare
-        	} else {
-        		//classify
+    	    	testClassValActual  = key.getString(1);
+    			stBld.append(testClassValActual).append(fieldDelim);
         	}
- 			outVal.set("");
+    		
+    		//predicted class value
+			testClassValPredicted =  neighborhood.classify();
+			stBld.append(testClassValPredicted);
+    		
+ 			outVal.set(stBld.toString());
 			context.write(NullWritable.get(), outVal);
     	}
     }
-	
      
  
 	/**
