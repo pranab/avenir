@@ -31,7 +31,7 @@ public class Neighborhood {
     private int kernelParam;
 	private List<Neighbor>  neighbors = new ArrayList<Neighbor>();
 	private Map<String, Integer> classDistr = new HashMap<String, Integer>();
-	
+	private static final int KERNEL_SCALE = 100;
 	/**
 	 * @param kernelFunction
 	 * @param kernelParam
@@ -56,6 +56,7 @@ public class Neighborhood {
 	}
 	
 	/**
+	 * calculates class distribution
 	 * @return
 	 */
 	public Map<String, Integer> getClassDitribution() {
@@ -69,8 +70,27 @@ public class Neighborhood {
 				}
 			}
 		} else if (kernelFunction.equals("linear")) {
-			
+			for (Neighbor neighbor : neighbors) {
+				int currentScore = (KERNEL_SCALE) / neighbor.distance;
+				Integer score = classDistr.get(neighbor.classValue);
+				if (null == score) {
+					classDistr.put(neighbor.classValue, currentScore);
+				} else {
+					classDistr.put(neighbor.classValue, score + currentScore);
+				}
+			}
 		} else if (kernelFunction.equals("gaussian")) {
+			for (Neighbor neighbor : neighbors) {
+				double temp = (double)neighbor.distance  / kernelParam;
+				double gaussian = Math.exp(-0.5 * temp * temp );
+				int currentScore = (int)(KERNEL_SCALE  * gaussian);
+				Integer score = classDistr.get(neighbor.classValue);
+				if (null == score) {
+					classDistr.put(neighbor.classValue, currentScore);
+				} else {
+					classDistr.put(neighbor.classValue, score + currentScore);
+				}
+			}
 			
 		} else if (kernelFunction.equals("sigmoid")) {
 			
