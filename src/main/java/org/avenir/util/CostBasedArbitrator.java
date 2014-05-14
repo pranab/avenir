@@ -38,4 +38,9 @@ public class CostBasedArbitrator {
 		String predClass =  posCost < negCost  ? posClass : negClass;
 		return predClass;
 	}
+	
+	public String classify(int posProb) {
+		String predClass =  posProb > (falsePosCost * 100) / (falsePosCost + falseNegCost)  ? posClass : negClass;
+		return predClass;
+	}
 }

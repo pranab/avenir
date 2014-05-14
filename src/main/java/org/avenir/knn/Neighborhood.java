@@ -32,6 +32,7 @@ public class Neighborhood {
 	private List<Neighbor>  neighbors = new ArrayList<Neighbor>();
 	private Map<String, Integer> classDistr = new HashMap<String, Integer>();
 	private static final int KERNEL_SCALE = 100;
+	private static final int PROB_SCALE = 100;
 	/**
 	 * @param kernelFunction
 	 * @param kernelParam
@@ -100,6 +101,7 @@ public class Neighborhood {
 	}
 	
 	/**
+	 * Classify and return class attribute value
 	 * @return
 	 */
 	public String classify() {
@@ -114,6 +116,19 @@ public class Neighborhood {
 			}
 		}
 		return winningClassVal;
+	}
+	
+	/**
+	 * return probability for given class attr value
+	 * @param classAttrVal
+	 * @return
+	 */
+	public int getClassProb(String classAttrVal) {
+		int count = 0;
+		for (String classVal : classDistr.keySet()) {
+			count += classDistr.get(classVal);
+		}		
+		return (classDistr.get(classAttrVal) * PROB_SCALE) / count;
 	}
 	
 	/**

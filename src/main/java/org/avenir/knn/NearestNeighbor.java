@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.avenir.util.CostBasedArbitrator;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -47,7 +48,7 @@ public class NearestNeighbor extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "Top n matches MR";
+        String jobName = "K nerest neighbor(KNN)  MR";
         job.setJobName(jobName);
         
         job.setJarByClass(NearestNeighbor.class);
@@ -86,7 +87,6 @@ public class NearestNeighbor extends Configured implements Tool {
 		private Tuple outKey = new Tuple();
 		private Tuple outVal = new Tuple();
         private String fieldDelimRegex;
-        private String fieldDelim;
         private String trainClassAttr;
         private String testClassAttr;
         private boolean isValidationMode;
@@ -95,7 +95,6 @@ public class NearestNeighbor extends Configured implements Tool {
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-           	fieldDelim = context.getConfiguration().get("field.delim", "\\[\\]");
             fieldDelimRegex = context.getConfiguration().get("field.delim.regex", "\\[\\]");
             isValidationMode = context.getConfiguration().getBoolean("validation.mode", true);
         }    
@@ -149,7 +148,13 @@ public class NearestNeighbor extends Configured implements Tool {
     	private StringBuilder stBld = new StringBuilder();
     	private String testClassValActual;
     	private String testClassValPredicted;
-        
+    	private boolean useCostBasedClassifier;
+    	private String posClassAttrValue;
+    	private String negClassAttrValue;
+        private int falsePosCost;
+        private int falseNegCost;
+        private CostBasedArbitrator costBasedArbitrator;
+        private int posClassProbab;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -163,6 +168,21 @@ public class NearestNeighbor extends Configured implements Tool {
         	kernelParam = config.getInt("kernel.param", -1);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
+            
+        	//using cost based arbitrator
+        	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", true);
+            if (useCostBasedClassifier) {
+            	String[] classAttrValues = config.get("class.attribute.values").split(",");
+            	posClassAttrValue = classAttrValues[0];
+            	negClassAttrValue = classAttrValues[1];
+        
+            	int[] missclassificationCost = Utility.intArrayFromString(config.get("misclassification.cost"));
+            	falsePosCost = missclassificationCost[0];
+            	falseNegCost = missclassificationCost[1];
+            	costBasedArbitrator = new CostBasedArbitrator(negClassAttrValue, posClassAttrValue,
+            			falseNegCost, falsePosCost);
+            }
+            
         }
     	
     	/* (non-Javadoc)
@@ -198,12 +218,20 @@ public class NearestNeighbor extends Configured implements Tool {
 					}
 			 }
     		if (isValidationMode) {
+    			//actual class attr value
     	    	testClassValActual  = key.getString(1);
     			stBld.append(testClassValActual).append(fieldDelim);
         	}
     		
     		//predicted class value
-			testClassValPredicted =  neighborhood.classify();
+    		if (useCostBasedClassifier) {
+    			//use cost based arbitrator
+    			posClassProbab = neighborhood.getClassProb(posClassAttrValue);
+    			testClassValPredicted = costBasedArbitrator.classify(posClassProbab);
+    		} else {
+    			//get directly
+    			testClassValPredicted = neighborhood.classify();
+    		}
 			stBld.append(testClassValPredicted);
     		
  			outVal.set(stBld.toString());
