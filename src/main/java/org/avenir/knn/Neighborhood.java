@@ -70,9 +70,19 @@ public class Neighborhood {
 					classDistr.put(neighbor.classValue, count + 1);
 				}
 			}
-		} else if (kernelFunction.equals("linear")) {
+		} else if (kernelFunction.equals("linearMultiplicative")) {
 			for (Neighbor neighbor : neighbors) {
-				int currentScore = (KERNEL_SCALE) / neighbor.distance;
+				int currentScore = neighbor.distance == 0 ? (2 * KERNEL_SCALE) : (KERNEL_SCALE / neighbor.distance);
+				Integer score = classDistr.get(neighbor.classValue);
+				if (null == score) {
+					classDistr.put(neighbor.classValue, currentScore);
+				} else {
+					classDistr.put(neighbor.classValue, score + currentScore);
+				}
+			}
+		} else if (kernelFunction.equals("linearAdditive")) {
+			for (Neighbor neighbor : neighbors) {
+				int currentScore = (KERNEL_SCALE - neighbor.distance);
 				Integer score = classDistr.get(neighbor.classValue);
 				if (null == score) {
 					classDistr.put(neighbor.classValue, currentScore);
