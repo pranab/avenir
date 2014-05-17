@@ -90,7 +90,8 @@ public class NearestNeighbor extends Configured implements Tool {
         private String trainClassAttr;
         private String testClassAttr;
         private boolean isValidationMode;
-
+        private String[] items;
+        
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
@@ -105,7 +106,7 @@ public class NearestNeighbor extends Configured implements Tool {
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
-            String[] items  =  value.toString().split(fieldDelimRegex);
+            items  =  value.toString().split(fieldDelimRegex);
             
             trainEntityId = items[0];
             testEntityId = items[1];
