@@ -23,36 +23,71 @@ import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 import org.chombo.util.FeatureCount;
 
+/**
+ * Feature posterior probability
+ * @author pranab
+ *
+ */
 public class FeaturePosterior {
 	private String classValue;
 	private List<FeatureCount> featureCounts = new ArrayList<FeatureCount>();
 	private int count;
 	private double prob;
 	
+	/**
+	 * @return
+	 */
 	public String getClassValue() {
 		return classValue;
 	}
+	
+	/**
+	 * @param classValue
+	 */
 	public void setClassValue(String classValue) {
 		this.classValue = classValue;
 	}
+	
+	/**
+	 * @return
+	 */
 	public List<FeatureCount> getFeatureCounts() {
 		return featureCounts;
 	}
+	
+	/**
+	 * @param featureCounts
+	 */
 	public void setFeatureCounts(List<FeatureCount> featureCounts) {
 		this.featureCounts = featureCounts;
 	}
+	
+	/**
+	 * @return
+	 */
 	public int getCount() {
 		return count;
 	}
+	
+	/**
+	 * @param count
+	 */
 	public void setCount(int count) {
 		this.count = count;
 	}
 	
+	/**
+	 * @param count
+	 */
 	public void addCount(int count) {
 		this.count += count;
 	}
 	
-	public  FeatureCount getFeatureCount(int ordinal) {
+	/**
+	 * @param ordinal
+	 * @return
+	 */
+	public FeatureCount getFeatureCount(int ordinal) {
 		FeatureCount feaCount  = null;
 		for (FeatureCount thisFeaCount :   featureCounts){
 			if (thisFeaCount.getOrdinal() == ordinal) {
@@ -67,6 +102,9 @@ public class FeaturePosterior {
 		return feaCount;
 	}
 
+	/**
+	 * @param total
+	 */
 	public void normalize(int total) {
 		//feature posterior
 		for (FeatureCount feaCount : featureCounts) {
@@ -77,10 +115,17 @@ public class FeaturePosterior {
 		prob = ((double)count ) / total;
 	}
 	
+	/**
+	 * @return
+	 */
 	public double getProb() {
 		return prob;
 	}
 	
+	/**
+	 * @param featureValues
+	 * @return
+	 */
 	public double getFeaturePostProb( List<Pair<Integer, String>> featureValues) {
 		double prob = 1.0;
 		for (Pair<Integer, String> feature : featureValues) {

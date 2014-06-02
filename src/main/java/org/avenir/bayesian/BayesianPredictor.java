@@ -170,15 +170,29 @@ public class BayesianPredictor extends Configured implements Tool {
         			throw new IOException("invalid model data");
         		}
         		
+    			int featureOrd = !items[1].isEmpty() ? Integer.parseInt(items[1]) : -1;
         		if (items[0].isEmpty()) {
         			//feature prior
-        			model.addFeaturePrior(Integer.parseInt(items[1]), items[2], Integer.parseInt(items[3]));
+        			if (!items[2].isEmpty()) {
+        				//binned
+        				model.addFeaturePrior(featureOrd, items[2], Integer.parseInt(items[3]));
+        			} else {
+        				//continuous
+        				model.setFeaturePriorParaemeters(featureOrd, Long.parseLong(items[3]), Long.parseLong(items[4]));
+        			}
         		} else if (items[1].isEmpty() && items[2].isEmpty()) {
         			//class prior
         			model.addClassPrior(items[0], Integer.parseInt(items[3]));
         		} else {
         			//feature posterior
-        			model.addFeaturePosterior(items[0], Integer.parseInt(items[1]), items[2], Integer.parseInt(items[3]));
+        			String classVal = items[0];
+        			if (!items[2].isEmpty()) {
+        				//binned
+        				model.addFeaturePosterior(classVal, featureOrd, items[2], Integer.parseInt(items[3]));
+        			} else {
+        				//continuous
+        				model.setFeaturePosteriorParaemeters(classVal, featureOrd, Long.parseLong(items[3]), Long.parseLong(items[4]));
+        			}
         		}
         	}
         	

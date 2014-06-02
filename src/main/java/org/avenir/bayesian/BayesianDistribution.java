@@ -19,8 +19,11 @@ package org.avenir.bayesian;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -40,6 +43,7 @@ import org.apache.lucene.util.Version;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.Tuple;
+import org.chombo.util.Triplet;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -67,7 +71,7 @@ public class BayesianDistribution extends Configured implements Tool {
         job.setReducerClass(BayesianDistribution.DistributionReducer.class);
 
         job.setMapOutputKeyClass(Tuple.class);
-        job.setMapOutputValueClass(IntWritable.class);
+        job.setMapOutputValueClass(Tuple.class);
 
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
@@ -83,10 +87,10 @@ public class BayesianDistribution extends Configured implements Tool {
 	 * @author pranab
 	 *
 	 */
-	public static class DistributionMapper extends Mapper<LongWritable, Text, Tuple, IntWritable> {
+	public static class DistributionMapper extends Mapper<LongWritable, Text, Tuple, Tuple> {
 		private String[] items;
 		private Tuple outKey = new Tuple();
-		private IntWritable outVal = new IntWritable(1);
+		private Tuple outVal = new Tuple();
         private String fieldDelimRegex;
         private FeatureSchema schema;
         private List<FeatureField> fields;
@@ -98,14 +102,19 @@ public class BayesianDistribution extends Configured implements Tool {
         private int bin;
         private boolean tabularInput;
         private Analyzer analyzer;
+        private long val;
+        private long valSq;
+        private final int ONE = 1;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-        	fieldDelimRegex = context.getConfiguration().get("bs.field.delim.regex", ",");
-        	tabularInput = context.getConfiguration().getBoolean("tabular.input", true);
+        	Configuration config = context.getConfiguration();
+        	fieldDelimRegex = config.get("bs.field.delim.regex", ",");
+        	tabularInput = config.getBoolean("tabular.input", true);
         	if (tabularInput) {
+        		//tabular input
 	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
 	            ObjectMapper mapper = new ObjectMapper();
 	            schema = mapper.readValue(fs, FeatureSchema.class);
@@ -114,8 +123,11 @@ public class BayesianDistribution extends Configured implements Tool {
 	            classAttrField = schema.findClassAttrField();
 	        	fields = schema.getFields();
         	} else {
+        		//text input
                 analyzer = new StandardAnalyzer(Version.LUCENE_35);
                 featureAttrOrdinal = 1;
+                outVal.initialize();
+				outVal.add(ONE);
         	}
         }
  
@@ -131,16 +143,31 @@ public class BayesianDistribution extends Configured implements Tool {
 	            
 	        	for (FeatureField field : fields) {
 	        		if (field.isFeature()) {
+	        			boolean binned = true;
 	        			featureAttrVal = items[field.getOrdinal()];
 	        			featureAttrOrdinal = field.getOrdinal();
 	        			if  (field.isCategorical()) {
 	        				featureAttrBin= featureAttrVal;
 	        			} else {
-	        				bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
-	        				featureAttrBin = "" + bin;
+	        				if (field.isBucketWidthDefined()) {
+	        					bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
+	        					featureAttrBin = "" + bin;
+	        				} else {
+	        					binned = false;
+	        					val = Integer.parseInt(featureAttrVal);
+	        					valSq = val * val;
+	        				}
 	        			}
+	        			
 	        			outKey.initialize();
-	        			outKey.add(classAttrVal, featureAttrOrdinal, featureAttrBin);
+	        			outVal.initialize();
+	        			if (binned) {
+	        				outKey.add(classAttrVal, featureAttrOrdinal, featureAttrBin);
+	        				outVal.add(ONE);
+	        			} else {
+	        				outKey.add(classAttrVal, featureAttrOrdinal);
+	        				outVal.add(ONE, val, valSq);
+	        			}
 	       	   			context.write(outKey, outVal);
 	        		}
 	        	}
@@ -171,31 +198,104 @@ public class BayesianDistribution extends Configured implements Tool {
 	 * @author pranab
 	 *
 	 */
-	public static class DistributionReducer extends Reducer<Tuple, IntWritable, NullWritable, Text> {
+	public static class DistributionReducer extends Reducer<Tuple, Tuple, NullWritable, Text> {
 		private Text outVal = new Text();
 		private String fieldDelim;
+		private FeatureSchema schema;
+        private List<FeatureField> fields;
 		private int count;
 		private StringBuilder stBld = new  StringBuilder();
+		private long valSum;
+		private long valSqSum;
+		private long featurePosteriorMean;
+		private long featurePosteriorStdDev;
+		private Map<Integer, Triplet<Integer, Long, Long>> featurePriorDistr = new HashMap<Integer, Triplet<Integer, Long, Long>>();
+		private Integer featureOrd;
+		private boolean tabularInput;
+		private boolean binned;
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
 		 */
 		protected void setup(Context context) throws IOException, InterruptedException {
+        	Configuration config = context.getConfiguration();
         	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
-       }
+        	tabularInput = config.getBoolean("tabular.input", true);
+    		
+        	//tabular input
+        	if (tabularInput) {
+        		InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        		ObjectMapper mapper = new ObjectMapper();
+        		schema = mapper.readValue(fs, FeatureSchema.class);
+        	}
+		}
 
+		/* (non-Javadoc)
+		 * @see org.apache.hadoop.mapreduce.Reducer#cleanup(org.apache.hadoop.mapreduce.Reducer.Context)
+		 */
+		protected void cleanup(Context context) throws IOException, InterruptedException {
+			//emit feature prior probability parameters for numerical continuous variables
+			for (int featureOrd : featurePriorDistr.keySet()) {
+    			Triplet<Integer, Long, Long> distr = featurePriorDistr.get(featureOrd);
+    			count = distr.getLeft();
+    			valSum = distr.getCenter();
+    			valSqSum = distr.getRight();
+    			long mean = valSum / count;
+    			double temp = valSqSum - count * mean  * mean;
+    			long stdDev = (long)(Math.sqrt(temp / (count -1)));
+    			
+	    		stBld.delete(0, stBld.length());
+	    		stBld.append(fieldDelim).append(featureOrd).append(fieldDelim).append(fieldDelim).append(mean).
+	    			append(fieldDelim).append(stdDev);
+	    		outVal.set(stBld.toString());
+				context.write(NullWritable.get(),outVal);
+			}
+		}	
+		
     	/* (non-Javadoc)
     	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
     	 */
-    	protected void reduce(Tuple key, Iterable<IntWritable> values, Context context)
+    	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
             	throws IOException, InterruptedException {
     		count = 0;
-    		for (IntWritable val : values) {
-    			++count;
+			featureOrd = key.getInt(1);
+			binned = !(tabularInput && !schema.findFieldByOrdinal(featureOrd).isBucketWidthDefined());
+    		if (!binned){
+    			valSum = valSqSum = 0;
     		}
+    		for (Tuple val : values) {
+    			count += val.getInt(0);
+    			if (!binned) {
+    				valSum += val.getLong(1);
+    				valSqSum += val.getLong(2);
+    			}
+    		}
+    		
+    		if (!binned) {
+    			featurePosteriorMean = valSum / count;
+    			double temp = valSqSum - count * featurePosteriorMean  * featurePosteriorMean;
+    			featurePosteriorStdDev = (long)(Math.sqrt(temp / (count -1)));
+    			
+				//collect feature prior values
+    			Triplet<Integer, Long, Long> distr = featurePriorDistr.get(featureOrd);
+    			if (null == distr) {
+    				distr = new Triplet<Integer, Long, Long>(count, valSum, valSqSum);
+    			} else {
+    				distr.setLeft(distr.getLeft() + count);
+    				distr.setCenter(distr.getCenter() + valSum);
+    				distr.setRight(distr.getRight() + valSqSum);
+    			}
+    		}
+    		
     		//feature posterior
     		stBld.delete(0, stBld.length());
-    		stBld.append(key.toString()).append(fieldDelim).append(count);
+    		if (binned) {
+    			stBld.append(key.toString()).append(fieldDelim).append(count);
+    		} else {
+    			stBld.append(key.toString()).append(fieldDelim).append(featurePosteriorMean).
+    			append(fieldDelim).append(featurePosteriorStdDev);
+    		}
+    			
     		outVal.set(stBld.toString());
 			context.write(NullWritable.get(),outVal);
 			
@@ -206,11 +306,13 @@ public class BayesianDistribution extends Configured implements Tool {
 			context.write(NullWritable.get(),outVal);
 			
 			//feature prior
-    		stBld.delete(0, stBld.length());
-    		stBld.append(fieldDelim).append(key.getInt(1)).append(fieldDelim).append(key.getString(2)).append(fieldDelim).append(count);
-    		outVal.set(stBld.toString());
-			context.write(NullWritable.get(),outVal);
-			
+    		if (binned) {
+	    		stBld.delete(0, stBld.length());
+	    		stBld.append(fieldDelim).append(key.getInt(1)).append(fieldDelim).append(key.getString(2)).
+	    			append(fieldDelim).append(count);
+	    		outVal.set(stBld.toString());
+				context.write(NullWritable.get(),outVal);
+    		}
     	}
 	}
 	

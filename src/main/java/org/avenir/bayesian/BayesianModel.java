@@ -24,16 +24,29 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.chombo.util.BinCount;
 import org.chombo.util.FeatureCount;
 
+/**
+ * Bayesian model related probability distributions
+ * @author pranab
+ *
+ */
 public class BayesianModel {
 	private List<FeaturePosterior> featurePosteriors = new ArrayList<FeaturePosterior>();
 	private List<FeatureCount> featurePriors = new ArrayList<FeatureCount>();
 	private int count;
 	
+	/**
+	 * @param classValue
+	 * @return
+	 */
 	public double getClassPriorProb(String classValue) {
 		FeaturePosterior feaPost = getFeaturePosterior(classValue);
 		return feaPost.getProb();
 	}
 	
+	/**
+	 * @param featureValues
+	 * @return
+	 */
 	public double getFeaturePriorProb(List<Pair<Integer, String>> featureValues) {
 		double prob = 1.0;
 		for (Pair<Integer, String> feature : featureValues) {
@@ -43,23 +56,53 @@ public class BayesianModel {
 		return prob;
 	}
 	
+	/**
+	 * @param classVal
+	 * @param featureValues
+	 * @return
+	 */
 	public double getFeaturePostProb(String classVal, List<Pair<Integer, String>> featureValues) {
 		FeaturePosterior feaPost = getFeaturePosterior(classVal);
 		double prob = feaPost.getFeaturePostProb(featureValues);
 		return prob;
 	}
 	
+	/**
+	 * @param classValue
+	 * @param count
+	 */
 	public void addClassPrior(String classValue, int count) {
 		FeaturePosterior feaPost = getFeaturePosterior(classValue);
 		feaPost.addCount(count);
 	}
 	
+	/**
+	 * @param ordinal
+	 * @param bin
+	 * @param count
+	 */
 	public void addFeaturePrior(int ordinal, String bin,  int count) {
 		FeatureCount feaCount = getFeatureCount( ordinal);
 		BinCount binCount = new BinCount(bin, count);
 		feaCount.addBinCount(binCount);
 	}
 	
+	/**
+	 * @param ordinal
+	 * @param mean
+	 * @param stdDev
+	 */
+	public void setFeaturePriorParaemeters(int ordinal, long mean, long stdDev) {
+		FeatureCount feaCount = getFeatureCount( ordinal);
+		feaCount.setDistrParameters(mean, stdDev);
+	}	
+	
+	/**
+	 * @param classValue
+	 * @param ordinal
+	 * @param bin
+	 * @param count
+	 */
 	public void addFeaturePosterior(String classValue, int ordinal, String bin,  int count) {
 		FeaturePosterior feaPost = getFeaturePosterior(classValue);
 		FeatureCount  feaCount =  feaPost.getFeatureCount( ordinal);
@@ -67,6 +110,22 @@ public class BayesianModel {
 		feaCount.addBinCount(binCount);
 	}
 	
+	/**
+	 * @param classValue
+	 * @param ordinal
+	 * @param mean
+	 * @param stdDev
+	 */
+	public void setFeaturePosteriorParaemeters(String classValue, int ordinal, long mean, long stdDev) {
+		FeaturePosterior feaPost = getFeaturePosterior(classValue);
+		FeatureCount  feaCount =  feaPost.getFeatureCount(ordinal);
+		feaCount.setDistrParameters(mean, stdDev);
+	}	
+	
+	/**
+	 * @param ordinal
+	 * @return
+	 */
 	private FeatureCount getFeatureCount(int ordinal) {
 		FeatureCount feaCount  = null;
 		for (FeatureCount thisFeaCount :   featurePriors) {
@@ -82,6 +141,10 @@ public class BayesianModel {
 		return feaCount;
 	}
 	
+	/**
+	 * @param classValue
+	 * @return
+	 */
 	private FeaturePosterior getFeaturePosterior(String classValue) {
 		FeaturePosterior feaPost = null;
 		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
@@ -100,27 +163,53 @@ public class BayesianModel {
 		return feaPost;
 	}
 	
+	/**
+	 * @return
+	 */
 	public List<FeaturePosterior> getFeaturePosteriors() {
 		return featurePosteriors;
 	}
+	
+	/**
+	 * @param featurePosteriors
+	 */
 	public void setFeaturePosteriors(List<FeaturePosterior> featurePosteriors) {
 		this.featurePosteriors = featurePosteriors;
 	}
+	
+	/**
+	 * @return
+	 */
 	public List<FeatureCount> getFeaturePriors() {
 		return featurePriors;
 	}
+	
+	/**
+	 * @param featurePriors
+	 */
 	public void setFeaturePriors(List<FeatureCount> featurePriors) {
 		this.featurePriors = featurePriors;
 	}
+	
+	/**
+	 * @return
+	 */
 	public int getCount() {
 		return count;
 	}
+	
+	/**
+	 * @param count
+	 */
 	public void setCount(int count) {
 		this.count = count;
 	}
 	
+	/**
+	 * 
+	 */
 	public void finishUp() {
-		//total count
+		//total count by adding all class prior counts
 		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
 			count += thisFeaPost.getCount();
 		}	
