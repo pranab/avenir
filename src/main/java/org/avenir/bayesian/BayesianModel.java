@@ -47,11 +47,17 @@ public class BayesianModel {
 	 * @param featureValues
 	 * @return
 	 */
-	public double getFeaturePriorProb(List<Pair<Integer, String>> featureValues) {
+	public double getFeaturePriorProb(List<Pair<Integer, Object>> featureValues) {
 		double prob = 1.0;
-		for (Pair<Integer, String> feature : featureValues) {
+		for (Pair<Integer, Object> feature : featureValues) {
 			FeatureCount feaCount = getFeatureCount( feature.getLeft());
-			prob *= feaCount.getProb(feature.getRight());
+			if (feature.getRight() instanceof String) {
+				//categorical or binned numerical
+				prob *= feaCount.getProb((String)feature.getRight());
+			} else {
+				//continuous numerical
+				prob *= feaCount.getProb((Integer)feature.getRight());
+			}
 		}
 		return prob;
 	}
@@ -61,7 +67,7 @@ public class BayesianModel {
 	 * @param featureValues
 	 * @return
 	 */
-	public double getFeaturePostProb(String classVal, List<Pair<Integer, String>> featureValues) {
+	public double getFeaturePostProb(String classVal, List<Pair<Integer, Object>> featureValues) {
 		FeaturePosterior feaPost = getFeaturePosterior(classVal);
 		double prob = feaPost.getFeaturePostProb(featureValues);
 		return prob;

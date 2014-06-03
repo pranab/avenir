@@ -48,6 +48,11 @@ import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
+/**
+ * Predict with naive bayes
+ * @author pranab
+ *
+ */
 public class BayesianPredictor extends Configured implements Tool {
 
 	@Override
@@ -72,6 +77,10 @@ public class BayesianPredictor extends Configured implements Tool {
         return status;
 	}
 
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class PredictorMapper extends Mapper<LongWritable, Text, NullWritable, Text> {
 		private String[] items;
 		private Text outVal = new Text();
@@ -83,9 +92,10 @@ public class BayesianPredictor extends Configured implements Tool {
         private String featureAttrVal;
         private Integer featureAttrOrdinal;
         private String featureAttrBin;
+        private int featureVal;
         private int bin;
         private BayesianModel model;
-		private List<Pair<Integer, String>> featureValues = new ArrayList<Pair<Integer, String>>();
+		private List<Pair<Integer, Object>> featureValues = new ArrayList<Pair<Integer, Object>>();
 		private String[] predictingClasses;
 		private String fieldDelim;
 		private List<Pair<String, Integer>> classPrediction = new ArrayList<Pair<String,Integer>>();
@@ -101,8 +111,12 @@ public class BayesianPredictor extends Configured implements Tool {
 		private CostBasedArbitrator arbitrator;
 		private int classProbDiffThrehold;
 		private int classProbDiff;
+		private Pair<Integer, Object> feature;
 		
         
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("bs.field.delim.regex", ",");
@@ -147,6 +161,9 @@ public class BayesianPredictor extends Configured implements Tool {
         	loadModel(context);
         }
  
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
         protected void cleanup(Context context) throws IOException, InterruptedException {
 			context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
 			context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
@@ -157,6 +174,10 @@ public class BayesianPredictor extends Configured implements Tool {
 			context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
         }
          
+        /**
+         * @param context
+         * @throws IOException
+         */
         private void loadModel(Context context) throws IOException {
         	model = new BayesianModel();
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bayesian.model.file.path");
@@ -166,10 +187,6 @@ public class BayesianPredictor extends Configured implements Tool {
         	
         	while((line = reader.readLine()) != null) {
         		items = line.split(fieldDelimRegex);
-        		if(items.length != MODEL_DATA_NUM_TOKENS) {
-        			throw new IOException("invalid model data");
-        		}
-        		
     			int featureOrd = !items[1].isEmpty() ? Integer.parseInt(items[1]) : -1;
         		if (items[0].isEmpty()) {
         			//feature prior
@@ -211,16 +228,26 @@ public class BayesianPredictor extends Configured implements Tool {
             //collect feature attribute and associated bin
         	for (FeatureField field : fields) {
         		if (field.isFeature()) {
+        			boolean binned = true;
         			featureAttrOrdinal = field.getOrdinal();
         			featureAttrVal = items[featureAttrOrdinal];
         			if  (field.isCategorical()) {
         				featureAttrBin= featureAttrVal;
         			} else {
-        				bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
-        				featureAttrBin = "" + bin;
+        				if (field.isBucketWidthDefined()) {
+        					bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
+        					featureAttrBin = "" + bin;
+        				} else {
+        					binned = false;
+        					featureVal = Integer.parseInt(featureAttrVal);
+        				}
         			}
-        			Pair<Integer, String> feature = new ImmutablePair<Integer, String>(featureAttrOrdinal, featureAttrBin);
-        			featureValues.add(feature);
+        			if (binned) {
+        				feature = new ImmutablePair<Integer, Object>(featureAttrOrdinal, featureAttrBin);
+        			} else {
+        				feature = new ImmutablePair<Integer, Object>(featureAttrOrdinal, featureVal);
+        			}
+    				featureValues.add(feature);
         		}
         	}
             
@@ -271,6 +298,9 @@ public class BayesianPredictor extends Configured implements Tool {
         	
         }	
         
+        /**
+         * 
+         */
         private void defaultArbitrate() {
     		int prob = 0;
     		String classVal = null;
@@ -301,6 +331,9 @@ public class BayesianPredictor extends Configured implements Tool {
     		predProb =  prob;
         }
         
+        /**
+         * 
+         */
         private void costArbitrate() {
 			int posProb = 0;
 			int negProb = 0;
@@ -319,6 +352,9 @@ public class BayesianPredictor extends Configured implements Tool {
     		predProb = 100;
         }
         
+        /**
+         * class posterior probability
+         */
         private void predictClassValue() {
         	double classPriorProb = 0;
         	double featurePriorProb = 1.0;
