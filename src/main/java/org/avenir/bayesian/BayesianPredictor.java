@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -112,7 +114,10 @@ public class BayesianPredictor extends Configured implements Tool {
 		private int classProbDiffThrehold;
 		private int classProbDiff;
 		private Pair<Integer, Object> feature;
-		
+		private boolean outputFeatureProbOnly;
+        private double featurePriorProb;
+        private Map<String, Double> featurePostProbabilities  = new HashMap<String, Double>();
+        private StringBuilder stBld = new StringBuilder();
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -154,8 +159,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		predictingClasses[1] = cardinality.get(1);
         	}
     		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
-    		
     		classProbDiffThrehold = config.getInt("class.prob.diff.threshold", -1);
+    		outputFeatureProbOnly  = config.getBoolean("output.feature.prob.only",  false);
         	
         	//bayesian model
         	loadModel(context);
@@ -254,7 +259,41 @@ public class BayesianPredictor extends Configured implements Tool {
         	//predict probabilty for class values
         	predictClassValue();
         	
-        	if (classPrediction.size() == 1) {
+        	if (outputFeatureProbOnly) {
+        		outputFeatureProb(items[0], context);
+        	} else {
+        		outputClassPrediction( value,  context);
+        	}
+        }	
+
+        /**
+         * Outputs feature probabilities
+         * @param itemID
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void outputFeatureProb(String itemID, Context context)  
+            	throws IOException, InterruptedException{
+   			stBld.delete(0, stBld.length());
+   			stBld.append(itemID).append(fieldDelim).append(featurePriorProb);
+            for (String classVal :  predictingClasses) {
+            	stBld.append(fieldDelim).append(classVal).append(featurePostProbabilities.get(classVal));
+            }   			
+    		outVal.set(stBld.toString());
+			context.write(NullWritable.get(),outVal);
+        }
+        
+        /**
+         * @param value
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void outputClassPrediction(Text value, Context context)  
+        	throws IOException, InterruptedException{
+   			stBld.delete(0, stBld.length());
+   			if (classPrediction.size() == 1) {
         		//single class
        			predClass = classPrediction.get(0).getLeft();
        			predProb =  classPrediction.get(0).getRight();
@@ -275,8 +314,7 @@ public class BayesianPredictor extends Configured implements Tool {
        			incorrPred = !corrPred;
        			confMatrix.report(predClass, classAttrVal);
        			
-       			StringBuilder stBld = new StringBuilder(value.toString());
-       			stBld.append(fieldDelim).append(predClass).append(fieldDelim).append(predProb);
+       			stBld.append(value.toString()).append(fieldDelim).append(predClass).append(fieldDelim).append(predProb);
        			if (classProbDiffThrehold > 0) {
        				stBld.append(fieldDelim);
        				if (classProbDiff > classProbDiffThrehold) {
@@ -295,11 +333,10 @@ public class BayesianPredictor extends Configured implements Tool {
 				context.getCounter("Validation", "Incorrect").increment(1);
         	}
 			context.write(NullWritable.get(),outVal);
-        	
-        }	
+        }
         
         /**
-         * 
+         * deafult class artbitrator 
          */
         private void defaultArbitrate() {
     		int prob = 0;
@@ -332,7 +369,7 @@ public class BayesianPredictor extends Configured implements Tool {
         }
         
         /**
-         * 
+         *  Cost based arbitration
          */
         private void costArbitrate() {
 			int posProb = 0;
@@ -353,19 +390,20 @@ public class BayesianPredictor extends Configured implements Tool {
         }
         
         /**
-         * class posterior probability
+         * feature posterior, class posterior probability
          */
         private void predictClassValue() {
         	double classPriorProb = 0;
-        	double featurePriorProb = 1.0;
         	double featurePostProb = 1.0;
         	int classPostProb = 0;
         	classPrediction.clear();
         	
-    		for (String classVal :  predictingClasses) {
+           	featurePostProbabilities.clear();
+			featurePriorProb = model.getFeaturePriorProb(featureValues);
+            for (String classVal :  predictingClasses) {
     			classPriorProb = model.getClassPriorProb(classVal);
-    			featurePriorProb = model.getFeaturePriorProb(featureValues);
     			featurePostProb = model.getFeaturePostProb(classVal, featureValues);
+    			featurePostProbabilities.put(classVal, featurePostProb);
     			
     			if (classAttrVal.equals(classVal)) {
     				System.out.println("featurePostProb:" + featurePostProb + " classPriorProb:" + classPriorProb +
