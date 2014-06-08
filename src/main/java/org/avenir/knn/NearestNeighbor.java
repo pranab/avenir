@@ -96,7 +96,7 @@ public class NearestNeighbor extends Configured implements Tool {
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-            fieldDelimRegex = context.getConfiguration().get("field.delim.regex", "\\[\\]");
+            fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
             isValidationMode = context.getConfiguration().getBoolean("validation.mode", true);
         }    
 
