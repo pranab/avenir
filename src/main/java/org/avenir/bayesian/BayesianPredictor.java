@@ -279,7 +279,8 @@ public class BayesianPredictor extends Configured implements Tool {
    			stBld.append(itemID).append(fieldDelim).append(featurePriorProb);
             for (String classVal :  predictingClasses) {
             	stBld.append(fieldDelim).append(classVal).append(featurePostProbabilities.get(classVal));
-            }   			
+            }   
+            stBld.append(fieldDelim).append(classAttrVal);
     		outVal.set(stBld.toString());
 			context.write(NullWritable.get(),outVal);
         }

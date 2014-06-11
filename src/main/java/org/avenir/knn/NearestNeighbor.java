@@ -91,6 +91,8 @@ public class NearestNeighbor extends Configured implements Tool {
         private String testClassAttr;
         private boolean isValidationMode;
         private String[] items;
+        private boolean classCondtionWeighted;
+        private double trainingFeaturePostProb;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -98,6 +100,7 @@ public class NearestNeighbor extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
             fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
             isValidationMode = context.getConfiguration().getBoolean("validation.mode", true);
+            classCondtionWeighted = context.getConfiguration().getBoolean("class.condtion.weighted", true);
         }    
 
         /* (non-Javadoc)
@@ -107,23 +110,38 @@ public class NearestNeighbor extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
-            
-            trainEntityId = items[0];
-            testEntityId = items[1];
-            rank = Integer.parseInt(items[2]);
             outKey.initialize();
-            outKey.add(testEntityId, rank);
             outVal.initialize();
-        	trainClassAttr = items[3];
-            if (isValidationMode) {
-            	//validation mode
-            	testClassAttr = items[4];
-                outKey.add(testEntityId, testClassAttr, rank);
+            if (classCondtionWeighted) {
+	            trainEntityId = items[2];
+	            testEntityId = items[0];
+	            rank = Integer.parseInt(items[3]);
+	        	trainClassAttr = items[4];
+	        	trainingFeaturePostProb = Double.parseDouble(items[5]); 
+	            if (isValidationMode) {
+	            	//validation mode
+	            	testClassAttr = items[1];
+	                outKey.add(testEntityId, testClassAttr, rank);
+	            } else {
+	            	//prediction mode
+	                outKey.add(testEntityId, rank);
+	            }
+	        	outVal.add(trainEntityId,rank,trainClassAttr,trainingFeaturePostProb);
             } else {
-            	//prediction mode
-                outKey.add(testEntityId, rank);
+	            trainEntityId = items[0];
+	            testEntityId = items[1];
+	            rank = Integer.parseInt(items[2]);
+	        	trainClassAttr = items[3];
+	            if (isValidationMode) {
+	            	//validation mode
+	            	testClassAttr = items[4];
+	                outKey.add(testEntityId, testClassAttr, rank);
+	            } else {
+	            	//prediction mode
+	                outKey.add(testEntityId, rank);
+	            }
+	        	outVal.add(trainEntityId,rank,trainClassAttr);
             }
-        	outVal.add(trainEntityId,rank,trainClassAttr);
 			context.write(outKey, outVal);
         }
 	}
@@ -156,6 +174,8 @@ public class NearestNeighbor extends Configured implements Tool {
         private int falseNegCost;
         private CostBasedArbitrator costBasedArbitrator;
         private int posClassProbab;
+        private boolean classCondtionWeighted;
+        private double trainingFeaturePostProb;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -167,6 +187,7 @@ public class NearestNeighbor extends Configured implements Tool {
             isValidationMode = config.getBoolean("validation.mode", true);
             kernelFunction = config.get("kernel.function", "none");
         	kernelParam = config.getInt("kernel.param", -1);
+            classCondtionWeighted = context.getConfiguration().getBoolean("class.condtion.weighted", true);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
             
@@ -203,6 +224,9 @@ public class NearestNeighbor extends Configured implements Tool {
         		trainEntityId = value.getString(0);
         		distance = value.getInt(1);
         		testClassValue = value.getString(2);
+        		if (classCondtionWeighted) {
+        			trainingFeaturePostProb = value.getDouble(3);
+        		}
         		neighborhood.addNeighbor(trainEntityId, distance, testClassValue);
         		if (++count == topMatchCount){
         			break;

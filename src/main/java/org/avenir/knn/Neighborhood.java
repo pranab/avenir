@@ -31,15 +31,23 @@ public class Neighborhood {
     private int kernelParam;
 	private List<Neighbor>  neighbors = new ArrayList<Neighbor>();
 	private Map<String, Integer> classDistr = new HashMap<String, Integer>();
+	private Map<String, Double> weightedClassDistr = new HashMap<String, Double>();
 	private static final int KERNEL_SCALE = 100;
 	private static final int PROB_SCALE = 100;
+	private boolean classCondWeighted;
+
+	public Neighborhood(String kernelFunction, int kernelParam, boolean classCondWeighted) {
+		this.kernelFunction = kernelFunction;
+		this.kernelParam = kernelParam;
+		this.classCondWeighted = classCondWeighted;
+	}
+	
 	/**
 	 * @param kernelFunction
 	 * @param kernelParam
 	 */
 	public Neighborhood(String kernelFunction, int kernelParam) {
-		this.kernelFunction = kernelFunction;
-		this.kernelParam = kernelParam;
+		this(kernelFunction, kernelParam, false);
 	}
 	
 	public void initialize() {
@@ -57,10 +65,20 @@ public class Neighborhood {
 	}
 	
 	/**
+	 * @param entityID
+	 * @param distance
+	 * @param classValue
+	 */
+	public void addNeighbor(String entityID, int distance, String classValue, double featurePostProb) {
+		neighbors.add(new Neighbor(entityID, distance, classValue, featurePostProb));
+	}
+
+	/**
 	 * calculates class distribution
 	 * @return
 	 */
 	public Map<String, Integer> getClassDitribution() {
+		//aply kernel
 		if (kernelFunction.equals("none")) {
 			for (Neighbor neighbor : neighbors) {
 				Integer count = classDistr.get(neighbor.classValue);
@@ -69,6 +87,7 @@ public class Neighborhood {
 				} else {
 					classDistr.put(neighbor.classValue, count + 1);
 				}
+				neighbor.setScore(1);
 			}
 		} else if (kernelFunction.equals("linearMultiplicative")) {
 			for (Neighbor neighbor : neighbors) {
@@ -79,6 +98,7 @@ public class Neighborhood {
 				} else {
 					classDistr.put(neighbor.classValue, score + currentScore);
 				}
+				neighbor.setScore(currentScore);
 			}
 		} else if (kernelFunction.equals("linearAdditive")) {
 			for (Neighbor neighbor : neighbors) {
@@ -89,6 +109,7 @@ public class Neighborhood {
 				} else {
 					classDistr.put(neighbor.classValue, score + currentScore);
 				}
+				neighbor.setScore(currentScore);
 			}
 		} else if (kernelFunction.equals("gaussian")) {
 			for (Neighbor neighbor : neighbors) {
@@ -101,10 +122,22 @@ public class Neighborhood {
 				} else {
 					classDistr.put(neighbor.classValue, score + currentScore);
 				}
+				neighbor.setScore(currentScore);
 			}
-			
 		} else if (kernelFunction.equals("sigmoid")) {
 			
+		}
+		
+		//class conditional weighting
+		if (classCondWeighted) {
+			for (Neighbor neighbor : neighbors) {
+				Double score = weightedClassDistr.get(neighbor.classValue);
+				if (null == score) {
+					weightedClassDistr.put(neighbor.classValue, neighbor.classCondWeightedScore);
+				} else {
+					weightedClassDistr.put(neighbor.classValue, score + neighbor.classCondWeightedScore);
+				}
+			}
 		}
 		
 		return classDistr;
@@ -115,14 +148,28 @@ public class Neighborhood {
 	 * @return
 	 */
 	public String classify() {
-		int maxScore = 0;
-		int thisScore;
 		String winningClassVal = null;
-		for (String classVal : classDistr.keySet()) {
-			thisScore = classDistr.get(classVal);
-			if (thisScore  > maxScore) {
-				maxScore = thisScore; 
-				winningClassVal = classVal;
+		if (classCondWeighted) {
+			double maxScore = 0;
+			double thisScore;
+			winningClassVal = null;
+			for (String classVal : weightedClassDistr.keySet()) {
+				thisScore = weightedClassDistr.get(classVal);
+				if (thisScore  > maxScore) {
+					maxScore = thisScore; 
+					winningClassVal = classVal;
+				}
+			}
+		} else {
+			int maxScore = 0;
+			int thisScore;
+			winningClassVal = null;
+			for (String classVal : classDistr.keySet()) {
+				thisScore = classDistr.get(classVal);
+				if (thisScore  > maxScore) {
+					maxScore = thisScore; 
+					winningClassVal = classVal;
+				}
 			}
 		}
 		return winningClassVal;
@@ -149,13 +196,38 @@ public class Neighborhood {
 		private String entityID;
 		private int distance;
 		private String classValue;
+		private double featurePostProb = -1.0;
+		private int score;
+		private double classCondWeightedScore;
 		
+		/**
+		 * @param entityID
+		 * @param distance
+		 * @param classValue
+		 */
 		public Neighbor(String entityID, int distance, String classValue) {
 			this.entityID = entityID;
 			this.distance = distance;
 			this.classValue = classValue;
 		}
+
+		/**
+		 * @param entityID
+		 * @param distance
+		 * @param classValue
+		 * @param featurePostProb
+		 */
+		public Neighbor(String entityID, int distance, String classValue, double featurePostProb) {
+			this(entityID, distance, classValue);
+			this.featurePostProb = featurePostProb;
+		}		
 		
+		private void setScore(int score) {
+			this.score = score;
+			if (featurePostProb > 0) {
+				classCondWeightedScore = (double)score  * featurePostProb;
+			}
+		}
 	}
 
 }

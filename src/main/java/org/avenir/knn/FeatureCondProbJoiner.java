@@ -108,18 +108,19 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
         	outVal.initialize();
         	
         	if (isFeatureCondProbSplit) {
+        		//training itemID
         		outKey.add(items[0], GR_PROBABILITY);
         		
-        		//all class conditional probabilities ending with class value and skip feature vprior probability
+        		//all class conditional probabilities ending with class value and skip feature prior probability
         		for (int i = 2; i < items.length; ++i) {
         			outVal.add(items[i]);
         		}
         	} else {
         		//nearest neighbor split
-           		outKey.add(items[1], GR_NEIGHBOUR);
+           		outKey.add(items[0], GR_NEIGHBOUR);
            		
-           		//test vector neighbor and distance
-        		outVal.add(items[0], items[2]);
+           		//test vector neighbor itemdID, distance, class
+        		outVal.add(items[1], items[2],items[4]);
         	}
         	context.write(outKey, outVal);
         }       
@@ -164,10 +165,11 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
             		}
     				first = false;
     			} else {
-    				//testItemID, trainingItemID, distance, traingItem class value, trainingItem feature posterior probability
+    				//0.test ItemID, 1.test Item class value, 2.trainingItemID, 3.distance, 4.traingItem class value, 
+    				//5.trainingItem feature posterior probability
     		   		stBld.delete(0, stBld.length());
-    		   		stBld.append(val.getString(0)).append(fieldDelim).append(trainITemID).append(val.getString(1)).
-    		   				append(fieldDelim).append(trainingClassValProb);
+    		   		stBld.append(val.getString(0)).append(fieldDelim).append(val.getString(2)).append(fieldDelim).append(trainITemID).
+    		   			append(val.getString(1)).append(fieldDelim).append(trainingClassValProb);
     		   		outVal.set(stBld.toString());
     				context.write(NullWritable.get(), outVal);
     			}
