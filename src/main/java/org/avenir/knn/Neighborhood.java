@@ -77,7 +77,7 @@ public class Neighborhood {
 	 * calculates class distribution
 	 * @return
 	 */
-	public Map<String, Integer> getClassDitribution() {
+	public void processClassDitribution() {
 		//aply kernel
 		if (kernelFunction.equals("none")) {
 			for (Neighbor neighbor : neighbors) {
@@ -139,9 +139,23 @@ public class Neighborhood {
 				}
 			}
 		}
-		
-		return classDistr;
 	}
+	
+	/**
+	 * calculates class distribution
+	 * @return
+	 */
+	public Map<String, Integer> getClassDitribution() {
+		return classDistr;
+	}	
+
+	/**
+	 * calculates class distribution
+	 * @return
+	 */
+	public Map<String, Double> getWeightedClassDitribution() {
+		return weightedClassDistr;
+	}	
 	
 	/**
 	 * Classify and return class attribute value
@@ -181,11 +195,23 @@ public class Neighborhood {
 	 * @return
 	 */
 	public int getClassProb(String classAttrVal) {
-		int count = 0;
-		for (String classVal : classDistr.keySet()) {
-			count += classDistr.get(classVal);
-		}		
-		return (classDistr.get(classAttrVal) * PROB_SCALE) / count;
+		int prob = 0;
+		if (classCondWeighted) {
+			double count = 0;
+			for (String classVal : weightedClassDistr.keySet()) {
+				count += weightedClassDistr.get(classVal);
+			}		
+			prob = (int)((weightedClassDistr.get(classAttrVal) * PROB_SCALE) / count);
+			
+		} else {
+			int count = 0;
+			for (String classVal : classDistr.keySet()) {
+				count += classDistr.get(classVal);
+			}		
+			prob = (classDistr.get(classAttrVal) * PROB_SCALE) / count;
+		}
+		
+		return prob;
 	}
 	
 	/**

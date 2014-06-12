@@ -226,22 +226,35 @@ public class NearestNeighbor extends Configured implements Tool {
         		testClassValue = value.getString(2);
         		if (classCondtionWeighted) {
         			trainingFeaturePostProb = value.getDouble(3);
+        			neighborhood.addNeighbor(trainEntityId, distance, testClassValue,trainingFeaturePostProb);
+        		} else {
+        			neighborhood.addNeighbor(trainEntityId, distance, testClassValue);
         		}
-        		neighborhood.addNeighbor(trainEntityId, distance, testClassValue);
         		if (++count == topMatchCount){
         			break;
         		}
 			} 
 
 			 //class distribution
-			 Map<String, Integer>  classDistr = neighborhood.getClassDitribution();
+        	neighborhood.processClassDitribution();
 			 if (outputClassDistr) {
+	    		if (classCondtionWeighted) {
+					 Map<String, Double>  classDistr = neighborhood.getWeightedClassDitribution();
+					 double thisScore;
+					 for (String classVal : classDistr.keySet()) {
+								thisScore = classDistr.get(classVal);
+				    			stBld.append(classVal).append(fieldDelim).append(thisScore);
+					 }
+	    		} else {
+					Map<String, Integer>  classDistr = neighborhood.getClassDitribution();
 				 	int thisScore;
 					for (String classVal : classDistr.keySet()) {
 						thisScore = classDistr.get(classVal);
 		    			 stBld.append(classVal).append(fieldDelim).append(thisScore);
 					}
-			 }
+	    		}
+			}
+			 
     		if (isValidationMode) {
     			//actual class attr value
     	    	testClassValActual  = key.getString(1);
@@ -263,7 +276,6 @@ public class NearestNeighbor extends Configured implements Tool {
 			context.write(NullWritable.get(), outVal);
     	}
     }
-     
  
 	/**
 	 * @param args
