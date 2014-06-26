@@ -182,7 +182,7 @@ public class NearestNeighbor extends Configured implements Tool {
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
-           	fieldDelim = config.get("field.delim", "\\[\\]");
+           	fieldDelim = config.get("field.delim", ",");
         	topMatchCount = config.getInt("top.match.count", 10);
             isValidationMode = config.getBoolean("validation.mode", true);
             kernelFunction = config.get("kernel.function", "none");
