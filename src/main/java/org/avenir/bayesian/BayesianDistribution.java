@@ -111,7 +111,7 @@ public class BayesianDistribution extends Configured implements Tool {
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
-        	fieldDelimRegex = config.get("bs.field.delim.regex", ",");
+        	fieldDelimRegex = config.get("field.delim.regex", ",");
         	tabularInput = config.getBoolean("tabular.input", true);
         	if (tabularInput) {
         		//tabular input
@@ -162,9 +162,11 @@ public class BayesianDistribution extends Configured implements Tool {
 	        			outKey.initialize();
 	        			outVal.initialize();
 	        			if (binned) {
+	        				//1.cjass attribute vale 2.feature attribute ordinal 3. feature attribute bin
 	        				outKey.add(classAttrVal, featureAttrOrdinal, featureAttrBin);
 	        				outVal.add(ONE);
 	        			} else {
+	        				//1.cjass attribute vale 2.feature attribute ordinal 
 	        				outKey.add(classAttrVal, featureAttrOrdinal);
 	        				outVal.add(ONE, val, valSq);
 	        			}
@@ -209,10 +211,12 @@ public class BayesianDistribution extends Configured implements Tool {
 		private long valSqSum;
 		private long featurePosteriorMean;
 		private long featurePosteriorStdDev;
-		private Map<Integer, Triplet<Integer, Long, Long>> featurePriorDistr = new HashMap<Integer, Triplet<Integer, Long, Long>>();
+		private Map<Integer, Triplet<Integer, Long, Long>> featurePriorDistr = 
+				new HashMap<Integer, Triplet<Integer, Long, Long>>();
 		private Integer featureOrd;
 		private boolean tabularInput;
 		private boolean binned;
+		private String classAttrValue;
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -258,6 +262,7 @@ public class BayesianDistribution extends Configured implements Tool {
     	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
             	throws IOException, InterruptedException {
     		count = 0;
+    		classAttrValue = key.getString(0);
 			featureOrd = key.getInt(1);
 			binned = !(tabularInput && !schema.findFieldByOrdinal(featureOrd).isBucketWidthDefined());
     		if (!binned){
@@ -276,10 +281,11 @@ public class BayesianDistribution extends Configured implements Tool {
     			double temp = valSqSum - count * featurePosteriorMean  * featurePosteriorMean;
     			featurePosteriorStdDev = (long)(Math.sqrt(temp / (count -1)));
     			
-				//collect feature prior values
+				//collect feature prior values across all class attribute values
     			Triplet<Integer, Long, Long> distr = featurePriorDistr.get(featureOrd);
     			if (null == distr) {
     				distr = new Triplet<Integer, Long, Long>(count, valSum, valSqSum);
+    				featurePriorDistr.put(featureOrd, distr);
     			} else {
     				distr.setLeft(distr.getLeft() + count);
     				distr.setCenter(distr.getCenter() + valSum);
@@ -287,7 +293,7 @@ public class BayesianDistribution extends Configured implements Tool {
     			}
     		}
     		
-    		//feature posterior
+    		//emit feature posterior
     		stBld.delete(0, stBld.length());
     		if (binned) {
     			stBld.append(key.toString()).append(fieldDelim).append(count);
@@ -295,11 +301,10 @@ public class BayesianDistribution extends Configured implements Tool {
     			stBld.append(key.toString()).append(fieldDelim).append(featurePosteriorMean).
     			append(fieldDelim).append(featurePosteriorStdDev);
     		}
-    			
     		outVal.set(stBld.toString());
 			context.write(NullWritable.get(),outVal);
 			
-			//class prior
+			//emit class prior
     		stBld.delete(0, stBld.length());
     		stBld.append(key.getString(0)).append(fieldDelim).append(fieldDelim).append(fieldDelim).append(count);
     		outVal.set(stBld.toString());
@@ -312,7 +317,7 @@ public class BayesianDistribution extends Configured implements Tool {
 	    			append(fieldDelim).append(count);
 	    		outVal.set(stBld.toString());
 				context.write(NullWritable.get(),outVal);
-    		}
+    		} 
     	}
 	}
 	

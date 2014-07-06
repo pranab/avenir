@@ -1,5 +1,5 @@
 ## Introduction
-Set of predictive and explorator data mining tools. Runs on Hadoop and Storm
+Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
 
 ## Philosophy
 * Simple to use
@@ -30,6 +30,10 @@ of detail documentation
 * http://pkghosh.wordpress.com/2013/02/19/stop-the-customer-separation-pain-bayesian-classifier/
 * http://pkghosh.wordpress.com/2013/01/31/explore-with-cramer-index/
 
-## Tutorial
+## Getting started
 Project's resource directory has various tutorial documents for the use cases described in
 the blogs.
+
+## Help
+Please feel free to email me at pkghosh99@gmail.com
+

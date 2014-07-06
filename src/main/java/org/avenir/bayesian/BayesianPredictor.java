@@ -42,6 +42,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
 import org.chombo.mr.FeatureField;
@@ -118,13 +120,18 @@ public class BayesianPredictor extends Configured implements Tool {
         private double featurePriorProb;
         private Map<String, Double> featurePostProbabilities  = new HashMap<String, Double>();
         private StringBuilder stBld = new StringBuilder();
-        
+        private static final Logger LOG = Logger.getLogger(BayesianPredictor.PredictorMapper.class);
+       
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
-        	fieldDelimRegex = config.get("bs.field.delim.regex", ",");
+            if (config.getBoolean("debug.on", false)) {
+             	LOG.setLevel(Level.DEBUG);
+           }
+        	
+        	fieldDelimRegex = config.get("field.delim.regex", ",");
         	fieldDelim = config.get("field.delim.out", ",");
 
         	//schema
@@ -141,13 +148,7 @@ public class BayesianPredictor extends Configured implements Tool {
             }
             
             //class attribute field
-        	fields = schema.getFields();
-        	for (FeatureField field : fields) {
-        		if (!field.isFeature()  &&  !field.isId()) {
-        			classAttrField = field;
-        			break;
-        		}
-        	}
+        	classAttrField = schema.findClassAttrField();
         	
             //predicting classes and confusion matrix
         	if (null != config.get("bp.predict.class")) {
@@ -170,13 +171,15 @@ public class BayesianPredictor extends Configured implements Tool {
          * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void cleanup(Context context) throws IOException, InterruptedException {
-			context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
-			context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
-			context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
-			context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
-			context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
-			context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
-			context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+        	if (!outputFeatureProbOnly) {
+				context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+				context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+				context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+				context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+				context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
+				context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+				context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+        	}
         }
          
         /**
@@ -407,14 +410,16 @@ public class BayesianPredictor extends Configured implements Tool {
     			featurePostProbabilities.put(classVal, featurePostProb);
     			
     			if (classAttrVal.equals(classVal)) {
-    				System.out.println("featurePostProb:" + featurePostProb + " classPriorProb:" + classPriorProb +
+    				LOG.debug("featurePostProb:" + featurePostProb + " classPriorProb:" + classPriorProb +
     						"featurePriorProb:" + featurePriorProb);
     			}
     			
     			//predict
-    			classPostProb =(int)(((featurePostProb * classPriorProb) / featurePriorProb) * 100);
-    			Pair<String, Integer> classProb = new ImmutablePair<String, Integer>(classVal, classPostProb);
-    			classPrediction.add(classProb);
+            	if (!outputFeatureProbOnly) {
+            		classPostProb =(int)(((featurePostProb * classPriorProb) / featurePriorProb) * 100);
+            		Pair<String, Integer> classProb = new ImmutablePair<String, Integer>(classVal, classPostProb);
+            		classPrediction.add(classProb);
+            	}
     		}
     	}
     	     
