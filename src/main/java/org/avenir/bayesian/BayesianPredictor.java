@@ -31,13 +31,11 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -48,7 +46,6 @@ import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
-import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -138,7 +135,7 @@ public class BayesianPredictor extends Configured implements Tool {
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
-            
+            fields =  schema.getFeatureAttrFields();
             
             //cost based arbitrator
             if (null != config.get("bp.predict.class.cost")) {
@@ -281,7 +278,7 @@ public class BayesianPredictor extends Configured implements Tool {
    			stBld.delete(0, stBld.length());
    			stBld.append(itemID).append(fieldDelim).append(featurePriorProb);
             for (String classVal :  predictingClasses) {
-            	stBld.append(fieldDelim).append(classVal).append(featurePostProbabilities.get(classVal));
+            	stBld.append(fieldDelim).append(classVal).append(fieldDelim).append(featurePostProbabilities.get(classVal));
             }   
             stBld.append(fieldDelim).append(classAttrVal);
     		outVal.set(stBld.toString());

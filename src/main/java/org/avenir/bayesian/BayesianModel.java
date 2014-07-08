@@ -216,6 +216,7 @@ public class BayesianModel {
 	 */
 	public void finishUp() {
 		//total count by adding all class prior counts
+		count = 0;
 		for (FeaturePosterior thisFeaPost  :  featurePosteriors) {
 			count += thisFeaPost.getCount();
 		}	

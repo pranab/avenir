@@ -1,0 +1,86 @@
+{
+	"distAlgorithm" : "euclidean",
+	"numericDiffThreshold" : 0.20,
+	"entity" : 
+	{
+		"name" : "studentActivity",
+		"fields" :
+		[
+			{
+				"name" : "studentID",
+				"ordinal" : 0,
+				"id" : true,
+				"dataType" : "string"
+			},
+			{
+				"name" : "contentTime",
+				"ordinal" : 1,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 600
+			},
+			{
+				"name" : "discussTime",
+				"ordinal" : 2,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 200
+			},
+			{
+				"name" : "organizerTime",
+				"ordinal" : 3,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 100
+			},
+			{
+				"name" : "emailCount",
+				"ordinal" : 4,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 28
+			},
+			{
+				"name" : "testScore",
+				"ordinal" : 5,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 100
+			},
+			{
+				"name" : "assignmentScore",
+				"ordinal" : 6,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 100
+			},
+			{
+				"name" : "chatMsgCount",
+				"ordinal" : 7,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 280
+			},
+			{
+				"name" : "searchTime",
+				"ordinal" : 8,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 180
+			},
+			{
+				"name" : "bookMarkCount",
+				"ordinal" : 9,
+				"dataType" : "int",
+				"min" : 0,
+				"max" : 26
+			},
+			{
+				"name" : "status",
+				"ordinal" : 10,
+				"dataType" : "categorical",
+				"classAttribute" : true
+			}
+		]
+	}
+}

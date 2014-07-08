@@ -217,6 +217,7 @@ public class BayesianDistribution extends Configured implements Tool {
 		private boolean tabularInput;
 		private boolean binned;
 		private String classAttrValue;
+		private FeatureField field;
 		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -240,6 +241,7 @@ public class BayesianDistribution extends Configured implements Tool {
 		protected void cleanup(Context context) throws IOException, InterruptedException {
 			//emit feature prior probability parameters for numerical continuous variables
 			for (int featureOrd : featurePriorDistr.keySet()) {
+				context.getCounter("Distribution Data", "Feature prior cont ").increment(1);
     			Triplet<Integer, Long, Long> distr = featurePriorDistr.get(featureOrd);
     			count = distr.getLeft();
     			valSum = distr.getCenter();
@@ -264,7 +266,8 @@ public class BayesianDistribution extends Configured implements Tool {
     		count = 0;
     		classAttrValue = key.getString(0);
 			featureOrd = key.getInt(1);
-			binned = !(tabularInput && !schema.findFieldByOrdinal(featureOrd).isBucketWidthDefined());
+			field = schema.findFieldByOrdinal(featureOrd);
+			binned = !tabularInput ||  field.isCategorical() || field.isBucketWidthDefined();
     		if (!binned){
     			valSum = valSqSum = 0;
     		}
@@ -296,15 +299,18 @@ public class BayesianDistribution extends Configured implements Tool {
     		//emit feature posterior
     		stBld.delete(0, stBld.length());
     		if (binned) {
+				context.getCounter("Distribution Data", "Feature posterior binned ").increment(1);
     			stBld.append(key.toString()).append(fieldDelim).append(count);
     		} else {
-    			stBld.append(key.toString()).append(fieldDelim).append(featurePosteriorMean).
+				context.getCounter("Distribution Data", "Feature posterior cont ").increment(1);
+    			stBld.append(key.toString()).append(fieldDelim).append(fieldDelim).append(featurePosteriorMean).
     			append(fieldDelim).append(featurePosteriorStdDev);
     		}
     		outVal.set(stBld.toString());
 			context.write(NullWritable.get(),outVal);
 			
 			//emit class prior
+			context.getCounter("Distribution Data", "Class prior").increment(1);
     		stBld.delete(0, stBld.length());
     		stBld.append(key.getString(0)).append(fieldDelim).append(fieldDelim).append(fieldDelim).append(count);
     		outVal.set(stBld.toString());
@@ -312,6 +318,7 @@ public class BayesianDistribution extends Configured implements Tool {
 			
 			//feature prior
     		if (binned) {
+				context.getCounter("Distribution Data", "Feature prior binned ").increment(1);
 	    		stBld.delete(0, stBld.length());
 	    		stBld.append(fieldDelim).append(key.getInt(1)).append(fieldDelim).append(key.getString(2)).
 	    			append(fieldDelim).append(count);
