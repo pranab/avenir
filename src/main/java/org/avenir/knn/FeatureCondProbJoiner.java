@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -54,7 +55,7 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
         
         job.setJarByClass(FeatureCondProbJoiner.class);
         
-        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileInputFormat.addInputPaths(job, args[0]);
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         
         job.setMapperClass(FeatureCondProbJoiner.JoinerMapper.class);
@@ -176,4 +177,10 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
     		}		
     	}
     }	
+     
+     public static void main(String[] args) throws Exception {
+         int exitCode = ToolRunner.run(new FeatureCondProbJoiner(), args);
+         System.exit(exitCode);
+     }
+     
 }
