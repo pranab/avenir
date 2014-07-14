@@ -170,7 +170,7 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
     				//5.trainingItem feature posterior probability
     		   		stBld.delete(0, stBld.length());
     		   		stBld.append(val.getString(0)).append(fieldDelim).append(val.getString(2)).append(fieldDelim).append(trainITemID).
-    		   			append(val.getString(1)).append(fieldDelim).append(trainingClassValProb);
+    		   		append(fieldDelim).append(val.getString(1)).append(fieldDelim).append(trainingClassValProb);
     		   		outVal.set(stBld.toString());
     				context.write(NullWritable.get(), outVal);
     			}

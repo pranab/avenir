@@ -33,6 +33,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.avenir.util.CostBasedArbitrator;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
@@ -156,7 +158,7 @@ public class NearestNeighbor extends Configured implements Tool {
 		private String testEntityId;
 		private int count;
 		private int distance;
-		private String testClassValue;
+		private String trainClassValue;
 		private Text outVal = new Text();
         private String fieldDelim;
         private boolean isValidationMode;
@@ -176,19 +178,25 @@ public class NearestNeighbor extends Configured implements Tool {
         private int posClassProbab;
         private boolean classCondtionWeighted;
         private double trainingFeaturePostProb;
-        
+        private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
+       
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
+            if (config.getBoolean("debug.on", false)) {
+             	LOG.setLevel(Level.DEBUG);
+             	System.out.println("in debug mode");
+            }
+        	
            	fieldDelim = config.get("field.delim", ",");
         	topMatchCount = config.getInt("top.match.count", 10);
             isValidationMode = config.getBoolean("validation.mode", true);
             kernelFunction = config.get("kernel.function", "none");
         	kernelParam = config.getInt("kernel.param", -1);
-            classCondtionWeighted = context.getConfiguration().getBoolean("class.condtion.weighted", true);
-        	neighborhood = new Neighborhood(kernelFunction, kernelParam);
+            classCondtionWeighted = config.getBoolean("class.condtion.weighted", true);
+        	neighborhood = new Neighborhood(kernelFunction, kernelParam, classCondtionWeighted);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
             
         	//using cost based arbitrator
@@ -204,7 +212,7 @@ public class NearestNeighbor extends Configured implements Tool {
             	costBasedArbitrator = new CostBasedArbitrator(negClassAttrValue, posClassAttrValue,
             			falseNegCost, falsePosCost);
             }
-            
+            LOG.debug("classCondtionWeighted:" + classCondtionWeighted + "outputClassDistr:" + outputClassDistr);
         }
     	
     	/* (non-Javadoc)
@@ -216,19 +224,21 @@ public class NearestNeighbor extends Configured implements Tool {
         		stBld.delete(0,  stBld.length() -1);
         	}
     		testEntityId  = key.getString(0);
-			stBld.append(testEntityId).append(fieldDelim);
-
+			stBld.append(testEntityId);
+			LOG.debug("testEntityId:" + testEntityId);
+			
         	//collect nearest neighbors
     		count = 0;
+    		neighborhood.initialize();
         	for (Tuple value : values){
         		trainEntityId = value.getString(0);
         		distance = value.getInt(1);
-        		testClassValue = value.getString(2);
+        		trainClassValue = value.getString(2);
         		if (classCondtionWeighted) {
         			trainingFeaturePostProb = value.getDouble(3);
-        			neighborhood.addNeighbor(trainEntityId, distance, testClassValue,trainingFeaturePostProb);
+        			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb);
         		} else {
-        			neighborhood.addNeighbor(trainEntityId, distance, testClassValue);
+        			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue);
         		}
         		if (++count == topMatchCount){
         			break;
@@ -242,8 +252,9 @@ public class NearestNeighbor extends Configured implements Tool {
 					 Map<String, Double>  classDistr = neighborhood.getWeightedClassDitribution();
 					 double thisScore;
 					 for (String classVal : classDistr.keySet()) {
-								thisScore = classDistr.get(classVal);
-				    			stBld.append(classVal).append(fieldDelim).append(thisScore);
+							thisScore = classDistr.get(classVal);
+			    			LOG.debug("classVal:" + classVal + " thisScore:" + thisScore);
+				    		stBld.append(fieldDelim).append(classVal).append(fieldDelim).append(thisScore);
 					 }
 	    		} else {
 					Map<String, Integer>  classDistr = neighborhood.getClassDitribution();
@@ -258,7 +269,7 @@ public class NearestNeighbor extends Configured implements Tool {
     		if (isValidationMode) {
     			//actual class attr value
     	    	testClassValActual  = key.getString(1);
-    			stBld.append(testClassValActual).append(fieldDelim);
+    			stBld.append(fieldDelim).append(testClassValActual);
         	}
     		
     		//predicted class value
@@ -270,7 +281,7 @@ public class NearestNeighbor extends Configured implements Tool {
     			//get directly
     			testClassValPredicted = neighborhood.classify();
     		}
-			stBld.append(testClassValPredicted);
+			stBld.append(fieldDelim).append(testClassValPredicted);
     		
  			outVal.set(stBld.toString());
 			context.write(NullWritable.get(), outVal);
