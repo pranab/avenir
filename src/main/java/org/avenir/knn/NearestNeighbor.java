@@ -221,7 +221,7 @@ public class NearestNeighbor extends Configured implements Tool {
     	protected void reduce(Tuple key, Iterable<Tuple> values, Context context)
         	throws IOException, InterruptedException {
         	if (stBld.length() > 0) {
-        		stBld.delete(0,  stBld.length() -1);
+        		stBld.delete(0,  stBld.length() );
         	}
     		testEntityId  = key.getString(0);
 			stBld.append(testEntityId);

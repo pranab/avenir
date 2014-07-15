@@ -53,6 +53,7 @@ public class Neighborhood {
 	public void initialize() {
 		neighbors.clear();
 		classDistr.clear();
+		weightedClassDistr.clear();
 	}
 
 	/**
