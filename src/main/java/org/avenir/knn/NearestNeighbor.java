@@ -18,6 +18,8 @@
 package org.avenir.knn;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,16 +31,21 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
+import org.chombo.mr.FeatureField;
+import org.chombo.mr.FeatureSchema;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * KNN classifer
@@ -178,6 +185,11 @@ public class NearestNeighbor extends Configured implements Tool {
         private int posClassProbab;
         private boolean classCondtionWeighted;
         private double trainingFeaturePostProb;
+        private FeatureSchema schema;
+		private  ConfusionMatrix confMatrix;
+		private String[] predictingClasses;
+	    private FeatureField classAttrField;
+	       
         private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
        
         /* (non-Javadoc)
@@ -212,9 +224,37 @@ public class NearestNeighbor extends Configured implements Tool {
             	costBasedArbitrator = new CostBasedArbitrator(negClassAttrValue, posClassAttrValue,
             			falseNegCost, falsePosCost);
             }
+            
+            //confusion matrix
+       		if (isValidationMode) {
+       		     InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	            ObjectMapper mapper = new ObjectMapper();
+	            schema = mapper.readValue(fs, FeatureSchema.class);
+	        	classAttrField = schema.findClassAttrField();
+	           	List<String> cardinality = classAttrField.getCardinality();
+	        	predictingClasses = new String[2];
+	    		predictingClasses[0] = cardinality.get(0);
+	    		predictingClasses[1] = cardinality.get(1);
+	    		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
+       		}
             LOG.debug("classCondtionWeighted:" + classCondtionWeighted + "outputClassDistr:" + outputClassDistr);
         }
     	
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
+         */
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+       		if (isValidationMode) {
+				context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+				context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+				context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+				context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+				context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
+				context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+				context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+        	}
+        }
+        
     	/* (non-Javadoc)
     	 * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
     	 */
@@ -225,7 +265,6 @@ public class NearestNeighbor extends Configured implements Tool {
         	}
     		testEntityId  = key.getString(0);
 			stBld.append(testEntityId);
-			LOG.debug("testEntityId:" + testEntityId);
 			
         	//collect nearest neighbors
     		count = 0;
@@ -253,7 +292,7 @@ public class NearestNeighbor extends Configured implements Tool {
 					 double thisScore;
 					 for (String classVal : classDistr.keySet()) {
 							thisScore = classDistr.get(classVal);
-			    			LOG.debug("classVal:" + classVal + " thisScore:" + thisScore);
+			    			//LOG.debug("classVal:" + classVal + " thisScore:" + thisScore);
 				    		stBld.append(fieldDelim).append(classVal).append(fieldDelim).append(thisScore);
 					 }
 	    		} else {
@@ -282,7 +321,10 @@ public class NearestNeighbor extends Configured implements Tool {
     			testClassValPredicted = neighborhood.classify();
     		}
 			stBld.append(fieldDelim).append(testClassValPredicted);
-    		
+			
+    		if (isValidationMode) {
+    			confMatrix.report(testClassValPredicted, testClassValActual);
+    		}    		
  			outVal.set(stBld.toString());
 			context.write(NullWritable.get(), outVal);
     	}
