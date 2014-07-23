@@ -1,0 +1,61 @@
+Introduction
+============
+This tutorial is for predicting which students will eventually drop out from an
+eLearning class based on Nearest Neighbor algorithm(KNN).Processing is done with 
+a pipeline of MR jobs. We will use training data and then predict and validate for a 
+test or validation data set. Please make changes in knn.sh depending on your environment 
+and path etc
+
+This tutorial is for basic KNN with class conditional weighting. As I add other 
+improvements and options to KNN, the document will be updated.
+
+Dependency
+==========
+Please refer to dependency.txt
+
+Create training data
+====================
+./knn.sh createTrainingData <traing_data_size> > <training_data_file>
+
+Create test data
+================
+./knn.sh createTestData <test_data_size> > <test_data_data-file>
+
+Export data to Hadoop
+=====================
+./knn.sh expData <training_data_file> <test_data_file>
+
+Export schema to Hadoop
+=======================
+Two schema files are necessary one for similarity or distance calcuilation and 
+one for KNN classifier
+
+./knn.sh expSchema <similarity_schema_file>
+./knn.sh expSchema <knn_classifier_schema_file>
+
+
+Distance between training data instances
+========================================
+./knn.sh computeDistance
+
+Feature and class attribute distribution for training data
+==========================================================
+./knn.sh bayesianDistr <training_data_file>
+
+Feature class condtional distribution for training data
+=======================================================
+./knn.sh bayesianPredictor <training_data_file>
+
+Join distance and feature distribution for training data
+========================================================
+./knn.sh joinFeatureDistr 
+
+KNN classifier
+==============
+./knn.sh knnClassifier
+
+
+
+
+
+
