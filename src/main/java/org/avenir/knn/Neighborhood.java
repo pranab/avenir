@@ -75,6 +75,16 @@ public class Neighborhood {
 	}
 
 	/**
+	 * @param entityID
+	 * @param distance
+	 * @param classValue
+	 */
+	public void addNeighbor(String entityID, int distance, String classValue, double featurePostProb, 
+			boolean inverseDistanceWeighted) {
+		neighbors.add(new Neighbor(entityID, distance, classValue, featurePostProb, inverseDistanceWeighted));
+	}
+
+	/**
 	 * calculates class distribution
 	 * @return
 	 */
@@ -226,6 +236,7 @@ public class Neighborhood {
 		private double featurePostProb = -1.0;
 		private int score;
 		private double classCondWeightedScore;
+		private boolean inverseDistanceWeighted;
 		
 		/**
 		 * @param entityID
@@ -249,10 +260,30 @@ public class Neighborhood {
 			this.featurePostProb = featurePostProb;
 		}		
 		
+		/**
+		 * @param entityID
+		 * @param distance
+		 * @param classValue
+		 * @param featurePostProb
+		 * @param inverseDistanceWeighted
+		 */
+		public Neighbor(String entityID, int distance, String classValue, double featurePostProb, 
+				boolean inverseDistanceWeighted) {
+			this(entityID, distance, classValue);
+			this.featurePostProb = featurePostProb;
+			this.inverseDistanceWeighted = inverseDistanceWeighted;
+		}
+		
 		private void setScore(int score) {
 			this.score = score;
 			if (featurePostProb > 0) {
 				classCondWeightedScore = (double)score  * featurePostProb;
+			} else {
+				classCondWeightedScore = score;
+			}
+			
+			if (inverseDistanceWeighted) {
+				classCondWeightedScore  *= 1.0 / (double)distance;
 			}
 		}
 	}

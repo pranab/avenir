@@ -189,7 +189,8 @@ public class NearestNeighbor extends Configured implements Tool {
 		private  ConfusionMatrix confMatrix;
 		private String[] predictingClasses;
 	    private FeatureField classAttrField;
-	       
+		private boolean inverseDistanceWeighted;
+   
         private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
        
         /* (non-Javadoc)
@@ -210,7 +211,8 @@ public class NearestNeighbor extends Configured implements Tool {
             classCondtionWeighted = config.getBoolean("class.condtion.weighted", true);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam, classCondtionWeighted);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
-            
+        	inverseDistanceWeighted = config.getBoolean("inverse.distance.weighted", false);
+        	
         	//using cost based arbitrator
         	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", true);
             if (useCostBasedClassifier) {
@@ -275,7 +277,11 @@ public class NearestNeighbor extends Configured implements Tool {
         		trainClassValue = value.getString(2);
         		if (classCondtionWeighted) {
         			trainingFeaturePostProb = value.getDouble(3);
-        			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb);
+        			if (inverseDistanceWeighted) {
+            			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb, true);
+        			} else {
+            			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb);
+        			}
         		} else {
         			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue);
         		}
