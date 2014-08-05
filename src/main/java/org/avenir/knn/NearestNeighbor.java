@@ -190,7 +190,7 @@ public class NearestNeighbor extends Configured implements Tool {
 		private String[] predictingClasses;
 	    private FeatureField classAttrField;
 		private boolean inverseDistanceWeighted;
-   
+		private double decisionThreshold;
         private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
        
         /* (non-Javadoc)
@@ -208,18 +208,29 @@ public class NearestNeighbor extends Configured implements Tool {
             isValidationMode = config.getBoolean("validation.mode", true);
             kernelFunction = config.get("kernel.function", "none");
         	kernelParam = config.getInt("kernel.param", -1);
-            classCondtionWeighted = config.getBoolean("class.condtion.weighted", true);
+            classCondtionWeighted = config.getBoolean("class.condtion.weighted", false);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam, classCondtionWeighted);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
         	inverseDistanceWeighted = config.getBoolean("inverse.distance.weighted", false);
+        	decisionThreshold = Double.parseDouble(config.get("decision.threshold", "-1.0"));
+        	if (decisionThreshold > 0) {
+            	String[] classAttrValues = config.get("class.attribute.values").split(",");
+            	posClassAttrValue = classAttrValues[0];
+            	negClassAttrValue = classAttrValues[1];
+        		neighborhood.
+        			withDecisionThreshold(decisionThreshold).
+        			withPositiveClass(posClassAttrValue);
+        	}
         	
         	//using cost based arbitrator
         	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", true);
             if (useCostBasedClassifier) {
-            	String[] classAttrValues = config.get("class.attribute.values").split(",");
-            	posClassAttrValue = classAttrValues[0];
-            	negClassAttrValue = classAttrValues[1];
-        
+            	if (null == posClassAttrValue) {
+            		String[] classAttrValues = config.get("class.attribute.values").split(",");
+            		posClassAttrValue = classAttrValues[0];
+            		negClassAttrValue = classAttrValues[1];
+            	}
+            	
             	int[] missclassificationCost = Utility.intArrayFromString(config.get("misclassification.cost"));
             	falsePosCost = missclassificationCost[0];
             	falseNegCost = missclassificationCost[1];

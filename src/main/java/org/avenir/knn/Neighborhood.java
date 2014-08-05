@@ -35,6 +35,8 @@ public class Neighborhood {
 	private static final int KERNEL_SCALE = 100;
 	private static final int PROB_SCALE = 100;
 	private boolean classCondWeighted;
+	private String positiveClass;
+	private double decisionThreshold = -1.0;
 
 	public Neighborhood(String kernelFunction, int kernelParam, boolean classCondWeighted) {
 		this.kernelFunction = kernelFunction;
@@ -50,7 +52,17 @@ public class Neighborhood {
 		this(kernelFunction, kernelParam, false);
 	}
 	
-	public void initialize() {
+	public Neighborhood withPositiveClass(String positiveClass) {
+		this.positiveClass = positiveClass;
+		return this;
+	}
+	
+	public Neighborhood withDecisionThreshold(double decisionThreshold) {
+		this.decisionThreshold = decisionThreshold;
+		return this;
+	}
+	
+	public void initialize() { 
 		neighbors.clear();
 		classDistr.clear();
 		weightedClassDistr.clear();
@@ -189,11 +201,25 @@ public class Neighborhood {
 			int maxScore = 0;
 			int thisScore;
 			winningClassVal = null;
-			for (String classVal : classDistr.keySet()) {
-				thisScore = classDistr.get(classVal);
-				if (thisScore  > maxScore) {
-					maxScore = thisScore; 
-					winningClassVal = classVal;
+			if (decisionThreshold > 0) {
+				int posScore = classDistr.get(positiveClass);
+				int negScore = 0;
+				String negativeClass = null;
+				for (String classVal : classDistr.keySet()) {
+					if (!classVal.equals(positiveClass)){
+						negativeClass = classVal;
+						negScore = classDistr.get(classVal);
+						break;
+					}
+				}				
+				winningClassVal =  (double)posScore / negScore > decisionThreshold ? positiveClass : negativeClass;
+			} else {
+				for (String classVal : classDistr.keySet()) {
+					thisScore = classDistr.get(classVal);
+					if (thisScore  > maxScore) {
+						maxScore = thisScore; 
+						winningClassVal = classVal;
+					}
 				}
 			}
 		}
