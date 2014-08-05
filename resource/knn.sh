@@ -116,10 +116,11 @@ case "$1" in
 	;;
 
 "knnClassifier")
+	# 2nd arg is join if you are using class condioned weighting, simi otherwise
 	echo "running KNN classifier MR"
 	JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
 	CLASS_NAME=org.avenir.knn.NearestNeighbor
-	IN_PATH=$HDFS_BASE_DIR/join
+	IN_PATH=$HDFS_BASE_DIR/$2
 	OUT_PATH=$HDFS_BASE_DIR/output
 	echo "input $IN_PATH output $OUT_PATH"
 	hadoop fs -rmr $OUT_PATH

@@ -38,15 +38,18 @@ Distance between training data instances
 ========================================
 ./knn.sh computeDistance
 
-Feature and class attribute distribution for training data
+if you are not using class condtioned distribution weighting, you can
+staraight to the last step
+
+Feature and class attribute distribution for training data (optional)
 ==========================================================
 ./knn.sh bayesianDistr <training_data_file>
 
-Feature class condtional distribution for training data
+Feature class condtional distribution for training data (optional)
 =======================================================
 ./knn.sh bayesianPredictor <training_data_file>
 
-Join distance and feature distribution for training data
+Join distance and feature distribution for training data )optional)
 ========================================================
 ./knn.sh joinFeatureDistr 
 
