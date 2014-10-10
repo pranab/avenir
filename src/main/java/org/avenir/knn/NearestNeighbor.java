@@ -194,7 +194,6 @@ public class NearestNeighbor extends Configured implements Tool {
 	    private FeatureField classAttrField;
 		private boolean inverseDistanceWeighted;
 		private double decisionThreshold;
-		private boolean inRegressionMode = false;
         private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
        
         /* (non-Javadoc)
@@ -216,8 +215,19 @@ public class NearestNeighbor extends Configured implements Tool {
         	neighborhood = new Neighborhood(kernelFunction, kernelParam, classCondtionWeighted);
         	outputClassDistr = config.getBoolean("output.class.distr", false);
         	inverseDistanceWeighted = config.getBoolean("inverse.distance.weighted", false);
+        	
+        	//regression
+        	String predictionMode = config.get("prediction.mode", "classification");
+        	if (predictionMode.equals("regression")) {
+        		neighborhood.withPredictionMode(PredictionMode.Regression);
+            	String regressionMethod = config.get("regression.method", "average");
+            	regressionMethod = WordUtils.capitalize(regressionMethod) ;
+            	neighborhood.withRegressionMethod(RegressionMethod.valueOf(regressionMethod));
+        	}
+
+        	//decision threshold for classification
         	decisionThreshold = Double.parseDouble(config.get("decision.threshold", "-1.0"));
-        	if (decisionThreshold > 0) {
+        	if (decisionThreshold > 0 && neighborhood.IsInClassificationMode()) {
             	String[] classAttrValues = config.get("class.attribute.values").split(",");
             	posClassAttrValue = classAttrValues[0];
             	negClassAttrValue = classAttrValues[1];
@@ -226,19 +236,9 @@ public class NearestNeighbor extends Configured implements Tool {
         			withPositiveClass(posClassAttrValue);
         	}
         	
-        	//regression
-        	String predictionMode = config.get("prediction.mode", "classification");
-        	if (predictionMode.equals("regression")) {
-        		inRegressionMode = true;
-        		neighborhood.withPredictionMode(PredictionMode.Regression);
-            	String regressionMethod = config.get("regression.method", "average");
-            	regressionMethod = WordUtils.capitalize(regressionMethod) ;
-            	neighborhood.withRegressionMethod(RegressionMethod.valueOf(regressionMethod));
-        	}
-        	
-        	//using cost based arbitrator
+        	//using cost based arbitrator for classification
         	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", true);
-            if (useCostBasedClassifier) {
+            if (useCostBasedClassifier && neighborhood.IsInClassificationMode()) {
             	if (null == posClassAttrValue) {
             		String[] classAttrValues = config.get("class.attribute.values").split(",");
             		posClassAttrValue = classAttrValues[0];
@@ -252,17 +252,19 @@ public class NearestNeighbor extends Configured implements Tool {
             			falseNegCost, falsePosCost);
             }
             
-            //confusion matrix
+            //confusion matrix for classification validation
        		if (isValidationMode) {
-       		     InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
-	            ObjectMapper mapper = new ObjectMapper();
-	            schema = mapper.readValue(fs, FeatureSchema.class);
-	        	classAttrField = schema.findClassAttrField();
-	           	List<String> cardinality = classAttrField.getCardinality();
-	        	predictingClasses = new String[2];
-	    		predictingClasses[0] = cardinality.get(0);
-	    		predictingClasses[1] = cardinality.get(1);
-	    		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
+       			if (neighborhood.IsInClassificationMode()) {
+	       		    InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+		            ObjectMapper mapper = new ObjectMapper();
+		            schema = mapper.readValue(fs, FeatureSchema.class);
+		        	classAttrField = schema.findClassAttrField();
+		           	List<String> cardinality = classAttrField.getCardinality();
+		        	predictingClasses = new String[2];
+		    		predictingClasses[0] = cardinality.get(0);
+		    		predictingClasses[1] = cardinality.get(1);
+		    		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
+       			}
        		}
             LOG.debug("classCondtionWeighted:" + classCondtionWeighted + "outputClassDistr:" + outputClassDistr);
         }
@@ -272,13 +274,15 @@ public class NearestNeighbor extends Configured implements Tool {
          */
         protected void cleanup(Context context) throws IOException, InterruptedException {
        		if (isValidationMode) {
-				context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
-				context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
-				context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
-				context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
-				context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
-				context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
-				context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+       			if (neighborhood.IsInClassificationMode()) {
+					context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+					context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+					context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+					context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+					context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
+					context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+					context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+       			}
         	}
         }
         
@@ -300,7 +304,7 @@ public class NearestNeighbor extends Configured implements Tool {
         		trainEntityId = value.getString(0);
         		distance = value.getInt(1);
         		trainClassValue = value.getString(2);
-        		if (classCondtionWeighted) {
+        		if (classCondtionWeighted && neighborhood.IsInClassificationMode()) {
         			trainingFeaturePostProb = value.getDouble(3);
         			if (inverseDistanceWeighted) {
             			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb, true);
@@ -315,9 +319,9 @@ public class NearestNeighbor extends Configured implements Tool {
         		}
 			} 
 
-			 //class distribution
+			//class distribution
         	neighborhood.processClassDitribution();
-			 if (outputClassDistr) {
+			if (outputClassDistr && neighborhood.IsInClassificationMode()) {
 	    		if (classCondtionWeighted) {
 					 Map<String, Double>  classDistr = neighborhood.getWeightedClassDitribution();
 					 double thisScore;
@@ -336,7 +340,7 @@ public class NearestNeighbor extends Configured implements Tool {
 	    		}
 			}
 			 
-    		if (isValidationMode) {
+    		if (isValidationMode && neighborhood.IsInClassificationMode()) {
     			//actual class attr value
     	    	testClassValActual  = key.getString(1);
     			stBld.append(fieldDelim).append(testClassValActual);
@@ -345,20 +349,24 @@ public class NearestNeighbor extends Configured implements Tool {
     		//predicted class value
     		if (useCostBasedClassifier) {
     			//use cost based arbitrator
-    			posClassProbab = neighborhood.getClassProb(posClassAttrValue);
-    			testClassValPredicted = costBasedArbitrator.classify(posClassProbab);
+    			if (neighborhood.IsInClassificationMode()) {
+    				posClassProbab = neighborhood.getClassProb(posClassAttrValue);
+    				testClassValPredicted = costBasedArbitrator.classify(posClassProbab);
+    			}
     		} else {
     			//get directly
-    			if (inRegressionMode) {
-    				testClassValPredicted = "" + neighborhood.getPredictedValue();
-    			} else {
+    			if (neighborhood.IsInClassificationMode()) {
     				testClassValPredicted = neighborhood.classify();
+    			} else {
+    				testClassValPredicted = "" + neighborhood.getPredictedValue();
     			}
     		}
 			stBld.append(fieldDelim).append(testClassValPredicted);
 			
     		if (isValidationMode) {
-    			confMatrix.report(testClassValPredicted, testClassValActual);
+    			if (neighborhood.IsInClassificationMode()) {
+    				confMatrix.report(testClassValPredicted, testClassValActual);
+    			}
     		}    		
  			outVal.set(stBld.toString());
 			context.write(NullWritable.get(), outVal);

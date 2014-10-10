@@ -91,6 +91,10 @@ public class Neighborhood {
 		classDistr.clear();
 		weightedClassDistr.clear();
 	}
+	
+	public boolean IsInClassificationMode() {
+		return predictionMode == PredictionMode.Classification;
+	}
 
 	/**
 	 * @param entityID
