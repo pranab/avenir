@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.WordUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +39,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.knn.Neighborhood.PredictionMode;
+import org.avenir.knn.Neighborhood.RegressionMethod;
 import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
 import org.chombo.mr.FeatureField;
@@ -191,6 +194,7 @@ public class NearestNeighbor extends Configured implements Tool {
 	    private FeatureField classAttrField;
 		private boolean inverseDistanceWeighted;
 		private double decisionThreshold;
+		private boolean inRegressionMode = false;
         private static final Logger LOG = Logger.getLogger(NearestNeighbor.TopMatchesReducer.class);
        
         /* (non-Javadoc)
@@ -220,6 +224,16 @@ public class NearestNeighbor extends Configured implements Tool {
         		neighborhood.
         			withDecisionThreshold(decisionThreshold).
         			withPositiveClass(posClassAttrValue);
+        	}
+        	
+        	//regression
+        	String predictionMode = config.get("prediction.mode", "classification");
+        	if (predictionMode.equals("regression")) {
+        		inRegressionMode = true;
+        		neighborhood.withPredictionMode(PredictionMode.Regression);
+            	String regressionMethod = config.get("regression.method", "average");
+            	regressionMethod = WordUtils.capitalize(regressionMethod) ;
+            	neighborhood.withRegressionMethod(RegressionMethod.valueOf(regressionMethod));
         	}
         	
         	//using cost based arbitrator
@@ -335,7 +349,11 @@ public class NearestNeighbor extends Configured implements Tool {
     			testClassValPredicted = costBasedArbitrator.classify(posClassProbab);
     		} else {
     			//get directly
-    			testClassValPredicted = neighborhood.classify();
+    			if (inRegressionMode) {
+    				testClassValPredicted = "" + neighborhood.getPredictedValue();
+    			} else {
+    				testClassValPredicted = neighborhood.classify();
+    			}
     		}
 			stBld.append(fieldDelim).append(testClassValPredicted);
 			

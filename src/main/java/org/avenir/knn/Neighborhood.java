@@ -18,6 +18,7 @@
 package org.avenir.knn;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,20 @@ public class Neighborhood {
 	private boolean classCondWeighted;
 	private String positiveClass;
 	private double decisionThreshold = -1.0;
-
+	public enum PredictionMode {
+		Classification,
+		Regression
+	}
+	public enum RegressionMethod {
+		Average,
+		Median,
+		LinearRegression,
+		MultiLinearRegression
+	}
+	private PredictionMode predictionMode = PredictionMode.Classification;
+	private RegressionMethod regressionMethod = RegressionMethod.Average;
+	private int predictedValue;
+	
 	public Neighborhood(String kernelFunction, int kernelParam, boolean classCondWeighted) {
 		this.kernelFunction = kernelFunction;
 		this.kernelParam = kernelParam;
@@ -59,6 +73,16 @@ public class Neighborhood {
 	
 	public Neighborhood withDecisionThreshold(double decisionThreshold) {
 		this.decisionThreshold = decisionThreshold;
+		return this;
+	}
+	
+	public Neighborhood withPredictionMode(PredictionMode predictionMode) {
+		this.predictionMode = predictionMode;
+		return this;
+	}
+
+	public Neighborhood withRegressionMethod(RegressionMethod regressionMethod) {
+		this.regressionMethod = regressionMethod;
 		return this;
 	}
 	
@@ -103,14 +127,42 @@ public class Neighborhood {
 	public void processClassDitribution() {
 		//aply kernel
 		if (kernelFunction.equals("none")) {
-			for (Neighbor neighbor : neighbors) {
-				Integer count = classDistr.get(neighbor.classValue);
-				if (null == count) {
-					classDistr.put(neighbor.classValue, 1);
-				} else {
-					classDistr.put(neighbor.classValue, count + 1);
+			if (predictionMode == PredictionMode.Classification) {
+				//classification
+				for (Neighbor neighbor : neighbors) {
+					Integer count = classDistr.get(neighbor.classValue);
+					if (null == count) {
+						classDistr.put(neighbor.classValue, 1);
+					} else {
+						classDistr.put(neighbor.classValue, count + 1);
+					}
+					neighbor.setScore(1);
 				}
-				neighbor.setScore(1);
+			} else {
+				//regression
+				predictedValue = 0;
+				if (regressionMethod == RegressionMethod.Average) {
+					for (Neighbor neighbor : neighbors) {
+						predictedValue += Integer.parseInt(neighbor.classValue);
+					}
+					predictedValue /= neighbors.size();
+				} else if (regressionMethod == RegressionMethod.Median) {
+					int[] values = new int[neighbors.size()];
+					int i = 0;
+					for (Neighbor neighbor : neighbors) {
+						values[i++] = Integer.parseInt(neighbor.classValue);
+					}
+					Arrays.sort(values);
+					int mid = values.length / 2;
+					predictedValue = (values.length % 2) == 1 ? values[mid] : 
+						(values[mid - 1] + values[mid]) / 2;
+				} else if (regressionMethod == RegressionMethod.LinearRegression) {
+					//TODO
+					throw new IllegalArgumentException("operation not supported");
+				} else if (regressionMethod == RegressionMethod.MultiLinearRegression) {
+					//TODO
+					throw new IllegalArgumentException("operation not supported");
+				}
 			}
 		} else if (kernelFunction.equals("linearMultiplicative")) {
 			for (Neighbor neighbor : neighbors) {
@@ -249,6 +301,10 @@ public class Neighborhood {
 		}
 		
 		return prob;
+	}
+	
+	public int getPredictedValue() {
+		return predictedValue;
 	}
 	
 	/**
