@@ -105,14 +105,22 @@ public class NearestNeighbor extends Configured implements Tool {
         private String[] items;
         private boolean classCondtionWeighted;
         private double trainingFeaturePostProb;
+        private boolean isLinearRegression;
+        private String trainRegrNumFld;
+        private String testRegrNumFld;
+        
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-            fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
-            isValidationMode = context.getConfiguration().getBoolean("validation.mode", true);
-            classCondtionWeighted = context.getConfiguration().getBoolean("class.condtion.weighted", true);
+        	Configuration config = context.getConfiguration();
+            fieldDelimRegex = config.get("field.delim.regex", ",");
+            isValidationMode = config.getBoolean("validation.mode", true);
+            classCondtionWeighted = config.getBoolean("class.condtion.weighted", true);
+            String predictionMode = config.get("prediction.mode", "classification");
+        	String regressionMethod = config.get("regression.method", "average");
+        	isLinearRegression = predictionMode.equals("regression") && regressionMethod.equals("linearRegression");
         }    
 
         /* (non-Javadoc)
@@ -140,19 +148,36 @@ public class NearestNeighbor extends Configured implements Tool {
 	            }
 	        	outVal.add(trainEntityId,rank,trainClassAttr,trainingFeaturePostProb);
             } else {
-	            trainEntityId = items[0];
-	            testEntityId = items[1];
-	            rank = Integer.parseInt(items[2]);
-	        	trainClassAttr = items[3];
+            	int index = 0;
+	            trainEntityId = items[index++];
+	            testEntityId = items[index++];
+	            rank = Integer.parseInt(items[index++]);
+	        	trainClassAttr = items[index++];
 	            if (isValidationMode) {
 	            	//validation mode
-	            	testClassAttr = items[4];
-	                outKey.add(testEntityId, testClassAttr, rank);
-	            } else {
-	            	//prediction mode
-	                outKey.add(testEntityId, rank);
-	            }
+	            	testClassAttr = items[index++];
+	            } 
 	        	outVal.add(trainEntityId,rank,trainClassAttr);
+	        	
+	        	//for linear regression add numeric input field
+	        	if (isLinearRegression) {
+	        		trainRegrNumFld = items[index++];
+	        		outVal.add(trainRegrNumFld);
+	        		
+	        		testRegrNumFld = items[index++];
+		            if (isValidationMode) {
+		                outKey.add(testEntityId, testClassAttr, testRegrNumFld,rank);
+		            } else {
+		                outKey.add(testEntityId, testRegrNumFld, rank);
+		            }
+	        		outKey.add(testRegrNumFld);
+	        	} else {
+		            if (isValidationMode) {
+		                outKey.add(testEntityId, testClassAttr, rank);
+		            } else {
+		                outKey.add(testEntityId, rank);
+		            }
+	        	}
             }
 			context.write(outKey, outVal);
         }
@@ -301,24 +326,32 @@ public class NearestNeighbor extends Configured implements Tool {
     		count = 0;
     		neighborhood.initialize();
         	for (Tuple value : values){
-        		trainEntityId = value.getString(0);
-        		distance = value.getInt(1);
-        		trainClassValue = value.getString(2);
+        		int index = 0;
+        		trainEntityId = value.getString(index++);
+        		distance = value.getInt(index++);
+        		trainClassValue = value.getString(index++);
         		if (classCondtionWeighted && neighborhood.IsInClassificationMode()) {
-        			trainingFeaturePostProb = value.getDouble(3);
+        			trainingFeaturePostProb = value.getDouble(index++);
         			if (inverseDistanceWeighted) {
             			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb, true);
         			} else {
             			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue,trainingFeaturePostProb);
         			}
         		} else {
-        			neighborhood.addNeighbor(trainEntityId, distance, trainClassValue);
+        			Neighborhood.Neighbor neighbor = neighborhood.addNeighbor(trainEntityId, distance, trainClassValue);
+        			if (neighborhood.isInLinearRegressionMode()) {
+        				neighbor.setRegrInputVar(Double.parseDouble(value.getString(index++)));
+        			}
         		}
         		if (++count == topMatchCount){
         			break;
         		}
 			} 
-
+			if (neighborhood.isInLinearRegressionMode()) {
+				String testRegrNumFld = isValidationMode? key.getString(2) : key.getString(1);
+				neighborhood.withRegrInputVar(Double.parseDouble(testRegrNumFld));
+			}
+			
 			//class distribution
         	neighborhood.processClassDitribution();
 			if (outputClassDistr && neighborhood.IsInClassificationMode()) {
@@ -340,7 +373,7 @@ public class NearestNeighbor extends Configured implements Tool {
 	    		}
 			}
 			 
-    		if (isValidationMode && neighborhood.IsInClassificationMode()) {
+    		if (isValidationMode) {
     			//actual class attr value
     	    	testClassValActual  = key.getString(1);
     			stBld.append(fieldDelim).append(testClassValActual);

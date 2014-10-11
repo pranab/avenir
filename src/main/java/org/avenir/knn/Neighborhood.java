@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+
 /**
  * @author pranab
  *
@@ -51,6 +53,8 @@ public class Neighborhood {
 	private PredictionMode predictionMode = PredictionMode.Classification;
 	private RegressionMethod regressionMethod = RegressionMethod.Average;
 	private int predictedValue;
+	private SimpleRegression simpleRegression = new SimpleRegression();
+	private double regrInputVar;
 	
 	public Neighborhood(String kernelFunction, int kernelParam, boolean classCondWeighted) {
 		this.kernelFunction = kernelFunction;
@@ -86,6 +90,11 @@ public class Neighborhood {
 		return this;
 	}
 	
+	public Neighborhood withRegrInputVar(double regrInputVar) {
+		this.regrInputVar = regrInputVar;
+		return this;
+	}
+
 	public void initialize() { 
 		neighbors.clear();
 		classDistr.clear();
@@ -96,13 +105,8 @@ public class Neighborhood {
 		return predictionMode == PredictionMode.Classification;
 	}
 
-	/**
-	 * @param entityID
-	 * @param distance
-	 * @param classValue
-	 */
-	public void addNeighbor(String entityID, int distance, String classValue) {
-		neighbors.add(new Neighbor(entityID, distance, classValue));
+	public boolean isInLinearRegressionMode() {
+		return predictionMode == PredictionMode.Regression && regressionMethod == RegressionMethod.LinearRegression;
 	}
 	
 	/**
@@ -110,8 +114,21 @@ public class Neighborhood {
 	 * @param distance
 	 * @param classValue
 	 */
-	public void addNeighbor(String entityID, int distance, String classValue, double featurePostProb) {
-		neighbors.add(new Neighbor(entityID, distance, classValue, featurePostProb));
+	public Neighbor addNeighbor(String entityID, int distance, String classValue) {
+		Neighbor neighbor = new Neighbor(entityID, distance, classValue);
+		neighbors.add(neighbor);
+		return neighbor;
+	}
+	
+	/**
+	 * @param entityID
+	 * @param distance
+	 * @param classValue
+	 */
+	public Neighbor addNeighbor(String entityID, int distance, String classValue, double featurePostProb) {
+		Neighbor neighbor = new Neighbor(entityID, distance, classValue, featurePostProb);
+		neighbors.add(neighbor);
+		return neighbor;
 	}
 
 	/**
@@ -119,9 +136,11 @@ public class Neighborhood {
 	 * @param distance
 	 * @param classValue
 	 */
-	public void addNeighbor(String entityID, int distance, String classValue, double featurePostProb, 
+	public Neighbor addNeighbor(String entityID, int distance, String classValue, double featurePostProb, 
 			boolean inverseDistanceWeighted) {
-		neighbors.add(new Neighbor(entityID, distance, classValue, featurePostProb, inverseDistanceWeighted));
+		Neighbor neighbor =  new Neighbor(entityID, distance, classValue, featurePostProb, inverseDistanceWeighted);
+		neighbors.add(neighbor);
+		return neighbor;
 	}
 
 	/**
@@ -144,29 +163,7 @@ public class Neighborhood {
 				}
 			} else {
 				//regression
-				predictedValue = 0;
-				if (regressionMethod == RegressionMethod.Average) {
-					for (Neighbor neighbor : neighbors) {
-						predictedValue += Integer.parseInt(neighbor.classValue);
-					}
-					predictedValue /= neighbors.size();
-				} else if (regressionMethod == RegressionMethod.Median) {
-					int[] values = new int[neighbors.size()];
-					int i = 0;
-					for (Neighbor neighbor : neighbors) {
-						values[i++] = Integer.parseInt(neighbor.classValue);
-					}
-					Arrays.sort(values);
-					int mid = values.length / 2;
-					predictedValue = (values.length % 2) == 1 ? values[mid] : 
-						(values[mid - 1] + values[mid]) / 2;
-				} else if (regressionMethod == RegressionMethod.LinearRegression) {
-					//TODO
-					throw new IllegalArgumentException("operation not supported");
-				} else if (regressionMethod == RegressionMethod.MultiLinearRegression) {
-					//TODO
-					throw new IllegalArgumentException("operation not supported");
-				}
+				doRegression();
 			}
 		} else if (kernelFunction.equals("linearMultiplicative")) {
 			for (Neighbor neighbor : neighbors) {
@@ -217,6 +214,38 @@ public class Neighborhood {
 					weightedClassDistr.put(neighbor.classValue, score + neighbor.classCondWeightedScore);
 				}
 			}
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	private void doRegression() {
+		predictedValue = 0;
+		if (regressionMethod == RegressionMethod.Average) {
+			for (Neighbor neighbor : neighbors) {
+				predictedValue += Integer.parseInt(neighbor.classValue);
+			}
+			predictedValue /= neighbors.size();
+		} else if (regressionMethod == RegressionMethod.Median) {
+			int[] values = new int[neighbors.size()];
+			int i = 0;
+			for (Neighbor neighbor : neighbors) {
+				values[i++] = Integer.parseInt(neighbor.classValue);
+			}
+			Arrays.sort(values);
+			int mid = values.length / 2;
+			predictedValue = (values.length % 2) == 1 ? values[mid] : 
+				(values[mid - 1] + values[mid]) / 2;
+		} else if (regressionMethod == RegressionMethod.LinearRegression) {
+			simpleRegression.clear();
+			for (Neighbor neighbor : neighbors) {
+				simpleRegression.addData(neighbor.getRegrInputVar(), neighbor.getRegrOutputVar());
+			}		
+			predictedValue = (int)simpleRegression.predict(regrInputVar);
+		} else if (regressionMethod == RegressionMethod.MultiLinearRegression) {
+			//TODO
+			throw new IllegalArgumentException("operation not supported");
 		}
 	}
 	
@@ -315,7 +344,7 @@ public class Neighborhood {
 	 * @author pranab
 	 *
 	 */
-	private static class Neighbor {
+	public static class Neighbor {
 		private String entityID;
 		private int distance;
 		private String classValue;
@@ -323,6 +352,7 @@ public class Neighborhood {
 		private int score;
 		private double classCondWeightedScore;
 		private boolean inverseDistanceWeighted;
+		private double regrInputVar;
 		
 		/**
 		 * @param entityID
@@ -371,6 +401,18 @@ public class Neighborhood {
 			if (inverseDistanceWeighted) {
 				classCondWeightedScore  *= 1.0 / (double)distance;
 			}
+		}
+
+		public double getRegrInputVar() {
+			return regrInputVar;
+		}
+
+		public void setRegrInputVar(double regrInputVar) {
+			this.regrInputVar = regrInputVar;
+		}
+		
+		public double getRegrOutputVar() {
+			return Double.parseDouble(classValue);
 		}
 	}
 
