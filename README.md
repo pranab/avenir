@@ -34,6 +34,10 @@ of detail documentation
 Project's resource directory has various tutorial documents for the use cases described in
 the blogs.
 
+## Configuration 
+All configuration parameters are described in the wiki page
+https://github.com/pranab/avenir/wiki/Configuration
+
 ## Help
 Please feel free to email me at pkghosh99@gmail.com
 

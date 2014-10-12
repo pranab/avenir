@@ -69,7 +69,7 @@ public class HeterogeneityReductionCorrelation extends Configured implements Too
 		
 		protected void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			heterogeneityAlgorithm = context.getConfiguration().get(" heterogeneity.algorithm", "gini");			
+			heterogeneityAlgorithm = context.getConfiguration().get("heterogeneity.algorithm", "gini");			
 		}
 		
 		@Override
