@@ -117,7 +117,7 @@ public class NearestNeighbor extends Configured implements Tool {
         	Configuration config = context.getConfiguration();
             fieldDelimRegex = config.get("field.delim.regex", ",");
             isValidationMode = config.getBoolean("validation.mode", true);
-            classCondtionWeighted = config.getBoolean("class.condtion.weighted", true);
+            classCondtionWeighted = config.getBoolean("class.condition.weighted", false);
             String predictionMode = config.get("prediction.mode", "classification");
         	String regressionMethod = config.get("regression.method", "average");
         	isLinearRegression = predictionMode.equals("regression") && regressionMethod.equals("linearRegression");
@@ -262,7 +262,7 @@ public class NearestNeighbor extends Configured implements Tool {
         	}
         	
         	//using cost based arbitrator for classification
-        	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", true);
+        	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", false);
             if (useCostBasedClassifier && neighborhood.IsInClassificationMode()) {
             	if (null == posClassAttrValue) {
             		String[] classAttrValues = config.get("class.attribute.values").split(",");

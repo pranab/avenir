@@ -111,7 +111,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	probReductionConstant = conf.getFloat("prob.reduction.constant",  (float)1.0);
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
-        	auerGreedyConstant = conf.getInt("auer.greedy.contant", 5);
+        	auerGreedyConstant = conf.getInt("auer.greedy.constant", 5);
  
         	//batch size
         	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
