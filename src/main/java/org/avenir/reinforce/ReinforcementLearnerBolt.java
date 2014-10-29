@@ -65,7 +65,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	@Override
 	public void intialize(Map stormConf, TopologyContext context) {
 		//intialize learner
-		String learnerType = ConfigUtility.getString(stormConf, "reinforcement.learrner.type");
+		String learnerType = ConfigUtility.getString(stormConf, "reinforcement.learner.type");
 		String[] actions = ConfigUtility.getString(stormConf, "reinforcement.learrner.actions").split(",");
 		Map<String, Object> typedConf = ConfigUtility.toTypedMap(stormConf);
 		learner =  ReinforcementLearnerFactory.create(learnerType, actions, typedConf);
