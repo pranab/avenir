@@ -10,20 +10,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 
     <packaging>jar</packaging>
 
-    <profiles>
-        <profile>
-            <id>compiler</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <log4j.version>1.2.16</log4j.version>
-                <hadoop.version>0.20.2-cdh3u2</hadoop.version>
-                <jackson.version>1.9.13</jackson.version>
-                <jdk.level>1.6</jdk.level>
-            </properties>
-        </profile>
-    </profiles>
 
     <build>
         <pluginManagement>
@@ -57,7 +43,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
+            <version>1.2.16</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.sun.jmx</groupId>
@@ -71,12 +57,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         </dependency>
 
         <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-core</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-        
-        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <classifier>jdk15</classifier>
@@ -87,13 +67,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
             <artifactId>jackson-core-asl </artifactId>
-            <version>${jackson.version}</version>
+            <version>1.9.13</version>
         </dependency>
 
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
             <artifactId>jackson-mapper-asl </artifactId>
-            <version>${jackson.version}</version>
+            <version>1.9.13</version>
         </dependency>
         
         <dependency>
@@ -168,8 +148,62 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 			<id>clojars.org</id>
 			<url>http://clojars.org/repo</url>
 		</repository>
-        
     </repositories>
-
+    
+	<profiles>
+		<profile>
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-core</artifactId>
+					<version>2.5.0-mr1-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-client</artifactId>
+					<version>2.5.0-mr1-cdh5.3.1</version>
+					</dependency>
+				</dependencies>
+		</profile>
+		<profile>
+			<id>yarn</id>
+			<dependencies>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-mapreduce-client-core</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-common</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-mapreduce-client-hs</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-auth</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-hdfs</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-hdfs</artifactId>
+					<version>2.5.0-cdh5.3.1</version>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
 </project>
 
