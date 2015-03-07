@@ -223,7 +223,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
         				outKey.initialize();
         				outKey.add(attrOrdObj, splitKey, segmentIndex,classVal);
         				context.write(outKey, outVal);
-        				context.getCounter("Stats", "mapper output count").increment(1);
+        				//context.getCounter("Stats", "mapper output count").increment(1);
         			}
 	            }
             }
@@ -570,7 +570,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          */
         protected void reduce(Tuple  key, Iterable<IntWritable> values, Context context)
         		throws IOException, InterruptedException {
-			context.getCounter("Stats", "reducer input count").increment(1);
+			//context.getCounter("Stats", "reducer input count").increment(1);
         	int attrOrdinal = key.getInt(0);
         	String splitKey = key.getString(1);
         	int segmentIndex = key.getInt(2);

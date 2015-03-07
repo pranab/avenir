@@ -300,13 +300,13 @@ public class NearestNeighbor extends Configured implements Tool {
         protected void cleanup(Context context) throws IOException, InterruptedException {
        		if (isValidationMode) {
        			if (neighborhood.IsInClassificationMode()) {
-					context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
-					context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
-					context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
-					context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
-					context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
-					context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
-					context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+					//context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+					//context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+					//context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+					//context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+					//context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
+					//context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+					//context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
        			}
         	}
         }

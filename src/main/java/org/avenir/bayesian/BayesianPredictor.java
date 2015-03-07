@@ -169,13 +169,13 @@ public class BayesianPredictor extends Configured implements Tool {
          */
         protected void cleanup(Context context) throws IOException, InterruptedException {
         	if (!outputFeatureProbOnly) {
-				context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
-				context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
-				context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
-				context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
-				context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
-				context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
-				context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
+				//context.getCounter("Validation", "TruePositive").increment(confMatrix.getTruePos());
+				//context.getCounter("Validation", "FalseNegative").increment(confMatrix.getFalseNeg());
+				//context.getCounter("Validation", "TrueNagative").increment(confMatrix.getTrueNeg());
+				//context.getCounter("Validation", "FalsePositive").increment(confMatrix.getFalsePos());
+				//context.getCounter("Validation", "Accuracy").increment(confMatrix.getAccuracy());
+				//context.getCounter("Validation", "Recall").increment(confMatrix.getRecall());
+				//context.getCounter("Validation", "Precision").increment(confMatrix.getPrecision());
         	}
         }
          
@@ -328,10 +328,10 @@ public class BayesianPredictor extends Configured implements Tool {
         	}
         	
         	if (corrPred){
-				context.getCounter("Validation", "Correct").increment(1);
+				//context.getCounter("Validation", "Correct").increment(1);
         	}
         	if (incorrPred){
-				context.getCounter("Validation", "Incorrect").increment(1);
+				//context.getCounter("Validation", "Incorrect").increment(1);
         	}
 			context.write(NullWritable.get(),outVal);
         }

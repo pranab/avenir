@@ -137,7 +137,7 @@ public class MutualInformation extends Configured implements Tool {
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
             classAttrVal = items[classAttrField.getOrdinal()];
-			context.getCounter("Basic", "Records").increment(1);
+			//context.getCounter("Basic", "Records").increment(1);
 
             //class
         	outKey.initialize();

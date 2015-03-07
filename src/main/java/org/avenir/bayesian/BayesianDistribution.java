@@ -241,7 +241,7 @@ public class BayesianDistribution extends Configured implements Tool {
 		protected void cleanup(Context context) throws IOException, InterruptedException {
 			//emit feature prior probability parameters for numerical continuous variables
 			for (int featureOrd : featurePriorDistr.keySet()) {
-				context.getCounter("Distribution Data", "Feature prior cont ").increment(1);
+				//context.getCounter("Distribution Data", "Feature prior cont ").increment(1);
     			Triplet<Integer, Long, Long> distr = featurePriorDistr.get(featureOrd);
     			count = distr.getLeft();
     			valSum = distr.getCenter();
@@ -299,10 +299,10 @@ public class BayesianDistribution extends Configured implements Tool {
     		//emit feature posterior
     		stBld.delete(0, stBld.length());
     		if (binned) {
-				context.getCounter("Distribution Data", "Feature posterior binned ").increment(1);
+				//context.getCounter("Distribution Data", "Feature posterior binned ").increment(1);
     			stBld.append(key.toString()).append(fieldDelim).append(count);
     		} else {
-				context.getCounter("Distribution Data", "Feature posterior cont ").increment(1);
+				//context.getCounter("Distribution Data", "Feature posterior cont ").increment(1);
     			stBld.append(key.toString()).append(fieldDelim).append(fieldDelim).append(featurePosteriorMean).
     			append(fieldDelim).append(featurePosteriorStdDev);
     		}
@@ -310,7 +310,7 @@ public class BayesianDistribution extends Configured implements Tool {
 			context.write(NullWritable.get(),outVal);
 			
 			//emit class prior
-			context.getCounter("Distribution Data", "Class prior").increment(1);
+			//context.getCounter("Distribution Data", "Class prior").increment(1);
     		stBld.delete(0, stBld.length());
     		stBld.append(key.getString(0)).append(fieldDelim).append(fieldDelim).append(fieldDelim).append(count);
     		outVal.set(stBld.toString());
@@ -318,7 +318,7 @@ public class BayesianDistribution extends Configured implements Tool {
 			
 			//feature prior
     		if (binned) {
-				context.getCounter("Distribution Data", "Feature prior binned ").increment(1);
+				//context.getCounter("Distribution Data", "Feature prior binned ").increment(1);
 	    		stBld.delete(0, stBld.length());
 	    		stBld.append(fieldDelim).append(key.getInt(1)).append(fieldDelim).append(key.getString(2)).
 	    			append(fieldDelim).append(count);
