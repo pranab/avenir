@@ -23,6 +23,10 @@ import java.util.Map;
 
 import org.chombo.util.DoubleTable;
 
+/**
+ * @author pranab
+ *
+ */
 public class MarkovModel {
 	private String[] states;
 	private DoubleTable stateTransitionProb;
