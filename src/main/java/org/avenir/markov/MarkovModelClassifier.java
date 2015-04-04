@@ -113,7 +113,7 @@ public class MarkovModelClassifier extends Configured implements Tool {
         	logOdds = 0;
         	if (items.length >= (skipFieldCount + 2)) {
 	        	for (int i = skipFieldCount + 1; i < items.length; ++i) {
-	        		//cumulative log odds for 2 classes based on respective state transition probabbility matrix
+	        		//cumulative log odds for 2 classes based on respective state transition probability matrix
 	        		frState = items[i-1];
 	        		toState = items[i];
 	        		logOdds += Math.log(model.getStateTransProbability(classLabels[0], frState, toState) /
