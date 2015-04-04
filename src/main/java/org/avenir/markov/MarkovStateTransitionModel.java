@@ -169,6 +169,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 		private String classLabel;
 		private String fromSt;
 		private String toSt;
+		private boolean outputStates;
 		
 		private static final Logger LOG = Logger.getLogger(StateTransitionMapper.class);
 		
@@ -187,6 +188,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         	int transProbScale = conf.getInt("trans.prob.scale", 1000);
         	transProb.setScale(transProbScale);
         	isClassBasedModel = conf.getInt("class.label.field.ord", -1) >= 0;
+        	outputStates = conf.getBoolean("output.states", true); 
 	   	}
 	   	
 	   	/* (non-Javadoc)
@@ -196,9 +198,11 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 	   			throws IOException, InterruptedException {
 	   		//all states
         	Configuration conf = context.getConfiguration();
-	   		outVal.set(conf.get("model.states"));
-   			context.write(NullWritable.get(),outVal);
-
+        	if (outputStates) {
+        		outVal.set(conf.get("model.states"));
+        		context.write(NullWritable.get(),outVal);
+        	}
+        	
    			//state transitions
    			if (isClassBasedModel) {
    				//class based model
