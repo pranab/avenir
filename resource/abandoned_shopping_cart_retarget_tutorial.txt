@@ -1,5 +1,8 @@
 This tutorial is for optimizing retargeting campaigns for abandoned shopping carts.
-Change path etc as needed for your environment
+Solution is based on decision tree. 
+
+Path etc shown here corresposnds to my environment. Please Change them  as needed 
+for your environment
 
 Dependency
 ==========
@@ -41,13 +44,5 @@ and make the second run
 
 Configuration
 =============
-field.delim.regex=,
-field.delim.out=,
-num.reducer=1
-feature.schema.file.path=/Users/pranab/retarget/meta/emailCampaign.json
-split.attributes=1
-max.cat.attr.split.groups=3
-split.algorithm=giniIndex
-parent.info=0.4755305856406957
-output.split.prob=true
-debug.on=true
+They are in retarget.properties. Make changes as per your need
+
