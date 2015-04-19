@@ -83,6 +83,9 @@ public class MarkovModelClassifier extends Configured implements Tool {
 		private double logOdds;
 		private int idFieldOrd;
 		private String predClass;
+		private boolean inValidationMode;
+		private StringBuilder stBld =  new StringBuilder();
+		private int classLabelFieldOrd = -1;
         private static final Logger LOG = Logger.getLogger(ClassifierMapper.class);
 
         /* (non-Javadoc)
@@ -97,7 +100,15 @@ public class MarkovModelClassifier extends Configured implements Tool {
         	fieldDelim = conf.get("field.delim.out", ",");
             skipFieldCount = conf.getInt("skip.field.count", 1);
             idFieldOrd = conf.getInt("id.field.ord", 0);
-            isClassLabelBased = conf.getBoolean("class.label.based", false);
+            isClassLabelBased = conf.getBoolean("class.label.based.model", false);
+            inValidationMode = conf.getBoolean("validation.mode", false);
+            if (inValidationMode) {
+            	++skipFieldCount;
+            	classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            	if (classLabelFieldOrd < 0) {
+            		throw new IllegalArgumentException("In validation mode actual class labels must be provided");
+            	}
+            }
             
         	List<String> lines = Utility.getFileLines(conf, "mm.model.path");
         	model = new MarkovModel(lines,  isClassLabelBased);
@@ -120,7 +131,14 @@ public class MarkovModelClassifier extends Configured implements Tool {
 	        			model.getStateTransProbability(classLabels[1], frState, toState));
 	        	}
 	        	predClass = logOdds > 0 ? classLabels[0] : classLabels[1];
-	        	outVal.set(items[idFieldOrd] + fieldDelim + predClass + fieldDelim + logOdds);
+	        	stBld.delete(0, stBld.length());
+	        	stBld.append(items[idFieldOrd]).append(fieldDelim);
+	        	if (inValidationMode){
+	        		stBld.append(items[classLabelFieldOrd]).append(fieldDelim);
+	        	}
+	        	stBld.append(predClass).append(fieldDelim).append(logOdds);
+	        	
+	        	outVal.set(stBld.toString());
     			context.write(NullWritable.get(),outVal);
         	}
         }        

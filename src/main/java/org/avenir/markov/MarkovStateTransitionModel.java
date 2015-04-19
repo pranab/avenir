@@ -104,6 +104,10 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
             skipFieldCount = conf.getInt("skip.field.count", 0);
             classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            if (classLabelFieldOrd >= 0) {
+            	++skipFieldCount;
+            }
+            
         }
         
         /* (non-Javadoc)
