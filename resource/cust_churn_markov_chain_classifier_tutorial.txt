@@ -1,0 +1,131 @@
+This tutorial for customer churn prediction based on Markov chain classifier. 
+
+Dependency
+==========
+Please refer to dependency.txt
+
+Test training data
+==================
+You can generate customer transaction  training data using the script buy_xaction.rb. Make sure that util.rb 
+is in the path ../lib. util.rb can be checked out from the project visitante. It's under script 
+/ruby/lib directory in that project.
+
+generate training data for transaction (customerID, transactionID, date, amount) as below
+./buy_xaction.rb 80000 210 .05  > training.txt
+where
+customer count = 80000
+days count = 210
+fraction of customers visting on day = .05
+
+Transaction sequencing MR for training data
+===========================================
+Copy training.txt to HDFS path /Users/pranab/buyhist/sequence/input
+hadoop fs -rm /Users/pranab/buyhist/sequence/input/*
+hadoop fs -put training.txt  /Users/pranab/buyhist/sequence/input
+ 
+Run Projection MR as below to order all transactions for an user by time. Generates
+one output line per customer
+
+JAR_NAME=/Users/pranab/Projects/chombo/target/chombo-1.0.jar
+CLASS_NAME=org.chombo.mr.Projection
+echo "running mr"
+IN_PATH=/Users/pranab/buyhist/sequence/input
+OUT_PATH=/Users/pranab/buyhist/sequence/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
+
+
+Convert training data transaction sequence to state sequence
+============================================================
+Run the  following to convert transactions to 2 character state symbols
+
+rm xaction_seq.txt 
+hadoop fs -get /Users/pranab/buyhist/sequence/output/part-r-00000 xaction_seq.txt 
+./xaction_state.rb xaction_seq.txt > state_seq.txt
+
+Insert class label (C or E) as the second field in each line of state_seq.txt
+
+Markov Model MR
+===============
+Copy state_seq.txt to HDFS path /Users/pranab/buyhist/input. 
+hadoop fs -rm /Users/pranab/buyhist/input/*
+hadoop fs -put state_seq.txt /Users/pranab/buyhist/input
+
+Run the MR as below
+JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.markov.MarkovStateTransitionModel
+echo "running mr"
+IN_PATH=/Users/pranab/buyhist/input
+OUT_PATH=/Users/pranab/buyhist/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
+
+Generate validation data
+========================
+./buy_xaction.rb 80000 30 .05 > validation.txt
+
+
+Transaction sequencing MR for validation data
+=============================================
+Copy validation.txt to HDFS path /Users/pranab/buyhist/validation/sequence/input
+
+hadoop fs -rm /Users/pranab/buyhist/validation/sequence/input/*
+hadoop fs -put validation.txt  /Users/pranab/buyhist/validation/sequence/input
+ 
+Run Projection MR as below to order all transactions for an user by time. Generates
+one output line per customer
+
+JAR_NAME=/Users/pranab/Projects/chombo/target/chombo-1.0.jar
+CLASS_NAME=org.chombo.mr.Projection
+echo "running mr"
+IN_PATH=/Users/pranab/buyhist/validation/sequence/input
+OUT_PATH=/Users/pranab/buyhist/validation/sequence/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
+
+
+Convert validation data transaction sequence to state sequence
+==============================================================
+Run the  following to convert transactions to 2 character state symbols
+
+rm validation_xaction_seq.txt 
+hadoop fs -get /Users/pranab/buyhist/validation/sequence/output/part-r-00000 validation_xaction_seq.txt 
+./xaction_state.rb validation_xaction_seq.txt > validation_state_seq.txt
+
+Insert class label (C or E) as the second field in each line of validation_state_seq.txt
+
+
+Predict customer churn running markov model classifier MR
+=========================================================
+Copy validation_state_seq.txt to HDFS path /Users/pranab/buyhist/input. 
+
+hadoop fs -rm /Users/pranab/buyhist/validation/input/*
+hadoop fs -put validation_state_seq.txt /Users/pranab/buyhist/validation/input
+
+Copy model data from /Users/pranab/buyhist/output to the HDFS path specified in the
+config param mm.model.path
+hadoop fs -cp /Users/pranab/buyhist/output/part-r-00000 <hdfs_path_as_per_cofig_param>
+
+Run the MR as below
+JAR_NAME=/Users/pranab/Projects/avenir/target/avenir-1.0.jar
+CLASS_NAME=org.avenir.markov.MarkovModelClassifier
+echo "running mr"
+IN_PATH=/Users/pranab/buyhist/validation/input
+OUT_PATH=/Users/pranab/buyhist/validation/output
+echo "input $IN_PATH output $OUT_PATH"
+hadoop fs -rmr $OUT_PATH
+echo "removed output dir"
+
+hadoop jar $JAR_NAME $CLASS_NAME -Dconf.path=/Users/pranab/Projects/bin/avenir/buyhist.properties $IN_PATH $OUT_PATH
+
+
+Configuration
+=============
+It's in buyhist.properties
+

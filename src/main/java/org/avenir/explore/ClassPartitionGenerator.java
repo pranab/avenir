@@ -138,7 +138,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             schema = mapper.readValue(fs, FeatureSchema.class);
             
             //attribute selection strategy
-            String attrSelectStrategy = conf.get("split.attribute.selection.strategy");
+            String attrSelectStrategy = conf.get("split.attribute.selection.strategy", "userSpecified");
             
             //get split attributes
             getSplitAttributes(attrSelectStrategy, conf);
