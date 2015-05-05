@@ -38,6 +38,20 @@ the blogs.
 All configuration parameters are described in the wiki page
 https://github.com/pranab/avenir/wiki/Configuration
 
+## Build
+Please refer to resource/dependency.txt for build time and run time dependencies
+
+For Hadoop 1
+* mvn clean install
+
+For Hadoop 2 (non yarn)
+* git checkout nuovo
+* mvn clean install
+
+For Hadoop 2 (yarn)
+* git checkout nuovo
+* mvn clean install -P yarn
+
 ## Help
 Please feel free to email me at pkghosh99@gmail.com
 
