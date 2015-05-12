@@ -15,6 +15,13 @@ def numSamples(numHyp, errors, prThresholds):
 			m = long(m)
 			print "%d,%.3f,%.3f,%d" %(numHyp,e,p,m)
 
+def numSamplesWithLn(numHypLn, errors, prThresholds):
+	for e in errors:
+		for p in prThresholds:
+			m = (numHypLn + math.log(1/p)) / e
+			m = long(m)
+			print "%.3f,%.3f,%d" %(e,p,m)
+
 #conjuction of all feature variables
 def termsHypSpace(featureAttrCard, classAttrCard):
 	print "all terms:"
@@ -46,9 +53,9 @@ def disjunctiveHypSpace(featureAttrCard, classAttrCard, cSize, dSize):
 def conjunctiveHypSpace(featureAttrCard, classAttrCard, dSize):
 	print "k cnf:"
 	numHyp = numValueCombinations(featureAttrCard, dSize)
-	numHyp = 2 ** numHyp
-	numHyp = numHyp * classAttrCard
-	return numHyp
+	e = math.exp(1)
+	numHypLn = numHyp / math.log(e,2)  + math.log(classAttrCard)
+	return numHypLn
 
 def numValueCombinations(featureAttrCard, numVars):
 	numFeature = len(featureAttrCard)
@@ -90,10 +97,13 @@ elif (hypSpace == "dnf"):
 	numHyp = disjunctiveHypSpace(featureAttrCard, classAttrCard, cSize, dSize)
 elif (hypSpace == "cnf"):	
 	dSize = int(sys.argv[4])
-	numHyp = conjunctiveHypSpace(featureAttrCard, classAttrCard, dSize)
+	numHypLn = conjunctiveHypSpace(featureAttrCard, classAttrCard, dSize)
 	
 	
 errors = [0.01, 0.02, 0.03, 0.04, 0.05]
-prThreshold = [0.01, 0.02, 0.03, 0.04, 0.05]
+prThresholds = [0.01, 0.02, 0.03, 0.04, 0.05]
 
-numSamples(numHyp, errors, prThreshold)
+if (hypSpace == "cnf"):
+	numSamplesWithLn(numHypLn, errors, prThresholds)
+else:
+	numSamples(numHyp, errors, prThresholds)
