@@ -17,6 +17,8 @@
 
 package org.avenir.reinforce;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 
@@ -26,16 +28,18 @@ import java.util.Map;
  *
  */
 public abstract class ReinforcementLearner {
-	protected String[] actions;
+	protected List<Action> actions = new ArrayList<Action>();
 	protected int batchSize;
-	protected String[] selActions;
+	protected Action[] selActions;;
 
 	/**
 	 * sets actions
 	 * @param actions
 	 */
-	public ReinforcementLearner withActions(String[] actions){
-		this.actions = actions;
+	public ReinforcementLearner withActions(String[] actionIds){
+		for (String actionId : actionIds) {
+			actions.add(new Action(actionId));
+		}
 		return this;
 	}
 	
@@ -51,9 +55,9 @@ public abstract class ReinforcementLearner {
 	
 	protected void initSelectedActions() {
 		if (batchSize == 0) {
-			selActions = new String[1];
+			selActions = new Action[1];
 		} else {
-			selActions = new String[batchSize];
+			selActions = new Action[batchSize];
 		}
 		
 	}
@@ -68,7 +72,7 @@ public abstract class ReinforcementLearner {
 	 * @param roundNum
 	 * @return actionID
 	 */
-	public abstract String[] nextActions(int roundNum);
+	public abstract Action[] nextActions(int roundNum);
 
 	/**
 	 * @param action
@@ -81,6 +85,17 @@ public abstract class ReinforcementLearner {
 	 */
 	public  String getStat() {
 		return "";
+	}
+	
+	public Action findAction(String id) {
+		Action action = null;
+		for (Action thisAction : actions) {
+			if (thisAction.getId().equals(id)) {
+				action = thisAction;
+				break;
+			}
+		}
+		return action;
 	}
 	
 }

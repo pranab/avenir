@@ -36,4 +36,10 @@ public interface ActionWriter {
 	 * @param actions
 	 */
 	public  void write(String eventID, String[] actions);
+	
+	/**
+	 * @param eventID
+	 * @param actions
+	 */
+	public  void write(String eventID, Action[] actions);
 }

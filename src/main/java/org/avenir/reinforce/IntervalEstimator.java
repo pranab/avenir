@@ -24,6 +24,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.chombo.util.HistogramStat;
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.Utility;
 
 
 /**
@@ -59,8 +60,8 @@ public class IntervalEstimator extends ReinforcementLearner{
 		confidenceLimitReductionRoundInterval = ConfigUtility.getInt(config, "confidence.limit.reduction.round.interval");
 		minDistrSample = ConfigUtility.getInt(config, "min.reward.distr.sample");
 		
-		for (String action : actions) {
-			rewardDistr.put(action, new HistogramStat(binWidth));
+		for (Action action : actions) {
+			rewardDistr.put(action.getId(), new HistogramStat(binWidth));
 		}
 		
 		initSelectedActions();
@@ -75,8 +76,8 @@ public class IntervalEstimator extends ReinforcementLearner{
 	}
 
 	@Override
-	public String[] nextActions(int roundNum) {
-		String selAction = null;
+	public Action[] nextActions(int roundNum) {
+		Action selAction = null;
 		++logCounter;
 		++roundCounter;
 		//make sure reward distributions have enough sample
@@ -101,7 +102,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 		
 		if (lowSample) {
 			//select randomly
-			selAction = actions[(int)(Math.random() * actions.length)];
+			selAction = Utility.selectRandom(actions);
 			++randomSelectCount;
 		} else {
 			//reduce confidence limit
@@ -109,6 +110,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			
 			//select as per interval estimate, choosing distr with max upper conf bound
 			int maxUpperConfBound = 0;
+			String selActionId = null;
 			for (String action : rewardDistr.keySet()) {
 				HistogramStat stat = rewardDistr.get(action);
 				int[] confBounds = stat.getConfidenceBounds(curConfidenceLimit);
@@ -117,11 +119,13 @@ public class IntervalEstimator extends ReinforcementLearner{
 				}
 				if (confBounds[1] > maxUpperConfBound) {
 					maxUpperConfBound = confBounds[1];
-					selAction = action;
+					selActionId = action;
 				}
 			}
+			selAction = findAction(selActionId);
 			++intvEstSelectCount;
 		}
+		selAction.select();
 		selActions[0] = selAction;
 		return selActions;
 	}
@@ -155,7 +159,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			throw new IllegalArgumentException("invalid action:" + action);
 		}
 		stat.add(reward);
-		
+		findAction(action).reward(reward);
 		if (debugOn) {
 			LOG.info("setReward action:" + action + " reward:" + reward + " sample count:" + stat.getCount());
 		}

@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.SimpleStat;
+import org.chombo.util.Utility;
 
 /**
  * Random greedy reinforcement learner
@@ -30,7 +31,7 @@ import org.chombo.util.SimpleStat;
  */
 public class RandomGreedyLearner extends ReinforcementLearner {
 	private double  randomSelectionProb;
-	private String  	probRedAlgorithm;
+	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
 	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	private static final String PROB_RED_LINEAR = "linear";
@@ -42,15 +43,15 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	    probRedAlgorithm = ConfigUtility.getString(config,"prob.reduction.algorithm", PROB_RED_LINEAR );
         probReductionConstant = ConfigUtility.getDouble(config, "prob.reduction.constant",  1.0);
         
-        for (String action : actions) {
-        	rewardStats.put(action, new SimpleStat());
+        for (Action action : actions) {
+        	rewardStats.put(action.getId(), new SimpleStat());
         }
  	}
 
 	@Override
-	public String[] nextActions(int roundNum) {
+	public Action[] nextActions(int roundNum) {
 		double curProb = 0.0;
-		String action = null;
+		Action action = null;
 		if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
 			curProb = randomSelectionProb * probReductionConstant / roundNum ;
 		} else {
@@ -60,18 +61,19 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 		
        	if (curProb < Math.random()) {
     		//select random
-    		action = actions[(int)(Math.random() * actions.length)];
+    		action = Utility.selectRandom(actions);
     	} else {
     		//select best
     		int bestReward = 0;
-            for (String thisAction : actions) {
-            	int thisReward = (int)(rewardStats.get(thisAction).getMean());
+            for (Action thisAction : actions) {
+            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getMean());
             	if (thisReward >  bestReward) {
             		bestReward = thisReward;
             		action = thisAction;
             	}
             }
     	}
+		action.select();
        	
 		selActions[0] = action;
 		return selActions;
@@ -80,6 +82,7 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	@Override
 	public void setReward(String action, int reward) {
 		rewardStats.get(action).add(reward);
+		findAction(action).reward(reward);
 	}
 
 }

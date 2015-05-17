@@ -48,4 +48,12 @@ public  class RedisActionWriter implements  ActionWriter {
 		jedis.lpush(actionQueue, eventID + "," + actionList);
 	}
 
+	@Override
+	public void write(String eventID, Action[] actions) {
+		StringBuilder stBld = new StringBuilder();
+		for (Action action : actions) {
+			stBld.append(action.getId()).append(",");
+		}
+		jedis.lpush(actionQueue, eventID + "," + stBld.substring(0, stBld.length() -1));
+	}
 }

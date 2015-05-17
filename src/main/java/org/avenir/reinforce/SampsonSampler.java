@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.Utility;
 
 /**
  * Sampson sampler probabilistic matching reinforcement learning
@@ -46,6 +47,7 @@ public class SampsonSampler extends ReinforcementLearner {
 			rewardDistr.put(actionID, rewards);
 		}
 		rewards.add(reward);
+		findAction(actionID).reward(reward);
 	}
 
 	/**
@@ -53,16 +55,14 @@ public class SampsonSampler extends ReinforcementLearner {
 	 * @return
 	 */
 	@Override
-	public String[]  nextActions(int roundNum) {
+	public Action[]  nextActions(int roundNum) {
 		String slectedActionID = null;
 		int maxRewardCurrent = 0;
-		int index = 0;
 		int reward = 0;
 		for (String actionID : rewardDistr.keySet()) {
 			List<Integer> rewards = rewardDistr.get(actionID);
 			if (rewards.size() > minSampleSize) {
-				index = (int) (Math.random() * rewards.size());
-				reward = rewards.get(index);
+				reward = Utility.selectRandom(rewards);
 				reward = enforce(actionID, reward);
 			} else {
 				reward = (int) (Math.random() * maxReward);
@@ -74,7 +74,9 @@ public class SampsonSampler extends ReinforcementLearner {
 			}
 		}
 		
-		selActions[0] = slectedActionID;
+		Action selAction = findAction(slectedActionID);
+		selAction.select();
+		selActions[0] = selAction;
 		return selActions;
 	}
 	
