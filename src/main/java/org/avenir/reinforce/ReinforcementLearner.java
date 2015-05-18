@@ -30,7 +30,8 @@ import java.util.Map;
 public abstract class ReinforcementLearner {
 	protected List<Action> actions = new ArrayList<Action>();
 	protected int batchSize;
-	protected Action[] selActions;;
+	protected Action[] selActions;
+	protected long totalTrialCount;
 
 	/**
 	 * sets actions
