@@ -33,15 +33,17 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	private double  randomSelectionProb;
 	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
+	private double minProb;
 	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	private static final String PROB_RED_LINEAR = "linear";
 	private static final String PROB_RED_LOG_LINEAR = "logLinear";
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
-		 randomSelectionProb = ConfigUtility.getDouble(config, "random.selection.prob", 0.5);
+		randomSelectionProb = ConfigUtility.getDouble(config, "random.selection.prob", 0.5);
 	    probRedAlgorithm = ConfigUtility.getString(config,"prob.reduction.algorithm", PROB_RED_LINEAR );
         probReductionConstant = ConfigUtility.getDouble(config, "prob.reduction.constant",  1.0);
+        minProb = ConfigUtility.getDouble(config, "min.prob",  -1.0);
         
         for (Action action : actions) {
         	rewardStats.put(action.getId(), new SimpleStat());
@@ -58,6 +60,11 @@ public class RandomGreedyLearner extends ReinforcementLearner {
    			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
 		}
 		curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
+		
+		//non stationary reward
+		if (minProb > 0 && curProb < minProb) {
+			curProb = minProb;
+		}
 		
        	if (curProb < Math.random()) {
     		//select random
