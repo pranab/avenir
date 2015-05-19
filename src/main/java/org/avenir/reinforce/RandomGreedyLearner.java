@@ -40,6 +40,7 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
+		super.initialize(config);;
 		randomSelectionProb = ConfigUtility.getDouble(config, "random.selection.prob", 0.5);
 	    probRedAlgorithm = ConfigUtility.getString(config,"prob.reduction.algorithm", PROB_RED_LINEAR );
         probReductionConstant = ConfigUtility.getDouble(config, "prob.reduction.constant",  1.0);
@@ -54,32 +55,40 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	public Action[] nextActions(int roundNum) {
 		double curProb = 0.0;
 		Action action = null;
-		if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-			curProb = randomSelectionProb * probReductionConstant / roundNum ;
-		} else {
-   			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
+
+		//check for min trial requirement
+		action = selectActionBasedOnMinTrial();
+
+		if (null == action) {
+			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
+				curProb = randomSelectionProb * probReductionConstant / roundNum ;
+			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )){
+	   			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
+			} else {
+				throw new IllegalArgumentException("Invalid probability reduction algorithms");
+			}
+			curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
+			
+			//non stationary reward
+			if (minProb > 0 && curProb < minProb) {
+				curProb = minProb;
+			}
+			
+	       	if (curProb < Math.random()) {
+	    		//select random
+	    		action = Utility.selectRandom(actions);
+	    	} else {
+	    		//select best
+	    		int bestReward = 0;
+	            for (Action thisAction : actions) {
+	            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getMean());
+	            	if (thisReward >  bestReward) {
+	            		bestReward = thisReward;
+	            		action = thisAction;
+	            	}
+	            }
+	    	}
 		}
-		curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
-		
-		//non stationary reward
-		if (minProb > 0 && curProb < minProb) {
-			curProb = minProb;
-		}
-		
-       	if (curProb < Math.random()) {
-    		//select random
-    		action = Utility.selectRandom(actions);
-    	} else {
-    		//select best
-    		int bestReward = 0;
-            for (Action thisAction : actions) {
-            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getMean());
-            	if (thisReward >  bestReward) {
-            		bestReward = thisReward;
-            		action = thisAction;
-            	}
-            }
-    	}
 		action.select();
        	
 		selActions[0] = action;

@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.chombo.util.ConfigUtility;
+
 
 /**
  * This interface for all reinforcement learners
@@ -32,6 +34,7 @@ public abstract class ReinforcementLearner {
 	protected int batchSize;
 	protected Action[] selActions;
 	protected long totalTrialCount;
+	protected int minTrial;
 
 	/**
 	 * sets actions
@@ -66,7 +69,9 @@ public abstract class ReinforcementLearner {
 	/**
 	 * @param config
 	 */
-	public abstract void initialize(Map<String, Object> config);
+	public  void initialize(Map<String, Object> config) {
+		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
+	}
 	
 	/**
 	 * Selects the next action 
@@ -88,6 +93,10 @@ public abstract class ReinforcementLearner {
 		return "";
 	}
 	
+	/**
+	 * @param id
+	 * @return
+	 */
 	public Action findAction(String id) {
 		Action action = null;
 		for (Action thisAction : actions) {
@@ -99,4 +108,34 @@ public abstract class ReinforcementLearner {
 		return action;
 	}
 	
+	/**
+	 * @return
+	 */
+	public Action findActionWithMinTrial() {
+		long minTrial = Long.MAX_VALUE;
+		Action action = null;
+		for (Action thisAction : actions) {
+			if (thisAction.getTrialCount() < minTrial) {
+				minTrial = thisAction.getTrialCount();
+				action = thisAction;
+			}
+		}
+		
+		return action;
+	}
+	
+	/**
+	 * @return
+	 */
+	public Action selectActionBasedOnMinTrial() {
+		//check for min trial requirement
+		Action action = null;
+		if (minTrial > 0) {
+			action = findActionWithMinTrial();
+			if (action.getTrialCount() > minTrial) {
+				action = null;
+			}
+		}
+		return action;
+	}
 }
