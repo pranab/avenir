@@ -35,6 +35,7 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	private  double	probReductionConstant;
 	private double minProb;
 	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	private static final String PROB_RED_NONE = "none";
 	private static final String PROB_RED_LINEAR = "linear";
 	private static final String PROB_RED_LOG_LINEAR = "logLinear";
 	
@@ -53,6 +54,17 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 
 	@Override
 	public Action[] nextActions(int roundNum) {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction(roundNum + i);
+		}
+		return selActions;
+	}	
+
+	/**
+	 * @param roundNum
+	 * @return
+	 */
+	public Action nextAction(int roundNum) {
 		double curProb = 0.0;
 		Action action = null;
 
@@ -60,7 +72,9 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 		action = selectActionBasedOnMinTrial();
 
 		if (null == action) {
-			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
+			if (probRedAlgorithm.equals(PROB_RED_NONE )) {
+				curProb = randomSelectionProb;
+			} else if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
 				curProb = randomSelectionProb * probReductionConstant / roundNum ;
 			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )){
 	   			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
@@ -89,10 +103,9 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	            }
 	    	}
 		}
+		++totalTrialCount;
 		action.select();
-       	
-		selActions[0] = action;
-		return selActions;
+		return action;
 	}
 
 	@Override

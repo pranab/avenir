@@ -35,6 +35,7 @@ public abstract class ReinforcementLearner {
 	protected Action[] selActions;
 	protected long totalTrialCount;
 	protected int minTrial;
+	
 
 	/**
 	 * sets actions
@@ -58,12 +59,7 @@ public abstract class ReinforcementLearner {
 	}
 	
 	protected void initSelectedActions() {
-		if (batchSize == 0) {
-			selActions = new Action[1];
-		} else {
-			selActions = new Action[batchSize];
-		}
-		
+		selActions = new Action[batchSize];
 	}
 
 	/**
@@ -71,6 +67,8 @@ public abstract class ReinforcementLearner {
 	 */
 	public  void initialize(Map<String, Object> config) {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
+		batchSize = ConfigUtility.getInt(config, "batch.size",  1);
+		initSelectedActions();
 	}
 	
 	/**
