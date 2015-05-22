@@ -14,7 +14,10 @@ import org.chombo.util.SimpleStat;
  */
 public class SoftMaxLearner extends ReinforcementLearner {
 	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	private Map<String, Double> expDistr = new HashMap<String, Double>();
 	private double tempConstant;
+	private double minTempConstant;
+	private boolean rewardStatsModified;
 	private CategoricalSampler sampler = new CategoricalSampler();
 	private String tempRedAlgorithm;
 	private static final String TEMP_RED_LINEAR = "linear";
@@ -24,6 +27,7 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
 		tempConstant  = ConfigUtility.getDouble(config, "temp.constant", 100.0);
+		minTempConstant  = ConfigUtility.getDouble(config, "min.temp.constant", -1.0);
 	    tempRedAlgorithm = ConfigUtility.getString(config,"temp.reduction.algorithm", TEMP_RED_LINEAR );
         
         for (Action action : actions) {
@@ -51,12 +55,26 @@ public class SoftMaxLearner extends ReinforcementLearner {
 		action = selectActionBasedOnMinTrial();
 
 		if (null == action) {
-			sampler.initialize();
-            for (Action thisAction : actions) {
-            	double thisReward = rewardStats.get(thisAction.getId()).getMean();
-            	double distr = Math.exp(thisReward / tempConstant);
-            	sampler.add(thisAction.getId(), distr);
-            }	
+			if (rewardStatsModified) {
+				sampler.initialize();
+				expDistr.clear();
+				
+				//all exp distributions 
+				double sum = 0;
+	            for (Action thisAction : actions) {
+	            	double thisReward = rewardStats.get(thisAction.getId()).getMean();
+	            	double distr = Math.exp(thisReward / tempConstant);
+	            	expDistr.put(thisAction.getId(), distr);
+	            	sum += distr;
+	            }	
+				
+	            //prob distributions
+	            for (Action thisAction : actions) {
+	            	double distr = expDistr.get(thisAction.getId()) / sum;
+	            	sampler.add(thisAction.getId(), distr);
+	            }	
+	            rewardStatsModified = false;
+			}
             action = findAction(sampler.sample());
             
             //reduce constant
@@ -66,10 +84,13 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	            	tempConstant /= softMaxRound;
 	            } else if (tempRedAlgorithm.equals(TEMP_RED_LOG_LINEAR)) {
 	            	tempConstant *= Math.log(softMaxRound) / softMaxRound;
-	            	
 	            }
-            }
-            
+	            
+	            //apply lower bound
+	            if (minTempConstant > 0 && tempConstant < minTempConstant) {
+	            	tempConstant = minTempConstant;
+	            }
+            }            
 		}
 		
 		++totalTrialCount;
@@ -81,6 +102,7 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	public void setReward(String action, int reward) {
 		rewardStats.get(action).add(reward);
 		findAction(action).reward(reward);
+		rewardStatsModified = true;
 	}
 
 }
