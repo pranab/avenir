@@ -49,16 +49,25 @@ public class SampsonSampler extends ReinforcementLearner {
 		rewards.add(reward);
 		findAction(actionID).reward(reward);
 	}
+	
+	@Override
+	public Action[] nextActions() {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction();
+		}
+		return selActions;
+	}
 
 	/**
 	 * Select action
 	 * @return
 	 */
-	@Override
-	public Action[]  nextActions(int roundNum) {
+	public Action  nextAction() {
 		String slectedActionID = null;
 		int maxRewardCurrent = 0;
 		int reward = 0;
+		++totalTrialCount;
+		
 		for (String actionID : rewardDistr.keySet()) {
 			List<Integer> rewards = rewardDistr.get(actionID);
 			if (rewards.size() > minSampleSize) {
@@ -76,8 +85,7 @@ public class SampsonSampler extends ReinforcementLearner {
 		
 		Action selAction = findAction(slectedActionID);
 		selAction.select();
-		selActions[0] = selAction;
-		return selActions;
+		return selAction;
 	}
 	
 	/**
@@ -91,6 +99,7 @@ public class SampsonSampler extends ReinforcementLearner {
 
 	@Override
 	public void initialize(Map<String, Object> config) {
+		super.initialize(config);
 		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
 		maxReward = ConfigUtility.getInt(config, "max.reward");
 	}

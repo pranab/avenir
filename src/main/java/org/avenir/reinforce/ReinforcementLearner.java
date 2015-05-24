@@ -33,7 +33,7 @@ import org.chombo.util.SimpleStat;
  */
 public abstract class ReinforcementLearner {
 	protected List<Action> actions = new ArrayList<Action>();
-	protected int batchSize;
+	protected int batchSize = 1;
 	protected Action[] selActions;
 	protected long totalTrialCount;
 	protected int minTrial;

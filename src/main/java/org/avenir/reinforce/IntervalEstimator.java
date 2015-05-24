@@ -41,17 +41,17 @@ public class IntervalEstimator extends ReinforcementLearner{
 	private int confidenceLimitReductionRoundInterval;
 	private int minDistrSample;
 	private Map<String, HistogramStat> rewardDistr = new HashMap<String, HistogramStat>(); 
-	private int lastRoundNum = 1;
+	private long lastRoundNum = 1;
 	private long randomSelectCount;
 	private long intvEstSelectCount;
 	private boolean debugOn;
 	private long logCounter;
-	private long roundCounter;
 	private boolean lowSample = true;
 	private static final Logger LOG = Logger.getLogger(IntervalEstimator.class);
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
+		super.initialize(config);
 		binWidth = ConfigUtility.getInt(config, "bin.width");
 		confidenceLimit = ConfigUtility.getInt(config, "confidence.limit");
 		minConfidenceLimit = ConfigUtility.getInt(config, "min.confidence.limit");
@@ -64,8 +64,6 @@ public class IntervalEstimator extends ReinforcementLearner{
 			rewardDistr.put(action.getId(), new HistogramStat(binWidth));
 		}
 		
-		initSelectedActions();
-		
 		debugOn = ConfigUtility.getBoolean(config,"debug.on", false);
 		if (debugOn) {
 			LOG.setLevel(Level.INFO);
@@ -74,12 +72,19 @@ public class IntervalEstimator extends ReinforcementLearner{
 					confidenceLimitReductionRoundInterval + " minDistrSample:" + minDistrSample);
 		}
 	}
-
 	@Override
-	public Action[] nextActions(int roundNum) {
+	public Action[] nextActions() {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction();
+		}
+		return selActions;
+	}
+
+	public Action nextAction() {
 		Action selAction = null;
 		++logCounter;
-		++roundCounter;
+		++totalTrialCount;
+		
 		//make sure reward distributions have enough sample
 		if (lowSample) {
 			lowSample = false;
@@ -96,7 +101,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			
 			if (!lowSample && debugOn) {
 				LOG.info("got full sample");
-				lastRoundNum = roundNum;
+				lastRoundNum = totalTrialCount;
 			}
 		}
 		
@@ -106,7 +111,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			++randomSelectCount;
 		} else {
 			//reduce confidence limit
-			adjustConfLimit(roundNum);
+			adjustConfLimit();
 			
 			//select as per interval estimate, choosing distr with max upper conf bound
 			int maxUpperConfBound = 0;
@@ -126,18 +131,17 @@ public class IntervalEstimator extends ReinforcementLearner{
 			++intvEstSelectCount;
 		}
 		selAction.select();
-		selActions[0] = selAction;
-		return selActions;
+		return selAction;
 	}
 
 	/**
 	 * @param roundNum
 	 */
-	private void adjustConfLimit(int roundNum) {
+	private void adjustConfLimit() {
 		if (curConfidenceLimit > minConfidenceLimit) {
-			int redStep = (roundNum - lastRoundNum) / confidenceLimitReductionRoundInterval;
+			int redStep = (int)((totalTrialCount - lastRoundNum) / confidenceLimitReductionRoundInterval);
 			if (debugOn) {
-				LOG.info("redStep:" +  redStep + " roundNum:"  + roundNum + " lastRoundNum:" + lastRoundNum);
+				LOG.info("redStep:" +  redStep + " roundNum:"  + totalTrialCount + " lastRoundNum:" + lastRoundNum);
 			}
 			if (redStep > 0) {
 				curConfidenceLimit -=  (redStep * confidenceLimitReductionStep);
@@ -145,9 +149,9 @@ public class IntervalEstimator extends ReinforcementLearner{
 					curConfidenceLimit = minConfidenceLimit;
 				}
 				if (debugOn) {
-					LOG.info("reduce conf limit roundNum:" +  roundNum + " lastRoundNum:"  + lastRoundNum);
+					LOG.info("reduce conf limit roundNum:" +  totalTrialCount + " lastRoundNum:"  + lastRoundNum);
 				}
-				lastRoundNum = roundNum;
+				lastRoundNum = totalTrialCount;
 			}
 		}
 	}
