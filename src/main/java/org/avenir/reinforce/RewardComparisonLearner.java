@@ -15,36 +15,44 @@
  * permissions and limitations under the License.
  */
 
+
 package org.avenir.reinforce;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.util.CategoricalSampler;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.SimpleStat;
 
-
 /**
- * Action pursuit larner
  * @author pranab
  *
  */
-public class ActionPursuitLearner extends ReinforcementLearner {
-	private double learningRate;
+public class RewardComparisonLearner extends ReinforcementLearner {
+	private double preferenceChangeRate;
+	private double refRewardChangeRate;
+	private double intialRefReward;
 	private CategoricalSampler sampler = new CategoricalSampler();
+	private Map<String, Double> actionPrefs = new HashMap<String, Double>();
+	private double refReward;
+	private Map<String, Double> expDistr = new HashMap<String, Double>();
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
-		learningRate  = ConfigUtility.getDouble(config, "pursuit.learning.rate", 0.05);
-        
+		preferenceChangeRate  = ConfigUtility.getDouble(config, "preference.change.rate", 0.01);
+		refRewardChangeRate  = ConfigUtility.getDouble(config, "reference.reward.change.rate", 0.01);
+		intialRefReward = ConfigUtility.getDouble(config, "intial.reference.reward", 100.0);
+		refReward = intialRefReward;
+		
 		double intialProb = 1.0 / actions.size();
         for (Action action : actions) {
         	sampler.add(action.getId(), intialProb);
         	rewardStats.put(action.getId(), new SimpleStat());
+        	actionPrefs.put(action.getId(), 0.0);
         }
  	}
-	
 	
 	@Override
 	public Action[] nextActions() {
@@ -61,22 +69,27 @@ public class ActionPursuitLearner extends ReinforcementLearner {
 		Action action = null;
 		double distr = 0;
 		++totalTrialCount;
-
+		
 		if (rewarded) {
-			Action bestAction = findBestAction();
+			sampler.initialize();
+			
+			//exponentials
+			double expSum = 0;
 	        for (Action thisAction : actions) {
-        		distr = sampler.get(thisAction.getId());
-	        	if (thisAction == bestAction) {
-	        		distr += learningRate * (1.0 - distr);
-	        	} else {
-	        		distr -= learningRate * distr;
-	        	}
-        		sampler.set(thisAction.getId(), distr);
-	        }	
+	        	distr = Math.exp(actionPrefs.get(thisAction.getId()));
+	        	expDistr.put(thisAction.getId(), distr);
+	        	expSum += distr;
+	        }
+	        
+	        //prob distr
+            for (Action thisAction : actions) {
+            	distr = expDistr.get(thisAction.getId()) / expSum;
+            	sampler.add(thisAction.getId(), distr);
+            }	
 	        rewarded = false;
 		}
-        action = findAction(sampler.sample());
-
+		
+		action = findAction(sampler.sample());
 		action.select();
 		return action;
 	}
@@ -86,6 +99,14 @@ public class ActionPursuitLearner extends ReinforcementLearner {
 		rewardStats.get(actionId).add(reward);
 		rewarded = true;
 		findAction(actionId).reward(reward);
+		
+		//update action preference
+		double meanReward = rewardStats.get(actionId).getMean();
+		double actionPref = actionPrefs.get(actionId) + preferenceChangeRate * (meanReward - refReward);
+		actionPrefs.put(actionId, actionPref);
+		
+		//update reference reward
+		refReward += refRewardChangeRate * (meanReward - refReward);
 	}
 
 }

@@ -17,7 +17,6 @@
 
 package org.avenir.reinforce;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
@@ -34,7 +33,6 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
 	private double minProb;
-	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	private static final String PROB_RED_NONE = "none";
 	private static final String PROB_RED_LINEAR = "linear";
 	private static final String PROB_RED_LOG_LINEAR = "logLinear";
@@ -109,9 +107,9 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	}
 
 	@Override
-	public void setReward(String action, int reward) {
-		rewardStats.get(action).add(reward);
-		findAction(action).reward(reward);
+	public void setReward(String actionId, int reward) {
+		rewardStats.get(actionId).add(reward);
+		findAction(actionId).reward(reward);
 	}
 
 }
