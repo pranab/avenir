@@ -53,9 +53,9 @@ public class RandomGreedyLearner extends ReinforcementLearner {
  	}
 
 	@Override
-	public Action[] nextActions(int roundNum) {
+	public Action[] nextActions() {
 		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction(roundNum + i);
+			selActions[i] = nextAction();
 		}
 		return selActions;
 	}	
@@ -64,9 +64,10 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	 * @param roundNum
 	 * @return
 	 */
-	public Action nextAction(int roundNum) {
+	public Action nextAction() {
 		double curProb = 0.0;
 		Action action = null;
+		++totalTrialCount;
 
 		//check for min trial requirement
 		action = selectActionBasedOnMinTrial();
@@ -75,9 +76,9 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 			if (probRedAlgorithm.equals(PROB_RED_NONE )) {
 				curProb = randomSelectionProb;
 			} else if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-				curProb = randomSelectionProb * probReductionConstant / roundNum ;
+				curProb = randomSelectionProb * probReductionConstant / totalTrialCount ;
 			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )){
-	   			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
+	   			curProb = randomSelectionProb * probReductionConstant * Math.log(totalTrialCount) / totalTrialCount;
 			} else {
 				throw new IllegalArgumentException("Invalid probability reduction algorithms");
 			}
@@ -103,7 +104,6 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	            }
 	    	}
 		}
-		++totalTrialCount;
 		action.select();
 		return action;
 	}

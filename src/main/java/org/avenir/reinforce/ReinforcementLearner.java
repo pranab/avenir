@@ -18,10 +18,12 @@
 package org.avenir.reinforce;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.SimpleStat;
 
 
 /**
@@ -35,7 +37,9 @@ public abstract class ReinforcementLearner {
 	protected Action[] selActions;
 	protected long totalTrialCount;
 	protected int minTrial;
-	
+	protected Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	protected boolean rewarded;
+
 
 	/**
 	 * sets actions
@@ -76,7 +80,7 @@ public abstract class ReinforcementLearner {
 	 * @param roundNum
 	 * @return actionID
 	 */
-	public abstract Action[] nextActions(int roundNum);
+	public abstract Action[] nextActions();
 
 	/**
 	 * @param action
@@ -135,5 +139,19 @@ public abstract class ReinforcementLearner {
 			}
 		}
 		return action;
+	}
+	
+	/**
+	 * @return
+	 */
+	public Action findBestAction() {
+		String actionId = null;
+		double maxReward = -1.0;
+		for (String thisActionId : rewardStats.keySet()) {
+			if (rewardStats.get(thisActionId).getMean() > maxReward) {
+				actionId = thisActionId;
+			}
+		}
+		return findAction(actionId);
 	}
 }

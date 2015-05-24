@@ -30,11 +30,9 @@ import org.chombo.util.SimpleStat;
  *
  */
 public class SoftMaxLearner extends ReinforcementLearner {
-	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	private Map<String, Double> expDistr = new HashMap<String, Double>();
 	private double tempConstant;
 	private double minTempConstant;
-	private boolean rewardStatsModified;
 	private CategoricalSampler sampler = new CategoricalSampler();
 	private String tempRedAlgorithm;
 	private static final String TEMP_RED_LINEAR = "linear";
@@ -53,9 +51,9 @@ public class SoftMaxLearner extends ReinforcementLearner {
  	}
 
 	@Override
-	public Action[] nextActions(int roundNum) {
+	public Action[] nextActions() {
 		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction(roundNum + i);
+			selActions[i] = nextAction();
 		}
 		return selActions;
 	}
@@ -64,15 +62,16 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	 * @param roundNum
 	 * @return
 	 */
-	public Action nextAction(int roundNum) {
+	public Action nextAction() {
 		double curProb = 0.0;
 		Action action = null;
+		++totalTrialCount;
 		
 		//check for min trial requirement
 		action = selectActionBasedOnMinTrial();
 
 		if (null == action) {
-			if (rewardStatsModified) {
+			if (rewarded) {
 				sampler.initialize();
 				expDistr.clear();
 				
@@ -90,7 +89,7 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	            	double distr = expDistr.get(thisAction.getId()) / sum;
 	            	sampler.add(thisAction.getId(), distr);
 	            }	
-	            rewardStatsModified = false;
+	            rewarded = false;
 			}
             action = findAction(sampler.sample());
             
@@ -110,7 +109,6 @@ public class SoftMaxLearner extends ReinforcementLearner {
             }            
 		}
 		
-		++totalTrialCount;
 		action.select();
 		return action;
 	}
@@ -119,7 +117,7 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	public void setReward(String action, int reward) {
 		rewardStats.get(action).add(reward);
 		findAction(action).reward(reward);
-		rewardStatsModified = true;
+		rewarded = true;
 	}
 
 }

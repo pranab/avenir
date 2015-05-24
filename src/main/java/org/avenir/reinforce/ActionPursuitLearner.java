@@ -33,7 +33,6 @@ import org.chombo.util.SimpleStat;
 public class ActionPursuitLearner extends ReinforcementLearner {
 	private double learningRate;
 	private CategoricalSampler sampler = new CategoricalSampler();
-	private String rewardedAction;
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
@@ -43,14 +42,15 @@ public class ActionPursuitLearner extends ReinforcementLearner {
 		double intialProb = 1.0 / actions.size();
         for (Action action : actions) {
         	sampler.add(action.getId(), intialProb);
+        	rewardStats.put(action.getId(), new SimpleStat());
         }
  	}
 	
 	
 	@Override
-	public Action[] nextActions(int roundNum) {
+	public Action[] nextActions() {
 		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction(roundNum + i);
+			selActions[i] = nextAction();
 		}
 		return selActions;
 	}
@@ -59,31 +59,34 @@ public class ActionPursuitLearner extends ReinforcementLearner {
 	 * @param roundNum
 	 * @return
 	 */
-	public Action nextAction(int roundNum) {
+	public Action nextAction() {
 		Action action = null;
 		double distr = 0;
-		if (null != rewardedAction) {
+		++totalTrialCount;
+
+		if (rewarded) {
+			Action bestAction = findBestAction();
 	        for (Action thisAction : actions) {
         		distr = sampler.get(thisAction.getId());
-	        	if (thisAction.equals(rewardedAction)) {
+	        	if (thisAction == bestAction) {
 	        		distr += learningRate * (1.0 - distr);
 	        	} else {
 	        		distr -= learningRate * distr;
 	        	}
         		sampler.set(thisAction.getId(), distr);
 	        }	
-	        rewardedAction = null;
+	        rewarded = false;
 		}
         action = findAction(sampler.sample());
 
-		++totalTrialCount;
 		action.select();
 		return action;
 	}
 	
 	@Override
 	public void setReward(String actionId, int reward) {
-		rewardedAction = actionId;
+		rewardStats.get(actionId).add(reward);
+		rewarded = true;
 		findAction(actionId).reward(reward);
 	}
 

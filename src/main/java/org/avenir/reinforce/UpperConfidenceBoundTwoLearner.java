@@ -29,7 +29,6 @@ import org.chombo.util.SimpleStat;
  *
  */
 public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
-	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	private Map<String, Integer> numEpochs = new HashMap<String, Integer>();
 	private int rewardScale;
 	private double alpha;
@@ -47,11 +46,22 @@ public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
         	numEpochs.put(action.getId(), 0);
         }
 	}
-
 	@Override
-	public Action[] nextActions(int roundNum) {
+	public Action[] nextActions() {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction();
+		}
+		return selActions;
+	}
+
+
+	/**
+	 * @return
+	 */
+	public Action nextAction() {
 		Action action = null;
 		double score = 0;
+		++totalTrialCount;
 		
 		//check for min trial requirement
 		action = selectActionBasedOnMinTrial();
@@ -88,10 +98,8 @@ public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
 			}
 		}
 		
-		++totalTrialCount;
 		action.select();
-		selActions[0] = action;
-		return selActions;
+		return action;
 	}
 
 	@Override
