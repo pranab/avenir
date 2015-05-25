@@ -32,7 +32,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class IntervalEstimator extends ReinforcementLearner{
+public class IntervalEstimatorLearner extends ReinforcementLearner{
 	private int binWidth;
 	private int confidenceLimit;
 	private int minConfidenceLimit;
@@ -47,7 +47,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 	private boolean debugOn;
 	private long logCounter;
 	private boolean lowSample = true;
-	private static final Logger LOG = Logger.getLogger(IntervalEstimator.class);
+	private static final Logger LOG = Logger.getLogger(IntervalEstimatorLearner.class);
 	
 	@Override
 	public void initialize(Map<String, Object> config) {

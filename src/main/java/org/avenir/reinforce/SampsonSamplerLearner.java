@@ -30,7 +30,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class SampsonSampler extends ReinforcementLearner {
+public class SampsonSamplerLearner extends ReinforcementLearner {
 	protected  Map<String, List<Integer>> rewardDistr = new HashMap<String, List<Integer>>();
 	private int minSampleSize;
 	private int maxReward;

@@ -35,11 +35,11 @@ public class ReinforcementLearnerFactory {
 	public static ReinforcementLearner create(String learnerType, String[] actions, Map<String, Object> config) {
 		ReinforcementLearner learner = null;
 		if (learnerType.equals("intervalEstimator")) {
-			learner = new IntervalEstimator();
+			learner = new IntervalEstimatorLearner();
 		} else if (learnerType.equals("sampsonSampler")) {
-			learner = new SampsonSampler();
+			learner = new SampsonSamplerLearner();
 		} else if (learnerType.equals("optimisticSampsonSampler")) {
-			learner = new OptimisticSampsonSampler();
+			learner = new OptimisticSampsonSamplerLearner();
 		} else if (learnerType.equals("randomGreedy")) {
 			learner = new RandomGreedyLearner();
 		} else if (learnerType.equals("upperConfidenceBoundOne")) {
