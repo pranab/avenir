@@ -62,7 +62,7 @@ public class UpperConfidenceBoundOneLearner extends ReinforcementLearner {
 		
 		if (null == action) {
 	        for (Action thisAction : actions) {
-	        	double thisReward = (rewardStats.get(thisAction.getId()).getMean());
+	        	double thisReward = (rewardStats.get(thisAction.getId()).getAvgValue());
 	        	double thisScore = thisReward + Math.sqrt(2.0 * Math.log(totalTrialCount) / thisAction.getTrialCount());
 	        	if (thisScore >  score) {
 	        		score = thisScore;

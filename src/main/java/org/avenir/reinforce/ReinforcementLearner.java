@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.chombo.util.AverageValue;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.SimpleStat;
 
@@ -37,7 +38,7 @@ public abstract class ReinforcementLearner {
 	protected Action[] selActions;
 	protected long totalTrialCount;
 	protected int minTrial;
-	protected Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	protected Map<String, AverageValue> rewardStats = new HashMap<String, AverageValue>();
 	protected boolean rewarded;
 
 
@@ -148,7 +149,7 @@ public abstract class ReinforcementLearner {
 		String actionId = null;
 		double maxReward = -1.0;
 		for (String thisActionId : rewardStats.keySet()) {
-			if (rewardStats.get(thisActionId).getMean() > maxReward) {
+			if (rewardStats.get(thisActionId).getAvgValue() > maxReward) {
 				actionId = thisActionId;
 			}
 		}
