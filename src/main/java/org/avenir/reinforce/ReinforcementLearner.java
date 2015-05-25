@@ -40,6 +40,7 @@ public abstract class ReinforcementLearner {
 	protected int minTrial;
 	protected Map<String, AverageValue> rewardStats = new HashMap<String, AverageValue>();
 	protected boolean rewarded;
+	protected int rewardScale;
 
 
 	/**
@@ -73,6 +74,7 @@ public abstract class ReinforcementLearner {
 	public  void initialize(Map<String, Object> config) {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
 		batchSize = ConfigUtility.getInt(config, "batch.size",  1);
+		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
 		initSelectedActions();
 	}
 	
