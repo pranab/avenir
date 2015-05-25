@@ -52,6 +52,8 @@ public class ReinforcementLearnerFactory {
 			learner = new ActionPursuitLearner();
 		} else if (learnerType.equals("rewardComparison")) {
 			learner = new RewardComparisonLearner();
+		} else if (learnerType.equals("exponentialWeight")) {
+			learner = new ExponentialWeightLearner();
 		} else {
 			throw new IllegalArgumentException("invalid learner type:" + learnerType);
 		}

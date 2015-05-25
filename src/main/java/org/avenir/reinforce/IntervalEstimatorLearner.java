@@ -72,14 +72,11 @@ public class IntervalEstimatorLearner extends ReinforcementLearner{
 					confidenceLimitReductionRoundInterval + " minDistrSample:" + minDistrSample);
 		}
 	}
-	@Override
-	public Action[] nextActions() {
-		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction();
-		}
-		return selActions;
-	}
 
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.ReinforcementLearner#nextAction()
+	 */
+	@Override	
 	public Action nextAction() {
 		Action selAction = null;
 		++logCounter;

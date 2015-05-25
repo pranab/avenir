@@ -50,18 +50,11 @@ public class SampsonSamplerLearner extends ReinforcementLearner {
 		findAction(actionID).reward(reward);
 	}
 	
-	@Override
-	public Action[] nextActions() {
-		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction();
-		}
-		return selActions;
-	}
-
 	/**
 	 * Select action
 	 * @return
 	 */
+	@Override
 	public Action  nextAction() {
 		String slectedActionID = null;
 		int maxRewardCurrent = 0;

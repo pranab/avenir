@@ -83,7 +83,14 @@ public abstract class ReinforcementLearner {
 	 * @param roundNum
 	 * @return actionID
 	 */
-	public abstract Action[] nextActions();
+	public  Action[] nextActions() {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction();
+		}
+		return selActions;
+	}
+	
+	public abstract Action nextAction();
 
 	/**
 	 * @param action

@@ -46,17 +46,10 @@ public class ActionPursuitLearner extends ReinforcementLearner {
  	}
 	
 	
-	@Override
-	public Action[] nextActions() {
-		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction();
-		}
-		return selActions;
-	}
-
 	/**
 	 * @return
 	 */
+	@Override
 	public Action nextAction() {
 		Action action = null;
 		double distr = 0;

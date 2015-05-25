@@ -50,18 +50,11 @@ public class RandomGreedyLearner extends ReinforcementLearner {
         }
  	}
 
-	@Override
-	public Action[] nextActions() {
-		for (int i = 0; i < batchSize; ++i) {
-			selActions[i] = nextAction();
-		}
-		return selActions;
-	}	
-
 	/**
 	 * @param roundNum
 	 * @return
 	 */
+	@Override
 	public Action nextAction() {
 		double curProb = 0.0;
 		Action action = null;
