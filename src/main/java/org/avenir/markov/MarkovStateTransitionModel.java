@@ -169,6 +169,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 		private Map<String, StateTransitionProbability> classBasedTransProb =
 				new HashMap<String, StateTransitionProbability>();
 		private int count;
+		private int transProbScale;
 		private boolean isClassBasedModel;;
 		private String classLabel;
 		private String fromSt;
@@ -189,7 +190,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
         	fieldDelim = conf.get("field.delim.out", ",");
         	states = conf.get("model.states").split(",");
         	transProb = new StateTransitionProbability(states, states);
-        	int transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	transProbScale = conf.getInt("trans.prob.scale", 1000);
         	transProb.setScale(transProbScale);
         	isClassBasedModel = conf.getInt("class.label.field.ord", -1) >= 0;
         	outputStates = conf.getBoolean("output.states", true); 
@@ -257,7 +258,8 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	
             	StateTransitionProbability clsTransProb = classBasedTransProb.get(classLabel);
             	if (null == clsTransProb) {
-            		clsTransProb = new StateTransitionProbability();
+            		clsTransProb = new StateTransitionProbability(states, states);
+            		clsTransProb.setScale(transProbScale);
             		classBasedTransProb.put(classLabel, clsTransProb);
             	}
         		clsTransProb.add(fromSt, toSt, count);
