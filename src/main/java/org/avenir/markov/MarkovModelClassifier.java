@@ -86,6 +86,7 @@ public class MarkovModelClassifier extends Configured implements Tool {
 		private boolean inValidationMode;
 		private StringBuilder stBld =  new StringBuilder();
 		private int classLabelFieldOrd = -1;
+		private int transProbScale;
         private static final Logger LOG = Logger.getLogger(ClassifierMapper.class);
 
         /* (non-Javadoc)
@@ -113,6 +114,8 @@ public class MarkovModelClassifier extends Configured implements Tool {
         	List<String> lines = Utility.getFileLines(conf, "mm.model.path");
         	model = new MarkovModel(lines,  isClassLabelBased);
         	classLabels = conf.get("class.labels").split(",");
+        	transProbScale = conf.getInt("trans.prob.scale", 1000);
+
         }
         
         /* (non-Javadoc)
@@ -127,8 +130,8 @@ public class MarkovModelClassifier extends Configured implements Tool {
 	        		//cumulative log odds for 2 classes based on respective state transition probability matrix
 	        		frState = items[i-1];
 	        		toState = items[i];
-	        		logOdds += Math.log(model.getStateTransProbability(classLabels[0], frState, toState) /
-	        			model.getStateTransProbability(classLabels[1], frState, toState));
+	        		logOdds += Math.log((double)model.getStateTransProbability(classLabels[0], frState, toState) / 
+	        				(double)model.getStateTransProbability(classLabels[1], frState, toState));
 	        	}
 	        	predClass = logOdds > 0 ? classLabels[0] : classLabels[1];
 	        	stBld.delete(0, stBld.length());
