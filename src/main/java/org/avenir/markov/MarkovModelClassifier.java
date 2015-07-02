@@ -56,10 +56,8 @@ public class MarkovModelClassifier extends Configured implements Tool {
         Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(MarkovModelClassifier.ClassifierMapper.class);
         
-        job.setOutputKeyClass(NullWritable.class);
-        job.setOutputValueClass(Text.class);
-
-
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setNumReduceTasks(0);
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
@@ -87,6 +85,7 @@ public class MarkovModelClassifier extends Configured implements Tool {
 		private StringBuilder stBld =  new StringBuilder();
 		private int classLabelFieldOrd = -1;
 		private int transProbScale;
+		private double logOddsThreshold = 0;
         private static final Logger LOG = Logger.getLogger(ClassifierMapper.class);
 
         /* (non-Javadoc)
@@ -116,6 +115,10 @@ public class MarkovModelClassifier extends Configured implements Tool {
         	classLabels = conf.get("class.labels").split(",");
         	transProbScale = conf.getInt("trans.prob.scale", 1000);
 
+        	if (null != conf.get("log.odds.threshold")) {
+        		logOddsThreshold = Double.parseDouble(conf.get("log.odds.threshold"));
+        	} 
+        	LOG.debug("logOddsThreshold:" + logOddsThreshold);
         }
         
         /* (non-Javadoc)
@@ -133,7 +136,7 @@ public class MarkovModelClassifier extends Configured implements Tool {
 	        		logOdds += Math.log((double)model.getStateTransProbability(classLabels[0], frState, toState) / 
 	        				(double)model.getStateTransProbability(classLabels[1], frState, toState));
 	        	}
-	        	predClass = logOdds > 0 ? classLabels[0] : classLabels[1];
+	        	predClass = logOdds > logOddsThreshold ? classLabels[0] : classLabels[1];
 	        	stBld.delete(0, stBld.length());
 	        	stBld.append(items[idFieldOrd]).append(fieldDelim);
 	        	if (inValidationMode){
