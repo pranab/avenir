@@ -84,11 +84,15 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
 		private String[] items;
 		private int skipFieldCount;
         private Tuple outKey = new Tuple();
-		private IntWritable outVal  = new IntWritable();
+		private IntWritable outVal  = new IntWritable(1);
 		private int classLabelFieldOrd;
 		private String classLabel;
 		private String treeRootSymbol;
 		private int rootCount;
+		private int maxSeqLength;
+		private int seqLength;
+		private int start;
+		private int end;
 
         private static final Logger LOG = Logger.getLogger(SuffixTreeMapper.class);
 
@@ -108,6 +112,7 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
             }
             
             treeRootSymbol = conf.get("tree.root.symbol", "$");
+            maxSeqLength = conf.getInt("max.seq.length",  5);
         }
         
         /* (non-Javadoc)
@@ -116,7 +121,6 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
         protected void map(LongWritable key, Text value, Context context)
         		throws IOException, InterruptedException {
         	items  =  value.toString().split(fieldDelimRegex);
-        	outVal.set(1);
         	rootCount = 0;
         	
     		if (classLabelFieldOrd >= 0) {
@@ -126,18 +130,25 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
 
     		//generate suffix nodes
         	if (items.length >= (skipFieldCount + 2)) {
-	        	for (int i = skipFieldCount; i < items.length; ++i) {
-	        		outKey.initialize();
-	        		if (null != classLabel) {
-	        			//class label based PST model
-	        			outKey.append(classLabel);
-	        		}
-	        		for (int j = i;  j < items.length; ++j) {
-	        			outKey.append(items[j]);
-	        			context.write(outKey, outVal);
-	        			++rootCount;
-	        		}
-	        	}
+        		//sequence length 2 upto max
+        		for (int w = 2;  w <= maxSeqLength;  ++w ) {
+        			start = skipFieldCount;
+        			end = start  + w;
+  
+        			//sliding window
+        			for (  ; end <= items.length; ++start, ++end) {
+    	        		outKey.initialize();
+       	        		if (null != classLabel) {
+    	        			//class label based PST model
+    	        			outKey.append(classLabel);
+    	        		}
+    	        		for (int i = start;  i < end;  ++i) {
+    	        			outKey.append(items[i]);
+        				}
+   	        			++rootCount;
+   	        		    context.write(outKey, outVal);
+        			}
+        		}
         	
 	        	//root node
         		outKey.initialize();
