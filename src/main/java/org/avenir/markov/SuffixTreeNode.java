@@ -33,6 +33,12 @@ public class SuffixTreeNode {
 
 	
 	/**
+	 * 
+	 */
+	public SuffixTreeNode() {
+	}
+	
+	/**
 	 * @param token
 	 */
 	public SuffixTreeNode(String token) {

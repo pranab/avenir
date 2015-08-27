@@ -93,6 +93,7 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
 		private int seqLength;
 		private int start;
 		private int end;
+        private int[] idOrdinals;
 
         private static final Logger LOG = Logger.getLogger(SuffixTreeMapper.class);
 
@@ -113,6 +114,10 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
             
             treeRootSymbol = conf.get("tree.root.symbol", "$");
             maxSeqLength = conf.getInt("max.seq.length",  5);
+            
+           	//record partition  id
+        	idOrdinals = Utility.intArrayFromString(conf.get("id.field.ordinals"), fieldDelimRegex);
+            
         }
         
         /* (non-Javadoc)
@@ -138,8 +143,12 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
         			//sliding window
         			for (  ; end <= items.length; ++start, ++end) {
     	        		outKey.initialize();
+    	        		
+    	        		//partition id
+    	        		outKey.addFromArray(items, idOrdinals);
+    	        		
+	        			//class label based PST model
        	        		if (null != classLabel) {
-    	        			//class label based PST model
     	        			outKey.append(classLabel);
     	        		}
     	        		for (int i = start;  i < end;  ++i) {
@@ -159,10 +168,9 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
         		outKey.append(treeRootSymbol);
         		outVal.set(rootCount);
     			context.write(outKey, outVal);
-	        	
         	}
-        }        
-	}	
+        }
+ 	}	
 	
 	
 	/**
