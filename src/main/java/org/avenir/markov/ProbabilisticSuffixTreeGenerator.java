@@ -18,6 +18,10 @@
 package org.avenir.markov;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -45,6 +49,8 @@ import org.chombo.util.Utility;
  *
  */
 public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool {
+	private static final String configDelim = ",";
+
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
@@ -94,7 +100,10 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
 		private int start;
 		private int end;
         private int[] idOrdinals;
-
+        private boolean inputFormatSequential;
+        private List<String> window = new  ArrayList<String>();
+        private Map<String, List<String>> partitionedWindows = new HashMap<String, List<String>>();
+        private int dataFieldOrdinal;
         private static final Logger LOG = Logger.getLogger(SuffixTreeMapper.class);
 
         /* (non-Javadoc)
@@ -118,6 +127,10 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
            	//record partition  id
         	idOrdinals = Utility.intArrayFromString(conf.get("id.field.ordinals"), fieldDelimRegex);
             
+        	inputFormatSequential = conf.getBoolean("input.format.sequential", true);
+        	if (!inputFormatSequential) {
+        		dataFieldOrdinal = Utility.assertIntConfigParam(conf,  "data.field.ordinal",  "for non sequential data data field ordinal must be specified");
+        	}
         }
         
         /* (non-Javadoc)
@@ -134,45 +147,103 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
     		}
 
     		//generate suffix nodes
-        	if (items.length >= (skipFieldCount + 2)) {
-        		//sequence length 2 upto max
-        		for (int w = 2;  w <= maxSeqLength;  ++w ) {
-        			start = skipFieldCount;
-        			end = start  + w;
-  
-        			//sliding window
-        			for (  ; end <= items.length; ++start, ++end) {
-    	        		outKey.initialize();
-    	        		
-    	        		//partition id
-    	        		outKey.addFromArray(items, idOrdinals);
-    	        		
-	        			//class label based PST model
-       	        		if (null != classLabel) {
-    	        			outKey.append(classLabel);
-    	        		}
-    	        		for (int i = start;  i < end;  ++i) {
-    	        			outKey.append(items[i]);
-        				}
-   	        			++rootCount;
-   	        		    context.write(outKey, outVal);
+    		if (inputFormatSequential) {
+	        	if (items.length >= (skipFieldCount + 2)) {
+	        		//sequence length 2 up to max
+	        		for (int w = 2;  w <= maxSeqLength;  ++w ) {
+	        			start = skipFieldCount;
+	        			end = start  + w;
+	  
+	        			//sliding window
+	        			for (  ; end <= items.length; ++start, ++end) {
+	    	        		outKey.initialize();
+	    	        		
+	    	        		//partition id
+	    	        		outKey.addFromArray(items, idOrdinals);
+	    	        		
+		        			//class label based PST model
+	       	        		if (null != classLabel) {
+	    	        			outKey.append(classLabel);
+	    	        		}
+	    	        		for (int i = start;  i < end;  ++i) {
+	    	        			outKey.append(items[i]);
+	        				}
+	   	        			++rootCount;
+	   	        		    context.write(outKey, outVal);
+	        			}
+	        	}
+        	} else {
+        			if (null != idOrdinals) {
+    					String compId = Utility.join(items, 0, idOrdinals.length, configDelim);
+    					List<String> partWindow = partitionedWindows.get(compId);
+    					if (null == partWindow) {
+    						partWindow =new  ArrayList<String>();
+    						partitionedWindows.put(compId, partWindow);
+    					}
+    					updateWindowAndEmit(partWindow, context);
+        			} else {
+        				updateWindowAndEmit(window, context);
         			}
         		}
-        	
+	        	
+	        	
 	        	//root node
+	        	emitRoot( context);
+    		}
+        }
+        
+        /**
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void emitRoot(Context context) throws IOException, InterruptedException {
+        	//root node
+    		outKey.initialize();
+    		outKey.addFromArray(items, idOrdinals);
+    		if (null != classLabel) {
+    			//class label based PST model
+    			outKey.append(classLabel);
+    		}
+    		outKey.append(treeRootSymbol);
+    		outVal.set(rootCount);
+			context.write(outKey, outVal);
+        }
+        
+	/**
+	 * @param window
+	 * @param context
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	private void updateWindowAndEmit(List<String> window, Context context) throws IOException, InterruptedException {
+		window.add(items[dataFieldOrdinal]);
+		if (window.size() > maxSeqLength) {
+			window.remove(0);
+		}
+		if (window.size() == maxSeqLength) {
+    		for (int w = 2;  w <= maxSeqLength;  ++w ) {
+    			end =  w;
         		outKey.initialize();
-        		if (null != classLabel) {
-        			//class label based PST model
+        		
+        		//partition Id
+        		outKey.addFromArray(items, idOrdinals);
+    			
+        		//class label based PST model
+	        	if (null != classLabel) {
         			outKey.append(classLabel);
         		}
-        		outKey.append(treeRootSymbol);
-        		outVal.set(rootCount);
-    			context.write(outKey, outVal);
-        	}
-        }
- 	}	
+        		for (int i = 0; i < end; ++i) {
+        			outKey.add(window.get(i));
+        		}
+       		    context.write(outKey, outVal);
+       		    ++rootCount;
+    		}        			
+		}
+	}
 	
-	
+}	
+       
 	/**
 	 * @author pranab
 	 *
