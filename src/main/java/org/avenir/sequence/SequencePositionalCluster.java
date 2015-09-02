@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.Utility;
+import org.hoidla.query.Criteria;
 import org.hoidla.util.ExplicitlyTimetStampedValue;
 import org.hoidla.window.EventLocality;
 import org.hoidla.window.TimeBoundEventLocalityAnalyzer;
@@ -52,7 +53,7 @@ public class SequencePositionalCluster  extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "Higher conditional probability for sequence data with probabilistic suffix tree";
+        String jobName = "Clustering based postion of data points in sequence meeting certain criteria ";
         job.setJobName(jobName);
         
         job.setJarByClass(SequencePositionalCluster.class);
@@ -93,6 +94,8 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         private ExplicitlyTimetStampedValue<Double> windowData;
         private double score;
         private double scoreThreshold;
+        private Criteria criteria;
+        private double[] operandValues;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -129,6 +132,10 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         	}
         	window = new TimeBoundEventLocalityAnalyzer(windowTimeSpan, timeStep, strategyContext);
         	scoreThreshold = Utility.assertDoubleConfigParam(conf, "score.threshold",  "missing score threhold parameter");
+        	
+        	String condExpression = Utility.assertStringConfigParam(conf, "cond.expression", "mission conditional expression");
+        	criteria = Criteria.createCriteriaFromExpression(condExpression);
+        	operandValues = new double[criteria.getNumPredicates()];
         }
 
         /* (non-Javadoc)
@@ -141,6 +148,9 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         	timeStamp = Long.parseLong(items[seqNumFieldOrdinal]);
         	
         	//add to window
+        	for (int i = 0; i < operandValues.length; ++i) {
+        		operandValues[i] = quantValue;
+        	}
         	windowData = new ExplicitlyTimetStampedValue<Double>(quantValue, timeStamp, isConditionMet());
         	window.add(windowData);
         	score = window.getScore();
@@ -151,8 +161,7 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         }	
         
         private boolean isConditionMet() {
-        	//TODO
-        	return true;
+         	return criteria.evaluate(operandValues);
         }
 	}	
 	
