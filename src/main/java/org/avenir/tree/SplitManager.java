@@ -55,6 +55,7 @@ public class SplitManager {
 		this.schema = schema;
 		List<String> lines = Utility.getFileLines(config, statFilePathParam);
 		for (String line : lines) {
+			//each line is decision path
 			List<AttributePredicate> decisionPath = new ArrayList<AttributePredicate>(); 
 			decisionPaths.add(decisionPath);
 			
@@ -111,7 +112,63 @@ public class SplitManager {
 		}
 		return candidateAttrs;
 	}
+
+	/**
+	 * @param attr
+	 * @param scanInterVal
+	 * @return
+	 */
+	public List<AttributePredicate> createIntAttrPredicates(int attr) {
+		FeatureField field = schema.findFieldByOrdinal(attr);
+		double min = field.getMin();
+		double max = field.getMax();
+		double splitScanInterval = field.getSplitScanInterval();
+		
+		//number of splits
+		int numSplits =(int)( (max - min) / splitScanInterval);
+		if (0 == numSplits) {
+			numSplits = 1;
+			splitScanInterval = (max - min) / 2;
+		}
+		int[] splitPoints = new int[numSplits];
+		
+		//split locations
+		int splitPoint = (int)(min + splitScanInterval);
+		for (int i = 0; i < numSplits; ++i, splitPoint += splitScanInterval) {
+			splitPoints[i] = splitPoint;
+		}
+		
+		return createIntAttrPredicates(attr,  splitPoints);
+	}
 	
+	/**
+	 * @param attr
+	 * @param scanInterVal
+	 * @return
+	 */
+	public List<AttributePredicate> createDoubleAttrPredicates(int attr) {
+		FeatureField field = schema.findFieldByOrdinal(attr);
+		double min = field.getMin();
+		double max = field.getMax();
+		double splitScanInterval = field.getSplitScanInterval();
+		
+		//number of splits
+		int numSplits =(int)( (max - min) / splitScanInterval);
+		if (0 == numSplits) {
+			numSplits = 1;
+			splitScanInterval = (max - min) / 2;
+		}
+		double[] splitPoints = new double[numSplits];
+		
+		//split locations
+		double splitPoint = min + splitScanInterval;
+		for (int i = 0; i < numSplits; ++i, splitPoint += splitScanInterval) {
+			splitPoints[i] = splitPoint;
+		}
+		
+		return createDoubleAttrPredicates(attr,  splitPoints);
+	}
+
 	/**
 	 * @param attr
 	 * @param splitPoints
