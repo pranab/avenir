@@ -23,7 +23,7 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 /**
- * Info content based stat for whole data set without split
+ * Info content based stat for based on entropy or gini index
  * @author pranab
  *
  */
@@ -33,6 +33,21 @@ public class InfoContentStat {
 	private int totalCount;
     private static final Logger LOG = Logger.getLogger(InfoContentStat.class);
 	
+	/**
+	 * 
+	 */
+	public void initialize() {
+		classValCount.clear();
+		classValPr.clear();
+		totalCount = 0;
+	}
+	
+	/**
+	 * @param classVal
+	 */
+	public void incrClassValCount(String classVal) {
+		countClassVal(classVal,1);
+	}
 	
 	/**
 	 * @param classVal

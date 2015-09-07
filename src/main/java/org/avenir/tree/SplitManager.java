@@ -101,7 +101,7 @@ public class SplitManager {
 	/**
 	 * @return
 	 */
-	public List<Integer> getCandidateAttributes() {
+	public List<Integer> getRemainingAttributes() {
 		List<Integer> currentAttrs = getCurrentAttributes();
 		List<Integer> candidateAttrs = new ArrayList<Integer>();
 		
@@ -114,10 +114,152 @@ public class SplitManager {
 	}
 
 	/**
+	 * @return
+	 */
+	public List<Integer> getRandomRemainingAttributes(int count) {
+		List<Integer> remainingAttrs = getRemainingAttributes();
+		if (count > remainingAttrs.size()) {
+			count = remainingAttrs.size();
+		}
+		return Utility.selectRandomFromList(remainingAttrs, count);
+	}
+	
+	
+	/**
+	 * Returns list of predicates list. The top level corresponds to different split segment levels (2,3 etc)
+	 * @param attr
+	 * @return
+	 */
+	public List<List<AttributePredicate>> createIntAttrSplitPredicates(int attr) {
+		FeatureField field = schema.findFieldByOrdinal(attr);
+		List<int[]> splitList = new ArrayList<int[]>();
+		createIntPartitions(null, field, splitList);
+		
+		//converts to predicates
+		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+		for (int[] splits :  splitList) {
+			splitAttrPredicates.add( createIntAttrPredicates( attr, splits));
+		}
+		
+		return splitAttrPredicates;
+	}
+	
+    /**
+     * Create all possible splits within the max number of splits allowed
+     * @param splits previous split
+     * @param featFld
+     * @param newSplitList all possible splits
+     */
+    public void createIntPartitions(int[] splits, FeatureField field, List<int[]> newSplitList) {
+		double min = field.getMin();
+		double max = field.getMax();
+		double splitScanInterval = field.getSplitScanInterval();
+
+		//adjust number of splits
+		int numSplits =(int)( (max - min) / splitScanInterval);
+		if (0 == numSplits) {
+			splitScanInterval = (max - min) / 2;
+		}
+
+    	if (null == splits) {
+    		//first time
+    		for (int split =(int)( min + splitScanInterval) ; split < max; split += splitScanInterval) {
+    			int[] newSplits = new int[1];
+    			newSplits[0] = split;
+    			newSplitList.add(newSplits);
+    			createIntPartitions(newSplits, field, newSplitList);
+    		}
+    	} else {
+    		//create split based off last split that will contain one additional split point
+    		int len = splits.length;
+    		if (len < field.getMaxSplit() -1) {
+    			//only split the last segment of current splits
+        		for (int split = (int)(splits[len -1] + splitScanInterval);  split < max; split += splitScanInterval) {
+        			int[] newSplits = new int[len + 1];
+        			int i = 0;
+        			for (; i < len; ++i) {
+        				newSplits[i] = splits[i];
+        			}
+        			newSplits[i] = split;
+        			newSplitList.add(newSplits);
+        			
+        			//recurse to generate additional splits
+        			createIntPartitions(newSplits, field,newSplitList);
+        		}
+    		}
+    	}
+    }
+
+	/**
+	 * Returns list of predicates list. The top level corresponds to different split segment levels (2,3 etc)
+	 * @param attr
+	 * @return
+	 */
+	public List<List<AttributePredicate>> createDoubleAttrSplitPredicates(int attr) {
+		FeatureField field = schema.findFieldByOrdinal(attr);
+		List<double[]> splitList = new ArrayList<double[]>();
+		createDoublePartitions(null, field, splitList);
+		
+		//converts to predicates
+		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+		for (double[] splits :  splitList) {
+			splitAttrPredicates.add( createDoubleAttrPredicates( attr, splits));
+		}
+		return splitAttrPredicates;
+	}
+   
+    /**
+     * Create all possible splits within the max number of splits allowed
+     * @param splits previous split
+     * @param featFld
+     * @param newSplitList all possible splits
+     */
+    public void createDoublePartitions(double[] splits, FeatureField field, List<double[]> newSplitList) {
+		double min = field.getMin();
+		double max = field.getMax();
+		double splitScanInterval = field.getSplitScanInterval();
+		
+		//adjust number of splits
+		int numSplits =(int)( (max - min) / splitScanInterval);
+		if (0 == numSplits) {
+			splitScanInterval = (max - min) / 2;
+		}
+		
+    	if (null == splits) {
+    		//first time
+    		for (double split = min + splitScanInterval ; split < max; split += splitScanInterval) {
+    			double[] newSplits = new double[1];
+    			newSplits[0] = split;
+    			newSplitList.add(newSplits);
+    			createDoublePartitions(newSplits, field, newSplitList);
+    		}
+    	} else {
+    		//create split based off last split that will contain one additional split point
+    		int len = splits.length;
+    		if (len < field.getMaxSplit() -1) {
+    			//only split the last segment of current splits
+        		for (double split = splits[len -1] + splitScanInterval;  split < max; split += splitScanInterval) {
+        			double[] newSplits = new double[len + 1];
+        			int i = 0;
+        			for (; i < len; ++i) {
+        				newSplits[i] = splits[i];
+        			}
+        			newSplits[i] = split;
+        			newSplitList.add(newSplits);
+        			
+        			//recurse to generate additional splits
+        			createDoublePartitions(newSplits, field,newSplitList);
+        		}
+    		}
+    	}
+    }
+
+    /**
 	 * @param attr
 	 * @param scanInterVal
 	 * @return
 	 */
+	@Deprecated
 	public List<AttributePredicate> createIntAttrPredicates(int attr) {
 		FeatureField field = schema.findFieldByOrdinal(attr);
 		double min = field.getMin();
@@ -146,6 +288,7 @@ public class SplitManager {
 	 * @param scanInterVal
 	 * @return
 	 */
+	@Deprecated
 	public List<AttributePredicate> createDoubleAttrPredicates(int attr) {
 		FeatureField field = schema.findFieldByOrdinal(attr);
 		double min = field.getMin();
@@ -170,26 +313,36 @@ public class SplitManager {
 	}
 
 	/**
+	 * Creates predicate for each split segment
 	 * @param attr
 	 * @param splitPoints
 	 * @return
 	 */
 	public List<AttributePredicate> createIntAttrPredicates(int attr, int[] splitPoints) {
 		List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
-		for (int i = 0;  i  < splitPoints.length; ++i) {
-			if (i == splitPoints.length - 1) {
-				AttributePredicate pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
-				predicates.add(pred);
-				pred = new IntPredicate( attr, Predicate.OPERATOR_GT, splitPoints[i]);
-				predicates.add(pred);
-			} else if (i == 0) {
-				AttributePredicate pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
-			} else {
-				AttributePredicate pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i], splitPoints[i-1]);
-				predicates.add(pred);
+		AttributePredicate pred = null;
+
+		if (splitPoints.length == 1) {
+			pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[0]);
+			predicates.add(pred);
+			pred = new IntPredicate( attr, Predicate.OPERATOR_GT, splitPoints[0]);
+			predicates.add(pred);
+		} else {
+			for (int i = 0;  i  < splitPoints.length; ++i) {
+				if (i == splitPoints.length - 1) {
+					pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
+					predicates.add(pred);
+					pred = new IntPredicate( attr, Predicate.OPERATOR_GT, splitPoints[i]);
+					predicates.add(pred);
+				} else if (i == 0) {
+					pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
+					predicates.add(pred);
+				} else {
+					pred = new IntPredicate( attr, Predicate.OPERATOR_LE, splitPoints[i], splitPoints[i-1]);
+					predicates.add(pred);
+				}
 			}
 		}
-		
 		return predicates;
 	}
 	
