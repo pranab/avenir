@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.log4j.Logger;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
 import org.chombo.util.BaseAttribute;
@@ -41,7 +42,8 @@ public class SplitManager {
 	private List<List<AttributePredicate>> decisionPaths = new ArrayList<List<AttributePredicate>>();
 	private FeatureSchema schema;
 	private static final String OPERATOR_IN = "in";
-	
+	private static final Logger LOG = Logger.getLogger(SplitManager.class);
+	 
 	/**
 	 * @param config
 	 * @param statFilePathParam
@@ -255,6 +257,129 @@ public class SplitManager {
     }
 
     /**
+     * @param splitList
+     * @param cardinality
+     * @param cardinalityIndex
+     * @param numGroups
+     */
+    public void createCategoricalPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
+    		int cardinalityIndex, int numGroups) {
+    	LOG.debug("next round cardinalityIndex:" + cardinalityIndex);
+		//first time
+    	if (0 == cardinalityIndex) {
+			//initial full splits
+			List<List<String>> fullSp = createInitialCategoricalSplit(cardinality, numGroups);
+
+			//partial split shorter in length by one 
+			List<List<List<String>>> partialSpList = createPartialCategoricalSplit(cardinality,numGroups-1, numGroups);
+			
+			//split list
+			splitList.add(fullSp);
+			splitList.addAll(partialSpList);
+			
+			//recurse
+			cardinalityIndex += numGroups;
+			createCategoricalPartitions(splitList, cardinality,cardinalityIndex, numGroups);
+    	} else if (cardinalityIndex < cardinality.size()){
+    		//more elements to consume	
+    		List<List<List<String>>>  newSplitList = new ArrayList<List<List<String>>>(); 
+    		String newElement = cardinality.get(cardinalityIndex);
+    		for (List<List<String>> sp : splitList) {
+    			if (sp.size() == numGroups) {
+    				//if full split, append new element to each group within split to create new splits
+    				LOG.debug("creating new split from full split");
+    				for (int i = 0; i < numGroups; ++i) {
+        				List<List<String>> newSp = new ArrayList<List<String>>();
+    					for (int j = 0; j < sp.size(); ++j) {
+    						List<String> gr = Utility.cloneList(sp.get(j));
+    						if (j == i) {
+    							//add new element
+    							gr.add(newElement);
+    						}
+    						newSp.add(gr);
+    					}
+    					newSplitList.add(newSp);
+    				}
+    			} else {
+    				//if partial split, create new group with new element and add to split
+    				LOG.debug("creating new split from partial split");
+    				List<List<String>> newSp = new ArrayList<List<String>>();
+					for (int i = 0; i < sp.size(); ++i) {
+						List<String> gr = Utility.cloneList(sp.get(i));
+						newSp.add(gr);
+					}
+					List<String> newGr = new ArrayList<String>();
+					newGr.add(newElement);
+					newSp.add(newGr);
+					newSplitList.add(newSp);
+    			}
+    			LOG.debug("newSplitList:" + newSplitList);
+    		}
+    		
+    		//generate partial splits
+    		if (cardinalityIndex < cardinality.size() -1){        		
+    			List<List<List<String>>> partialSpList = createPartialCategoricalSplit(cardinality,cardinalityIndex, numGroups);
+				newSplitList.addAll(partialSpList);
+    		}
+    		
+    		//replace old splits with new
+			splitList.clear();
+			splitList.addAll(newSplitList);
+			
+			//recurse
+			++cardinalityIndex;
+			createCategoricalPartitions(splitList, cardinality,cardinalityIndex, numGroups);
+    	}
+    }	
+    
+    /**
+     * @param cardinality
+     * @param cardinalityIndex
+     * @param numGroups
+     * @return
+     */
+    private List<List<List<String>>> createPartialCategoricalSplit(List<String> cardinality,
+    		int cardinalityIndex, int numGroups) {
+		List<List<List<String>>> partialSplitList = new ArrayList<List<List<String>>>();
+    	if (numGroups == 2) {
+        	List<List<String>> newSp = new ArrayList<List<String>>();
+    		List<String> gr = new ArrayList<String>();
+    		for (int i = 0;i <= cardinalityIndex; ++i) {
+    			gr.add(cardinality.get(i));
+    		}
+    		newSp.add(gr);
+    		partialSplitList.add(newSp);
+    	} else {
+    		//create split list with splits shorter in length by 1
+    		List<String> partialCardinality = new ArrayList<String>();
+    		for (int i = 0; i <= cardinalityIndex; ++i) {
+    			partialCardinality.add(cardinality.get(i));
+    		}
+    		createCategoricalPartitions(partialSplitList,  partialCardinality, 0, numGroups-1);
+    	}
+    	
+		LOG.debug("partial split:" + partialSplitList);
+    	return partialSplitList;
+    }
+   
+    /**
+     * @param cardinality
+     * @param numGroups
+     * @return
+     */
+    private List<List<String>> createInitialCategoricalSplit(List<String> cardinality, int numGroups) {
+    	List<List<String>> newSp = new ArrayList<List<String>>();
+		for (int i = 0; i < numGroups; ++i) {
+			//only one member per group
+			List<String> gr = new ArrayList<String>();
+			gr.add(cardinality.get(i));
+			newSp.add(gr);
+		}
+		LOG.debug("initial split:" + newSp);
+    	return newSp;
+    }
+   
+    /**
 	 * @param attr
 	 * @param scanInterVal
 	 * @return
@@ -318,7 +443,7 @@ public class SplitManager {
 	 * @param splitPoints
 	 * @return
 	 */
-	public List<AttributePredicate> createIntAttrPredicates(int attr, int[] splitPoints) {
+	private List<AttributePredicate> createIntAttrPredicates(int attr, int[] splitPoints) {
 		List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
 		AttributePredicate pred = null;
 
@@ -351,19 +476,28 @@ public class SplitManager {
 	 * @param splitPoints
 	 * @return
 	 */
-	public List<AttributePredicate> createDoubleAttrPredicates(int attr,  double[] splitPoints) {
+	private List<AttributePredicate> createDoubleAttrPredicates(int attr,  double[] splitPoints) {
 		List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
-		for (int i = 0;  i  < splitPoints.length; ++i) {
-			if (i == splitPoints.length - 1) {
-				AttributePredicate pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
-				predicates.add(pred);
-				pred = new DoublePredicate( attr, Predicate.OPERATOR_GT, splitPoints[i]);
-				predicates.add(pred);
-			} else if (i == 0) {
-				AttributePredicate pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
-			} else {
-				AttributePredicate pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i], splitPoints[i-1]);
-				predicates.add(pred);
+		AttributePredicate pred = null;
+		if (splitPoints.length == 1) {
+			pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[0]);
+			predicates.add(pred);
+			pred = new DoublePredicate( attr, Predicate.OPERATOR_GT, splitPoints[0]);
+			predicates.add(pred);
+		} else {
+			for (int i = 0;  i  < splitPoints.length; ++i) {
+				if (i == splitPoints.length - 1) {
+					pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
+					predicates.add(pred);
+					pred = new DoublePredicate( attr, Predicate.OPERATOR_GT, splitPoints[i]);
+					predicates.add(pred);
+				} else if (i == 0) {
+					pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i]);
+					predicates.add(pred);
+				} else {
+					pred = new DoublePredicate( attr, Predicate.OPERATOR_LE, splitPoints[i], splitPoints[i-1]);
+					predicates.add(pred);
+				}
 			}
 		}
 		
