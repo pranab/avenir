@@ -42,6 +42,7 @@ public class SplitManager {
 	private List<List<AttributePredicate>> decisionPaths = new ArrayList<List<AttributePredicate>>();
 	private FeatureSchema schema;
 	private static final String OPERATOR_IN = "in";
+	private boolean treeAvailable;
 	private static final Logger LOG = Logger.getLogger(SplitManager.class);
 	 
 	/**
@@ -51,11 +52,12 @@ public class SplitManager {
 	 * @param schema
 	 * @throws IOException
 	 */
-	public SplitManager(Configuration config, String statFilePathParam,   String delim, FeatureSchema schema) 
+	public SplitManager(Configuration config, String decPathFilePathParam,   String delim, FeatureSchema schema) 
 			throws IOException {
 		super();
 		this.schema = schema;
-		List<String> lines = Utility.getFileLines(config, statFilePathParam);
+		List<String> lines = Utility.getFileLines(config, decPathFilePathParam);
+		treeAvailable = !lines.isEmpty();
 		for (String line : lines) {
 			//each line is decision path
 			List<AttributePredicate> decisionPath = new ArrayList<AttributePredicate>(); 
@@ -85,6 +87,25 @@ public class SplitManager {
 		}
 	}
 
+	/**
+	 * @return
+	 */
+	public List<Integer> getAllAttributes() {
+		return Utility.fromIntArrayToList(schema.getFeatureFieldOrdinals());
+	}
+	
+	/**
+	 * @param count
+	 * @return
+	 */
+	public List<Integer> getRandomAllAttributes(int count) {
+		List<Integer> allAttrs =  getAllAttributes();
+		if (count > allAttrs.size()) {
+			count = allAttrs.size();
+		}
+		return Utility.selectRandomFromList(allAttrs, count);
+	}
+	
 	/**
 	 * @return
 	 */
@@ -209,7 +230,8 @@ public class SplitManager {
 		}
 		return splitAttrPredicates;
 	}
-   
+
+	
     /**
      * Create all possible splits within the max number of splits allowed
      * @param splits previous split
@@ -255,14 +277,44 @@ public class SplitManager {
     		}
     	}
     }
+    
+	/**
+	 * @param attr
+	 * @return
+	 */
+	public List<List<AttributePredicate>> createCategoricalAttrSplitPredicates(int attr) {
+		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+		FeatureField field = schema.findFieldByOrdinal(attr);
+		int numGroups = field.getMaxSplit();
+		List<List<List<String>>> totalSplitList = new ArrayList<List<List<String>>>();
 
+		//all group levels
+		for (int gr = 2; gr <= numGroups; ++gr) {
+			LOG.debug("num of split sets:" + gr);
+			List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
+			createCategoricalPartitions(splitList,  field.getCardinality(), 0, gr);
+			totalSplitList.addAll(splitList);
+		}
+		
+		//convert to predicates
+		for (List<List<String>> splits : totalSplitList) {
+			List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
+			for (List<String> split : splits) {
+				predicates.add(new CategoricalPredicate(attr, OPERATOR_IN, split));
+			}
+			splitAttrPredicates.add(predicates);
+		}
+		
+		return splitAttrPredicates;
+	}
+    
     /**
      * @param splitList
      * @param cardinality
      * @param cardinalityIndex
      * @param numGroups
      */
-    public void createCategoricalPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
+    private void createCategoricalPartitions(List<List<List<String>>>  splitList, List<String> cardinality,
     		int cardinalityIndex, int numGroups) {
     	LOG.debug("next round cardinalityIndex:" + cardinalityIndex);
 		//first time
@@ -518,6 +570,10 @@ public class SplitManager {
 		return predicates;
 	}
 	
+	public boolean isTreeAvailable() {
+		return treeAvailable;
+	}
+
 	/**
 	 * @author pranab
 	 *
@@ -525,6 +581,7 @@ public class SplitManager {
 	public static abstract class AttributePredicate {
 		protected int attribute;
 		protected String operator;
+		protected String prStr;
 		
 		public AttributePredicate(int attribute, String operator) {
 			super();
@@ -548,11 +605,22 @@ public class SplitManager {
 		private int value; 
 		private Integer otherBound;
 		
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param value
+		 */
 		public IntPredicate(int attribute, String operator, int value) {
 			super(attribute, operator);
 			this.value = value;
 		}
 		
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param value
+		 * @param otherBound
+		 */
 		public IntPredicate(int attribute, String operator, int value, Integer otherBound) {
 			super(attribute, operator);
 			this.value = value;
@@ -591,6 +659,21 @@ public class SplitManager {
 					
 			return result;
 		}
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		public String toString() {
+			if (null == prStr) {
+				StringBuilder stBld = new StringBuilder();
+				stBld.append(attribute).append(" ").append(operator).append(" ").append(value);
+				if (null != otherBound) {
+					stBld.append(" ").append(otherBound);
+				}
+				prStr = stBld.toString();
+			}
+			return prStr;
+		}
 	}
 
 	/**
@@ -601,11 +684,22 @@ public class SplitManager {
 		private double value; 
 		private Double otherBound;
 		
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param value
+		 */
 		public DoublePredicate(int attribute, String operator, double value) {
 			super(attribute, operator);
 			this.value = value;
 		}
 
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param value
+		 * @param otherBound
+		 */
 		public DoublePredicate(int attribute, String operator, double value, Double otherBound) {
 			super(attribute, operator);
 			this.value = value;
@@ -642,6 +736,21 @@ public class SplitManager {
 			}
 			return result;
 		}
+
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		public String toString() {
+			if (null == prStr) {
+				StringBuilder stBld = new StringBuilder();
+				stBld.append(attribute).append(" ").append(operator).append(" ").append(value);
+				if (null != otherBound) {
+					stBld.append(" ").append(otherBound);
+				}
+				prStr = stBld.toString();
+			}
+			return prStr;
+		}
 	}
 
 	/**
@@ -651,17 +760,30 @@ public class SplitManager {
 	public static  class CategoricalPredicate extends AttributePredicate {
 		private List<String> values; 
 		
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param values
+		 */
 		public CategoricalPredicate(int attribute, String operator, List<String> values) {
 			super(attribute, operator);
 			this.values = values;
 		}
 
+		/**
+		 * @param attribute
+		 * @param operator
+		 * @param values
+		 */
 		public CategoricalPredicate(int attribute, String operator, String values) {
 			super(attribute, operator);
 			String[] valueItems = values.split(",");
 			this.values = Arrays.asList(valueItems);
 		}
 		
+		/* (non-Javadoc)
+		 * @see org.avenir.tree.SplitManager.AttributePredicate#evaluate(java.lang.Object)
+		 */
 		public boolean evaluate(Object operandObj) {
 			boolean result = false;
 			String operand = (String)operandObj;
@@ -672,5 +794,21 @@ public class SplitManager {
 			}
 			return result;
 		}
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		public String toString() {
+			if (null == prStr) {
+				StringBuilder stBld = new StringBuilder();
+				stBld.append(attribute).append(" ").append(operator).append(" ");
+				for (String value : values) {
+					stBld.append(value).append(":");
+				}
+				prStr = stBld.substring(0, stBld.length() -1);
+			}
+			return prStr;
+		}
+		
 	}
 }
