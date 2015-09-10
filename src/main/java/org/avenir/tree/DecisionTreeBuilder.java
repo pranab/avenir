@@ -21,10 +21,8 @@ package org.avenir.tree;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -36,22 +34,20 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.avenir.explore.ClassPartitionGenerator;
-import org.avenir.explore.ClassPartitionGenerator.AttributeSplitPartitioner;
-import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorMapper;
 import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
 import org.avenir.tree.SplitManager.AttributePredicate;
-import org.avenir.util.AttributeSplitHandler;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
+import org.chombo.mr.NumericalAttrNormalizer;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -139,8 +135,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
+        	
             items  =  value.toString().split(fieldDelimRegex);
             classVal = items[classField.getOrdinal()];
+
+            //if decision not in in progree or completed status then skip
+        	
             
             //get split attributes
            getSplitAttributes();
@@ -177,14 +177,16 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                 			outKey.initialize();
                 			if (null == currenttDecPath) {
                 				outKey.add(predicate.toString());
+                    			outVal.set(value.toString());
                 			} else {
                 				String[] curDecPathItems = items[0].split(decPathDelim);
                 				for (String curDecPathItem : curDecPathItems) {
                     				outKey.add(curDecPathItem);
                 				}
                  				outKey.add(predicate.toString());
+                 				int pos = value.toString().indexOf(fieldDelimRegex);
+                    			outVal.set(value.toString().substring(pos + fieldDelimRegex.length()));
                 			}               			}
-                			outVal.set(value.toString());
             				context.write(outKey, outVal);
                 		}	
                 	}
@@ -230,6 +232,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private boolean atRoot = false;
         private boolean outputSplitProb;
         private double parentInfo;
+        private Map<String, Map<String, InfoContentStat>> decPaths = new HashMap<String, Map<String, InfoContentStat>>();
+        private int classAttrOrdinal;
+        private String classAttrValue;
+        private String parentDecPath;
+        //private 
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
 
 	   	@Override
@@ -247,15 +254,57 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 
         	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
         	outputSplitProb = conf.getBoolean("output.split.prob", false);
+        	classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
 	   	}   
 
+	   	@Override
+	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
+	   	
+	   	}
+	   	
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
          */
         protected void reduce(Tuple  key, Iterable<Text> values, Context context)
         		throws IOException, InterruptedException {
+        	int keySize = key.getSize();
+        	key.setDelim(";");
+        	String decPath = key.toString();
+        	String parentDecPath =  key.toString(0, keySize-1);
+        	String childPath = key.getString(keySize-1);
+        	
+        	//all child class stats
+        	Map<String, InfoContentStat> candidateChildrenPath =  decPaths.get(parentDecPath);
+        	if (null == candidateChildrenPath) {
+        		candidateChildrenPath = new HashMap<String, InfoContentStat>();
+        		decPaths.put(parentDecPath,  candidateChildrenPath);
+        	}
+        	
+        	//class stats
+        	InfoContentStat classStats = candidateChildrenPath.get(childPath);
+        	if (null == classStats) {
+        		classStats = new InfoContentStat();
+        		candidateChildrenPath.put(childPath, classStats);
+        	}
+        	
+        	for (Text value : values) {
+        		classAttrValue = values.toString().split(fieldDelim)[classAttrOrdinal];
+        		classStats.incrClassValCount(classAttrValue);
+            	outVal.set(decPath + fieldDelim + value.toString());
+            	context.write(NullWritable.get(), outVal);
+        	}
+        	
         	
         }
 	   	
 	}
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new DecisionTreeBuilder(), args);
+        System.exit(exitCode);
+	}
+	
 }
