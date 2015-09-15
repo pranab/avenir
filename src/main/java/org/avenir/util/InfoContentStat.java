@@ -32,6 +32,8 @@ public class InfoContentStat {
 	private Map<String, Double> classValPr = new HashMap<String, Double>();
 	private int totalCount;
     private static final Logger LOG = Logger.getLogger(InfoContentStat.class);
+    private String predicate;
+    private double stat;
 	
 	/**
 	 * 
@@ -54,8 +56,7 @@ public class InfoContentStat {
 	 * @param count
 	 */
 	public void countClassVal(String classVal, int count) {
-		LOG.debug("counting InfoContentStat " + 
-				" classVal:" + classVal + " count:" + count);
+		LOG.debug("counting InfoContentStat " + " classVal:" + classVal + " count:" + count);
 		if (null == classValCount.get(classVal)) {
 			classValCount.put(classVal, 0);
 		}
@@ -68,7 +69,7 @@ public class InfoContentStat {
 	 * @return
 	 */
 	public double processStat(boolean isAlgoEntropy) {
-		double stat = 0.0;
+		stat = 0.0;
 		totalCount = 0;
 		for (String key : classValCount.keySet()) {
 			totalCount += classValCount.get(key);
@@ -103,8 +104,20 @@ public class InfoContentStat {
 		return totalCount;
 	}
 
+	public double getStat() {
+		return stat;
+	}
+
 	public Map<String, Double> getClassValPr() {
 		return classValPr;
+	}
+
+	public String getPredicate() {
+		return predicate;
+	}
+
+	public void setPredicate(String predicate) {
+		this.predicate = predicate;
 	}
 
 }

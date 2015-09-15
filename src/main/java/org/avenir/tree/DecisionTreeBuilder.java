@@ -20,6 +20,7 @@ package org.avenir.tree;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
+import org.avenir.tree.DecisionPathList.DecisionPathPredicate;
 import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
@@ -224,19 +226,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
  		private FeatureSchema schema;
 		private String fieldDelim;
 		private Text outVal  = new Text();
-		private Map<Integer, AttributeSplitStat> splitStats = new HashMap<Integer, AttributeSplitStat>();
-		private InfoContentStat rootInfoStat;
-		private int count;
-		private int[] attrOrdinals;
 		private String  infoAlgorithm;
-        private boolean atRoot = false;
         private boolean outputSplitProb;
-        private double parentInfo;
         private Map<String, Map<String, InfoContentStat>> decPaths = new HashMap<String, Map<String, InfoContentStat>>();
         private int classAttrOrdinal;
         private String classAttrValue;
         private String parentDecPath;
-        //private 
+        private  String decPath;
+        private String childPath;
+        private DecisionPathStoppingStrategy pathStoppingStrategy;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
 
 	   	@Override
@@ -255,12 +253,138 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
         	outputSplitProb = conf.getBoolean("output.split.prob", false);
         	classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
+        	
+        	//stopping strategy
+        	String stoppingStrategy =  conf.get("stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
+        	int maxDepthLimit = -1;
+        	double minInfoGainLimit = -1;
+        	int minPopulationLimit = -1;
+        	if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MAX_DEPTH)) {
+        		maxDepthLimit = Utility.assertIntConfigParam(conf, "max.depth.limit", "missing max depth limit for tree");
+        	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN)) {
+            	minInfoGainLimit =      Utility.assertDoubleConfigParam(conf, "min.info.gain.limit", "missing min info gain limit");     
+        	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_POPULATION)) {
+            	minPopulationLimit =  Utility.assertIntConfigParam(conf, "min.population.limit", "missing min population limit");                 
+        	} else {
+        		throw new IllegalArgumentException("invalid stopping strategy " + stoppingStrategy);
+        	}
+        	pathStoppingStrategy = new DecisionPathStoppingStrategy(stoppingStrategy, maxDepthLimit, 
+        			minInfoGainLimit,minPopulationLimit);
+        	
 	   	}   
 
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
-	   	
+	   		DecisionPathList decPathList = new DecisionPathList();
+	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
+	   		double parentStat = 0;
+	   		for (String parentPath :  decPaths.keySet() ) {
+	   			//each parent path
+	   			List< DecisionPathList.DecisionPathPredicate> parentPredicates = createPredicates(parentPath);
+		   		Map<Integer, List< InfoContentStat>> attrInfoContent = new HashMap<Integer, List<InfoContentStat>>();
+	   			Map<String, InfoContentStat> childStats = decPaths.get(parentPath);
+	   			int selectedSplitAttr = 0;
+	   			double minInfoContent = 1000;
+	   			
+	   			for (String childPath :  childStats.keySet()) {
+	   				//each child path
+	   				InfoContentStat stat = childStats.get(childPath);
+	   				stat.processStat(infoAlgorithm.equals("entropy"));
+	   				int attr = Integer.parseInt(childPath.split("\\s+")[0]);
+	   				
+	   				//group  by attribute
+	   				List< InfoContentStat> statList = attrInfoContent.get(attr);
+	   				if (null == statList) {
+	   					statList  = new ArrayList< InfoContentStat>();
+	   					attrInfoContent.put(attr, statList);
+	   				}
+	   				stat.setPredicate(childPath);
+	   				statList.add(stat);
+	   			}
+	   			
+	   			//select splitting attributes
+	   			for (int attr :  attrInfoContent.keySet()) {
+	   				//each attribute
+	   				double weightedInfoContent = 0;
+	   				int totalCount = 0;
+	   				for (InfoContentStat stat : attrInfoContent.get(attr)) {
+	   					weightedInfoContent += stat.processStat(isAlgoEntropy) * stat.getTotalCount();
+	   					totalCount += stat.getTotalCount();
+	   				}
+	   				double  avInfoContent = weightedInfoContent / totalCount;
+	   				if (avInfoContent  < minInfoContent) {
+	   					minInfoContent = avInfoContent;
+	   					selectedSplitAttr = attr;
+	   				}
+	   			}
+	   			
+	   			//generate new path
+				FeatureField field = schema.findFieldByOrdinal(selectedSplitAttr);
+			    List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
+   				for (InfoContentStat stat : attrInfoContent.get(selectedSplitAttr)) {
+   					//all predicate for selected attribute
+   					
+   					String predicateStr = stat.getPredicate();
+   					DecisionPathList.DecisionPathPredicate predicate = null;
+   					if (field.isInteger()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createIntPredicate(predicateStr);
+   					} else if (field.isDouble()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createDoublePredicate(predicateStr);
+   					} else if (field.isCategorical()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createCategoricalPredicate(predicateStr);
+   					} 
+   					
+   					//append new predicate to parent predicate list
+   					predicates.clear();
+   					predicates.addAll(parentPredicates);
+   					predicates.add(predicate);
+   					
+   					//create new decision path
+   					boolean toBeStopped = pathStoppingStrategy.shouldStop(stat, parentStat, parentPredicates.size() + 1);
+   					DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(predicates, stat.getTotalCount(),
+   							stat.getStat(),  toBeStopped);
+   					decPathList.addDecisionPath(decPath);
+   				}	   			
+	   		}
 	   	}
+	   	
+
+	   	
+	   	/**
+	   	 * @param predicatesStr
+	   	 * @return
+	   	 */
+	   	private List< DecisionPathList.DecisionPathPredicate> createPredicates(String predicatesStr) {
+	   		List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
+	   		String[] predicateItems = predicatesStr.split(";");
+	   		for (String predicateItem : predicateItems) {
+	   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
+	   			FeatureField field = schema.findFieldByOrdinal(attr);
+	   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
+	   			predicates.add(predicate);
+	   		}
+	   		return predicates;
+	   	}
+	   	
+	   	/**
+	   	 * @param predicateStr
+	   	 * @param field
+	   	 * @return
+	   	 */
+	   	private DecisionPathList.DecisionPathPredicate  deserializePredicate(String predicateStr, FeatureField field) {
+				DecisionPathList.DecisionPathPredicate predicate = null;
+				if (field.isInteger()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createIntPredicate(predicateStr);
+				} else if (field.isDouble()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createDoublePredicate(predicateStr);
+				} else if (field.isCategorical()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createCategoricalPredicate(predicateStr);
+				} else {
+					throw new IllegalArgumentException("invalid data type for predicates");
+				}
+				return predicate;
+	   	}
+	   	
 	   	
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
@@ -269,9 +393,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         		throws IOException, InterruptedException {
         	int keySize = key.getSize();
         	key.setDelim(";");
-        	String decPath = key.toString();
-        	String parentDecPath =  key.toString(0, keySize-1);
-        	String childPath = key.getString(keySize-1);
+        	decPath = key.toString();
+        	parentDecPath =  key.toString(0, keySize-1);
+        	childPath = key.getString(keySize-1);
         	
         	//all child class stats
         	Map<String, InfoContentStat> candidateChildrenPath =  decPaths.get(parentDecPath);
@@ -287,16 +411,14 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         		candidateChildrenPath.put(childPath, classStats);
         	}
         	
+        	
         	for (Text value : values) {
         		classAttrValue = values.toString().split(fieldDelim)[classAttrOrdinal];
         		classStats.incrClassValCount(classAttrValue);
             	outVal.set(decPath + fieldDelim + value.toString());
             	context.write(NullWritable.get(), outVal);
         	}
-        	
-        	
         }
-	   	
 	}
 	
 	/**
