@@ -18,10 +18,18 @@
 
 package org.avenir.tree;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.chombo.mr.FeatureField;
+import org.chombo.mr.FeatureSchema;
 
+
+/**
+ * @author pranab
+ *
+ */
 public class DecisionPathList {
 	private List<DecisionPath>  decisionPaths;
 	
@@ -37,6 +45,18 @@ public class DecisionPathList {
 		decisionPaths.add(decPath);
 	}
 	
+	public DecisionPath findDecisionPath(String[] predcateStrings) {
+		DecisionPath foundDecPath = null;
+		for (DecisionPath decPath :  decisionPaths) {
+			if (decPath.isMatchedByPredicates(predcateStrings)) {
+				foundDecPath = decPath;
+				break;
+			}
+		}
+		
+		return foundDecPath;
+	}
+	
 	/**
 	 * @author pranab
 	 *
@@ -46,9 +66,6 @@ public class DecisionPathList {
 		private int population;
 		private double infoContent;
 		private boolean stopped;
-		private String status;
-		public static final String STATUS_COMPLETED = "completed";
-		public static final String STATUS_IN_PROGRESS = "inProgress";
 		
 		public DecisionPath() {
 		}
@@ -60,6 +77,19 @@ public class DecisionPathList {
 			this.population = population;
 			this.infoContent = infoContent;
 			this.stopped = stopped;
+		}
+		
+		public boolean isMatchedByPredicates(String[] predcateStrings) {
+			boolean matched = true;;
+			int i = 0;
+			for (DecisionPathPredicate predicate : predicates) {
+				if (!predicate.getPredicateStr().equals(predcateStrings[i++])) {
+					matched = false;
+					break;
+				}
+			}
+			
+			return matched;
 		}
 		
 		public List<DecisionPathPredicate> getPredicates() {
@@ -87,13 +117,6 @@ public class DecisionPathList {
 		public void setStopped(boolean stopped) {
 			this.stopped = stopped;
 		}
-
-		public String getStatus() {
-			return status;
-		}
-		public void setStatus(String status) {
-			this.status = status;
-		}
 	}
 	
 	public static class DecisionPathPredicate {
@@ -104,7 +127,12 @@ public class DecisionPathList {
 		private List<String> categoricalValues;
 		private Integer otherBoundInt;
 		private Double otherBoundDbl;
+		private String predicateStr;
 		
+		/**
+		 * @param predicateStr
+		 * @return
+		 */
 		public static DecisionPathPredicate createIntPredicate(String predicateStr) {
 			DecisionPathPredicate predicate = new  DecisionPathPredicate() ;
 			String[] items = predicateStr.split("\\s+");
@@ -114,10 +142,14 @@ public class DecisionPathList {
 			if (items.length == 4) {
 				predicate.setOtherBoundInt(Integer.parseInt(items[3]));
 			}
-			
+			predicate.setPredicateStr(predicateStr);
 			return predicate;
 		}
 		
+		/**
+		 * @param predicateStr
+		 * @return
+		 */
 		public static DecisionPathPredicate createDoublePredicate(String predicateStr) {
 			DecisionPathPredicate predicate = new  DecisionPathPredicate() ;
 			String[] items = predicateStr.split("\\s+");
@@ -127,10 +159,14 @@ public class DecisionPathList {
 			if (items.length == 4) {
 				predicate.setOtherBoundDbl(Double.parseDouble(items[3]));
 			}
-			
+			predicate.setPredicateStr(predicateStr);
 			return predicate;
 		}
 
+		/**
+		 * @param predicateStr
+		 * @return
+		 */
 		public static DecisionPathPredicate createCategoricalPredicate(String predicateStr) {
 			DecisionPathPredicate predicate = new  DecisionPathPredicate() ;
 			String[] items = predicateStr.split("\\s+");
@@ -140,9 +176,46 @@ public class DecisionPathList {
 			String[] valueArray = items[2].split(":");
 			List<String> categoricalValues = Arrays.asList(valueArray);
 			predicate.setCategoricalValues(categoricalValues);
+			predicate.setPredicateStr(predicateStr);
 			return predicate;
 		}
 
+	   	/**
+	   	 * @param predicatesStr
+	   	 * @param schema
+	   	 * @return
+	   	 */
+	   	public static List< DecisionPathList.DecisionPathPredicate> createPredicates(String predicatesStr, FeatureSchema schema) {
+	   		List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
+	   		String[] predicateItems = predicatesStr.split(";");
+	   		for (String predicateItem : predicateItems) {
+	   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
+	   			FeatureField field = schema.findFieldByOrdinal(attr);
+	   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
+	   			predicates.add(predicate);
+	   		}
+	   		return predicates;
+	   	}
+		
+	   	/**
+	   	 * @param predicateStr
+	   	 * @param field
+	   	 * @return
+	   	 */
+	   	public static DecisionPathList.DecisionPathPredicate  deserializePredicate(String predicateStr, FeatureField field) {
+				DecisionPathList.DecisionPathPredicate predicate = null;
+				if (field.isInteger()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createIntPredicate(predicateStr);
+				} else if (field.isDouble()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createDoublePredicate(predicateStr);
+				} else if (field.isCategorical()) {
+					predicate = DecisionPathList.DecisionPathPredicate.createCategoricalPredicate(predicateStr);
+				} else {
+					throw new IllegalArgumentException("invalid data type for predicates");
+				}
+				return predicate;
+	   	}
+	   	
 		public int getAttribute() {
 			return attribute;
 		}
@@ -184,6 +257,20 @@ public class DecisionPathList {
 		}
 		public void setOtherBoundDbl(Double otherBoundDbl) {
 			this.otherBoundDbl = otherBoundDbl;
+		}
+
+		public String getPredicateStr() {
+			return predicateStr;
+		}
+
+		public void setPredicateStr(String predicateStr) {
+			this.predicateStr = predicateStr;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			DecisionPathPredicate that = (DecisionPathPredicate)obj;
+			return predicateStr.equals(that.predicateStr);
 		}
 		
 	}

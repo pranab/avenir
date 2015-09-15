@@ -27,6 +27,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -103,6 +105,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private String classVal;
         private String currenttDecPath;
         private String decPathDelim;
+        private DecisionPathList decPathList;
+        private Map<String, Boolean> validDecPaths = new HashMap<String, Boolean>();
         private static final Logger LOG = Logger.getLogger(BuilderMapper.class);
 
         /* (non-Javadoc)
@@ -121,6 +125,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
+            //decision path list  file
+        	fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
+            mapper = new ObjectMapper();
+            decPathList = mapper.readValue(fs, DecisionPathList.class);
+           
             //split manager
             decPathDelim = conf.get("dec.path.delim", ";");
             splitManager = new SplitManager(conf, "dec.path.file.path",  decPathDelim , schema); 
@@ -132,6 +141,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             
             //class attribute
             classField = schema.findClassAttrField();
+            
+            validDecPaths.clear();
         }
         
         @Override
@@ -140,17 +151,25 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	
             items  =  value.toString().split(fieldDelimRegex);
             classVal = items[classField.getOrdinal()];
-
-            //if decision not in in progree or completed status then skip
         	
-            
-            //get split attributes
-           getSplitAttributes();
-            
             currenttDecPath = null;
             if (splitManager.isTreeAvailable()) {
             	currenttDecPath = items[0];
+            	
+            	//filter out rejected splits from last iteration
+            	Boolean status = validDecPaths.get(currenttDecPath);
+            	if (null == status) {
+            		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(currenttDecPath.split(decPathDelim)) ;
+            		status = null == decPathObj ? false : true;
+            		validDecPaths.put(currenttDecPath, status);
+            	} 
+            	if (!status) {
+            		return;
+            	}
             }
+            
+            //get split attributes
+           getSplitAttributes();
             
             //all attributes
             for (int attr :  splitAttrs) {
@@ -188,12 +207,13 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                  				outKey.add(predicate.toString());
                  				int pos = value.toString().indexOf(fieldDelimRegex);
                     			outVal.set(value.toString().substring(pos + fieldDelimRegex.length()));
-                			}               			}
+                			}               		
             				context.write(outKey, outVal);
                 		}	
                 	}
                 }
- 		}
+            }
+  		}
 
         /**
          * @param attrSelectStrategy
@@ -234,7 +254,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private String parentDecPath;
         private  String decPath;
         private String childPath;
+        private String decPathDelim;
         private DecisionPathStoppingStrategy pathStoppingStrategy;
+        private DecisionPathList decPathList;
         private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
 
 	   	@Override
@@ -245,15 +267,22 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             	AttributeSplitStat.enableLog();
             }
             
+            //schema
         	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
+            
+            //decision path list  file
+        	fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
+            mapper = new ObjectMapper();
+            decPathList = mapper.readValue(fs, DecisionPathList.class);
+            
         	fieldDelim = conf.get("field.delim.out", ",");
-
         	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
         	outputSplitProb = conf.getBoolean("output.split.prob", false);
         	classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
-        	
+            decPathDelim = conf.get("dec.path.delim", ";");
+
         	//stopping strategy
         	String stoppingStrategy =  conf.get("stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
         	int maxDepthLimit = -1;
@@ -275,16 +304,22 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
-	   		DecisionPathList decPathList = new DecisionPathList();
+	   		DecisionPathList newDecPathList = new DecisionPathList();
 	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
 	   		double parentStat = 0;
 	   		for (String parentPath :  decPaths.keySet() ) {
 	   			//each parent path
-	   			List< DecisionPathList.DecisionPathPredicate> parentPredicates = createPredicates(parentPath);
+	   			List< DecisionPathList.DecisionPathPredicate> parentPredicates = 
+	   					DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
 		   		Map<Integer, List< InfoContentStat>> attrInfoContent = new HashMap<Integer, List<InfoContentStat>>();
 	   			Map<String, InfoContentStat> childStats = decPaths.get(parentPath);
 	   			int selectedSplitAttr = 0;
 	   			double minInfoContent = 1000;
+	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
+	   			if (null == parentDecPath) {
+	   				throw new IllegalStateException("missing parent decision path");
+	   			}
+	   			parentStat = parentDecPath.getInfoContent();
 	   			
 	   			for (String childPath :  childStats.keySet()) {
 	   				//each child path
@@ -343,48 +378,27 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
    					boolean toBeStopped = pathStoppingStrategy.shouldStop(stat, parentStat, parentPredicates.size() + 1);
    					DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(predicates, stat.getTotalCount(),
    							stat.getStat(),  toBeStopped);
-   					decPathList.addDecisionPath(decPath);
+   					newDecPathList.addDecisionPath(decPath);
    				}	   			
 	   		}
+	   		
+	   		//save new decision path list
+	   		writeDecisioList(newDecPathList, "decision.file.path",  context.getConfiguration() );
 	   	}
 	   	
-
-	   	
-	   	/**
-	   	 * @param predicatesStr
-	   	 * @return
-	   	 */
-	   	private List< DecisionPathList.DecisionPathPredicate> createPredicates(String predicatesStr) {
-	   		List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
-	   		String[] predicateItems = predicatesStr.split(";");
-	   		for (String predicateItem : predicateItems) {
-	   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
-	   			FeatureField field = schema.findFieldByOrdinal(attr);
-	   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
-	   			predicates.add(predicate);
-	   		}
-	   		return predicates;
+	   	private DecisionPathList.DecisionPath findParentDecisionPath(String parentPath) {
+	   		String[] parentPathItems = parentPath.split(decPathDelim);
+	   		DecisionPathList.DecisionPath decPath = decPathList.findDecisionPath(parentPathItems);
+	   		return decPath;
 	   	}
 	   	
-	   	/**
-	   	 * @param predicateStr
-	   	 * @param field
-	   	 * @return
-	   	 */
-	   	private DecisionPathList.DecisionPathPredicate  deserializePredicate(String predicateStr, FeatureField field) {
-				DecisionPathList.DecisionPathPredicate predicate = null;
-				if (field.isInteger()) {
-					predicate = DecisionPathList.DecisionPathPredicate.createIntPredicate(predicateStr);
-				} else if (field.isDouble()) {
-					predicate = DecisionPathList.DecisionPathPredicate.createDoublePredicate(predicateStr);
-				} else if (field.isCategorical()) {
-					predicate = DecisionPathList.DecisionPathPredicate.createCategoricalPredicate(predicateStr);
-				} else {
-					throw new IllegalArgumentException("invalid data type for predicates");
-				}
-				return predicate;
+	   	private void writeDecisioList(DecisionPathList newDecPathList, String outFilePathParam, Configuration conf ) 
+	   			throws IOException {
+	   		FSDataOutputStream ouStrm = FileSystem.get(conf).create(new Path(conf.get(outFilePathParam)));	
+	   		ObjectMapper mapper = new ObjectMapper();
+	   		mapper.writeValue(ouStrm, newDecPathList);
+	   		ouStrm.flush();
 	   	}
-	   	
 	   	
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
