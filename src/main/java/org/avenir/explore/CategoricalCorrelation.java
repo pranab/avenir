@@ -76,7 +76,7 @@ public class CategoricalCorrelation {
         	InputStream fs = Utility.getFileStream(conf, "feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
-        	sourceAttrs = Utility.intArrayFromString(conf.get("first.set..attributes"), ",");
+        	sourceAttrs = Utility.intArrayFromString(conf.get("first.set.attributes"), ",");
         	destAttrs = Utility.intArrayFromString(conf.get("second.set..attributes"), ",");
         	
         	//initialize contingency matrix for all source attribute and target attribute pair

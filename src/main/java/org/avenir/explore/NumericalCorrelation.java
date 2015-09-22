@@ -72,7 +72,7 @@ public class NumericalCorrelation  extends Configured implements Tool {
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
-        int numReducer = job.getConfiguration().getInt("nas.num.reducer", -1);
+        int numReducer = job.getConfiguration().getInt("nco.num.reducer", -1);
         numReducer = -1 == numReducer ? job.getConfiguration().getInt("num.reducer", 1) : numReducer;
         job.setNumReduceTasks(numReducer);
 
@@ -102,7 +102,7 @@ public class NumericalCorrelation  extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
-        	attrPairs = Utility. assertIntPairListConfigParam(config, "attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
+        	attrPairs = Utility. assertIntPairListConfigParam(config, "nco.attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
         	
         	schema = Utility.getGenericAttributeSchema(config,  "schema.file.path");
         	if (null != schema) {
