@@ -30,14 +30,12 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -45,13 +43,11 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
-import org.avenir.tree.DecisionPathList.DecisionPathPredicate;
 import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
 import org.chombo.mr.FeatureSchema;
-import org.chombo.mr.NumericalAttrNormalizer;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -107,6 +103,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private String decPathDelim;
         private DecisionPathList decPathList;
         private Map<String, Boolean> validDecPaths = new HashMap<String, Boolean>();
+        private String subSamlingStrategy;
+        private static final String SUB_SAMPLING_WITH_REPLACE = "withReplace";
+        private static final String SUB_SAMPLING_WITHOUT_REPLACE = "withoutReplace";
+        private static final String SUB_SAMPLING_WITHOUT_NONE = "none";
+        private boolean treeAvailable;
+        private int samplingRate;
+        private int samplingBufferSize;
+        private String[]  samplingBuffer;
+        private int count;
         private static final Logger LOG = Logger.getLogger(BuilderMapper.class);
 
         /* (non-Javadoc)
@@ -133,6 +138,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             //split manager
             decPathDelim = conf.get("dec.path.delim", ";");
             splitManager = new SplitManager(conf, "dec.path.file.path",  decPathDelim , schema); 
+            treeAvailable = splitManager.isTreeAvailable();
             
             //attribute selection strategy
             attrSelectStrategy = conf.get("split.attribute.selection.strategy", "notUsedYet");
@@ -143,78 +149,129 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             classField = schema.findClassAttrField();
             
             validDecPaths.clear();
+            
+            //sub samling
+            subSamlingStrategy = conf.get("sub.samling.strategy", "withReplace");
+            if (subSamlingStrategy.equals(SUB_SAMPLING_WITHOUT_REPLACE)) {
+            	samplingRate = Utility.assertIntConfigParam(conf, "sampling.rate", 
+            			"samling rate should be provided for sampling without replacement");
+            } else if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
+            	int samplingBufferSize = conf.getInt("sampling.buffer.size",  10000);
+            	samplingBuffer = new String[samplingBufferSize];
+            }
         }
+        
+		@Override
+		protected void cleanup(Context context) throws IOException, InterruptedException {
+			for (int i = 0; i < count; ++i) {
+				int sel = (int)(Math.random() * count);
+				sel = sel == count ? count -1 : sel;
+        		mapHelper(samplingBuffer[sel], context);
+			}
+			super.cleanup(context);
+		}
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
-        	
-            items  =  value.toString().split(fieldDelimRegex);
-            classVal = items[classField.getOrdinal()];
-        	
-            currenttDecPath = null;
-            if (splitManager.isTreeAvailable()) {
-            	currenttDecPath = items[0];
-            	
-            	//filter out rejected splits from last iteration
-            	Boolean status = validDecPaths.get(currenttDecPath);
-            	if (null == status) {
-            		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(currenttDecPath.split(decPathDelim)) ;
-            		status = null == decPathObj ? false : true;
-            		validDecPaths.put(currenttDecPath, status);
-            	} 
-            	if (!status) {
-            		return;
-            	}
-            }
+        	//sampling
+        	if (!treeAvailable) {
+        		 if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
+        			 	//sampling with replace
+		        		if (count <  samplingBufferSize)  {
+		        			samplingBuffer[count++] = value.toString();
+		        		} else {
+		        			//sample all
+		        			for (int i = 0; i < samplingBufferSize; ++i) {
+		        				int sel = (int)(Math.random() * samplingBufferSize);
+		        				sel = sel == samplingBufferSize ? samplingBufferSize -1 : sel;
+		                		mapHelper(samplingBuffer[sel], context);
+		        			}
+		        			count = 0;
+		        			samplingBuffer[count++] = value.toString();
+		        		}
+        		 } else if (subSamlingStrategy.equals(SUB_SAMPLING_WITHOUT_REPLACE)) {
+        			 	//sampling without replace
+     					int sel = (int)(Math.random() * 100);
+     					if (sel < samplingRate) {
+     		        		mapHelper(value.toString(),  context);
+     					}
+        		 }
+        	} else {
+        		//no sampling
+        		mapHelper(value.toString(),  context);
+        	}
             
-            //get split attributes
-           getSplitAttributes();
-            
-            //all attributes
-            for (int attr :  splitAttrs) {
-            	FeatureField field = schema. findFieldByOrdinal(attr);
-            	Object attrValue = null;
-            	//all splits
-            	List<List<AttributePredicate>> allSplitPredicates = null;
-            	if (field.isInteger()) {
-            		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
-            		Integer iValue = Integer.parseInt(items[attr]);
-            		attrValue = iValue;
-            	} else if (field.isDouble()) {
-            		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
-            		Double dValue = Double.parseDouble(items[attr]);
-            		attrValue = dValue;
-            	} else if (field.isCategorical()) {
-            		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
-            		attrValue = items[attr];
-            	}
-                
-            	//evaluate split predicates
-                for (List<AttributePredicate> predicates : allSplitPredicates) {
-                	for (AttributePredicate predicate : predicates) {
-                		if (predicate.evaluate(attrValue)) {
-                			//data belongs to this split segment
-                			outKey.initialize();
-                			if (null == currenttDecPath) {
-                				outKey.add(predicate.toString());
-                    			outVal.set(value.toString());
-                			} else {
-                				String[] curDecPathItems = items[0].split(decPathDelim);
-                				for (String curDecPathItem : curDecPathItems) {
-                    				outKey.add(curDecPathItem);
-                				}
-                 				outKey.add(predicate.toString());
-                 				int pos = value.toString().indexOf(fieldDelimRegex);
-                    			outVal.set(value.toString().substring(pos + fieldDelimRegex.length()));
-                			}               		
-            				context.write(outKey, outVal);
-                		}	
-                	}
-                }
-            }
   		}
 
+        private void mapHelper(String record, Context context)
+                throws IOException, InterruptedException {
+       		items  =  record.split(fieldDelimRegex);
+       	    classVal = items[classField.getOrdinal()];
+            	
+             currenttDecPath = null;
+              if (treeAvailable) {
+                	currenttDecPath = items[0];
+                	
+                	//filter out rejected splits from last iteration
+                	Boolean status = validDecPaths.get(currenttDecPath);
+                	if (null == status) {
+                		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(currenttDecPath.split(decPathDelim)) ;
+                		status = null == decPathObj ? false : true;
+                		validDecPaths.put(currenttDecPath, status);
+                	} 
+                	if (!status) {
+                		return;
+                	}
+                }
+                
+              //get split attributes
+             getSplitAttributes();
+                
+              //all attributes
+              for (int attr :  splitAttrs) {
+                	FeatureField field = schema. findFieldByOrdinal(attr);
+                	Object attrValue = null;
+                	//all splits
+                	List<List<AttributePredicate>> allSplitPredicates = null;
+                	if (field.isInteger()) {
+                		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
+                		Integer iValue = Integer.parseInt(items[attr]);
+                		attrValue = iValue;
+                	} else if (field.isDouble()) {
+                		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
+                		Double dValue = Double.parseDouble(items[attr]);
+                		attrValue = dValue;
+                	} else if (field.isCategorical()) {
+                		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
+                		attrValue = items[attr];
+                	}
+                    
+                	//evaluate split predicates
+                    for (List<AttributePredicate> predicates : allSplitPredicates) {
+                    	for (AttributePredicate predicate : predicates) {
+                    		if (predicate.evaluate(attrValue)) {
+                    			//data belongs to this split segment
+                    			outKey.initialize();
+                    			if (null == currenttDecPath) {
+                    				outKey.add(predicate.toString());
+                        			outVal.set(record);
+                    			} else {
+                    				String[] curDecPathItems = items[0].split(decPathDelim);
+                    				for (String curDecPathItem : curDecPathItems) {
+                        				outKey.add(curDecPathItem);
+                    				}
+                     				outKey.add(predicate.toString());
+                     				int pos = record.indexOf(fieldDelimRegex);
+                        			outVal.set(record.substring(pos + fieldDelimRegex.length()));
+                    			}               		
+                				context.write(outKey, outVal);
+                    		}	
+                    	}
+                    }
+              }
+      	}
+       
         /**
          * @param attrSelectStrategy
          * @param conf
