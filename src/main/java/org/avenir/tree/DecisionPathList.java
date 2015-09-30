@@ -27,6 +27,7 @@ import org.chombo.mr.FeatureSchema;
 
 
 /**
+ * List of decisions paths
  * @author pranab
  *
  */
@@ -58,6 +59,7 @@ public class DecisionPathList {
 	}
 	
 	/**
+	 * Decision path containing a list of predicates
 	 * @author pranab
 	 *
 	 */
@@ -119,6 +121,11 @@ public class DecisionPathList {
 		}
 	}
 	
+	/**
+	 * Decision path predicate
+	 * @author pranab
+	 *
+	 */
 	public static class DecisionPathPredicate {
 		private int attribute;
 		private String operator;

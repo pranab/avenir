@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
@@ -43,7 +45,14 @@ public class SplitManager {
 	private FeatureSchema schema;
 	private static final String OPERATOR_IN = "in";
 	private boolean treeAvailable;
+	private Set<Integer> usedAttributes = new HashSet<Integer>();
+	private String predDelim;
+	private List<Integer> allAttributes;
+	private List<Integer> randomAllAttributes;
+	private Map<String, List<Integer>> remainingAttributes = new HashMap<String, List<Integer>>();
+	private Map<String, List<Integer>> randomRemainingAttributes = new HashMap<String, List<Integer>>();
 	private static final Logger LOG = Logger.getLogger(SplitManager.class);
+	private static final String SPACE = " ";
 	 
 	/**
 	 * @param config
@@ -56,6 +65,7 @@ public class SplitManager {
 			throws IOException {
 		super();
 		this.schema = schema;
+		predDelim = delim;
 		List<String> lines = Utility.getFileLines(config, decPathFilePathParam);
 		treeAvailable = !lines.isEmpty();
 		for (String line : lines) {
@@ -83,15 +93,28 @@ public class SplitManager {
 					pred = new  CategoricalPredicate(attr, operator, splitItems[2]);
 				}
 				decisionPath.add(pred);
+				usedAttributes.add(attr);
 			}
 		}
 	}
 
 	/**
+	 * 
+	 */
+	public void initialize() {
+		randomAllAttributes = null;
+		remainingAttributes.clear();
+		randomRemainingAttributes.clear();
+	}
+	
+	/**
 	 * @return
 	 */
 	public List<Integer> getAllAttributes() {
-		return Utility.fromIntArrayToList(schema.getFeatureFieldOrdinals());
+		if (null == allAttributes) {
+			allAttributes = Utility.fromIntArrayToList(schema.getFeatureFieldOrdinals());
+		}
+		return allAttributes;
 	}
 	
 	/**
@@ -99,17 +122,20 @@ public class SplitManager {
 	 * @return
 	 */
 	public List<Integer> getRandomAllAttributes(int count) {
-		List<Integer> allAttrs =  getAllAttributes();
-		if (count > allAttrs.size()) {
-			count = allAttrs.size();
+		if (null == randomAllAttributes) {
+			List<Integer> allAttrs =  getAllAttributes();
+			if (count > allAttrs.size()) {
+				count = allAttrs.size();
+			}
+			randomAllAttributes =  count == allAttrs.size() ?   allAttrs : Utility.selectRandomFromList(allAttrs, count);
 		}
-		return Utility.selectRandomFromList(allAttrs, count);
+		return randomAllAttributes;
 	}
 	
 	/**
 	 * @return
 	 */
-	public List<Integer> getCurrentAttributes() {
+	private List<Integer> getCurrentAttributes() {
 		List<Integer> attributes = new ArrayList<Integer>();
 		
 		if (!decisionPaths.isEmpty()) {
@@ -121,17 +147,39 @@ public class SplitManager {
 		return attributes;
 	}
 	
+	private List<Integer> getCurrentAttributes(String currentDecPath) {
+		List<Integer> attributes = new ArrayList<Integer>();
+		if (null != currentDecPath) {
+			String[] splits = currentDecPath.split(predDelim);
+			for (String split : splits) {
+				String[] splitItems = split.split("\\s+");
+				int attr = Integer.parseInt(splitItems[0]);
+				attributes.add(attr);
+			}			
+		}
+		return attributes;
+	}
+
 	/**
 	 * @return
 	 */
-	public List<Integer> getRemainingAttributes() {
-		List<Integer> currentAttrs = getCurrentAttributes();
-		List<Integer> candidateAttrs = new ArrayList<Integer>();
-		
-		for (FeatureField field :  schema.getFeatureAttrFields()) {
-			if (!currentAttrs.contains(field.getOrdinal())) {
-				candidateAttrs.add(field.getOrdinal());
+	public List<Integer> getRemainingAttributes(String currentDecPath) {
+		List<Integer> candidateAttrs = null;
+		if (null != currentDecPath) {
+			candidateAttrs = remainingAttributes.get(currentDecPath);
+			if (null == candidateAttrs) {
+				List<Integer> currentAttrs = getCurrentAttributes(currentDecPath);
+				candidateAttrs = new ArrayList<Integer>();
+			
+				for (FeatureField field :  schema.getFeatureAttrFields()) {
+					if (!currentAttrs.contains(field.getOrdinal())) {
+						candidateAttrs.add(field.getOrdinal());
+					}
+				}
+				 remainingAttributes.put(currentDecPath, candidateAttrs);
 			}
+		} else {
+			candidateAttrs = getAllAttributes();
 		}
 		return candidateAttrs;
 	}
@@ -139,14 +187,20 @@ public class SplitManager {
 	/**
 	 * @return
 	 */
-	public List<Integer> getRandomRemainingAttributes(int count) {
-		List<Integer> remainingAttrs = getRemainingAttributes();
-		if (count > remainingAttrs.size()) {
-			count = remainingAttrs.size();
+	public List<Integer> getRandomRemainingAttributes(String currentDecPath, int count) {
+		List<Integer> candidateAttrs  = null;
+		String effectCurrentDecPath = null != currentDecPath ? currentDecPath : "$";
+		candidateAttrs = randomRemainingAttributes.get(effectCurrentDecPath);
+		if (null == candidateAttrs) {
+			List<Integer> remainingAttrs = getRemainingAttributes(currentDecPath);
+			if (count > remainingAttrs.size()) {
+				count = remainingAttrs.size();
+			}
+			candidateAttrs =  count == remainingAttrs.size()? remainingAttrs :  Utility.selectRandomFromList(remainingAttrs, count);
+			randomRemainingAttributes.put(effectCurrentDecPath, candidateAttrs);
 		}
-		return Utility.selectRandomFromList(remainingAttrs, count);
+		return candidateAttrs;
 	}
-	
 	
 	/**
 	 * Returns list of predicates list. The top level corresponds to different split segment levels (2,3 etc)
@@ -644,12 +698,12 @@ public class SplitManager {
 					result = result && operand <= otherBound;
 				}
 			} else if (operator.equals(Predicate.OPERATOR_LE)) {
-				result = operand < value;
+				result = operand <= value;
 				if (null != otherBound) {
 					result = result && operand > otherBound;
 				}
 			} else if (operator.equals(Predicate.OPERATOR_LT)) {
-				result = operand <= value;
+				result = operand < value;
 				if (null != otherBound) {
 					result = result && operand >= otherBound;
 				}
@@ -666,9 +720,9 @@ public class SplitManager {
 		public String toString() {
 			if (null == prStr) {
 				StringBuilder stBld = new StringBuilder();
-				stBld.append(attribute).append(" ").append(operator).append(" ").append(value);
+				stBld.append(attribute).append(SPACE).append(operator).append(SPACE).append(value);
 				if (null != otherBound) {
-					stBld.append(" ").append(otherBound);
+					stBld.append(SPACE).append(otherBound);
 				}
 				prStr = stBld.toString();
 			}
@@ -722,12 +776,12 @@ public class SplitManager {
 					result = result && operand <= otherBound;
 				}
 			} else if (operator.equals(Predicate.OPERATOR_LE)) {
-				result = operand < value;
+				result = operand <= value;
 				if (null != otherBound) {
 					result = result && operand > otherBound;
 				}
 			} else if (operator.equals(Predicate.OPERATOR_LT)) {
-				result = operand <= value;
+				result = operand < value;
 				if (null != otherBound) {
 					result = result && operand >= otherBound;
 				}
@@ -743,9 +797,9 @@ public class SplitManager {
 		public String toString() {
 			if (null == prStr) {
 				StringBuilder stBld = new StringBuilder();
-				stBld.append(attribute).append(" ").append(operator).append(" ").append(value);
+				stBld.append(attribute).append(SPACE).append(operator).append(SPACE).append(value);
 				if (null != otherBound) {
-					stBld.append(" ").append(otherBound);
+					stBld.append(SPACE).append(otherBound);
 				}
 				prStr = stBld.toString();
 			}
@@ -801,7 +855,7 @@ public class SplitManager {
 		public String toString() {
 			if (null == prStr) {
 				StringBuilder stBld = new StringBuilder();
-				stBld.append(attribute).append(" ").append(operator).append(" ");
+				stBld.append(attribute).append(SPACE).append(operator).append(SPACE);
 				for (String value : values) {
 					stBld.append(value).append(":");
 				}

@@ -29,6 +29,9 @@ of detail documentation
 * http://pkghosh.wordpress.com/2013/03/18/analytic-is-your-doctors-friend/
 * http://pkghosh.wordpress.com/2013/02/19/stop-the-customer-separation-pain-bayesian-classifier/
 * http://pkghosh.wordpress.com/2013/01/31/explore-with-cramer-index/
+* https://pkghosh.wordpress.com/2015/07/06/customer-conversion-prediction-with-markov-chain-classifier/
+* https://pkghosh.wordpress.com/2015/05/11/is-bigger-data-better-for-machine-learning/
+
 
 ## Getting started
 Project's resource directory has various tutorial documents for the use cases described in

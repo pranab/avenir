@@ -52,6 +52,10 @@ import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
+/**
+ * @author pranab
+ *
+ */
 public class DecisionTreeBuilder   extends Configured implements Tool {
 
 	@Override
@@ -83,6 +87,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	}
 
 	/**
+	 * Decision tree or random forest. For random forest, data is sampled in the first iteration
 	 * @author pranab
 	 *
 	 */
@@ -112,6 +117,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private int samplingBufferSize;
         private String[]  samplingBuffer;
         private int count;
+        private static final String ATTR_SEL_ALL = "all";
+        private static final String ATTR_SEL_NOT_USED_YET = "notUsedYet";
+        private static final String ATTR_SEL_RANDOM_ALL = "randomAll";
+        private static final String ATTR_SEL_RANDOM_NOT_USED_YET = "randomNotUsedYet";
+        
         private static final Logger LOG = Logger.getLogger(BuilderMapper.class);
 
         /* (non-Javadoc)
@@ -150,7 +160,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             
             validDecPaths.clear();
             
-            //sub samling
+            //sub sampling
             subSamlingStrategy = conf.get("sub.samling.strategy", "withReplace");
             if (subSamlingStrategy.equals(SUB_SAMPLING_WITHOUT_REPLACE)) {
             	samplingRate = Utility.assertIntConfigParam(conf, "sampling.rate", 
@@ -163,10 +173,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         
 		@Override
 		protected void cleanup(Context context) throws IOException, InterruptedException {
-			for (int i = 0; i < count; ++i) {
-				int sel = (int)(Math.random() * count);
-				sel = sel == count ? count -1 : sel;
-        		mapHelper(samplingBuffer[sel], context);
+			if (!treeAvailable && subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
+				for (int i = 0; i < count; ++i) {
+					int sel = (int)(Math.random() * count);
+					sel = sel == count ? count -1 : sel;
+					mapHelper(samplingBuffer[sel], context);
+				}
 			}
 			super.cleanup(context);
 		}
@@ -176,6 +188,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             throws IOException, InterruptedException {
         	//sampling
         	if (!treeAvailable) {
+        		//first iteration
         		 if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
         			 	//sampling with replace
 		        		if (count <  samplingBufferSize)  {
@@ -187,6 +200,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 		        				sel = sel == samplingBufferSize ? samplingBufferSize -1 : sel;
 		                		mapHelper(samplingBuffer[sel], context);
 		        			}
+		        			
+		        			//start refilling buffer
 		        			count = 0;
 		        			samplingBuffer[count++] = value.toString();
 		        		}
@@ -196,14 +211,22 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
      					if (sel < samplingRate) {
      		        		mapHelper(value.toString(),  context);
      					}
+        		 } else {
+        			 //no sampling
+             		mapHelper(value.toString(),  context);
         		 }
         	} else {
-        		//no sampling
+        		//intermediate iteration
         		mapHelper(value.toString(),  context);
         	}
-            
   		}
 
+        /**
+         * @param record
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
         private void mapHelper(String record, Context context)
                 throws IOException, InterruptedException {
        		items  =  record.split(fieldDelimRegex);
@@ -213,13 +236,18 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
               if (treeAvailable) {
                 	currenttDecPath = items[0];
                 	
-                	//filter out rejected splits from last iteration
+                	//find decision path status
                 	Boolean status = validDecPaths.get(currenttDecPath);
                 	if (null == status) {
+                		//from decision path list object
                 		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(currenttDecPath.split(decPathDelim)) ;
                 		status = null == decPathObj ? false : true;
+                		
+                		//cache it
                 		validDecPaths.put(currenttDecPath, status);
                 	} 
+                	
+                	//rejected decision path from earlier iteration rejected splits
                 	if (!status) {
                 		return;
                 	}
@@ -257,12 +285,17 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                     				outKey.add(predicate.toString());
                         			outVal.set(record);
                     			} else {
+                    				//existing predicates
                     				String[] curDecPathItems = items[0].split(decPathDelim);
                     				for (String curDecPathItem : curDecPathItems) {
                         				outKey.add(curDecPathItem);
                     				}
+                    				
+                    				//new predicate
                      				outKey.add(predicate.toString());
                      				int pos = record.indexOf(fieldDelimRegex);
+                     				
+                     				//exclude predicate
                         			outVal.set(record.substring(pos + fieldDelimRegex.length()));
                     			}               		
                 				context.write(outKey, outVal);
@@ -277,18 +310,18 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
          * @param conf
          */
         private void getSplitAttributes() {
-            if (attrSelectStrategy.equals("all")) {
+            if (attrSelectStrategy.equals(ATTR_SEL_ALL)) {
             	//all attributes
             	splitAttrs = splitManager.getAllAttributes();
-            } else if (attrSelectStrategy.equals("notUsedYet")) {
+            } else if (attrSelectStrategy.equals(ATTR_SEL_NOT_USED_YET)) {
             	//attributes that have not been used yet
-            	splitAttrs = splitManager.getRemainingAttributes();
-            } else if (attrSelectStrategy.equals("randomAll")) {
+            	splitAttrs = splitManager.getRemainingAttributes(currenttDecPath);
+            } else if (attrSelectStrategy.equals(ATTR_SEL_RANDOM_ALL)) {
             	//randomly selected k attributes from all
             	splitManager.getRandomAllAttributes(randomSplitSetSize);
-            } else if (attrSelectStrategy.equals("randomNotUsedYet")) {
+            } else if (attrSelectStrategy.equals(ATTR_SEL_RANDOM_NOT_USED_YET)) {
             	//randomly selected k attributes from attributes not used yet
-            	splitManager.getRandomRemainingAttributes(randomSplitSetSize);
+            	splitManager.getRandomRemainingAttributes(currenttDecPath, randomSplitSetSize);
             } else {
             	throw new IllegalArgumentException("invalid splitting attribute selection strategy");
             }
@@ -364,24 +397,33 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		DecisionPathList newDecPathList = new DecisionPathList();
 	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
 	   		double parentStat = 0;
+   			Map<Integer, List< InfoContentStat>> attrInfoContent = new HashMap<Integer, List<InfoContentStat>>();
+	   		
+   			//each parent path
 	   		for (String parentPath :  decPaths.keySet() ) {
-	   			//each parent path
-	   			List< DecisionPathList.DecisionPathPredicate> parentPredicates = 
-	   					DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
-		   		Map<Integer, List< InfoContentStat>> attrInfoContent = new HashMap<Integer, List<InfoContentStat>>();
+	   			//parent predicates
+	   			//List<DecisionPathList.DecisionPathPredicate> parentPredicates = 
+	   			//		DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
+		   		
+	   			//info content stat for different attributes
+	   			attrInfoContent.clear();
+	   			
 	   			Map<String, InfoContentStat> childStats = decPaths.get(parentPath);
 	   			int selectedSplitAttr = 0;
 	   			double minInfoContent = 1000;
+	   			
+	   			//parent decision path in existing tree
 	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
 	   			if (null == parentDecPath) {
-	   				throw new IllegalStateException("missing parent decision path");
+	   				throw new IllegalStateException("missing parent decision path in existing tree");
 	   			}
 	   			parentStat = parentDecPath.getInfoContent();
 	   			
+	   			//all child stats for current parent decision path
 	   			for (String childPath :  childStats.keySet()) {
 	   				//each child path
 	   				InfoContentStat stat = childStats.get(childPath);
-	   				stat.processStat(infoAlgorithm.equals("entropy"));
+	   				//stat.processStat(infoAlgorithm.equals("entropy"));
 	   				int attr = Integer.parseInt(childPath.split("\\s+")[0]);
 	   				
 	   				//group  by attribute
@@ -394,28 +436,36 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				statList.add(stat);
 	   			}
 	   			
-	   			//select splitting attributes
+	   			//select splitting attributes iterating through each attribute
 	   			for (int attr :  attrInfoContent.keySet()) {
-	   				//each attribute
 	   				double weightedInfoContent = 0;
 	   				int totalCount = 0;
+	   				
+	   				//info content of each split
 	   				for (InfoContentStat stat : attrInfoContent.get(attr)) {
 	   					weightedInfoContent += stat.processStat(isAlgoEntropy) * stat.getTotalCount();
 	   					totalCount += stat.getTotalCount();
 	   				}
+	   				
+	   				//average info conten across splits
 	   				double  avInfoContent = weightedInfoContent / totalCount;
+	   				
+	   				//pick minimum
 	   				if (avInfoContent  < minInfoContent) {
 	   					minInfoContent = avInfoContent;
 	   					selectedSplitAttr = attr;
 	   				}
 	   			}
 	   			
-	   			//generate new path
+	   			//parent predicates
+	   			List<DecisionPathList.DecisionPathPredicate> parentPredicates = 
+	   					DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
+	   			
+	   			//generate new path based on selected split attribute
 				FeatureField field = schema.findFieldByOrdinal(selectedSplitAttr);
 			    List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
    				for (InfoContentStat stat : attrInfoContent.get(selectedSplitAttr)) {
    					//all predicate for selected attribute
-   					
    					String predicateStr = stat.getPredicate();
    					DecisionPathList.DecisionPathPredicate predicate = null;
    					if (field.isInteger()) {
@@ -443,12 +493,23 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		writeDecisioList(newDecPathList, "decision.file.path",  context.getConfiguration() );
 	   	}
 	   	
+	   	/**
+	   	 * finds decision path from current tree
+	   	 * @param parentPath
+	   	 * @return
+	   	 */
 	   	private DecisionPathList.DecisionPath findParentDecisionPath(String parentPath) {
 	   		String[] parentPathItems = parentPath.split(decPathDelim);
 	   		DecisionPathList.DecisionPath decPath = decPathList.findDecisionPath(parentPathItems);
 	   		return decPath;
 	   	}
 	   	
+	   	/**
+	   	 * @param newDecPathList
+	   	 * @param outFilePathParam
+	   	 * @param conf
+	   	 * @throws IOException
+	   	 */
 	   	private void writeDecisioList(DecisionPathList newDecPathList, String outFilePathParam, Configuration conf ) 
 	   			throws IOException {
 	   		FSDataOutputStream ouStrm = FileSystem.get(conf).create(new Path(conf.get(outFilePathParam)));	
