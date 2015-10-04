@@ -400,11 +400,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
    			Map<Integer, List< InfoContentStat>> attrInfoContent = new HashMap<Integer, List<InfoContentStat>>();
 	   		
    			//each parent path
-	   		for (String parentPath :  decPaths.keySet() ) {
-	   			//parent predicates
-	   			//List<DecisionPathList.DecisionPathPredicate> parentPredicates = 
-	   			//		DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
-		   		
+	   		for (String parentPath :  decPaths.keySet() ) {		   		
 	   			//info content stat for different attributes
 	   			attrInfoContent.clear();
 	   			
