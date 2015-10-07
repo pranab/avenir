@@ -45,11 +45,23 @@ public class EntityDistanceMapFileAccessor {
 	private MapFile.Reader reader;
 	private String delim;
 	
+	/**
+	 * @throws IOException
+	 */
 	public EntityDistanceMapFileAccessor() throws IOException {
 		conf = new Configuration();;
 		fileSys = FileSystem.get(conf);
 	}
 	
+	/**
+	 * @param conf
+	 * @throws IOException
+	 */
+	public EntityDistanceMapFileAccessor(Configuration conf) throws IOException {
+		this.conf = conf;
+		fileSys = FileSystem.get(conf);
+	}
+
 	/**
 	 * @param filePathParam
 	 * @param delim
@@ -74,7 +86,6 @@ public class EntityDistanceMapFileAccessor {
                 txtValue.set(value);
                 writer.append(txtKey, txtValue);
     		}
-    		
     		IOUtils.closeStream(writer);
     		this.delim = delim;
     	}
@@ -86,7 +97,8 @@ public class EntityDistanceMapFileAccessor {
 	 * @throws IOException
 	 */
 	public void initReader(String mapFileDirPathParam) throws IOException {
-		Path mapFiles = new Path(conf.get(mapFileDirPathParam));
+		String dirPath = Utility.assertStringConfigParam(conf, mapFileDirPathParam, "missing distance map file directory");
+		Path mapFiles = new Path(dirPath);
         MapFile.Reader reader = new MapFile.Reader(fileSys, mapFiles.toString(), conf);
 	}
 

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.avenir.util.EntityDistanceMapFileAccessor;
 
@@ -29,16 +30,23 @@ import org.avenir.util.EntityDistanceMapFileAccessor;
  *
  */
 public class EdgeWeightedCluster {
-	List<String> cluster = new ArrayList<String>();
+	private List<String> cluster = new ArrayList<String>();
+	private String ID;
 	private double avEdgeWeight;
 	private double distScale;
 	private boolean isDistance;
+	private String delim = ",";
+	
+	public EdgeWeightedCluster() {
+		ID = UUID.randomUUID().toString().replaceAll("-", "");
+	}
 	
 	/**
 	 * @param entityId
 	 */
-	public void add(String entityId) {
+	public void add(String entityId, double avEdgeWeight) {
 		cluster.add(entityId);
+		this.avEdgeWeight = avEdgeWeight;
 	}
 	
 	/**
@@ -68,9 +76,32 @@ public class EdgeWeightedCluster {
 		return newAvEdgeWeight;
 	}
 
+	/**
+	 * @param distScale
+	 */
 	public void setDistScale(double distScale) {
 		this.distScale = distScale;
 		isDistance = true;
+	}
+
+	/**
+	 * @return
+	 */
+	public String getID() {
+		return ID;
+	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		StringBuilder stBld = new StringBuilder();
+		stBld.append(ID).append(delim);
+		for (String entity :  cluster) {
+			stBld.append(entity).append(delim);
+		}
+		stBld.append(avEdgeWeight);
+		return stBld.toString();
 	}
 	
 }
