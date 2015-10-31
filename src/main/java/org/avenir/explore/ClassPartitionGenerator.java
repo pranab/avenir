@@ -48,7 +48,7 @@ import org.avenir.util.AttributeSplitHandler;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;

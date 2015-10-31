@@ -43,7 +43,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.explore.MutualInformationScore.FeatureMutualInfo;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Pair;
 import org.chombo.util.TextTuple;
 import org.chombo.util.Tuple;

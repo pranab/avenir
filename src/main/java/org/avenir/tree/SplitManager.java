@@ -30,8 +30,8 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
 import org.chombo.util.BaseAttribute;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
 import org.hoidla.query.Predicate;
 

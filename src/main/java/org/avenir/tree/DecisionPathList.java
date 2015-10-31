@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 
 
 /**

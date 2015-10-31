@@ -47,7 +47,7 @@ import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -136,13 +136,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
         	
         	//schema
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
-            ObjectMapper mapper = new ObjectMapper();
-            schema = mapper.readValue(fs, FeatureSchema.class);
+            schema = Utility.getFeatureSchema(conf, "feature.schema.file.path");
             
             //decision path list  file
-        	fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
-            mapper = new ObjectMapper();
+            InputStream  fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
+            ObjectMapper  mapper = new ObjectMapper();
             decPathList = mapper.readValue(fs, DecisionPathList.class);
            
             //split manager
@@ -358,13 +356,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             }
             
             //schema
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
-            ObjectMapper mapper = new ObjectMapper();
-            schema = mapper.readValue(fs, FeatureSchema.class);
-            
+            schema = Utility.getFeatureSchema(conf, "feature.schema.file.path");
+
             //decision path list  file
-        	fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
-            mapper = new ObjectMapper();
+            InputStream fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
+            ObjectMapper mapper = new ObjectMapper();
             decPathList = mapper.readValue(fs, DecisionPathList.class);
             
         	fieldDelim = conf.get("field.delim.out", ",");

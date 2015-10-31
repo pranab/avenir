@@ -43,7 +43,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.explore.CramerCorrelation;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;

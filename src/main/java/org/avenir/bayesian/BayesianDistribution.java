@@ -41,7 +41,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.util.Version;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Triplet;
 import org.chombo.util.Utility;

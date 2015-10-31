@@ -1,0 +1,72 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "plan",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true		
+		},
+		{
+			"name" : "minUsed",
+			"ordinal" : 2,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 2200,
+			"splitScanInterval" : 200,
+			"maxSplit" : 2
+		},
+		{
+			"name" : "dataUsed",
+			"ordinal" : 3,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 1000,
+			"splitScanInterval" : 100,
+			"maxSplit" : 2
+		},
+		{
+			"name" : "csCall",
+			"ordinal" : 4,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 14,
+			"splitScanInterval" : 2,
+			"maxSplit" : 2
+		},
+		{
+			"name" : "csEmail",
+			"ordinal" : 5,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 22,
+			"splitScanInterval" : 4,
+			"maxSplit" : 2
+		},
+		{
+			"name" : "network",
+			"ordinal" : 6,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 12,
+			"splitScanInterval" : 2,
+			"maxSplit" : 2
+		},
+		{
+			"name" : "churned",
+			"ordinal" : 7,
+			"dataType" : "categorical"
+		}
+	]
+}
