@@ -65,7 +65,8 @@ public class CostSchema {
 		String attrKey = fromValue + "," + toValue;
 		Double cost = foundAttr.getCatAttrCost().get(attrKey);
 		if (null == cost) {
-			throw new IllegalArgumentException("invalid categorical attribute value");
+			//if cost not specified assume 0
+			cost = 0.0;
 		}
 		return cost;
 	}

@@ -1,0 +1,44 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "plan",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true		
+		},
+		{
+			"name" : "csCall",
+			"ordinal" : 4,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 14,
+			"numAttrCost" : -100.0
+		},
+		{
+			"name" : "csEmail",
+			"ordinal" : 5,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 22,
+			"numAttrCost" : -80.0
+		},
+		{
+			"name" : "network",
+			"ordinal" : 6,
+			"dataType" : "int",
+			"feature" : true,
+			"min" : 0,
+			"max" : 12,
+			"numAttrCost" : 1000.0
+		}
+	]
+}

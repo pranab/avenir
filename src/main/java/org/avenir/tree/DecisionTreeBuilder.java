@@ -99,7 +99,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private FeatureSchema schema;
         private List<Integer> splitAttrs;
         private FeatureField classField;
-        private int maxCatAttrSplitGroups;
+        //private int maxCatAttrSplitGroups;
         private SplitManager splitManager;
         private String attrSelectStrategy;
         private int randomSplitSetSize;
@@ -133,7 +133,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
+        	//maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
         	
         	//schema
             schema = Utility.getFeatureSchema(conf, "feature.schema.file.path");
@@ -159,12 +159,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             validDecPaths.clear();
             
             //sub sampling
-            subSamlingStrategy = conf.get("sub.samling.strategy", "withReplace");
+            subSamlingStrategy = conf.get("sub.sampling.strategy", "withReplace");
             if (subSamlingStrategy.equals(SUB_SAMPLING_WITHOUT_REPLACE)) {
-            	samplingRate = Utility.assertIntConfigParam(conf, "sampling.rate", 
+            	samplingRate = Utility.assertIntConfigParam(conf, "sub.sampling.rate", 
             			"samling rate should be provided for sampling without replacement");
             } else if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
-            	int samplingBufferSize = conf.getInt("sampling.buffer.size",  10000);
+            	int samplingBufferSize = conf.getInt("sub.sampling.buffer.size",  10000);
             	samplingBuffer = new String[samplingBufferSize];
             }
         }
@@ -366,18 +366,19 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	fieldDelim = conf.get("field.delim.out", ",");
         	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
         	outputSplitProb = conf.getBoolean("output.split.prob", false);
-        	classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
+        	//classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
+        	classAttrOrdinal = schema.findClassAttrField().getOrdinal();
             decPathDelim = conf.get("dec.path.delim", ";");
 
         	//stopping strategy
-        	String stoppingStrategy =  conf.get("stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
+        	String stoppingStrategy =  conf.get("path.stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
         	int maxDepthLimit = -1;
         	double minInfoGainLimit = -1;
         	int minPopulationLimit = -1;
         	if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MAX_DEPTH)) {
         		maxDepthLimit = Utility.assertIntConfigParam(conf, "max.depth.limit", "missing max depth limit for tree");
         	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN)) {
-            	minInfoGainLimit =      Utility.assertDoubleConfigParam(conf, "min.info.gain.limit", "missing min info gain limit");     
+            	minInfoGainLimit =  Utility.assertDoubleConfigParam(conf, "min.info.gain.limit", "missing min info gain limit");     
         	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_POPULATION)) {
             	minPopulationLimit =  Utility.assertIntConfigParam(conf, "min.population.limit", "missing min population limit");                 
         	} else {
