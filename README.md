@@ -12,7 +12,8 @@ Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
 * Naive Bayes
 * Discrimininant analysis
 * Nearest neighbor
-* Decision tree
+* Decision tree and Random Forest
+* Association Mining
 * Reinforcement learning
 
 
