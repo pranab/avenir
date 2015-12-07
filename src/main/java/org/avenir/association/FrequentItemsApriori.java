@@ -111,19 +111,19 @@ public class FrequentItemsApriori extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 1);
-            itemSetLength = Utility.assertIntConfigParam(conf,  "item.set.length",  "missing item set length");
-            tansIdOrd = Utility.assertIntConfigParam(conf,  "tans.id.ord",  "missing transaction id ordinal");
-            emitTransId = conf.getBoolean("emit.trans.id", true);
+            skipFieldCount = conf.getInt("fia.skip.field.count", 1);
+            itemSetLength = Utility.assertIntConfigParam(conf,  "fia.item.set.length",  "missing item set length");
+            tansIdOrd = Utility.assertIntConfigParam(conf,  "fia.tans.id.ord",  "missing transaction id ordinal");
+            emitTransId = conf.getBoolean("fia.emit.trans.id", true);
             
            	//record partition  id
-        	idOrdinals = Utility.intArrayFromString(conf.get("id.field.ordinals"), fieldDelimRegex);
+        	idOrdinals = Utility.intArrayFromString(conf.get("fia.id.field.ordinals"), fieldDelimRegex);
         	
         	if (itemSetLength > 1) {
         		//load item sets of shorter length
-        		itemSetList = new ItemSetList(conf, "item.set.file.path", itemSetLength -1,  emitTransId, ",");
+        		itemSetList = new ItemSetList(conf, "fia.item.set.file.path", itemSetLength -1,  emitTransId, ",");
         	}
-        }
+       }
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#map(KEYIN, VALUEIN, org.apache.hadoop.mapreduce.Mapper.Context)
@@ -164,15 +164,16 @@ public class FrequentItemsApriori extends Configured implements Tool {
                     			outKey.initialize();
                     			outVal.initialize();
                     			
-                    			//new sorted item set
+                    			//existing items
                     			keyItems.clear();
                     			for (String item : itemSet.getItems()) {
                     				keyItems.add(item);
-                    			}                    			
+                    			}     
+                    			
+                    			//add new item and sort
                     			keyItems.add(items[i]);
                     			Collections.sort(keyItems);
                     			outKey.add(keyItems);
-                    			
                     			
                     			if (emitTransId) {
                     				outVal.add(transId);
@@ -194,7 +195,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
         private boolean shouldGenerateLongerItemSet(ItemSetList.ItemSet itemSet) {
         	boolean generate = true;
         	if (emitTransId) {
-        		//if transId found for samller item set
+        		//only if transId found for smaller item set
         		generate = itemSet.containsTrans(transId);
         	} else {
         		//if all items of the smaller items set found in current record
@@ -218,6 +219,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
 		private Tuple outVal = new Tuple();
 		private boolean emitTransId;
         private int transCount;
+        private Set<String> transactionIds = new HashSet<String>();
 
 		/* (non-Javadoc)
 	   	 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -225,7 +227,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
 	   	protected void setup(Context context) 
 	   			throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
-            emitTransId = conf.getBoolean("emit.trans.id", true);
+            emitTransId = conf.getBoolean("fia.emit.trans.id", true);
 	   	}		
 	   	
         /* (non-Javadoc)
@@ -235,15 +237,23 @@ public class FrequentItemsApriori extends Configured implements Tool {
         		throws IOException, InterruptedException {
         	outVal.initialize();
         	transCount = 0;
+        	transactionIds.clear();
         	for (Tuple value : values) {
         		if (emitTransId) {
-        			outVal.add(value);
+        			//outVal.add(value);
+        			for (int i = 0; i < value.getSize(); ++i) {
+        				transactionIds.add(value.toString(i));
+        			}
         		} else {
         			transCount += value.getInt(0);
         		}
         	}
         	if (!emitTransId) {
         		outVal.add(transCount);
+        	} else {
+        		for (String transID : transactionIds) {
+        			outVal.add(transID);
+        		}
         	}
         	context.write(key, outVal);       	
         }		
@@ -257,12 +267,14 @@ public class FrequentItemsApriori extends Configured implements Tool {
 	public static class AprioriReducer extends Reducer<Tuple, Tuple, NullWritable, Text> {
 		private String fieldDelim;
 		private Text outVal  = new Text();
-		private Tuple transactionIds;
+		private Tuple transactionIdTuple = new Tuple();
+		private Set<String> transactionIds = new HashSet<String>();
 		private boolean emitTransId;
 		private double supportThreshold;
 		private int transCount;
         private int totalTransCount;
         private double support;
+        private boolean transIdOutput;
 
 	   	/* (non-Javadoc)
 	   	 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -274,9 +286,10 @@ public class FrequentItemsApriori extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelim = conf.get("field.delim.out", ",");
-            emitTransId = conf.getBoolean("emit.trans.id", true);
-            supportThreshold = Utility.assertDoubleConfigParam(conf, "support.threshold", "missing support threshold");
-            totalTransCount = Utility.assertIntConfigParam(conf,  "total.tans.count",  "missing total transaction count");
+            emitTransId = conf.getBoolean("fia.emit.trans.id", true);
+            supportThreshold = Utility.assertDoubleConfigParam(conf, "fia.support.threshold", "missing support threshold");
+            totalTransCount = Utility.assertIntConfigParam(conf,  "fia.total.tans.count",  "missing total transaction count");
+            transIdOutput = conf.getBoolean("fia.trans.id.output", true);
  	   	}
 	   	
         /* (non-Javadoc)
@@ -284,11 +297,14 @@ public class FrequentItemsApriori extends Configured implements Tool {
          */
         protected void reduce(Tuple  key, Iterable<Tuple> values, Context context)
         		throws IOException, InterruptedException {
-        	transactionIds.initialize();
+        	transactionIds.clear();
+        	transactionIdTuple.initialize();
         	transCount = 0;
         	for (Tuple value : values) {
         		if (emitTransId) {
-        			transactionIds.add(value);
+        			for (int i = 0; i < value.getSize(); ++i) {
+        				transactionIds.add(value.toString(i));
+        			}
         		} else {
         			transCount += value.getInt(0);
         		}
@@ -296,12 +312,20 @@ public class FrequentItemsApriori extends Configured implements Tool {
         	
         	//emit only if support is above threshold
         	if (emitTransId) {
-        		transCount = transactionIds.getSize();
+        		transCount = transactionIds.size();
+        		for (String transID : transactionIds) {
+        			transactionIdTuple.add(transID);
+        		}
         	} 
         	support = (double)transCount / totalTransCount;
+        	//LOG.debug("transCount=" + transCount  + "    support=" + support);
+        	
         	if (support > supportThreshold) {
             	if (emitTransId) {
-            		outVal.set(key.toString() + fieldDelim + transactionIds.toString() + fieldDelim + Utility.formatDouble(support, 3));
+            		if (transIdOutput)
+            			outVal.set(key.toString() + fieldDelim + transactionIdTuple.toString() + fieldDelim + Utility.formatDouble(support, 3));
+            		else
+            			outVal.set(key.toString() + fieldDelim +  Utility.formatDouble(support, 3));
             	} else {
             		outVal.set(key.toString() + fieldDelim + transCount + fieldDelim + Utility.formatDouble(support, 3));
             	}

@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.chombo.util.Utility;
@@ -36,11 +34,18 @@ import org.chombo.util.Utility;
 public class ItemSetList {
 	private List<ItemSet> itemSetList = new ArrayList<ItemSet>();
 	
+	/**
+	 * @param config
+	 * @param statsFilePath
+	 * @param itemSetLength
+	 * @param containsTransIds
+	 * @param delim
+	 * @throws IOException
+	 */
 	public ItemSetList(Configuration config, String statsFilePath, int itemSetLength, boolean containsTransIds, String delim) throws IOException {
     	InputStream fs = Utility.getFileStream(config, statsFilePath);
     	BufferedReader reader = new BufferedReader(new InputStreamReader(fs));
     	String line = null; 
-    	String[] items = null;
     	
 		//item set, transaction Ids, support 
     	while((line = reader.readLine()) != null) {
