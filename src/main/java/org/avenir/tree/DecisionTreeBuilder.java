@@ -42,7 +42,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.avenir.explore.ClassPartitionGenerator.PartitionGeneratorReducer;
 import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
@@ -57,6 +56,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  *
  */
 public class DecisionTreeBuilder   extends Configured implements Tool {
+    private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
 	@Override
 	public int run(String[] args) throws Exception {
@@ -99,7 +99,6 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private FeatureSchema schema;
         private List<Integer> splitAttrs;
         private FeatureField classField;
-        //private int maxCatAttrSplitGroups;
         private SplitManager splitManager;
         private String attrSelectStrategy;
         private int randomSplitSetSize;
@@ -109,20 +108,19 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private DecisionPathList decPathList;
         private Map<String, Boolean> validDecPaths = new HashMap<String, Boolean>();
         private String subSamlingStrategy;
-        private static final String SUB_SAMPLING_WITH_REPLACE = "withReplace";
-        private static final String SUB_SAMPLING_WITHOUT_REPLACE = "withoutReplace";
-        private static final String SUB_SAMPLING_WITHOUT_NONE = "none";
         private boolean treeAvailable;
         private int samplingRate;
         private int samplingBufferSize;
         private String[]  samplingBuffer;
         private int count;
+        private static final String SUB_SAMPLING_WITH_REPLACE = "withReplace";
+        private static final String SUB_SAMPLING_WITHOUT_REPLACE = "withoutReplace";
+        private static final String SUB_SAMPLING_WITHOUT_NONE = "none";
         private static final String ATTR_SEL_ALL = "all";
         private static final String ATTR_SEL_NOT_USED_YET = "notUsedYet";
         private static final String ATTR_SEL_RANDOM_ALL = "randomAll";
         private static final String ATTR_SEL_RANDOM_NOT_USED_YET = "randomNotUsedYet";
         
-        private static final Logger LOG = Logger.getLogger(BuilderMapper.class);
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -133,25 +131,26 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	//maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
         	
         	//schema
-            schema = Utility.getFeatureSchema(conf, "feature.schema.file.path");
+            schema = Utility.getFeatureSchema(conf, "dtb.feature.schema.file.path");
             
             //decision path list  file
-            InputStream  fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
-            ObjectMapper  mapper = new ObjectMapper();
-            decPathList = mapper.readValue(fs, DecisionPathList.class);
+            InputStream  fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path");
+            if (null != fs) {
+            	ObjectMapper  mapper = new ObjectMapper();
+            	decPathList = mapper.readValue(fs, DecisionPathList.class);
+            }
            
             //split manager
-            decPathDelim = conf.get("dec.path.delim", ";");
-            splitManager = new SplitManager(conf, "dec.path.file.path",  decPathDelim , schema); 
+            decPathDelim = conf.get("dtb.dec.path.delim", ";");
+            splitManager = new SplitManager(conf, "dtb.dec.path.file.path",  decPathDelim , schema); 
             treeAvailable = splitManager.isTreeAvailable();
             
             //attribute selection strategy
-            attrSelectStrategy = conf.get("split.attribute.selection.strategy", "notUsedYet");
+            attrSelectStrategy = conf.get("dtb.split.attribute.selection.strategy", "notUsedYet");
  
-           	randomSplitSetSize = conf.getInt("random.split.set.size", 3);
+           	randomSplitSetSize = conf.getInt("dtb.random.split.set.size", 3);
             
             //class attribute
             classField = schema.findClassAttrField();
@@ -159,12 +158,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             validDecPaths.clear();
             
             //sub sampling
-            subSamlingStrategy = conf.get("sub.sampling.strategy", "withReplace");
+            subSamlingStrategy = conf.get("dtb.sub.sampling.strategy", "withReplace");
             if (subSamlingStrategy.equals(SUB_SAMPLING_WITHOUT_REPLACE)) {
-            	samplingRate = Utility.assertIntConfigParam(conf, "sub.sampling.rate", 
+            	samplingRate = Utility.assertIntConfigParam(conf, "dtb.sub.sampling.rate", 
             			"samling rate should be provided for sampling without replacement");
             } else if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
-            	int samplingBufferSize = conf.getInt("sub.sampling.buffer.size",  10000);
+            	int samplingBufferSize = conf.getInt("dtb.sub.sampling.buffer.size",  10000);
             	samplingBuffer = new String[samplingBufferSize];
             }
         }
@@ -345,8 +344,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private String decPathDelim;
         private DecisionPathStoppingStrategy pathStoppingStrategy;
         private DecisionPathList decPathList;
-        private static final Logger LOG = Logger.getLogger(PartitionGeneratorReducer.class);
-
+        private  boolean decTreeAvailable;
+        
 	   	@Override
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
@@ -356,37 +355,38 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             }
             
             //schema
-            schema = Utility.getFeatureSchema(conf, "feature.schema.file.path");
+            schema = Utility.getFeatureSchema(conf, "dtb.feature.schema.file.path");
 
             //decision path list  file
-            InputStream fs = Utility.getFileStream(context.getConfiguration(), "decision.file.path");
-            ObjectMapper mapper = new ObjectMapper();
-            decPathList = mapper.readValue(fs, DecisionPathList.class);
+            InputStream fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path");
+            if (null != fs) {
+            	ObjectMapper mapper = new ObjectMapper();
+            	decPathList = mapper.readValue(fs, DecisionPathList.class);
+            	decTreeAvailable = true;
+            }
             
         	fieldDelim = conf.get("field.delim.out", ",");
-        	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
-        	outputSplitProb = conf.getBoolean("output.split.prob", false);
-        	//classAttrOrdinal = Utility.assertIntConfigParam(conf, "class.attr.ordinal", "missing class attribute ordinal");
+        	infoAlgorithm = conf.get("dtb.split.algorithm", "giniIndex");
+        	outputSplitProb = conf.getBoolean("dtb.output.split.prob", false);
         	classAttrOrdinal = schema.findClassAttrField().getOrdinal();
-            decPathDelim = conf.get("dec.path.delim", ";");
+            decPathDelim = conf.get("dtb.dec.path.delim", ";");
 
         	//stopping strategy
-        	String stoppingStrategy =  conf.get("path.stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
+        	String stoppingStrategy =  conf.get("dtb.path.stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
         	int maxDepthLimit = -1;
         	double minInfoGainLimit = -1;
         	int minPopulationLimit = -1;
         	if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MAX_DEPTH)) {
-        		maxDepthLimit = Utility.assertIntConfigParam(conf, "max.depth.limit", "missing max depth limit for tree");
+        		maxDepthLimit = Utility.assertIntConfigParam(conf, "dtb.max.depth.limit", "missing max depth limit for tree");
         	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN)) {
-            	minInfoGainLimit =  Utility.assertDoubleConfigParam(conf, "min.info.gain.limit", "missing min info gain limit");     
+            	minInfoGainLimit =  Utility.assertDoubleConfigParam(conf, "dtb.min.info.gain.limit", "missing min info gain limit");     
         	} else if (stoppingStrategy.equals(DecisionPathStoppingStrategy.STOP_MIN_POPULATION)) {
-            	minPopulationLimit =  Utility.assertIntConfigParam(conf, "min.population.limit", "missing min population limit");                 
+            	minPopulationLimit =  Utility.assertIntConfigParam(conf, "dtb.min.population.limit", "missing min population limit");                 
         	} else {
         		throw new IllegalArgumentException("invalid stopping strategy " + stoppingStrategy);
         	}
         	pathStoppingStrategy = new DecisionPathStoppingStrategy(stoppingStrategy, maxDepthLimit, 
         			minInfoGainLimit,minPopulationLimit);
-        	
 	   	}   
 
 	   	@Override
@@ -440,7 +440,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   					totalCount += stat.getTotalCount();
 	   				}
 	   				
-	   				//average info conten across splits
+	   				//average info content across splits
 	   				double  avInfoContent = weightedInfoContent / totalCount;
 	   				
 	   				//pick minimum
@@ -483,7 +483,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		}
 	   		
 	   		//save new decision path list
-	   		writeDecisioList(newDecPathList, "decision.file.path",  context.getConfiguration() );
+	   		writeDecisioList(newDecPathList, "dtb.decision.file.path",  context.getConfiguration() );
 	   	}
 	   	
 	   	/**
@@ -493,7 +493,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	 */
 	   	private DecisionPathList.DecisionPath findParentDecisionPath(String parentPath) {
 	   		String[] parentPathItems = parentPath.split(decPathDelim);
-	   		DecisionPathList.DecisionPath decPath = decPathList.findDecisionPath(parentPathItems);
+	   		DecisionPathList.DecisionPath decPath =  null != decPathList?  decPathList.findDecisionPath(parentPathItems) : null;
 	   		return decPath;
 	   	}
 	   	
@@ -519,8 +519,13 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	int keySize = key.getSize();
         	key.setDelim(";");
         	decPath = key.toString();
-        	parentDecPath =  key.toString(0, keySize-1);
-        	childPath = key.getString(keySize-1);
+        	
+        	if (keySize > 1) {
+        		parentDecPath =  key.toString(0, keySize-1);
+        		childPath = key.getString(keySize-1);
+        	} else {
+        		parentDecPath = key.getString(0);
+        	}
         	
         	//all child class stats
         	Map<String, InfoContentStat> candidateChildrenPath =  decPaths.get(parentDecPath);

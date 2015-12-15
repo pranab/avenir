@@ -32,6 +32,7 @@ of detail documentation
 * http://pkghosh.wordpress.com/2013/01/31/explore-with-cramer-index/
 * https://pkghosh.wordpress.com/2015/07/06/customer-conversion-prediction-with-markov-chain-classifier/
 * https://pkghosh.wordpress.com/2015/05/11/is-bigger-data-better-for-machine-learning/
+* https://pkghosh.wordpress.com/2015/12/13/association-mining-with-improved-apriori-algorithm/
 
 
 ## Getting started
