@@ -46,6 +46,10 @@ public class DecisionPathList {
 		decisionPaths.add(decPath);
 	}
 	
+	/**
+	 * @param predcateStrings
+	 * @return
+	 */
 	public DecisionPath findDecisionPath(String[] predcateStrings) {
 		DecisionPath foundDecPath = null;
 		for (DecisionPath decPath :  decisionPaths) {
@@ -58,6 +62,22 @@ public class DecisionPathList {
 		return foundDecPath;
 	}
 	
+	/**
+	 * @param predcateString
+	 * @return
+	 */
+	public DecisionPath findDecisionPath(String predcateString) {
+		DecisionPath foundDecPath = null;
+		for (DecisionPath decPath :  decisionPaths) {
+			if (decPath.isMatchedByPredicateString(predcateString)) {
+				foundDecPath = decPath;
+				break;
+			}
+		}
+		
+		return foundDecPath;
+	}
+
 	/**
 	 * Decision path containing a list of predicates
 	 * @author pranab
@@ -72,6 +92,12 @@ public class DecisionPathList {
 		public DecisionPath() {
 		}
 		
+		/**
+		 * @param predicates
+		 * @param population
+		 * @param infoContent
+		 * @param stopped
+		 */
 		public DecisionPath(List<DecisionPathPredicate> predicates,
 			int population, double infoContent,  boolean stopped) {
 			super();
@@ -81,6 +107,20 @@ public class DecisionPathList {
 			this.stopped = stopped;
 		}
 		
+		/**
+		 * @param population
+		 * @param infoContent
+		 */
+		public DecisionPath(int population, double infoContent) {
+			this.population = population;
+			this.infoContent = infoContent;
+			this.stopped = false;
+		}
+
+		/**
+		 * @param predcateStrings
+		 * @return
+		 */
 		public boolean isMatchedByPredicates(String[] predcateStrings) {
 			boolean matched = true;;
 			int i = 0;
@@ -90,10 +130,21 @@ public class DecisionPathList {
 					break;
 				}
 			}
-			
 			return matched;
 		}
 		
+		public boolean isMatchedByPredicateString(String predcateString) {
+			boolean matched = false;;
+			int i = 0;
+			for (DecisionPathPredicate predicate : predicates) {
+				if (!predicate.getPredicateStr().equals(predcateString)) {
+					matched = true;
+					break;
+				}
+			}
+			return matched;
+		}
+
 		public List<DecisionPathPredicate> getPredicates() {
 			return predicates;
 		}
@@ -135,7 +186,17 @@ public class DecisionPathList {
 		private Integer otherBoundInt;
 		private Double otherBoundDbl;
 		private String predicateStr;
-		
+
+		/**
+		 * @param predicateStr
+		 * @return
+		 */
+		public static DecisionPathPredicate createRootPredicate(String predicateStr) {
+			DecisionPathPredicate predicate = new  DecisionPathPredicate() ;
+			predicate.setPredicateStr(predicateStr);
+			return predicate;
+		}		
+
 		/**
 		 * @param predicateStr
 		 * @return

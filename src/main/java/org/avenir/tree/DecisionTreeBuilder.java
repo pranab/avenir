@@ -42,6 +42,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.tree.DecisionPathList.DecisionPathPredicate;
 import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
@@ -56,6 +57,8 @@ import org.codehaus.jackson.map.ObjectMapper;
  *
  */
 public class DecisionTreeBuilder   extends Configured implements Tool {
+    private static final String ROOT_PATH = "$root";
+    private static final String CHILD_PATH = "$child";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
 	@Override
@@ -120,7 +123,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private static final String ATTR_SEL_NOT_USED_YET = "notUsedYet";
         private static final String ATTR_SEL_RANDOM_ALL = "randomAll";
         private static final String ATTR_SEL_RANDOM_NOT_USED_YET = "randomNotUsedYet";
-        
+       
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -171,10 +174,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 		@Override
 		protected void cleanup(Context context) throws IOException, InterruptedException {
 			if (!treeAvailable && subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
+				//remaining in buffer
 				for (int i = 0; i < count; ++i) {
 					int sel = (int)(Math.random() * count);
 					sel = sel == count ? count -1 : sel;
-					mapHelper(samplingBuffer[sel], context);
+					rootMapHelper(samplingBuffer[sel], context);
 				}
 			}
 			super.cleanup(context);
@@ -185,7 +189,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             throws IOException, InterruptedException {
         	//sampling
         	if (!treeAvailable) {
-        		//first iteration
+        		//first iteration for root predicate
         		 if (subSamlingStrategy.equals(SUB_SAMPLING_WITH_REPLACE)) {
         			 	//sampling with replace
 		        		if (count <  samplingBufferSize)  {
@@ -195,7 +199,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 		        			for (int i = 0; i < samplingBufferSize; ++i) {
 		        				int sel = (int)(Math.random() * samplingBufferSize);
 		        				sel = sel == samplingBufferSize ? samplingBufferSize -1 : sel;
-		                		mapHelper(samplingBuffer[sel], context);
+		        				rootMapHelper(samplingBuffer[sel], context);
 		        			}
 		        			
 		        			//start refilling buffer
@@ -206,15 +210,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         			 	//sampling without replace
      					int sel = (int)(Math.random() * 100);
      					if (sel < samplingRate) {
-     		        		mapHelper(value.toString(),  context);
+     						rootMapHelper(value.toString(),  context);
      					}
         		 } else {
         			 //no sampling
-             		mapHelper(value.toString(),  context);
+        			 rootMapHelper(value.toString(),  context);
         		 }
         	} else {
         		//intermediate iteration
-        		mapHelper(value.toString(),  context);
+        		pathMapHelper(value.toString(),  context);
         	}
   		}
 
@@ -224,7 +228,21 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
          * @throws IOException
          * @throws InterruptedException
          */
-        private void mapHelper(String record, Context context)
+        private void rootMapHelper(String record, Context context)
+                throws IOException, InterruptedException {
+			outKey.initialize();
+			outKey.add(ROOT_PATH);
+			outVal.set(record);
+			context.write(outKey, outVal);
+        }        
+        
+        /**
+         * @param record
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        private void pathMapHelper(String record, Context context)
                 throws IOException, InterruptedException {
        		items  =  record.split(fieldDelimRegex);
        	    classVal = items[classField.getOrdinal()];
@@ -391,6 +409,18 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
+	   		if (decTreeAvailable) {
+	   			generateTree(context);
+	   		} else {
+	   			generateRoot(context);
+	   		}
+	   	}
+
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 */
+	   	private void generateTree(Context context) throws IOException {
 	   		DecisionPathList newDecPathList = new DecisionPathList();
 	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
 	   		double parentStat = 0;
@@ -407,8 +437,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   			
 	   			//parent decision path in existing tree
 	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
-	   			if (null == parentDecPath) {
-	   				throw new IllegalStateException("missing parent decision path in existing tree");
+	   			if (null  == parentDecPath) {
+	   				throw new IllegalStateException("parent path not found");
 	   			}
 	   			parentStat = parentDecPath.getInfoContent();
 	   			
@@ -484,6 +514,27 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		
 	   		//save new decision path list
 	   		writeDecisioList(newDecPathList, "dtb.decision.file.path",  context.getConfiguration() );
+	   		
+	   	}	   	
+	   	
+	   	/**
+	   	 * @throws IOException 
+	   	 * 
+	   	 */
+	   	private void generateRoot(Context context) throws IOException {
+	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
+	   		Map<String, InfoContentStat> childStats = decPaths.get(ROOT_PATH);
+	   		InfoContentStat childStat = childStats.get(CHILD_PATH);
+	   		childStat.processStat(isAlgoEntropy);
+	   		
+	   		DecisionPathList newDecPathList = new DecisionPathList();
+	   		DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(childStat.getTotalCount(), childStat.getStat());
+	   		DecisionPathPredicate predicate = DecisionPathPredicate.createRootPredicate(ROOT_PATH);
+	   		
+	   		newDecPathList.addDecisionPath(decPath);
+	   		
+	   		//save new decision path list
+	   		writeDecisioList(newDecPathList, "dtb.decision.file.path",  context.getConfiguration() );
 	   	}
 	   	
 	   	/**
@@ -492,8 +543,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	 * @return
 	   	 */
 	   	private DecisionPathList.DecisionPath findParentDecisionPath(String parentPath) {
-	   		String[] parentPathItems = parentPath.split(decPathDelim);
-	   		DecisionPathList.DecisionPath decPath =  null != decPathList?  decPathList.findDecisionPath(parentPathItems) : null;
+	   		DecisionPathList.DecisionPath decPath =  null ;
+	   		if (null != decPathList) {
+	   			if (parentPath.equals(ROOT_PATH)) {
+	   				decPath = decPathList.findDecisionPath(ROOT_PATH);
+	   			} else {
+	   		   		String[] parentPathItems = parentPath.split(decPathDelim);
+	   		   		decPath = decPathList.findDecisionPath(parentPathItems);
+	   			}
+	   		}
 	   		return decPath;
 	   	}
 	   	
@@ -521,10 +579,13 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	decPath = key.toString();
         	
         	if (keySize > 1) {
+        		//tree exists
         		parentDecPath =  key.toString(0, keySize-1);
         		childPath = key.getString(keySize-1);
         	} else {
+        		//tree does not exist
         		parentDecPath = key.getString(0);
+        		childPath = CHILD_PATH;
         	}
         	
         	//all child class stats
