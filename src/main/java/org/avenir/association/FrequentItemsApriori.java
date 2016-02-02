@@ -101,6 +101,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
         private ItemSetList itemSetList;
         private Set<String> currentItems = new HashSet<String>();
         private List<String> keyItems = new ArrayList<String>();
+        private String infreqItemMarker;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -123,6 +124,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
         		//load item sets of shorter length
         		itemSetList = new ItemSetList(conf, "fia.item.set.file.path", itemSetLength -1,  emitTransId, ",");
         	}
+        	infreqItemMarker = conf.get("fia.infreq.item.marker");
        }
 
         /* (non-Javadoc)
@@ -159,8 +161,13 @@ public class FrequentItemsApriori extends Configured implements Tool {
         			if (shouldGenerateLongerItemSet(itemSet)) {
         				//this transaction contained shorter length item set
                 		for (int i = skipFieldCount; i < items.length; ++i) {
+                			//if infrequent items marked and there is match, skip the token
+                			if (null != infreqItemMarker && infreqItemMarker.equals(items[i])) {
+                				continue;
+                			}
+                			
+            				//if the item is not already contained in item set
                 			if (!itemSet.containsItem(items[i])) {
-                				//if the item is not already contained in item set
                     			outKey.initialize();
                     			outVal.initialize();
                     			
@@ -290,6 +297,7 @@ public class FrequentItemsApriori extends Configured implements Tool {
             supportThreshold = Utility.assertDoubleConfigParam(conf, "fia.support.threshold", "missing support threshold");
             totalTransCount = Utility.assertIntConfigParam(conf,  "fia.total.tans.count",  "missing total transaction count");
             transIdOutput = conf.getBoolean("fia.trans.id.output", true);
+
  	   	}
 	   	
         /* (non-Javadoc)
