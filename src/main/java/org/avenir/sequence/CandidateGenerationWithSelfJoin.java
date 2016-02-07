@@ -36,7 +36,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.avenir.association.FrequentItemsApriori;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -56,7 +55,7 @@ public class CandidateGenerationWithSelfJoin extends Configured implements Tool 
         String jobName = "Generates k candidate sequence";
         job.setJobName(jobName);
         
-        job.setJarByClass(FrequentItemsApriori.class);
+        job.setJarByClass(CandidateGenerationWithSelfJoin.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
