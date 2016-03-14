@@ -8,17 +8,26 @@ import sklearn.datasets
 import sklearn.linear_model
 import matplotlib
 
+print "num of command line args %d" %(len(sys.argv))
+
+if len(sys.argv) != 6:
+	print "usage: <num_hidden_units> <data_set_size> <noise_in_data> <iteration_count> <learning_rate>"
+	sys.exit()
+	
 # number of hidden units
 nn_hdim = int(sys.argv[1])
 
 # dat set size
 dsize = int(sys.argv[2])
 
+# noise in training data
+noise_level = float(sys.argv[3])
+
 # iteration count
-it_count = int(sys.argv[3])
+it_count = int(sys.argv[4])
 
 # learning rate
-epsilon = float(sys.argv[4])
+epsilon = float(sys.argv[5])
 
 
 # validation
@@ -26,7 +35,7 @@ use_validation_data = True
 
 # Generate a dataset
 #noise_level = 0.20
-noise_level = 0.01
+#noise_level = 0.01
 vlo = 100
 vup = vlo + dsize / 5
 vsize = vup - vlo
