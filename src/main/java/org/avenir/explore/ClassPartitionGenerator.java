@@ -130,15 +130,15 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	
-        	maxCatAttrSplitGroups = conf.getInt("max.cat.attr.split.groups", 3);
+        	maxCatAttrSplitGroups = conf.getInt("cpg.max.cat.attr.split.groups", 3);
         	
         	//schema
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "cpg.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
             //attribute selection strategy
-            String attrSelectStrategy = conf.get("split.attribute.selection.strategy", "userSpecified");
+            String attrSelectStrategy = conf.get("cpg.split.attribute.selection.strategy", "userSpecified");
             
             //get split attributes
             getSplitAttributes(attrSelectStrategy, conf);
@@ -158,12 +158,12 @@ public class ClassPartitionGenerator extends Configured implements Tool {
          * @param conf
          */
         private void getSplitAttributes(String attrSelectStrategy, Configuration conf) {
-            atRoot = conf.getBoolean("at.root", false);
+            atRoot = conf.getBoolean("cpg.at.root", false);
             if (atRoot) {
             	LOG.debug("processing at root");
             } else if (attrSelectStrategy.equals("userSpecified")) {
             	//user specified attributes
-	            String attrs = conf.get("split.attributes");
+	            String attrs = conf.get("cpg.split.attributes");
 	            splitAttrs = Utility.intArrayFromString(attrs, ",");
             } else if (attrSelectStrategy.equals("all")) {
             	//all attributes
@@ -176,7 +176,7 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             	
             } else if (attrSelectStrategy.equals("random")) {
             	//randomly selected k attributes
-            	int randomSplitSetSize = conf.getInt("random.split.set.size", 3);
+            	int randomSplitSetSize = conf.getInt("cpg.random.split.set.size", 3);
                	int[] allSplitAttrs = schema.getFeatureFieldOrdinals();
                	Set<Integer> splitSet = new  HashSet<Integer>();
                	while (splitSet.size() != randomSplitSetSize) {
@@ -488,13 +488,13 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             	AttributeSplitStat.enableLog();
             }
             
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "cpg.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
 
-        	infoAlgorithm = conf.get("split.algorithm", "giniIndex");
-            String attrs = conf.get("split.attributes");
+        	infoAlgorithm = conf.get("cpg.split.algorithm", "giniIndex");
+            String attrs = conf.get("cpg.split.attributes");
             if (null != attrs) {
             	//attribute level
             	attrOrdinals = Utility.intArrayFromString(attrs, ",");
@@ -506,8 +506,8 @@ public class ClassPartitionGenerator extends Configured implements Tool {
             	atRoot = true;
             	rootInfoStat = new InfoContentStat();
             }
-        	outputSplitProb = conf.getBoolean("output.split.prob", false);
-        	parentInfo = Double.parseDouble(conf.get("parent.info"));
+        	outputSplitProb = conf.getBoolean("cpg.output.split.prob", false);
+        	parentInfo = Double.parseDouble(conf.get("cpg.parent.info"));
 	   	}   
 	   	
 	   	@Override

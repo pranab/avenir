@@ -132,14 +132,14 @@ public class BayesianPredictor extends Configured implements Tool {
         	fieldDelim = config.get("field.delim.out", ",");
 
         	//schema
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bap.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             fields =  schema.getFeatureAttrFields();
             
             //cost based arbitrator
-            if (null != config.get("bp.predict.class.cost")) {
-	            String[] costs = config.get("bp.predict.class.cost").split(fieldDelim);
+            if (null != config.get("bap.predict.class.cost")) {
+	            String[] costs = config.get("bap.predict.class.cost").split(fieldDelim);
 	            arbitrator = new  CostBasedArbitrator(predictingClasses[0], predictingClasses[1], 
 	            		Integer.parseInt(costs[0]),  Integer.parseInt(costs[1]));
             }
@@ -148,8 +148,8 @@ public class BayesianPredictor extends Configured implements Tool {
         	classAttrField = schema.findClassAttrField();
         	
             //predicting classes and confusion matrix
-        	if (null != config.get("bp.predict.class")) {
-        		predictingClasses = config.get("bp.predict.class").split(fieldDelim);
+        	if (null != config.get("bap.predict.class")) {
+        		predictingClasses = config.get("bap.predict.class").split(fieldDelim);
         	} else {
             	List<String> cardinality = classAttrField.getCardinality();
             	predictingClasses = new String[2];
@@ -157,8 +157,8 @@ public class BayesianPredictor extends Configured implements Tool {
         		predictingClasses[1] = cardinality.get(1);
         	}
     		confMatrix = new ConfusionMatrix(predictingClasses[0], predictingClasses[1] );
-    		classProbDiffThrehold = config.getInt("class.prob.diff.threshold", -1);
-    		outputFeatureProbOnly  = config.getBoolean("output.feature.prob.only",  false);
+    		classProbDiffThrehold = config.getInt("bap.class.prob.diff.threshold", -1);
+    		outputFeatureProbOnly  = config.getBoolean("bap.output.feature.prob.only",  false);
         	
         	//bayesian model
         	loadModel(context);
@@ -185,7 +185,7 @@ public class BayesianPredictor extends Configured implements Tool {
          */
         private void loadModel(Context context) throws IOException {
         	model = new BayesianModel();
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bayesian.model.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bap.bayesian.model.file.path");
         	BufferedReader reader = new BufferedReader(new InputStreamReader(fs));
         	String line = null; 
         	String[] items = null;

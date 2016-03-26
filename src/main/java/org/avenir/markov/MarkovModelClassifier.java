@@ -98,25 +98,25 @@ public class MarkovModelClassifier extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim.out", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 1);
-            idFieldOrd = conf.getInt("id.field.ord", 0);
-            isClassLabelBased = conf.getBoolean("class.label.based.model", false);
-            inValidationMode = conf.getBoolean("validation.mode", false);
+            skipFieldCount = conf.getInt("mmc.skip.field.count", 1);
+            idFieldOrd = conf.getInt("mmc.id.field.ord", 0);
+            isClassLabelBased = conf.getBoolean("mmc.class.label.based.model", false);
+            inValidationMode = conf.getBoolean("mmc.validation.mode", false);
             if (inValidationMode) {
             	++skipFieldCount;
-            	classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            	classLabelFieldOrd = conf.getInt("mmc.class.label.field.ord", -1);
             	if (classLabelFieldOrd < 0) {
             		throw new IllegalArgumentException("In validation mode actual class labels must be provided");
             	}
             }
             
-        	List<String> lines = Utility.getFileLines(conf, "mm.model.path");
+        	List<String> lines = Utility.getFileLines(conf, "mmc.mm.model.path");
         	model = new MarkovModel(lines,  isClassLabelBased);
-        	classLabels = conf.get("class.labels").split(",");
-        	transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	classLabels = conf.get("mmc.class.labels").split(",");
+        	transProbScale = conf.getInt("mmc.trans.prob.scale", 1000);
 
-        	if (null != conf.get("log.odds.threshold")) {
-        		logOddsThreshold = Double.parseDouble(conf.get("log.odds.threshold"));
+        	if (null != conf.get("mmc.log.odds.threshold")) {
+        		logOddsThreshold = Double.parseDouble(conf.get("mmc.log.odds.threshold"));
         	} 
         	LOG.debug("logOddsThreshold:" + logOddsThreshold);
         }

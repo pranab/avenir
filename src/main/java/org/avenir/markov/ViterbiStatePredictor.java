@@ -98,12 +98,12 @@ public class ViterbiStatePredictor extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim.out", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 1);
-            idFieldIndex = conf.getInt("id.field.ordinal", 0);
-            outputStateOnly = conf.getBoolean("output.state.only", true);
-            subFieldDelim = conf.get("sub.field.delim", ":");
+            skipFieldCount = conf.getInt("vsp.skip.field.count", 1);
+            idFieldIndex = conf.getInt("vsp.id.field.ordinal", 0);
+            outputStateOnly = conf.getBoolean("vsp.output.state.only", true);
+            subFieldDelim = conf.get("vsp.sub.field.delim", ":");
             
-        	List<String> lines = Utility.getFileLines(conf, "hmm.model.path");
+        	List<String> lines = Utility.getFileLines(conf, "vsp.hmm.model.path");
         	model = new HiddenMarkovModel(lines,  LOG);
         	decoder = new ViterbiDecoder(model, LOG);
         }

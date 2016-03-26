@@ -121,7 +121,7 @@ public class MutualInformation extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
         	
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "mut.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             
@@ -444,15 +444,15 @@ public class MutualInformation extends Configured implements Tool {
 			Configuration conf = context.getConfiguration();
 	    	fieldDelim = conf.get("field.delim.out", ",");
 
-	    	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	    	InputStream fs = Utility.getFileStream(context.getConfiguration(), "mut.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             featureFields = schema.getFeatureAttrFields();
 
-            outputMutualInfo = conf.getBoolean("output.mutual.info", true);
-            String mututalInfoScoreAlg =  conf.get("mutual.info.score.algorithms", "mutual.info.maximization");
+            outputMutualInfo = conf.getBoolean("mut.output.mutual.info", true);
+            String mututalInfoScoreAlg =  conf.get("mut.mutual.info.score.algorithms", "mutual.info.maximization");
             mututalInfoScoreAlgList = mututalInfoScoreAlg.split(",");
-            redundancyFactor = Double.parseDouble(conf.get("mutual.info.redundancy.factor", "1.0"));
+            redundancyFactor = Double.parseDouble(conf.get("mut.mutual.info.redundancy.factor", "1.0"));
 		}
 		
 	   	/* (non-Javadoc)

@@ -102,8 +102,8 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 0);
-            classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            skipFieldCount = conf.getInt("mst.skip.field.count", 0);
+            classLabelFieldOrd = conf.getInt("mst.class.label.field.ord", -1);
             if (classLabelFieldOrd >= 0) {
             	++skipFieldCount;
             }
@@ -188,12 +188,12 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelim = conf.get("field.delim.out", ",");
-        	states = conf.get("model.states").split(",");
+        	states = conf.get("mst.model.states").split(",");
         	transProb = new StateTransitionProbability(states, states);
-        	transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	transProbScale = conf.getInt("mst.trans.prob.scale", 1000);
         	transProb.setScale(transProbScale);
-        	isClassBasedModel = conf.getInt("class.label.field.ord", -1) >= 0;
-        	outputStates = conf.getBoolean("output.states", true); 
+        	isClassBasedModel = conf.getInt("mst.class.label.field.ord", -1) >= 0;
+        	outputStates = conf.getBoolean("mst.output.states", true); 
 	   	}
 	   	
 	   	/* (non-Javadoc)

@@ -112,10 +112,10 @@ public class BayesianDistribution extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
-        	tabularInput = config.getBoolean("tabular.input", true);
+        	tabularInput = config.getBoolean("bad.tabular.input", true);
         	if (tabularInput) {
         		//tabular input
-	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bad.feature.schema.file.path");
 	            ObjectMapper mapper = new ObjectMapper();
 	            schema = mapper.readValue(fs, FeatureSchema.class);
 	            
@@ -225,11 +225,11 @@ public class BayesianDistribution extends Configured implements Tool {
 		protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
-        	tabularInput = config.getBoolean("tabular.input", true);
+        	tabularInput = config.getBoolean("bad.tabular.input", true);
     		
         	//tabular input
         	if (tabularInput) {
-        		InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        		InputStream fs = Utility.getFileStream(context.getConfiguration(), "bad.feature.schema.file.path");
         		ObjectMapper mapper = new ObjectMapper();
         		schema = mapper.readValue(fs, FeatureSchema.class);
         	}

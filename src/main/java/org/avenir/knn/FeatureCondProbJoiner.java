@@ -94,7 +94,7 @@ public class FeatureCondProbJoiner extends Configured implements Tool {
          */
         protected void setup(Context context) throws IOException, InterruptedException {
             fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
-            String splitPrefix = context.getConfiguration().get("feature.cond.prob.split.prefix", "condProb");
+            String splitPrefix = context.getConfiguration().get("fcb.feature.cond.prob.split.prefix", "condProb");
     		isFeatureCondProbSplit = ((FileSplit)context.getInputSplit()).getPath().getName().startsWith(splitPrefix);
         }
         

@@ -116,10 +116,10 @@ public class NearestNeighbor extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
             fieldDelimRegex = config.get("field.delim.regex", ",");
-            isValidationMode = config.getBoolean("validation.mode", true);
-            classCondtionWeighted = config.getBoolean("class.condition.weighted", false);
-            String predictionMode = config.get("prediction.mode", "classification");
-        	String regressionMethod = config.get("regression.method", "average");
+            isValidationMode = config.getBoolean("nen.validation.mode", true);
+            classCondtionWeighted = config.getBoolean("nen.class.condition.weighted", false);
+            String predictionMode = config.get("nen.prediction.mode", "classification");
+        	String regressionMethod = config.get("nen.regression.method", "average");
         	isLinearRegression = predictionMode.equals("regression") && regressionMethod.equals("linearRegression");
         }    
 
@@ -232,28 +232,28 @@ public class NearestNeighbor extends Configured implements Tool {
             }
         	
            	fieldDelim = config.get("field.delim", ",");
-        	topMatchCount = config.getInt("top.match.count", 10);
-            isValidationMode = config.getBoolean("validation.mode", true);
-            kernelFunction = config.get("kernel.function", "none");
-        	kernelParam = config.getInt("kernel.param", -1);
-            classCondtionWeighted = config.getBoolean("class.condtion.weighted", false);
+        	topMatchCount = config.getInt("nen.top.match.count", 10);
+            isValidationMode = config.getBoolean("nen.validation.mode", true);
+            kernelFunction = config.get("nen.kernel.function", "none");
+        	kernelParam = config.getInt("nen.kernel.param", -1);
+            classCondtionWeighted = config.getBoolean("nen.class.condtion.weighted", false);
         	neighborhood = new Neighborhood(kernelFunction, kernelParam, classCondtionWeighted);
-        	outputClassDistr = config.getBoolean("output.class.distr", false);
-        	inverseDistanceWeighted = config.getBoolean("inverse.distance.weighted", false);
+        	outputClassDistr = config.getBoolean("nen.output.class.distr", false);
+        	inverseDistanceWeighted = config.getBoolean("nen.inverse.distance.weighted", false);
         	
         	//regression
-        	String predictionMode = config.get("prediction.mode", "classification");
+        	String predictionMode = config.get("nen.prediction.mode", "classification");
         	if (predictionMode.equals("regression")) {
         		neighborhood.withPredictionMode(PredictionMode.Regression);
-            	String regressionMethod = config.get("regression.method", "average");
+            	String regressionMethod = config.get("nen.regression.method", "average");
             	regressionMethod = WordUtils.capitalize(regressionMethod) ;
             	neighborhood.withRegressionMethod(RegressionMethod.valueOf(regressionMethod));
         	}
 
         	//decision threshold for classification
-        	decisionThreshold = Double.parseDouble(config.get("decision.threshold", "-1.0"));
+        	decisionThreshold = Double.parseDouble(config.get("nen.decision.threshold", "-1.0"));
         	if (decisionThreshold > 0 && neighborhood.IsInClassificationMode()) {
-            	String[] classAttrValues = config.get("class.attribute.values").split(",");
+            	String[] classAttrValues = config.get("nen.class.attribute.values").split(",");
             	posClassAttrValue = classAttrValues[0];
             	negClassAttrValue = classAttrValues[1];
         		neighborhood.
@@ -262,15 +262,15 @@ public class NearestNeighbor extends Configured implements Tool {
         	}
         	
         	//using cost based arbitrator for classification
-        	useCostBasedClassifier = config.getBoolean("use.cost.based.classifier", false);
+        	useCostBasedClassifier = config.getBoolean("nen.use.cost.based.classifier", false);
             if (useCostBasedClassifier && neighborhood.IsInClassificationMode()) {
             	if (null == posClassAttrValue) {
-            		String[] classAttrValues = config.get("class.attribute.values").split(",");
+            		String[] classAttrValues = config.get("nen.class.attribute.values").split(",");
             		posClassAttrValue = classAttrValues[0];
             		negClassAttrValue = classAttrValues[1];
             	}
             	
-            	int[] missclassificationCost = Utility.intArrayFromString(config.get("misclassification.cost"));
+            	int[] missclassificationCost = Utility.intArrayFromString(config.get("nen.misclassification.cost"));
             	falsePosCost = missclassificationCost[0];
             	falseNegCost = missclassificationCost[1];
             	costBasedArbitrator = new CostBasedArbitrator(negClassAttrValue, posClassAttrValue,
@@ -280,7 +280,7 @@ public class NearestNeighbor extends Configured implements Tool {
             //confusion matrix for classification validation
        		if (isValidationMode) {
        			if (neighborhood.IsInClassificationMode()) {
-	       		    InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	       		    InputStream fs = Utility.getFileStream(context.getConfiguration(), "nen.feature.schema.file.path");
 		            ObjectMapper mapper = new ObjectMapper();
 		            schema = mapper.readValue(fs, FeatureSchema.class);
 		        	classAttrField = schema.findClassAttrField();
