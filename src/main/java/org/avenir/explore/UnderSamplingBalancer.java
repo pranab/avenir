@@ -85,8 +85,8 @@ public class UnderSamplingBalancer extends Configured implements Tool {
 	    protected void setup(Context context) throws IOException, InterruptedException {
 	    	Configuration conf = context.getConfiguration();
             fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
-	    	classAttrOrd = conf.getInt("class.attr.ord", -1);
-	    	distrBatchSize = conf.getInt("distr.batch.size", 500);
+	    	classAttrOrd = conf.getInt("usb.class.attr.ord", -1);
+	    	distrBatchSize = conf.getInt("usb.distr.batch.size", 500);
 	    }	
 	    
 	    @Override

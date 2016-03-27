@@ -106,12 +106,12 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 0);
+            skipFieldCount = conf.getInt("hmmb.skip.field.count", 0);
         	subFieldDelim = conf.get("sub.field.delim", ":");
-        	partiallyTagged = conf.getBoolean("partially.tagged", false);
-        	states = conf.get("model.states").split(",");
+        	partiallyTagged = conf.getBoolean("hmmb.partially.tagged", false);
+        	states = conf.get("hmmb.model.states").split(",");
         	if (partiallyTagged) {
-        		windowFunction = Utility.intArrayFromString(conf.get("window.function"), ",");
+        		windowFunction = Utility.intArrayFromString(conf.get("hmmb.window.function"), ",");
         	}
         }
         
@@ -288,9 +288,9 @@ public class HiddenMarkovModelBuilder extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelim = conf.get("field.delim.out", ",");
-        	states = conf.get("model.states").split(",");
-        	observations = conf.get("model.observations").split(",");
-        	int transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	states = conf.get("hmmb.model.states").split(",");
+        	observations = conf.get("hmmb.model.observations").split(",");
+        	int transProbScale = conf.getInt("hmmb.trans.prob.scale", 1000);
         	
         	//state transition
         	stateTransProb = new StateTransitionProbability(states, states);

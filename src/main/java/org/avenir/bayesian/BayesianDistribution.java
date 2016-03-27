@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -42,8 +41,8 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.util.Version;
 import org.chombo.mr.FeatureField;
 import org.chombo.util.FeatureSchema;
-import org.chombo.util.Tuple;
 import org.chombo.util.Triplet;
+import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -124,7 +123,7 @@ public class BayesianDistribution extends Configured implements Tool {
 	        	fields = schema.getFields();
         	} else {
         		//text input
-                analyzer = new StandardAnalyzer(Version.LUCENE_35);
+                analyzer = new StandardAnalyzer(Version.LUCENE_44);
                 featureAttrOrdinal = 1;
                 outVal.initialize();
 				outVal.add(ONE);

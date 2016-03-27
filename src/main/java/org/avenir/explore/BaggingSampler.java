@@ -87,7 +87,7 @@ public class BaggingSampler extends Configured implements Tool {
 	    	if (conf.getBoolean("debug.on", false)) {
 	    		LOG.setLevel(Level.DEBUG);
 	    	}
-	    	batchSize = conf.getInt("batch.size", 10000);
+	    	batchSize = conf.getInt("bas.batch.size", 10000);
 	    }	
        
        /* (non-Javadoc)

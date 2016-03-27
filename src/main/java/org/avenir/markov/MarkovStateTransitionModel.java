@@ -204,7 +204,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 	   		//all states
         	Configuration conf = context.getConfiguration();
         	if (outputStates) {
-        		outVal.set(conf.get("model.states"));
+        		outVal.set(conf.get("mst.model.states"));
         		context.write(NullWritable.get(),outVal);
         	}
         	

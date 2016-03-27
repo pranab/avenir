@@ -73,7 +73,7 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
-        int numReducer = job.getConfiguration().getInt("pst.num.reducer", -1);
+        int numReducer = job.getConfiguration().getInt("pstg.num.reducer", -1);
         numReducer = -1 == numReducer ? job.getConfiguration().getInt("num.reducer", 1) : numReducer;
         job.setNumReduceTasks(numReducer);
 
@@ -115,21 +115,22 @@ public class ProbabilisticSuffixTreeGenerator extends Configured implements Tool
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 0);
-            classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            skipFieldCount = conf.getInt("pstg.skip.field.count", 0);
+            classLabelFieldOrd = conf.getInt("pstg.class.label.field.ord", -1);
             if (classLabelFieldOrd >= 0) {
             	++skipFieldCount;
             }
             
-            treeRootSymbol = conf.get("tree.root.symbol", "$");
-            maxSeqLength = conf.getInt("max.seq.length",  5);
+            treeRootSymbol = conf.get("pstg.tree.root.symbol", "$");
+            maxSeqLength = conf.getInt("pstg.max.seq.length",  5);
             
            	//record partition  id
-        	idOrdinals = Utility.intArrayFromString(conf.get("id.field.ordinals"), fieldDelimRegex);
+        	idOrdinals = Utility.intArrayFromString(conf.get("pstg.id.field.ordinals"), fieldDelimRegex);
             
-        	inputFormatSequential = conf.getBoolean("input.format.sequential", true);
+        	inputFormatSequential = conf.getBoolean("pstg.input.format.sequential", true);
         	if (!inputFormatSequential) {
-        		dataFieldOrdinal = Utility.assertIntConfigParam(conf,  "data.field.ordinal",  "for non sequential data data field ordinal must be specified");
+        		dataFieldOrdinal = Utility.assertIntConfigParam(conf, "pstg.data.field.ordinal",  
+        				"for non sequential data data field ordinal must be specified");
         	}
         }
         

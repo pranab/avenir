@@ -72,7 +72,7 @@ public class NumericalCorrelation  extends Configured implements Tool {
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
-        int numReducer = job.getConfiguration().getInt("nco.num.reducer", -1);
+        int numReducer = job.getConfiguration().getInt("nuc.num.reducer", -1);
         numReducer = -1 == numReducer ? job.getConfiguration().getInt("num.reducer", 1) : numReducer;
         job.setNumReduceTasks(numReducer);
 
@@ -102,9 +102,9 @@ public class NumericalCorrelation  extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
-        	attrPairs = Utility. assertIntPairListConfigParam(config, "nco.attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
+        	attrPairs = Utility. assertIntPairListConfigParam(config, "nuc.attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
         	
-        	schema = Utility.getGenericAttributeSchema(config,  "schema.file.path");
+        	schema = Utility.getGenericAttributeSchema(config,  "nuc.schema.file.path");
         	if (null != schema) {
         		//validate
         		int[] attrs = new int[attrPairs.size() * 2];
@@ -119,7 +119,7 @@ public class NumericalCorrelation  extends Configured implements Tool {
         	}
         	
         	//get mean values
-        	NumericalAttrStatsManager statsManager = new NumericalAttrStatsManager( config, "stats.file.path", fieldDelimRegex);
+        	NumericalAttrStatsManager statsManager = new NumericalAttrStatsManager( config, "nuc.stats.file.path", fieldDelimRegex);
         	for (Pair<Integer, Integer> pair : attrPairs) {
         		attrMean.put(pair.getLeft(), statsManager.getMean(pair.getLeft()));
         		attrMean.put(pair.getRight(), statsManager.getMean(pair.getRight()));
@@ -192,8 +192,8 @@ public class NumericalCorrelation  extends Configured implements Tool {
 		protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelim = config.get("field.delim.out", ",");
-        	NumericalAttrStatsManager statsManager = new NumericalAttrStatsManager(config, "stats.file.path", fieldDelim);
-        	attrPairs = Utility. assertIntPairListConfigParam(config, "attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
+        	NumericalAttrStatsManager statsManager = new NumericalAttrStatsManager(config, "nuc.stats.file.path", fieldDelim);
+        	attrPairs = Utility. assertIntPairListConfigParam(config, "nuc.attr.pairs",  Utility.configDelim, Utility.configSubFieldDelim, "");
         	for (Pair<Integer, Integer> pair : attrPairs) {
         		attrStdDev.put(pair.getLeft(), statsManager.getStdDev(pair.getLeft()));
         		attrStdDev.put(pair.getRight(), statsManager.getStdDev(pair.getRight()));

@@ -85,9 +85,10 @@ public class AgglomerativeGraphical extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
 			Configuration config= context.getConfiguration();
             fieldDelimRegex = config.get("field.delim.regex", ",");
-            minAvEdgeWeightThreshold = Utility.assertDoubleConfigParam(config, "min.av.edge.weight.threshold", "missing min average edge weight");
+            minAvEdgeWeightThreshold = Utility.assertDoubleConfigParam(config, "agg.min.av.edge.weight.threshold", 
+            		"missing min average edge weight");
             distanceMapFileAccessor = new EntityDistanceMapFileAccessor(config);
-            distanceMapFileAccessor.initReader("map.file.dir.path.param");
+            distanceMapFileAccessor.initReader("agg.map.file.dir.path.param");
         }    
 
 	   	/* (non-Javadoc)
