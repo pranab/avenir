@@ -37,8 +37,9 @@ def kfold_validation(nfold):
 		model.fit(X, y) 
 
 		#persist model
-		model_file = model_file_prefix + "_" + str(i + 1) + ".mod"
-		joblib.dump(model, model_file) 
+		if persist_model:
+			model_file = model_file_directory + "/" + model_file_prefix + "_" + str(i + 1) + ".mod"
+			joblib.dump(model, model_file) 
 		
 		#print support vectors
 		print_support_vectors(model)
@@ -54,6 +55,8 @@ def kfold_validation(nfold):
 		offset += length
 		
 	#average error
+	av_error = np.mean(errors)
+	print "average error %.3f" %(av_error)
 		
 		
 # random k fold validation
@@ -77,8 +80,10 @@ def rfold_validation(nfold, niter):
 		model.fit(X, y) 
 		
 		#persist model
-		model_file = model_file_prefix + "_" + str(i + 1) + ".mod"
-		joblib.dump(model, model_file) 
+		if persist_model:
+			model_file = model_file_directory + "/" + model_file_prefix + "_" + str(i + 1) + ".mod"
+			print "saving model file " +  model_file
+			joblib.dump(model, model_file) 
 
 		#print support vectors
 		print_support_vectors(model)
@@ -93,7 +98,52 @@ def rfold_validation(nfold, niter):
 		
 	av_error = np.mean(errors)
 	print "average error %.3f" %(av_error)
+
+# make predictions
+def predict():
+	psize = len(X)
+	class_counts = []
 	
+	#all models
+	for i in range(0, num_models):
+		model_file = model_file_directory + "/" + model_file_prefix + "_" + str(i + 1) + ".mod"
+		print "loading model file " +  model_file
+		model = joblib.load(model_file) 	
+		
+		yp = model.predict(X)
+		if i == 0:
+			#initialize class counts
+			for y in yp:
+				class_count = {}
+				if y == 0:
+					class_count[0] = 1
+					class_count[1] = 0
+				else:	
+					class_count[1] = 1
+					class_count[0] = 0
+				class_counts.append(class_count)
+				
+		else:
+			#increment class count
+			for j in range(0, psize):
+				class_count = class_counts[j]
+				y = yp[j]
+				class_count[y] +=  1
+	
+	# predict based on majority vote
+	print "here are the predictions"
+	for k in range(0, psize):
+		class_count = class_counts[k]
+		if (class_count[0] > class_count[1]):
+			y = 0
+			majority = class_count[0]
+		else:
+			y = 1
+			majority = class_count[1]
+			
+		print X[k]
+		print "prediction %d  majority count %d" %(y, majority)
+		
 #builds model	
 def build_model():	
 	#build model
@@ -180,6 +230,7 @@ def validate(dvsize,yv,yp):
 # load configuration
 def getConfigs(configFile):
 	configs = {}
+	print "using following configurations"
 	with open(configFile) as fp:
   		for key, value in jprops.iter_properties(fp):
 			print key, value
@@ -187,54 +238,83 @@ def getConfigs(configFile):
 
 	return configs
 	
-######################################################################
+
+# load configuration
 configs = getConfigs(sys.argv[1])
-data_file = configs["train.data.file"]
-feat_field_indices = configs["train.data.feature.fields"].split(",")
-feat_field_indices = [int(a) for a in feat_field_indices]
-class_field_index = int(configs["train.data.class.field"])
-preprocess = configs["train.preprocessing"]
-validation = configs["train.validation"]
-num_folds = int(configs["train.num.folds"])
-num_iter = int(configs["train.num.iter"])
-algo = configs["train.algorithm"]
-kernel_fun = configs["train.kernel.function"]
-penalty = float(configs["train.penalty"])
-if penalty is None:
-	penalty = 1.0
-print_sup_vectors = configs["train.print.sup.vectors"].lower() == "true"
-persist_model = configs["train.persist.model"].lower() == "true"
-model_file_prefix = configs["train.model.file.prefix"]
+mode = configs["common.mode"]
+
+if mode == "train":
+	#train
+	print "running in train mode"
+	data_file = configs["train.data.file"]
+	feat_field_indices = configs["train.data.feature.fields"].split(",")
+	feat_field_indices = [int(a) for a in feat_field_indices]
+	class_field_index = int(configs["train.data.class.field"])
+	preprocess = configs["common.preprocessing"]
+	validation = configs["train.validation"]
+	num_folds = int(configs["train.num.folds"])
+	num_iter = int(configs["train.num.iter"])
+	algo = configs["train.algorithm"]
+	kernel_fun = configs["train.kernel.function"]
+	penalty = float(configs["train.penalty"])
+	if penalty is None:
+		penalty = 1.0
+	print_sup_vectors = configs["train.print.sup.vectors"].lower() == "true"
+	persist_model = configs["train.persist.model"].lower() == "true"
+	model_file_directory = configs["common.model.directory"]
+	model_file_prefix = configs["common.model.file.prefix"]
 	
-print feat_field_indices
+	print feat_field_indices
+	
+	#extract feature fields
+	d = np.loadtxt(data_file, delimiter=',')
+	dsize = len(d)
+	XC = d[:,feat_field_indices]
 
-#extract feature fields
-d = np.loadtxt(data_file, delimiter=',')
-dsize = len(d)
-XC = d[:,feat_field_indices]
+	#preprocess features
+	if (preprocess == "scale"):
+		XC = sk.preprocessing.scale(XC)
+	elif (preprocess == "normalize"):
+		XC = sk.preprocessing.normalize(XC, norm='l2')
+	else:
+		print "no preprocessing done"
 
-#preprocess features
-if (preprocess == "scale"):
-	XC = sk.preprocessing.scale(XC)
-elif (preprocess == "normalize"):
-	XC = sk.preprocessing.normalize(XC, norm='l2')
+	#extract output field
+	yc = d[:,[class_field_index]]
+	yc = yc.reshape(dsize)
+	yc = [int(a) for a in yc]
+
+	#print XC
+	#print yc
+	
+	
+	# train model
+	if validation == "kfold":
+		kfold_validation(num_folds)
+	else:
+		rfold_validation(num_folds,num_iter)
 else:
-	print "no preprocessing done"
-
-#extract output field
-yc = d[:,[class_field_index]]
-yc = yc.reshape(dsize)
-yc = [int(a) for a in yc]
-
-#print XC
-#print yc
+	#predict
+	print "running in prediction mode"
+	pred_data_file = configs["pred.data.file"]
+	pred_feat_field_indices = configs["pred.data.feature.fields"].split(",")
+	pred_feat_field_indices = [int(a) for a in pred_feat_field_indices]
+	preprocess = configs["common.preprocessing"]
+	num_models = int(configs["pred.num.models"])
+	model_file_directory = configs["common.model.directory"]
+	model_file_prefix = configs["common.model.file.prefix"]
 	
+	#extract feature fields
+	pd = np.loadtxt(pred_data_file, delimiter=',')
+	pdsize = len(pd)
+	X = pd[:,pred_feat_field_indices]
 	
-# train model
-if validation == "kfold":
-	kfold_validation(num_folds)
-else:
-	rfold_validation(num_folds,num_iter)
+	#preprocess features
+	if (preprocess == "scale"):
+		X = sk.preprocessing.scale(X)
+	elif (preprocess == "normalize"):
+		X = sk.preprocessing.normalize(X, norm='l2')
+	else:
+		print "no preprocessing done"
 	
-	
-	
+	predict()
