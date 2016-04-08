@@ -11,14 +11,43 @@ import matplotlib
 import random
 import jprops
 from sklearn.externals import joblib
+from sklearn.ensemble import BaggingClassifier
 
 if len(sys.argv) < 2:
 	print "usage: ./svm.py <config_properties_file>"
 	sys.exit()
 
+#train by bagging
+def train_bagging():
+	model = build_model()
+	bagging_model = BaggingClassifier(base_estimator=model,n_estimators=bagging_num_estimator,
+	max_samples=bagging_sample_fraction,oob_score=bagging_use_oob)
+	
+	#train model
+	bagging_model.fit(XC, yc) 
+	
+	#persist model
+	if persist_model:
+		models = bagging_model.estimators_
+		for m in zip(range(0, len(models)), models):
+			model_file = model_file_directory + "/" + model_file_prefix + "_" + str(m[0] + 1) + ".mod"
+			joblib.dump(m[1], model_file) 
+
+	score = bagging_model.score(XC, yc)
+	print "average error %.3f" %(1.0 - score)
 
 #linear k fold validation
-def kfold_validation(nfold):
+def train_kfold_validation(nfold):
+	if native_kfold_validation:
+		model = build_model()
+		scores = sk.cross_validation.cross_val_score(model, XC, yc, cv=nfold)
+		av_score = np.mean(scores)
+		print "average error %.3f" %(1.0 - av_score)
+	else:
+		train_kfold_validation_ext(nfold)
+
+#linear k fold validation
+def train_kfold_validation_ext(nfold):
 	model = build_model()
 	#scores = sk.cross_validation.cross_val_score(model, XC, yc, cv=nfold)
 	#print scores
@@ -60,7 +89,7 @@ def kfold_validation(nfold):
 		
 		
 # random k fold validation
-def rfold_validation(nfold, niter):
+def train_rfold_validation(nfold, niter):
 	max_offset_frac = 1.0 - 1.0 / nfold
 	max_offset_frac -= .01
 	length = dsize / nfold
@@ -149,7 +178,10 @@ def build_model():
 	#build model
 	print "building model..."
 	if (algo == "svc"):
-		model = sk.svm.SVC(C=penalty,kernel=kernel_fun)
+		if kernel_fun == "poly":
+			model = sk.svm.SVC(C=penalty,kernel=kernel_fun,degree=poly_degree)
+		else:
+			model = sk.svm.SVC(C=penalty,kernel=kernel_fun)
 	elif (algo == "nusvc"):
 		model = sk.svm.NuSVC(kernel=kernel_fun)
 	elif (algo == "linearsvc"):
@@ -256,6 +288,7 @@ if mode == "train":
 	num_iter = int(configs["train.num.iter"])
 	algo = configs["train.algorithm"]
 	kernel_fun = configs["train.kernel.function"]
+	poly_degree = int(configs["train.poly.degree"])
 	penalty = float(configs["train.penalty"])
 	if penalty is None:
 		penalty = 1.0
@@ -290,9 +323,19 @@ if mode == "train":
 	
 	# train model
 	if validation == "kfold":
-		kfold_validation(num_folds)
+		native_kfold_validation = configs["train.native.kfold.validation"].lower() == "true"
+		train_kfold_validation(num_folds)
+	elif validation == "rfold":
+		train_rfold_validation(num_folds,num_iter)
+	elif validation == "bagging":
+		bagging_num_estimator = int(configs["train.bagging.num.estimators"])
+		bagging_sample_fraction = float(configs["train.bagging.sample.fraction"])
+		bagging_use_oob = configs["train.bagging.sample.fraction"].lower() == "true"
+		train_bagging()
 	else:
-		rfold_validation(num_folds,num_iter)
+		print "invalid training validation method"
+		sys.exit()
+		
 else:
 	#predict
 	print "running in prediction mode"
