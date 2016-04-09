@@ -179,13 +179,20 @@ def build_model():
 	print "building model..."
 	if (algo == "svc"):
 		if kernel_fun == "poly":
-			model = sk.svm.SVC(C=penalty,kernel=kernel_fun,degree=poly_degree)
+			model = sk.svm.SVC(C=penalty,kernel=kernel_fun,degree=poly_degree,gamma=kernel_coeff)
+		elif kernel_fun == "rbf" or kernel_fun == "sigmoid":
+			model = sk.svm.SVC(C=penalty,kernel=kernel_fun,gamma=kernel_coeff)
 		else:
 			model = sk.svm.SVC(C=penalty,kernel=kernel_fun)
 	elif (algo == "nusvc"):
-		model = sk.svm.NuSVC(kernel=kernel_fun)
+		if kernel_fun == "poly":
+			model = sk.svm.NuSVC(kernel=kernel_fun,degree=poly_degree,gamma=kernel_coeff)
+		elif kernel_fun == "rbf" or kernel_fun == "sigmoid":
+			model = sk.svm.NuSVC(kernel=kernel_fun,gamma=kernel_coeff)
+		else:
+			model = sk.svm.NuSVC(kernel=kernel_fun)
 	elif (algo == "linearsvc"):
-		model = sk.svm.LinearSVC(C=penalty)
+		model = sk.svm.LinearSVC()
 	else:
 		print "invalid svm algorithm"
 		sys.exit()
@@ -290,8 +297,11 @@ if mode == "train":
 	kernel_fun = configs["train.kernel.function"]
 	poly_degree = int(configs["train.poly.degree"])
 	penalty = float(configs["train.penalty"])
-	if penalty is None:
+	if penalty < 0:
 		penalty = 1.0
+	kernel_coeff = float(configs["train.gamma"])
+	if kernel_coeff < 0:
+		kernel_coeff = 'auto'
 	print_sup_vectors = configs["train.print.sup.vectors"].lower() == "true"
 	persist_model = configs["train.persist.model"].lower() == "true"
 	model_file_directory = configs["common.model.directory"]
