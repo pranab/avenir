@@ -113,6 +113,7 @@ public class GroupedItems {
     }
     
     /**
+     * select item randomly
      * @return
      */
     public DynamicBean selectRandom() {
@@ -123,6 +124,7 @@ public class GroupedItems {
     }
 
     /**
+     * select item with maximum reward
      * @return
      */
     public DynamicBean getMaxRewardItem() {

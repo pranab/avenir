@@ -41,7 +41,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.ContingencyMatrix;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -108,11 +108,11 @@ public class CramerCorrelation extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "crc.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
-        	sourceAttrs = Utility.intArrayFromString(conf.get("source.attributes"), ",");
-        	destAttrs = Utility.intArrayFromString(conf.get("dest.attributes"), ",");
+        	sourceAttrs = Utility.intArrayFromString(conf.get("crc.source.attributes"), ",");
+        	destAttrs = Utility.intArrayFromString(conf.get("crc.dest.attributes"), ",");
         	
         	//initialize contingency matrix for all source attribute and target attribute pair
         	FeatureField srcField = null;
@@ -204,11 +204,11 @@ public class CramerCorrelation extends Configured implements Tool {
             if (conf.getBoolean("debug.on", false)) {
             	LOG.setLevel(Level.DEBUG);
             }
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "crc.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
         	fieldDelim = conf.get("field.delim.out", ",");
-        	corrScale = context.getConfiguration().getInt("correlation.scale", 1000);
+        	corrScale = context.getConfiguration().getInt("crc.correlation.scale", 1000);
 	   	}
 	   	
         /* (non-Javadoc)

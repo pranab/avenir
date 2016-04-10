@@ -1,0 +1,48 @@
+This tutorial for customer conversion prediction based on Markov chain classifier. 
+
+Dependency
+==========
+Please refer to dependency.txt
+
+Generate training data
+======================
+./conv.sh genTrainData <num_users> <conversion_rate> <training_data_file>
+
+where 
+num_users = number of users e.g., 5000
+conversion_rate = conversion rate e.g., 10
+training_data_file = training data file e.g., visit_hist.txt
+
+Export training data to HDFS
+============================
+./conv.sh expTrainData <training_data_file>
+
+where
+training_data_file = training data file e.g., visit_hist.txt
+ 
+Markov model classification training MR
+=======================================
+./conv.sh trainConv
+
+
+Generate test data
+======================
+./conv.sh genTestData <num_users> <conversion_rate> <test_data_file>
+
+where 
+num_users = number of users e.g., 5000
+conversion_rate = conversion rate e.g., 10
+test_data_file = test data file e.g., visit_hist_test.txt
+
+Export test data to HDFS
+========================
+./conv.sh expTrainData <test_data_file>
+
+where
+test_data_file = test data file e.g., visit_hist_test.txt
+
+Markov model classification prediction MR
+=========================================
+./conv.sh predConv
+
+

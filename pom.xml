@@ -93,6 +93,26 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
   			<artifactId>commons-lang3</artifactId>
   			<version>3.1</version>        
         </dependency>
+        
+		<dependency>
+	       <groupId>org.apache.lucene</groupId>
+	       <artifactId>lucene-core</artifactId>
+	       <version>4.4.0</version>
+	       <type>jar</type>
+	    </dependency>
+	    
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-analyzers-common</artifactId>
+			<version>4.4.0</version>
+	       <type>jar</type>
+		</dependency>
+
+		<dependency>
+  			<groupId>org.apache.lucene</groupId>
+  			<artifactId>lucene-analyzers-morfologik</artifactId>
+  			<version>4.4.0</version>
+		</dependency>	   
  
   		<dependency>
 			<groupId>storm</groupId>

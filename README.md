@@ -12,7 +12,8 @@ Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
 * Naive Bayes
 * Discrimininant analysis
 * Nearest neighbor
-* Decision tree
+* Decision tree and Random Forest
+* Association Mining
 * Reinforcement learning
 
 
@@ -29,6 +30,10 @@ of detail documentation
 * http://pkghosh.wordpress.com/2013/03/18/analytic-is-your-doctors-friend/
 * http://pkghosh.wordpress.com/2013/02/19/stop-the-customer-separation-pain-bayesian-classifier/
 * http://pkghosh.wordpress.com/2013/01/31/explore-with-cramer-index/
+* https://pkghosh.wordpress.com/2015/07/06/customer-conversion-prediction-with-markov-chain-classifier/
+* https://pkghosh.wordpress.com/2015/05/11/is-bigger-data-better-for-machine-learning/
+* https://pkghosh.wordpress.com/2015/12/13/association-mining-with-improved-apriori-algorithm/
+
 
 ## Getting started
 Project's resource directory has various tutorial documents for the use cases described in
@@ -38,6 +43,23 @@ the blogs.
 All configuration parameters are described in the wiki page
 https://github.com/pranab/avenir/wiki/Configuration
 
+## Build
+Please refer to resource/dependency.txt for build time and run time dependencies
+
+For Hadoop 1
+* mvn clean install
+
+For Hadoop 2 (non yarn)
+* git checkout nuovo
+* mvn clean install
+
+For Hadoop 2 (yarn)
+* git checkout nuovo
+* mvn clean install -P yarn
+
 ## Help
 Please feel free to email me at pkghosh99@gmail.com
+
+## Contribution
+Contributors are welcome. Please email me at pkghosh99@gmail.com
 

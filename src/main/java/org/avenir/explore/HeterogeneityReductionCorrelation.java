@@ -43,7 +43,7 @@ public class HeterogeneityReductionCorrelation extends Configured implements Too
         String jobName = "Categorical data correlation with Heterogeneity Reduction";
         job.setJobName(jobName);
         
-        job.setJarByClass(CramerCorrelation.class);
+        job.setJarByClass(HeterogeneityReductionCorrelation.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
@@ -64,12 +64,16 @@ public class HeterogeneityReductionCorrelation extends Configured implements Too
         return status;
 	}
 	
+	/**
+	 * @author pranab
+	 *
+	 */
 	public static class CorrelationReducer extends CategoricalCorrelation.CorrelationReducer {
 		private String heterogeneityAlgorithm;
 		
 		protected void setup(Context context) throws IOException, InterruptedException {
 			super.setup(context);
-			heterogeneityAlgorithm = context.getConfiguration().get("heterogeneity.algorithm", "gini");			
+			heterogeneityAlgorithm = context.getConfiguration().get("hrc.heterogeneity.algorithm", "gini");			
 		}
 		
 		@Override

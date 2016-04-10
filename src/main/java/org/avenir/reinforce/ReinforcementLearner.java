@@ -17,7 +17,14 @@
 
 package org.avenir.reinforce;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.chombo.util.AverageValue;
+import org.chombo.util.ConfigUtility;
+import org.chombo.util.SimpleStat;
 
 
 /**
@@ -26,16 +33,24 @@ import java.util.Map;
  *
  */
 public abstract class ReinforcementLearner {
-	protected String[] actions;
-	protected int batchSize;
-	protected String[] selActions;
+	protected List<Action> actions = new ArrayList<Action>();
+	protected int batchSize = 1;
+	protected Action[] selActions;
+	protected long totalTrialCount;
+	protected int minTrial;
+	protected Map<String, AverageValue> rewardStats = new HashMap<String, AverageValue>();
+	protected boolean rewarded;
+	protected int rewardScale;
+
 
 	/**
 	 * sets actions
 	 * @param actions
 	 */
-	public ReinforcementLearner withActions(String[] actions){
-		this.actions = actions;
+	public ReinforcementLearner withActions(String[] actionIds){
+		for (String actionId : actionIds) {
+			actions.add(new Action(actionId));
+		}
 		return this;
 	}
 	
@@ -50,25 +65,32 @@ public abstract class ReinforcementLearner {
 	}
 	
 	protected void initSelectedActions() {
-		if (batchSize == 0) {
-			selActions = new String[1];
-		} else {
-			selActions = new String[batchSize];
-		}
-		
+		selActions = new Action[batchSize];
 	}
 
 	/**
 	 * @param config
 	 */
-	public abstract void initialize(Map<String, Object> config);
+	public  void initialize(Map<String, Object> config) {
+		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
+		batchSize = ConfigUtility.getInt(config, "batch.size",  1);
+		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
+		initSelectedActions();
+	}
 	
 	/**
 	 * Selects the next action 
 	 * @param roundNum
 	 * @return actionID
 	 */
-	public abstract String[] nextActions(int roundNum);
+	public  Action[] nextActions() {
+		for (int i = 0; i < batchSize; ++i) {
+			selActions[i] = nextAction();
+		}
+		return selActions;
+	}
+	
+	public abstract Action nextAction();
 
 	/**
 	 * @param action
@@ -83,4 +105,63 @@ public abstract class ReinforcementLearner {
 		return "";
 	}
 	
+	/**
+	 * @param id
+	 * @return
+	 */
+	public Action findAction(String id) {
+		Action action = null;
+		for (Action thisAction : actions) {
+			if (thisAction.getId().equals(id)) {
+				action = thisAction;
+				break;
+			}
+		}
+		return action;
+	}
+	
+	/**
+	 * @return
+	 */
+	public Action findActionWithMinTrial() {
+		long minTrial = Long.MAX_VALUE;
+		Action action = null;
+		for (Action thisAction : actions) {
+			if (thisAction.getTrialCount() < minTrial) {
+				minTrial = thisAction.getTrialCount();
+				action = thisAction;
+			}
+		}
+		
+		return action;
+	}
+	
+	/**
+	 * @return
+	 */
+	public Action selectActionBasedOnMinTrial() {
+		//check for min trial requirement
+		Action action = null;
+		if (minTrial > 0) {
+			action = findActionWithMinTrial();
+			if (action.getTrialCount() > minTrial) {
+				action = null;
+			}
+		}
+		return action;
+	}
+	
+	/**
+	 * @return
+	 */
+	public Action findBestAction() {
+		String actionId = null;
+		double maxReward = -1.0;
+		for (String thisActionId : rewardStats.keySet()) {
+			if (rewardStats.get(thisActionId).getAvgValue() > maxReward) {
+				actionId = thisActionId;
+			}
+		}
+		return findAction(actionId);
+	}
 }

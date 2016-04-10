@@ -32,15 +32,32 @@ public class ReinforcementLearnerFactory {
 	 * @param config
 	 * @return
 	 */
-	public static ReinforcementLearner create(String learnerID, String[] actions, Map<String, Object> config) {
+	public static ReinforcementLearner create(String learnerType, String[] actions, Map<String, Object> config) {
 		ReinforcementLearner learner = null;
-		if (learnerID.equals("intervalEstimator")) {
-			learner = new IntervalEstimator();
-		} else if (learnerID.equals("sampsonSampler")) {
-			learner = new SampsonSampler();
-		} else if (learnerID.equals("optimisticSampsonSampler")) {
-			learner = new OptimisticSampsonSampler();
+		if (learnerType.equals("intervalEstimator")) {
+			learner = new IntervalEstimatorLearner();
+		} else if (learnerType.equals("sampsonSampler")) {
+			learner = new SampsonSamplerLearner();
+		} else if (learnerType.equals("optimisticSampsonSampler")) {
+			learner = new OptimisticSampsonSamplerLearner();
+		} else if (learnerType.equals("randomGreedy")) {
+			learner = new RandomGreedyLearner();
+		} else if (learnerType.equals("upperConfidenceBoundOne")) {
+			learner = new UpperConfidenceBoundOneLearner();
+		} else if (learnerType.equals("upperConfidenceBoundTwo")) {
+			learner = new UpperConfidenceBoundTwoLearner();
+		} else if (learnerType.equals("softMax")) {
+			learner = new SoftMaxLearner();
+		} else if (learnerType.equals("actionPursuit")) {
+			learner = new ActionPursuitLearner();
+		} else if (learnerType.equals("rewardComparison")) {
+			learner = new RewardComparisonLearner();
+		} else if (learnerType.equals("exponentialWeight")) {
+			learner = new ExponentialWeightLearner();
+		} else {
+			throw new IllegalArgumentException("invalid learner type:" + learnerType);
 		}
+		
 		learner.withActions(actions).initialize(config);
 		return learner;
 	}

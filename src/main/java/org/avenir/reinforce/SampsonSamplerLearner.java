@@ -23,13 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.Utility;
 
 /**
  * Sampson sampler probabilistic matching reinforcement learning
  * @author pranab
  *
  */
-public class SampsonSampler extends ReinforcementLearner {
+public class SampsonSamplerLearner extends ReinforcementLearner {
 	protected  Map<String, List<Integer>> rewardDistr = new HashMap<String, List<Integer>>();
 	private int minSampleSize;
 	private int maxReward;
@@ -46,23 +47,24 @@ public class SampsonSampler extends ReinforcementLearner {
 			rewardDistr.put(actionID, rewards);
 		}
 		rewards.add(reward);
+		findAction(actionID).reward(reward);
 	}
-
+	
 	/**
 	 * Select action
 	 * @return
 	 */
 	@Override
-	public String[]  nextActions(int roundNum) {
+	public Action  nextAction() {
 		String slectedActionID = null;
 		int maxRewardCurrent = 0;
-		int index = 0;
 		int reward = 0;
+		++totalTrialCount;
+		
 		for (String actionID : rewardDistr.keySet()) {
 			List<Integer> rewards = rewardDistr.get(actionID);
 			if (rewards.size() > minSampleSize) {
-				index = (int) (Math.random() * rewards.size());
-				reward = rewards.get(index);
+				reward = Utility.selectRandom(rewards);
 				reward = enforce(actionID, reward);
 			} else {
 				reward = (int) (Math.random() * maxReward);
@@ -74,8 +76,9 @@ public class SampsonSampler extends ReinforcementLearner {
 			}
 		}
 		
-		selActions[0] = slectedActionID;
-		return selActions;
+		Action selAction = findAction(slectedActionID);
+		selAction.select();
+		return selAction;
 	}
 	
 	/**
@@ -89,6 +92,7 @@ public class SampsonSampler extends ReinforcementLearner {
 
 	@Override
 	public void initialize(Map<String, Object> config) {
+		super.initialize(config);
 		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
 		maxReward = ConfigUtility.getInt(config, "max.reward");
 	}

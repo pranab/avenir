@@ -26,7 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -41,9 +40,9 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.util.Version;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
-import org.chombo.util.Tuple;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.Triplet;
+import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -112,10 +111,10 @@ public class BayesianDistribution extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
-        	tabularInput = config.getBoolean("tabular.input", true);
+        	tabularInput = config.getBoolean("bad.tabular.input", true);
         	if (tabularInput) {
         		//tabular input
-	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+	        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "bad.feature.schema.file.path");
 	            ObjectMapper mapper = new ObjectMapper();
 	            schema = mapper.readValue(fs, FeatureSchema.class);
 	            
@@ -124,7 +123,7 @@ public class BayesianDistribution extends Configured implements Tool {
 	        	fields = schema.getFields();
         	} else {
         		//text input
-                analyzer = new StandardAnalyzer(Version.LUCENE_35);
+                analyzer = new StandardAnalyzer(Version.LUCENE_44);
                 featureAttrOrdinal = 1;
                 outVal.initialize();
 				outVal.add(ONE);
@@ -225,11 +224,11 @@ public class BayesianDistribution extends Configured implements Tool {
 		protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelim = context.getConfiguration().get("field.delim.out", ",");
-        	tabularInput = config.getBoolean("tabular.input", true);
+        	tabularInput = config.getBoolean("bad.tabular.input", true);
     		
         	//tabular input
         	if (tabularInput) {
-        		InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        		InputStream fs = Utility.getFileStream(context.getConfiguration(), "bad.feature.schema.file.path");
         		ObjectMapper mapper = new ObjectMapper();
         		schema = mapper.readValue(fs, FeatureSchema.class);
         	}

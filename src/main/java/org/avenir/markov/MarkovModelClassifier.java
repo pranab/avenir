@@ -56,10 +56,8 @@ public class MarkovModelClassifier extends Configured implements Tool {
         Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(MarkovModelClassifier.ClassifierMapper.class);
         
-        job.setOutputKeyClass(NullWritable.class);
-        job.setOutputValueClass(Text.class);
-
-
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(Text.class);
         job.setNumReduceTasks(0);
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
@@ -86,6 +84,8 @@ public class MarkovModelClassifier extends Configured implements Tool {
 		private boolean inValidationMode;
 		private StringBuilder stBld =  new StringBuilder();
 		private int classLabelFieldOrd = -1;
+		private int transProbScale;
+		private double logOddsThreshold = 0;
         private static final Logger LOG = Logger.getLogger(ClassifierMapper.class);
 
         /* (non-Javadoc)
@@ -98,21 +98,27 @@ public class MarkovModelClassifier extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim.out", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 1);
-            idFieldOrd = conf.getInt("id.field.ord", 0);
-            isClassLabelBased = conf.getBoolean("class.label.based.model", false);
-            inValidationMode = conf.getBoolean("validation.mode", false);
+            skipFieldCount = conf.getInt("mmc.skip.field.count", 1);
+            idFieldOrd = conf.getInt("mmc.id.field.ord", 0);
+            isClassLabelBased = conf.getBoolean("mmc.class.label.based.model", false);
+            inValidationMode = conf.getBoolean("mmc.validation.mode", false);
             if (inValidationMode) {
             	++skipFieldCount;
-            	classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            	classLabelFieldOrd = conf.getInt("mmc.class.label.field.ord", -1);
             	if (classLabelFieldOrd < 0) {
             		throw new IllegalArgumentException("In validation mode actual class labels must be provided");
             	}
             }
             
-        	List<String> lines = Utility.getFileLines(conf, "mm.model.path");
+        	List<String> lines = Utility.getFileLines(conf, "mmc.mm.model.path");
         	model = new MarkovModel(lines,  isClassLabelBased);
-        	classLabels = conf.get("class.labels").split(",");
+        	classLabels = conf.get("mmc.class.labels").split(",");
+        	transProbScale = conf.getInt("mmc.trans.prob.scale", 1000);
+
+        	if (null != conf.get("mmc.log.odds.threshold")) {
+        		logOddsThreshold = Double.parseDouble(conf.get("mmc.log.odds.threshold"));
+        	} 
+        	LOG.debug("logOddsThreshold:" + logOddsThreshold);
         }
         
         /* (non-Javadoc)
@@ -127,10 +133,10 @@ public class MarkovModelClassifier extends Configured implements Tool {
 	        		//cumulative log odds for 2 classes based on respective state transition probability matrix
 	        		frState = items[i-1];
 	        		toState = items[i];
-	        		logOdds += Math.log(model.getStateTransProbability(classLabels[0], frState, toState) /
-	        			model.getStateTransProbability(classLabels[1], frState, toState));
+	        		logOdds += Math.log((double)model.getStateTransProbability(classLabels[0], frState, toState) / 
+	        				(double)model.getStateTransProbability(classLabels[1], frState, toState));
 	        	}
-	        	predClass = logOdds > 0 ? classLabels[0] : classLabels[1];
+	        	predClass = logOdds > logOddsThreshold ? classLabels[0] : classLabels[1];
 	        	stBld.delete(0, stBld.length());
 	        	stBld.append(items[idFieldOrd]).append(fieldDelim);
 	        	if (inValidationMode){

@@ -1,0 +1,40 @@
+This tutorial is for frequent item set mining using an improved version of Apriori 
+algorithm. Sales transaction data is used as an example.Make necessary changes in 
+the relevant files, according to your environment.
+
+Dependent script
+================
+Checkout the project visitante. Take the script util.py from the project and place it
+in ../lib directory with respect the directory containing store_order.py
+
+1. Create sales transaction data
+================================
+./fit.sh <num_items> <num_3item_item_set> <num_xaction> <output_file>
+
+num_items = number of items (e,g, 50000)
+num_3item_item_set = number of 3 item items sets (e.g., 3)
+num_xactions = number of transaction (e.g., 2000)
+
+2. Export input to HDFS
+=======================
+./fit.sh copyInput  <xaction_data_file>
+xaction_data_file = transaction data file (output of previous step)
+
+3. Run temporal filtering map reduce
+====================================
+./fit.sh tempFilter
+
+3. Run apriori map reduce
+=========================
+./fit.sh freqItems <freq_item_set_size>
+
+freq_item_set_size = size of the frequent item set to be generated
+
+This map reduce jobs should be run multiple times with freq_item_set_size 
+values of 1,2,3  and so forth, depending on the maximum frquent item set size
+desired. In every iteration the configuration parameters fia.item.set.length
+and fia.item.set.file.path should be set appropriately.
+
+6. Configuration
+================
+Sample configuration is in fit.properties

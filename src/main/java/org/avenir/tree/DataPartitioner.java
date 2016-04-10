@@ -41,7 +41,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
 import org.chombo.mr.FeatureField;
-import org.chombo.mr.FeatureSchema;
+import org.chombo.util.FeatureSchema;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -135,11 +135,11 @@ public class DataPartitioner extends Configured implements Tool {
 	private String getNodePath(Job job) {
 		String nodePath = null;
 		Configuration conf =  job.getConfiguration();
-		String basePath = conf.get("project.base.path");
+		String basePath = conf.get("dap.project.base.path");
 		if (Utility.isBlank(basePath)) {
 			throw new IllegalStateException("base path not defined");
 		}
-		String splitPath = conf.get("split.path");
+		String splitPath = conf.get("dap.split.path");
 		if (debugOn)
 			System.out.println("basePath:" + basePath + " splitPath:" + splitPath);
 		nodePath = Utility.isBlank(splitPath) ? basePath + "/split=root/data" : 
@@ -157,13 +157,13 @@ public class DataPartitioner extends Configured implements Tool {
 	private Split findBestSplitKey(Job job, String inputPath) throws IOException {
 		String splitKey = null;
 		Configuration conf =  job.getConfiguration();
-		String splitSelectionStrategy = conf.get("split.selection.strategy", "best");
+		String splitSelectionStrategy = conf.get("dap.split.selection.strategy", "best");
 		
 		String candidateSplitsPath = Utility.getSiblingPath(inputPath, "splits/part-r-00000");
         if (debugOn)
         	System.out.println("candidateSplitsPath:" + candidateSplitsPath);
-		conf.set("candidate.splits.path", candidateSplitsPath);
-		List<String> lines = Utility.getFileLines(conf, "candidate.splits.path");
+		conf.set("dap.candidate.splits.path", candidateSplitsPath);
+		List<String> lines = Utility.getFileLines(conf, "dap.candidate.splits.path");
 		
 		//create split objects and sort
 		Split[] splits = new Split[lines.size()];
@@ -180,7 +180,7 @@ public class DataPartitioner extends Configured implements Tool {
 		int splitIndex = 0;
 		if (splitSelectionStrategy.equals("best")) {
 		} else if (splitSelectionStrategy.equals("randomFromTop")) {
-			int numSplits = conf.getInt("num.top.splits", 5);
+			int numSplits = conf.getInt("dap.num.top.splits", 5);
 			splitIndex = (int)(Math.random() * numSplits);
 		}
 		Split split = splits[splitIndex];
@@ -189,13 +189,13 @@ public class DataPartitioner extends Configured implements Tool {
 		
 		//set asplit attribute ordinal and split key
 		int splitAttribute = split.getAttributeOrdinal();
-		conf.setInt("split.attribute", splitAttribute);
+		conf.setInt("dap.split.attribute", splitAttribute);
         if (debugOn)
         	System.out.println("splitAttribute:" + splitAttribute);
 		splitKey = split.getSplitKey();
         if (debugOn)
         	System.out.println("splitKey:" + splitKey);
-		conf.set("split.key", splitKey);
+		conf.set("dap.split.key", splitKey);
 		
         return split;
 	}
@@ -300,15 +300,15 @@ public class DataPartitioner extends Configured implements Tool {
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	
-        	splitAttrOrd = conf.getInt("split.attribute", -1);
+        	splitAttrOrd = conf.getInt("dap.split.attribute", -1);
         	if (splitAttrOrd == -1) {
         		throw new IOException("split attribute not found");
         	}
         	LOG.debug("splitAttrOrd:" + splitAttrOrd);
-        	String splitKey = conf.get("split.key");
+        	String splitKey = conf.get("dap.split.key");
         	LOG.debug("splitKey:" + splitKey);
         	
-        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "feature.schema.file.path");
+        	InputStream fs = Utility.getFileStream(context.getConfiguration(), "dap.feature.schema.file.path");
             ObjectMapper mapper = new ObjectMapper();
             schema = mapper.readValue(fs, FeatureSchema.class);
             featureField = schema.findFieldByOrdinal(splitAttrOrd);

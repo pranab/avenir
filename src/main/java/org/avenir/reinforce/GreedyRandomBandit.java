@@ -113,7 +113,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
         	auerGreedyConstant = conf.getInt("auer.greedy.constant", 5);
  
-        	//batch size
+        	//batch size is the number items selected in each round for each group
         	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
         	String groupID;
  			int batchSize;
@@ -174,6 +174,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         }
         
         /**
+         * select batch size number of items form each group
          * @return
          * @throws InterruptedException 
          * @throws IOException 

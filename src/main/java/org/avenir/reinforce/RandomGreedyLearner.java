@@ -17,11 +17,11 @@
 
 package org.avenir.reinforce;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.SimpleStat;
+import org.chombo.util.Utility;
 
 /**
  * Random greedy reinforcement learner
@@ -30,56 +30,79 @@ import org.chombo.util.SimpleStat;
  */
 public class RandomGreedyLearner extends ReinforcementLearner {
 	private double  randomSelectionProb;
-	private String  	probRedAlgorithm;
+	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
-	private Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	private double minProb;
+	private static final String PROB_RED_NONE = "none";
 	private static final String PROB_RED_LINEAR = "linear";
 	private static final String PROB_RED_LOG_LINEAR = "logLinear";
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
-		 randomSelectionProb = ConfigUtility.getDouble(config, "random.selection.prob", 0.5);
+		super.initialize(config);;
+		randomSelectionProb = ConfigUtility.getDouble(config, "random.selection.prob", 0.5);
 	    probRedAlgorithm = ConfigUtility.getString(config,"prob.reduction.algorithm", PROB_RED_LINEAR );
         probReductionConstant = ConfigUtility.getDouble(config, "prob.reduction.constant",  1.0);
+        minProb = ConfigUtility.getDouble(config, "min.prob",  -1.0);
         
-        for (String action : actions) {
-        	rewardStats.put(action, new SimpleStat());
+        for (Action action : actions) {
+        	rewardStats.put(action.getId(), new SimpleStat());
         }
  	}
 
+	/**
+	 * @param roundNum
+	 * @return
+	 */
 	@Override
-	public String[] nextActions(int roundNum) {
+	public Action nextAction() {
 		double curProb = 0.0;
-		String action = null;
-		if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-			curProb = randomSelectionProb * probReductionConstant / roundNum ;
-		} else {
-   			curProb = randomSelectionProb * probReductionConstant * Math.log(roundNum) / roundNum;
+		Action action = null;
+		++totalTrialCount;
+
+		//check for min trial requirement
+		action = selectActionBasedOnMinTrial();
+
+		if (null == action) {
+			if (probRedAlgorithm.equals(PROB_RED_NONE )) {
+				curProb = randomSelectionProb;
+			} else if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
+				curProb = randomSelectionProb * probReductionConstant / totalTrialCount ;
+			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )){
+	   			curProb = randomSelectionProb * probReductionConstant * Math.log(totalTrialCount) / totalTrialCount;
+			} else {
+				throw new IllegalArgumentException("Invalid probability reduction algorithms");
+			}
+			curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
+			
+			//non stationary reward
+			if (minProb > 0 && curProb < minProb) {
+				curProb = minProb;
+			}
+			
+	       	if (curProb < Math.random()) {
+	    		//select random
+	    		action = Utility.selectRandom(actions);
+	    	} else {
+	    		//select best
+	    		int bestReward = 0;
+	            for (Action thisAction : actions) {
+	            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getAvgValue());
+	            	if (thisReward >  bestReward) {
+	            		bestReward = thisReward;
+	            		action = thisAction;
+	            	}
+	            }
+	    	}
 		}
-		curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
-		
-       	if (curProb < Math.random()) {
-    		//select random
-    		action = actions[(int)(Math.random() * actions.length)];
-    	} else {
-    		//select best
-    		int bestReward = 0;
-            for (String thisAction : actions) {
-            	int thisReward = (int)(rewardStats.get(thisAction).getMean());
-            	if (thisReward >  bestReward) {
-            		bestReward = thisReward;
-            		action = thisAction;
-            	}
-            }
-    	}
-       	
-		selActions[0] = action;
-		return selActions;
+		action.select();
+		return action;
 	}
 
 	@Override
-	public void setReward(String action, int reward) {
-		rewardStats.get(action).add(reward);
+	public void setReward(String actionId, int reward) {
+		rewardStats.get(actionId).add(reward);
+		findAction(actionId).reward(reward);
 	}
 
 }

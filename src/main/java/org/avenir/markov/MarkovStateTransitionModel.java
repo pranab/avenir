@@ -102,8 +102,8 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
-            skipFieldCount = conf.getInt("skip.field.count", 0);
-            classLabelFieldOrd = conf.getInt("class.label.field.ord", -1);
+            skipFieldCount = conf.getInt("mst.skip.field.count", 0);
+            classLabelFieldOrd = conf.getInt("mst.class.label.field.ord", -1);
             if (classLabelFieldOrd >= 0) {
             	++skipFieldCount;
             }
@@ -169,6 +169,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 		private Map<String, StateTransitionProbability> classBasedTransProb =
 				new HashMap<String, StateTransitionProbability>();
 		private int count;
+		private int transProbScale;
 		private boolean isClassBasedModel;;
 		private String classLabel;
 		private String fromSt;
@@ -187,12 +188,12 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelim = conf.get("field.delim.out", ",");
-        	states = conf.get("model.states").split(",");
+        	states = conf.get("mst.model.states").split(",");
         	transProb = new StateTransitionProbability(states, states);
-        	int transProbScale = conf.getInt("trans.prob.scale", 1000);
+        	transProbScale = conf.getInt("mst.trans.prob.scale", 1000);
         	transProb.setScale(transProbScale);
-        	isClassBasedModel = conf.getInt("class.label.field.ord", -1) >= 0;
-        	outputStates = conf.getBoolean("output.states", true); 
+        	isClassBasedModel = conf.getInt("mst.class.label.field.ord", -1) >= 0;
+        	outputStates = conf.getBoolean("mst.output.states", true); 
 	   	}
 	   	
 	   	/* (non-Javadoc)
@@ -203,7 +204,7 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
 	   		//all states
         	Configuration conf = context.getConfiguration();
         	if (outputStates) {
-        		outVal.set(conf.get("model.states"));
+        		outVal.set(conf.get("mst.model.states"));
         		context.write(NullWritable.get(),outVal);
         	}
         	
@@ -257,7 +258,8 @@ public class MarkovStateTransitionModel extends Configured implements Tool {
             	
             	StateTransitionProbability clsTransProb = classBasedTransProb.get(classLabel);
             	if (null == clsTransProb) {
-            		clsTransProb = new StateTransitionProbability();
+            		clsTransProb = new StateTransitionProbability(states, states);
+            		clsTransProb.setScale(transProbScale);
             		classBasedTransProb.put(classLabel, clsTransProb);
             	}
         		clsTransProb.add(fromSt, toSt, count);

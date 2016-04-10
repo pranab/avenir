@@ -104,7 +104,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 			//select action for next round
 			String eventID = input.getStringByField(EVENT_ID);
 			int roundNum = input.getIntegerByField(ROUND_NUM);
-			String[] actions = learner.nextActions(roundNum);
+			Action[] actions = learner.nextActions();
 			actionWriter.write(eventID, actions);
 			if (debugOn) {
 				if (messageCounter % messageCountInterval == 0)

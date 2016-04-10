@@ -24,6 +24,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.chombo.util.HistogramStat;
 import org.chombo.util.ConfigUtility;
+import org.chombo.util.Utility;
 
 
 /**
@@ -31,7 +32,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class IntervalEstimator extends ReinforcementLearner{
+public class IntervalEstimatorLearner extends ReinforcementLearner{
 	private int binWidth;
 	private int confidenceLimit;
 	private int minConfidenceLimit;
@@ -40,17 +41,17 @@ public class IntervalEstimator extends ReinforcementLearner{
 	private int confidenceLimitReductionRoundInterval;
 	private int minDistrSample;
 	private Map<String, HistogramStat> rewardDistr = new HashMap<String, HistogramStat>(); 
-	private int lastRoundNum = 1;
+	private long lastRoundNum = 1;
 	private long randomSelectCount;
 	private long intvEstSelectCount;
 	private boolean debugOn;
 	private long logCounter;
-	private long roundCounter;
 	private boolean lowSample = true;
-	private static final Logger LOG = Logger.getLogger(IntervalEstimator.class);
+	private static final Logger LOG = Logger.getLogger(IntervalEstimatorLearner.class);
 	
 	@Override
 	public void initialize(Map<String, Object> config) {
+		super.initialize(config);
 		binWidth = ConfigUtility.getInt(config, "bin.width");
 		confidenceLimit = ConfigUtility.getInt(config, "confidence.limit");
 		minConfidenceLimit = ConfigUtility.getInt(config, "min.confidence.limit");
@@ -59,11 +60,9 @@ public class IntervalEstimator extends ReinforcementLearner{
 		confidenceLimitReductionRoundInterval = ConfigUtility.getInt(config, "confidence.limit.reduction.round.interval");
 		minDistrSample = ConfigUtility.getInt(config, "min.reward.distr.sample");
 		
-		for (String action : actions) {
-			rewardDistr.put(action, new HistogramStat(binWidth));
+		for (Action action : actions) {
+			rewardDistr.put(action.getId(), new HistogramStat(binWidth));
 		}
-		
-		initSelectedActions();
 		
 		debugOn = ConfigUtility.getBoolean(config,"debug.on", false);
 		if (debugOn) {
@@ -74,11 +73,15 @@ public class IntervalEstimator extends ReinforcementLearner{
 		}
 	}
 
-	@Override
-	public String[] nextActions(int roundNum) {
-		String selAction = null;
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.ReinforcementLearner#nextAction()
+	 */
+	@Override	
+	public Action nextAction() {
+		Action selAction = null;
 		++logCounter;
-		++roundCounter;
+		++totalTrialCount;
+		
 		//make sure reward distributions have enough sample
 		if (lowSample) {
 			lowSample = false;
@@ -95,20 +98,21 @@ public class IntervalEstimator extends ReinforcementLearner{
 			
 			if (!lowSample && debugOn) {
 				LOG.info("got full sample");
-				lastRoundNum = roundNum;
+				lastRoundNum = totalTrialCount;
 			}
 		}
 		
 		if (lowSample) {
 			//select randomly
-			selAction = actions[(int)(Math.random() * actions.length)];
+			selAction = Utility.selectRandom(actions);
 			++randomSelectCount;
 		} else {
 			//reduce confidence limit
-			adjustConfLimit(roundNum);
+			adjustConfLimit();
 			
 			//select as per interval estimate, choosing distr with max upper conf bound
 			int maxUpperConfBound = 0;
+			String selActionId = null;
 			for (String action : rewardDistr.keySet()) {
 				HistogramStat stat = rewardDistr.get(action);
 				int[] confBounds = stat.getConfidenceBounds(curConfidenceLimit);
@@ -117,23 +121,24 @@ public class IntervalEstimator extends ReinforcementLearner{
 				}
 				if (confBounds[1] > maxUpperConfBound) {
 					maxUpperConfBound = confBounds[1];
-					selAction = action;
+					selActionId = action;
 				}
 			}
+			selAction = findAction(selActionId);
 			++intvEstSelectCount;
 		}
-		selActions[0] = selAction;
-		return selActions;
+		selAction.select();
+		return selAction;
 	}
 
 	/**
 	 * @param roundNum
 	 */
-	private void adjustConfLimit(int roundNum) {
+	private void adjustConfLimit() {
 		if (curConfidenceLimit > minConfidenceLimit) {
-			int redStep = (roundNum - lastRoundNum) / confidenceLimitReductionRoundInterval;
+			int redStep = (int)((totalTrialCount - lastRoundNum) / confidenceLimitReductionRoundInterval);
 			if (debugOn) {
-				LOG.info("redStep:" +  redStep + " roundNum:"  + roundNum + " lastRoundNum:" + lastRoundNum);
+				LOG.info("redStep:" +  redStep + " roundNum:"  + totalTrialCount + " lastRoundNum:" + lastRoundNum);
 			}
 			if (redStep > 0) {
 				curConfidenceLimit -=  (redStep * confidenceLimitReductionStep);
@@ -141,9 +146,9 @@ public class IntervalEstimator extends ReinforcementLearner{
 					curConfidenceLimit = minConfidenceLimit;
 				}
 				if (debugOn) {
-					LOG.info("reduce conf limit roundNum:" +  roundNum + " lastRoundNum:"  + lastRoundNum);
+					LOG.info("reduce conf limit roundNum:" +  totalTrialCount + " lastRoundNum:"  + lastRoundNum);
 				}
-				lastRoundNum = roundNum;
+				lastRoundNum = totalTrialCount;
 			}
 		}
 	}
@@ -155,7 +160,7 @@ public class IntervalEstimator extends ReinforcementLearner{
 			throw new IllegalArgumentException("invalid action:" + action);
 		}
 		stat.add(reward);
-		
+		findAction(action).reward(reward);
 		if (debugOn) {
 			LOG.info("setReward action:" + action + " reward:" + reward + " sample count:" + stat.getCount());
 		}

@@ -43,13 +43,15 @@ public class MarkovModel {
 			String curClassLabel = null;
 			DoubleTable curStateTransitionProb = null;
 			while (count < lines.size()) {
-				String line = lines.get(count++);
+				String line = lines.get(count);
 				if (line.startsWith("classLabel")) {
 					curClassLabel = line.split(":")[1];
+					++count;
 				} else {
 					curStateTransitionProb = new DoubleTable(states, states);
 					for (int i = 0; i < numStates; ++i) {
-						curStateTransitionProb.deseralizeRow(lines.get(count++), i);
+						curStateTransitionProb.deseralizeRow(lines.get(count), i);
+						++count;
 					}
 					classBasedStateTransitionProb.put(curClassLabel, curStateTransitionProb);
 				}

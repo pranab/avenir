@@ -30,12 +30,12 @@ Here is the content of disease.properties
 field.delim.regex=,
 field.delim.out=,
 num.reducer=1
-feature.schema.file.path=/Users/pranab/disease/meta/patient.json
-split.attributes=1
-split.algorithm=hellingerDistance
-parent.info=0.333939
-output.split.prob=false
 debug.on=true
+cpg.feature.schema.file.path=/Users/pranab/disease/meta/patient.json
+cpg.split.attributes=1
+cpg.split.algorithm=hellingerDistance
+cpg.parent.info=0.333939
+cpg.output.split.prob=false
 
 
 Meta data

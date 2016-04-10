@@ -27,7 +27,7 @@ import java.util.Map;
  * @author pranab
  *
  */
-public class OptimisticSampsonSampler extends SampsonSampler {
+public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	private Map<String, Integer> meanRewards = new HashMap<String, Integer>();
 	
 	/**
