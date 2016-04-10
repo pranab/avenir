@@ -12,6 +12,7 @@ import random
 import jprops
 from sklearn.externals import joblib
 from sklearn.ensemble import BaggingClassifier
+from random import randint
 
 if len(sys.argv) < 2:
 	print "usage: ./svm.py <config_properties_file>"
@@ -39,11 +40,13 @@ def train_bagging():
 #linear k fold validation
 def train_kfold_validation(nfold):
 	if native_kfold_validation:
+		print "native linear kfold validation"
 		model = build_model()
 		scores = sk.cross_validation.cross_val_score(model, XC, yc, cv=nfold)
 		av_score = np.mean(scores)
 		print "average error %.3f" %(1.0 - av_score)
 	else:
+		print "extended linear kfold validation"
 		train_kfold_validation_ext(nfold)
 
 #linear k fold validation
@@ -86,10 +89,30 @@ def train_kfold_validation_ext(nfold):
 	#average error
 	av_error = np.mean(errors)
 	print "average error %.3f" %(av_error)
-		
-		
+
 # random k fold validation
 def train_rfold_validation(nfold, niter):
+	if native_rfold_validation:
+		print "native random  kfold validation"
+		train_fraction = 1.0 / nfold
+		scores = []
+		for i in range(0,niter):
+			state = randint(1,100)
+			X, XV, y, yv = sk.cross_validation.train_test_split(XC, yc, test_size=train_fraction, random_state=state)
+			model = build_model()
+			model.fit(X,y)
+			scores.append(model.score(XV, yv))
+		
+		print scores
+		av_score = np.mean(scores)
+		print "average error %.3f" %(1.0 - av_score)
+
+	else:
+		print "extended random  kfold validation"
+		train_rfold_validation_ext(nfold, niter)
+		
+# random k fold validation
+def train_rfold_validation_ext(nfold, niter):
 	max_offset_frac = 1.0 - 1.0 / nfold
 	max_offset_frac -= .01
 	length = dsize / nfold
@@ -336,6 +359,7 @@ if mode == "train":
 		native_kfold_validation = configs["train.native.kfold.validation"].lower() == "true"
 		train_kfold_validation(num_folds)
 	elif validation == "rfold":
+		native_rfold_validation = configs["train.native.rfold.validation"].lower() == "true"
 		train_rfold_validation(num_folds,num_iter)
 	elif validation == "bagging":
 		bagging_num_estimator = int(configs["train.bagging.num.estimators"])
