@@ -58,6 +58,8 @@ def train_kfold_validation_ext(nfold):
 	offset = 0
 	length = dsize / nfold
 	errors = []
+	fp_errors = []
+	fn_errors = []
 	for i in range(0, nfold):
 		print "....Next fold %d" %(i)
 		
@@ -81,14 +83,18 @@ def train_kfold_validation_ext(nfold):
 		yp = model.predict(XV)
 
 		#show prediction output
-		error = validate(dvsize,yv,yp)
-		errors.append(error)
+		(er, fp_er, fn_er) = validate(dvsize,yv,yp)
+		errors.append(er)
+		fp_errors.append(fp_er)
+		fn_errors.append(fn_er)
 		
 		offset += length
 		
 	#average error
 	av_error = np.mean(errors)
-	print "average error %.3f" %(av_error)
+	av_fp_error = np.mean(fp_errors)
+	av_fn_error = np.mean(fn_errors)
+	print "average  error %.3f  false positive error %.3f  false negative error %.3f" %(av_error, av_fp_error, av_fn_error)
 
 # random k fold validation
 def train_rfold_validation(nfold, niter):
@@ -118,6 +124,8 @@ def train_rfold_validation_ext(nfold, niter):
 	length = dsize / nfold
 
 	errors = []
+	fp_errors = []
+	fn_errors = []
 	for i in range(0,niter):	
 		print "...Next iteration %d" %(i)
 		offset = int(dsize * random.random() * max_offset_frac)
@@ -145,11 +153,15 @@ def train_rfold_validation_ext(nfold, niter):
 		yp = model.predict(XV)
 
 		#show prediction output
-		error = validate(dvsize,yv,yp)
-		errors.append(error)
+		(er, fp_er, fn_er) = validate(dvsize,yv,yp)
+		errors.append(er)
+		fp_errors.append(fp_er)
+		fn_errors.append(fn_er)
 		
 	av_error = np.mean(errors)
-	print "average error %.3f" %(av_error)
+	av_fp_error = np.mean(fp_errors)
+	av_fn_error = np.mean(fn_errors)
+	print "average error %.3f  false positive error %.3f  false negative error %.3f" %(av_error, av_fp_error, av_fn_error)
 
 # make predictions
 def predict():
@@ -280,14 +292,16 @@ def validate(dvsize,yv,yp):
 		else:
 			fn += 1
 		
-	er = float(err_count)  / dvsize		
+	er = float(err_count) / dvsize		
+	fp_er = float(fp) / dvsize
+	fn_er = float(fn) / dvsize
 	print "error %.3f" %(er)
-	print "true positive : %.3f" %(float(tp)  / dvsize)
-	print "false positive: %.3f" %(float(fp)  / dvsize)
-	print "true negative : %.3f" %(float(tn)  / dvsize)
-	print "false negative: %.3f" %(float(fn)  / dvsize)
+	print "true positive : %.3f" %(float(tp) / dvsize)
+	print "false positive: %.3f" %(fp_er)
+	print "true negative : %.3f" %(float(tn) / dvsize)
+	print "false negative: %.3f" %(fn_er)
 
-	return er
+	return (er, fp_er, fn_er)
 
 # load configuration
 def getConfigs(configFile):
@@ -322,9 +336,11 @@ if mode == "train":
 	penalty = float(configs["train.penalty"])
 	if penalty < 0:
 		penalty = 1.0
+		print "using default for penalty"
 	kernel_coeff = float(configs["train.gamma"])
 	if kernel_coeff < 0:
 		kernel_coeff = 'auto'
+		print "using default for gamma"
 	print_sup_vectors = configs["train.print.sup.vectors"].lower() == "true"
 	persist_model = configs["train.persist.model"].lower() == "true"
 	model_file_directory = configs["common.model.directory"]
