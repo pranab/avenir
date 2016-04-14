@@ -1,0 +1,51 @@
+This tutorial is for predicting customer churn with SVM using scikit-learn. 
+
+Dependent script
+================
+Checkout the project visitante. Take the script util.py and sampler.py  from that project and 
+place them in ../lib directory with respect the directory containing store_order.py
+
+Other dependency
+================
+The script uses numpy and scikit-leran. It’s best to install anaconda to get all related packages.
+
+I used properties file for configuration and python module called jprops for processing properties 
+file. Here is how you install it
+
+pip install jprops
+
+All python scripts
+==================
+You may to change the first line of all python script depending upon your pyton installation
+directory
+
+Creating training data
+======================
+To create test data use the python script telecom_churn.py as below. 
+./telecom_churn.py <num_cust> <churn_rate> <error_rate> > <output_file>
+
+where
+num_cust = number of customers e.g., 5000
+churn_rate = churn percentage e.g., 20
+error_rate = error percentage e.g. 10
+output_file = output file name e.g., churn_train_5000.txt
+
+Configuration
+=============
+Edit config properties file svm.properties according to your needs
+
+Run for training
+================
+Make sure the parameters in common and train group are set appropriately and then
+run
+./svm.py svm.properties
+
+
+Run for prediction
+==================
+Make sure the parameters in common and predict group are set appropriately and then
+run. 
+./svm.py svm.properties
+
+You must have saved the model ensemble while training for prediction to work
+
