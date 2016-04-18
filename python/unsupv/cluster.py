@@ -3,12 +3,12 @@
 # Package imports
 import os
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import sklearn as sk
-import sklearn.linear_model
+#import sklearn.linear_model
 from sklearn.cluster import KMeans
-import matplotlib
+#import matplotlib
 import random
 import jprops
 from sklearn.externals import joblib
@@ -21,7 +21,7 @@ if len(sys.argv) < 2:
 	print "usage: ./cluster.py <config_properties_file>"
 	sys.exit()
 
-# kmeans cluster
+# kmeans cluster finding
 def train_kmeans():
 	print "starting kmeans clustering..."
 	model = KMeans(n_clusters=num_clusters, init=init_strategy, n_init=num_inits, 
@@ -39,6 +39,49 @@ def train_kmeans():
 	cohesion = model.inertia_ / len(X)
 	print "cohesion:  %.3f" %(cohesion) 
 
+# finds belonging clusters
+def predict():
+	X = extract_data("pred.data.file", "pred.data.feature.fields")
+	model_file_directory = configs["common.model.directory"]
+	model_file_prefix = configs["common.model.file.prefix"]
+	model_file = model_file_directory + "/" + model_file_prefix + ".mod"
+	print "loading model file " +  model_file
+	model = joblib.load(model_file) 	
+	cluster_index = model.predict(X)
+	print cluster_index
+
+def explore():
+	print "calculating hopkins stats to detect if the data set has clusters..."
+	X = extract_data("train.data.file", "train.data.feature.fields")	
+	XR = extract_data("expl.data.file", "expl.data.feature.fields")
+	split_size = int(configs["expl.sample.size"])
+	num_iters = int(configs["expl.num.iters"])
+	hopkins_stats = []
+	
+	for i in range(0, num_iters):
+		(X_spl, X_tra) = split_data_random(X, split_size)
+		(X_ran, X_rem) = split_data_random(XR, split_size)
+	
+		min_dist_ran = find_min_distances(X_ran, X_tra)
+		min_dist_spl = find_min_distances(X_spl, X_tra)
+	
+		print "random"
+		#print min_dist_ran
+		ran_sum = min_dist_ran.sum()
+		print "sum %.3f" %(ran_sum)
+		
+		print "split"
+		#print min_dist_spl
+		spl_sum = min_dist_spl.sum()
+		print "sum %.3f" %(spl_sum)
+	
+		hopkins_stat = spl_sum / (ran_sum + spl_sum)
+		print "hopkins stats %.3f" %(hopkins_stat)
+		hopkins_stats.append(hopkins_stat)
+		
+	av_hopkins_stat = np.mean(hopkins_stats)
+	print "average hopkins stat %.3f" %(av_hopkins_stat)
+
 # loads file and extracts specific columns
 def extract_data(file_name_param, field_indices_param):
 	X = extract_table_from_file(configs, file_name_param, field_indices_param)	
@@ -55,7 +98,8 @@ preprocess = configs["common.preprocessing"]
 
 if mode == "train":
 	#train
-	algo = configs["train.algo"]
+	print "running in training mode..."
+	algo = configs["train.algo"]	
 	num_clusters = int(configs["train.num.clusters"])
 	num_iters = int(configs["train.num.iters"])
 	if num_iters == -1:
@@ -76,10 +120,7 @@ if mode == "train":
 		sys.exit()
 	persist_model = configs["train.persist.model"].lower() == "true"
 
-	X = extract_table_from_file(configs, "train.data.file", "train.data.feature.fields")	
-	#preprocess features
-	if (preprocess == "scale"):
-		X = sk.preprocessing.scale(X)
+	X = extract_data("train.data.file", "train.data.feature.fields")
 	model_file_directory = configs["common.model.directory"]
 	model_file_prefix = configs["common.model.file.prefix"]
 	
@@ -88,34 +129,15 @@ if mode == "train":
 	else:
 		print "invalid cluster algorithm"
 		sys.exit()
+
+elif mode == "predict":
+	print "running in prediction mode..."
+	predict()
 			
 elif mode == "explore":
 	#calculate hopkins stats
-	print "calculating hopkins stats to detect if the data set has clusters..."
-	X = extract_data("train.data.file", "train.data.feature.fields")	
-	X_ran = extract_data("expl.data.file", "expl.data.feature.fields")
-	split_size = len(X_ran)
-	
-	(X_spl, X_tra) = split_data_random(X, split_size)
-	min_dist_ran = find_min_distances(X_ran, X_tra)
-	min_dist_spl = find_min_distances(X_spl, X_tra)
-	
-	print "random"
-	print min_dist_ran
-	print "sum"
-	ran_sum = min_dist_ran.sum()
-	print ran_sum
-	
-	
-	print "split"
-	print min_dist_spl
-	print "sum"
-	spl_sum = min_dist_spl.sum()
-	print spl_sum
-	
-	hopkins_stat = spl_sum / (ran_sum + spl_sum)
-	print "hopkins stats %.3f" %(hopkins_stat)
-	
+	print "running in explore mode..."
+	explore()	
 	
 	
 	
