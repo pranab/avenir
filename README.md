@@ -33,6 +33,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2015/07/06/customer-conversion-prediction-with-markov-chain-classifier/
 * https://pkghosh.wordpress.com/2015/05/11/is-bigger-data-better-for-machine-learning/
 * https://pkghosh.wordpress.com/2015/12/13/association-mining-with-improved-apriori-algorithm/
+* https://pkghosh.wordpress.com/2016/03/14/is-neural-network-better-off-with-big-data/
+* https://pkghosh.wordpress.com/2016/04/13/customer-churn-prediction-with-svm-using-scikit-learn/
 
 
 ## Getting started
