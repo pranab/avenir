@@ -18,7 +18,7 @@ Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
 
 
 ## Blogs
-The following blogs of mine are good source of details of sifarish. These are the only source
+The following blogs of mine are good source of details of avenir. These are the only source
 of detail documentation
 * http://pkghosh.wordpress.com/2014/03/12/using-mutual-information-to-find-critical-factors-in-hospital-readmission/
 * http://pkghosh.wordpress.com/2014/01/09/boost-lead-generation-with-online-reinforcement-learning/
