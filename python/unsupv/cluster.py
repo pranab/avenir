@@ -1,18 +1,17 @@
 #!/Users/pranab/Tools/anaconda/bin/python
 
+
 # Package imports
 import os
 import sys
-#import matplotlib.pyplot as plt
 import numpy as np
 import sklearn as sk
-#import sklearn.linear_model
 from sklearn.cluster import KMeans
-#import matplotlib
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import DBSCAN
 import random
 import jprops
 from sklearn.externals import joblib
-from sklearn.ensemble import BaggingClassifier
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from support import *
@@ -39,6 +38,46 @@ def train_kmeans():
 	cohesion = model.inertia_ / len(X)
 	print "cohesion:  %.3f" %(cohesion) 
 
+# agglomerative clustering
+def train_agglomerative():
+	print "starting agglomerative clustering..."
+	model = AgglomerativeClustering(n_clusters=num_clusters, affinity=aggl_affinity,  
+	linkage=aggl_linkage)
+	model.fit(X)
+	labels = model.labels_	
+	print labels
+
+# DBSCAN clustering
+def train_dbscan():
+	print "starting dbscan clustering..."
+	model = DBSCAN(eps=dbs_eps, min_samples=dbs_min_samples, metric=dbs_metric, algorithm='auto')
+	model.fit(X)
+	
+	core_ponts = model.core_sample_indices_ 
+	if output_core_points:
+		print "core points data index"
+		print core_points
+	print "num of core points %d" %(len(core_ponts))
+	
+	print "all points clutser index"
+	cluster_index = model.labels_
+	if output_cluster_members:
+		#print cluster_index
+		cluster_members = {}
+		for i,c in enumerate(cluster_index):
+			index_list = cluster_members.get(c, list())
+			index_list.append(i)
+			cluster_members[c] = index_list
+		for cl, indx_list in cluster_members.iteritems():
+			if cl > 0:
+				print "cluster index %d  size %d" %(cl, len(indx_list))
+			else:
+				print "noise points size %d" %(len(indx_list))
+			print indx_list
+	
+	print "num of clusters %d" %(cluster_index.max() + 1)
+	
+	
 # finds belonging clusters
 def predict():
 	X = extract_data("pred.data.file", "pred.data.feature.fields")
@@ -50,6 +89,7 @@ def predict():
 	cluster_index = model.predict(X)
 	print cluster_index
 
+# calculates hopkins stat to find out whether data is likely to have clusters
 def explore():
 	print "calculating hopkins stats to detect if the data set has clusters..."
 	X = extract_data("train.data.file", "train.data.feature.fields")	
@@ -91,9 +131,8 @@ def extract_data(file_name_param, field_indices_param):
 	return X
 	
 # main
-configs = getConfigs(sys.argv[1])
+configs = get_configs(sys.argv[1])
 mode = configs["common.mode"]
-
 preprocess = configs["common.preprocessing"]
 
 if mode == "train":
@@ -104,28 +143,47 @@ if mode == "train":
 	num_iters = int(configs["train.num.iters"])
 	if num_iters == -1:
 		num_iters = 300
-	num_inits = int(configs["train.num.inits"])
-	if num_inits == -1:
-		num_inits = 10
-	init_strategy = configs["train.init.strategy"]
-	if init_strategy == "default":
-		init_strategy = "k-means++"
-	precom_dist = configs["train.precompute.distance"].lower()
-	if precom_dist == "true":
-		precom_dist = True
-	elif precom_dist == "false":
-		precom_dist = False
-	elif not precom_dist == "auto":
-		print "ivalid parameter for train.precompute.distance"
-		sys.exit()
 	persist_model = configs["train.persist.model"].lower() == "true"
 
 	X = extract_data("train.data.file", "train.data.feature.fields")
 	model_file_directory = configs["common.model.directory"]
 	model_file_prefix = configs["common.model.file.prefix"]
+	output_cluster_members = configs["train.output.cluster.members"].lower() == "true"
 	
 	if algo == "kmeans":
+		num_inits = int(configs["train.num.inits"])
+		if num_inits == -1:
+			num_inits = 10
+		init_strategy = configs["train.init.strategy"]
+		if init_strategy == "default":
+			init_strategy = "k-means++"
+		precom_dist = configs["train.precompute.distance"].lower()
+		if precom_dist == "true":
+			precom_dist = True
+		elif precom_dist == "false":
+			precom_dist = False
+		elif not precom_dist == "auto":
+			print "ivalid parameter for train.precompute.distance"
+			sys.exit()
 		train_kmeans()
+	elif algo == "agglomerative":
+		aggl_affinity = configs["train.affinity"]
+		if aggl_affinity == "default":
+			aggl_affinity = euclidean
+		aggl_linkage = configs["train.linkage"]
+		train_agglomerative()
+	elif algo == "dbscan":
+		dbs_eps = float(configs["train.eps"])
+		if (dbs_eps < 0):
+			dbs_eps = 0.5
+		dbs_min_samples = int(configs["train.min.samples"])
+		if dbs_min_samples < 0:
+			dbs_min_samples = 5
+		dbs_metric = configs["train.metric"]
+		if dbs_metric == "default":
+			dbs_metric = "euclidean"
+		output_core_points = configs["train.output.core.points"].lower() == "true"
+		train_dbscan()
 	else:
 		print "invalid cluster algorithm"
 		sys.exit()
