@@ -1,6 +1,5 @@
 #!/Users/pranab/Tools/anaconda/bin/python
 
-
 # Package imports
 import os
 import sys
@@ -9,6 +8,7 @@ import sklearn as sk
 from sklearn.cluster import KMeans
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 import random
 import jprops
 from sklearn.externals import joblib
@@ -20,8 +20,10 @@ if len(sys.argv) < 2:
 	print "usage: ./cluster.py <config_properties_file>"
 	sys.exit()
 
+
 # kmeans cluster finding
-def train_kmeans():
+def train_kmeans(num_clusters, init_strategy, num_inits, num_iters, precom_dist, 
+model_file_directory, model_file_prefix):
 	print "starting kmeans clustering..."
 	model = KMeans(n_clusters=num_clusters, init=init_strategy, n_init=num_inits, 
 	max_iter=num_iters, precompute_distances=precom_dist)
@@ -38,6 +40,11 @@ def train_kmeans():
 	cohesion = model.inertia_ / len(X)
 	print "cohesion:  %.3f" %(cohesion) 
 
+	inter_cluster_distances = find_min_distances_between_rows(clusters)
+	print inter_cluster_distances
+	print "min inter cluster distance: %.3f" %(inter_cluster_distances.min())
+	
+
 # agglomerative clustering
 def train_agglomerative():
 	print "starting agglomerative clustering..."
@@ -46,6 +53,7 @@ def train_agglomerative():
 	model.fit(X)
 	labels = model.labels_	
 	print labels
+
 
 # DBSCAN clustering
 def train_dbscan():
@@ -89,13 +97,14 @@ def predict():
 	cluster_index = model.predict(X)
 	print cluster_index
 
+
 # calculates hopkins stat to find out whether data is likely to have clusters
-def explore():
+def expl_hopkins(configs):
 	print "calculating hopkins stats to detect if the data set has clusters..."
 	X = extract_data("train.data.file", "train.data.feature.fields")	
-	XR = extract_data("expl.data.file", "expl.data.feature.fields")
-	split_size = int(configs["expl.sample.size"])
-	num_iters = int(configs["expl.num.iters"])
+	XR = extract_data("expl.hopkins.data.file", "expl.hopkins.data.feature.fields")
+	split_size = int(configs["expl.hopkins.sample.size"])
+	num_iters = int(configs["expl.hopkins.num.iters"])
 	hopkins_stats = []
 	
 	for i in range(0, num_iters):
@@ -122,6 +131,26 @@ def explore():
 	av_hopkins_stat = np.mean(hopkins_stats)
 	print "average hopkins stat %.3f" %(av_hopkins_stat)
 
+
+# calculates distance to nearest k th neighbor
+def expl_kdist(configs):
+	print "calculating distance to nearest kth neighbor ..."
+	X = extract_data("train.data.file", "train.data.feature.fields")
+	neighbor_index = int(configs["expl.kdist.neighbor.index"])	
+	neigh = NearestNeighbors(n_neighbors=neighbor_index)
+	neigh.fit(X)
+	dist = neigh.kneighbors(return_distance=True)[0]
+	#print dist
+	print "after sorting"
+	dist.sort(axis=0)
+	print dist
+	for k in range(0, neighbor_index):
+		print "neighbor index %d" %(k)
+		dist_kth = dist[:,k]
+		print "sorted distance to kth neighbor"
+		print dist_kth	
+
+
 # loads file and extracts specific columns
 def extract_data(file_name_param, field_indices_param):
 	X = extract_table_from_file(configs, file_name_param, field_indices_param)	
@@ -130,6 +159,7 @@ def extract_data(file_name_param, field_indices_param):
 		X = sk.preprocessing.scale(X)
 	return X
 	
+
 # main
 configs = get_configs(sys.argv[1])
 mode = configs["common.mode"]
@@ -165,13 +195,16 @@ if mode == "train":
 		elif not precom_dist == "auto":
 			print "ivalid parameter for train.precompute.distance"
 			sys.exit()
-		train_kmeans()
+		train_kmeans(num_clusters, init_strategy, num_inits, num_iters, precom_dist, 
+		model_file_directory, model_file_prefix)
+	
 	elif algo == "agglomerative":
 		aggl_affinity = configs["train.affinity"]
 		if aggl_affinity == "default":
 			aggl_affinity = euclidean
 		aggl_linkage = configs["train.linkage"]
 		train_agglomerative()
+	
 	elif algo == "dbscan":
 		dbs_eps = float(configs["train.eps"])
 		if (dbs_eps < 0):
@@ -184,6 +217,7 @@ if mode == "train":
 			dbs_metric = "euclidean"
 		output_core_points = configs["train.output.core.points"].lower() == "true"
 		train_dbscan()
+	
 	else:
 		print "invalid cluster algorithm"
 		sys.exit()
@@ -195,8 +229,11 @@ elif mode == "predict":
 elif mode == "explore":
 	#calculate hopkins stats
 	print "running in explore mode..."
-	explore()	
-	
+	expl_algo = configs["expl.algo"]
+	if 	expl_algo == "hopkins":
+		expl_hopkins(configs)
+	elif expl_algo == "kdist":
+		expl_kdist(configs)
 	
 	
 	
