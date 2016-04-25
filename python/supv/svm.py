@@ -12,6 +12,7 @@ import random
 import jprops
 from sklearn.externals import joblib
 from sklearn.ensemble import BaggingClassifier
+from random import randint
 
 if len(sys.argv) < 2:
 	print "usage: ./svm.py <config_properties_file>"
@@ -39,11 +40,13 @@ def train_bagging():
 #linear k fold validation
 def train_kfold_validation(nfold):
 	if native_kfold_validation:
+		print "native linear kfold validation"
 		model = build_model()
 		scores = sk.cross_validation.cross_val_score(model, XC, yc, cv=nfold)
 		av_score = np.mean(scores)
 		print "average error %.3f" %(1.0 - av_score)
 	else:
+		print "extended linear kfold validation"
 		train_kfold_validation_ext(nfold)
 
 #linear k fold validation
@@ -55,6 +58,8 @@ def train_kfold_validation_ext(nfold):
 	offset = 0
 	length = dsize / nfold
 	errors = []
+	fp_errors = []
+	fn_errors = []
 	for i in range(0, nfold):
 		print "....Next fold %d" %(i)
 		
@@ -78,23 +83,49 @@ def train_kfold_validation_ext(nfold):
 		yp = model.predict(XV)
 
 		#show prediction output
-		error = validate(dvsize,yv,yp)
-		errors.append(error)
+		(er, fp_er, fn_er) = validate(dvsize,yv,yp)
+		errors.append(er)
+		fp_errors.append(fp_er)
+		fn_errors.append(fn_er)
 		
 		offset += length
 		
 	#average error
 	av_error = np.mean(errors)
-	print "average error %.3f" %(av_error)
-		
-		
+	av_fp_error = np.mean(fp_errors)
+	av_fn_error = np.mean(fn_errors)
+	print "average  error %.3f  false positive error %.3f  false negative error %.3f" %(av_error, av_fp_error, av_fn_error)
+
 # random k fold validation
 def train_rfold_validation(nfold, niter):
+	if native_rfold_validation:
+		print "native random  kfold validation"
+		train_fraction = 1.0 / nfold
+		scores = []
+		for i in range(0,niter):
+			state = randint(1,100)
+			X, XV, y, yv = sk.cross_validation.train_test_split(XC, yc, test_size=train_fraction, random_state=state)
+			model = build_model()
+			model.fit(X,y)
+			scores.append(model.score(XV, yv))
+		
+		print scores
+		av_score = np.mean(scores)
+		print "average error %.3f" %(1.0 - av_score)
+
+	else:
+		print "extended random  kfold validation"
+		train_rfold_validation_ext(nfold, niter)
+		
+# random k fold validation
+def train_rfold_validation_ext(nfold, niter):
 	max_offset_frac = 1.0 - 1.0 / nfold
 	max_offset_frac -= .01
 	length = dsize / nfold
 
 	errors = []
+	fp_errors = []
+	fn_errors = []
 	for i in range(0,niter):	
 		print "...Next iteration %d" %(i)
 		offset = int(dsize * random.random() * max_offset_frac)
@@ -122,11 +153,15 @@ def train_rfold_validation(nfold, niter):
 		yp = model.predict(XV)
 
 		#show prediction output
-		error = validate(dvsize,yv,yp)
-		errors.append(error)
+		(er, fp_er, fn_er) = validate(dvsize,yv,yp)
+		errors.append(er)
+		fp_errors.append(fp_er)
+		fn_errors.append(fn_er)
 		
 	av_error = np.mean(errors)
-	print "average error %.3f" %(av_error)
+	av_fp_error = np.mean(fp_errors)
+	av_fn_error = np.mean(fn_errors)
+	print "average error %.3f  false positive error %.3f  false negative error %.3f" %(av_error, av_fp_error, av_fn_error)
 
 # make predictions
 def predict():
@@ -257,14 +292,16 @@ def validate(dvsize,yv,yp):
 		else:
 			fn += 1
 		
-	er = float(err_count)  / dvsize		
+	er = float(err_count) / dvsize		
+	fp_er = float(fp) / dvsize
+	fn_er = float(fn) / dvsize
 	print "error %.3f" %(er)
-	print "true positive : %.3f" %(float(tp)  / dvsize)
-	print "false positive: %.3f" %(float(fp)  / dvsize)
-	print "true negative : %.3f" %(float(tn)  / dvsize)
-	print "false negative: %.3f" %(float(fn)  / dvsize)
+	print "true positive : %.3f" %(float(tp) / dvsize)
+	print "false positive: %.3f" %(fp_er)
+	print "true negative : %.3f" %(float(tn) / dvsize)
+	print "false negative: %.3f" %(fn_er)
 
-	return er
+	return (er, fp_er, fn_er)
 
 # load configuration
 def getConfigs(configFile):
@@ -299,9 +336,11 @@ if mode == "train":
 	penalty = float(configs["train.penalty"])
 	if penalty < 0:
 		penalty = 1.0
+		print "using default for penalty"
 	kernel_coeff = float(configs["train.gamma"])
 	if kernel_coeff < 0:
 		kernel_coeff = 'auto'
+		print "using default for gamma"
 	print_sup_vectors = configs["train.print.sup.vectors"].lower() == "true"
 	persist_model = configs["train.persist.model"].lower() == "true"
 	model_file_directory = configs["common.model.directory"]
@@ -336,6 +375,7 @@ if mode == "train":
 		native_kfold_validation = configs["train.native.kfold.validation"].lower() == "true"
 		train_kfold_validation(num_folds)
 	elif validation == "rfold":
+		native_rfold_validation = configs["train.native.rfold.validation"].lower() == "true"
 		train_rfold_validation(num_folds,num_iter)
 	elif validation == "bagging":
 		bagging_num_estimator = int(configs["train.bagging.num.estimators"])
