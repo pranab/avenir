@@ -88,6 +88,7 @@ public class AuerDeterministic  extends Configured implements Tool {
 		private static final String ITEM_REWARD = "reward";
 		private Map<String, Integer> groupBatchCount = new HashMap<String, Integer>();
 		private GroupedItems groupedItems = new GroupedItems();
+		private int globalBatchSize;
 		
 		
 		/* (non-Javadoc)
@@ -104,15 +105,20 @@ public class AuerDeterministic  extends Configured implements Tool {
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
  
         	//batch size
-        	List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
-        	String groupID;
- 			int batchSize;
-        	for (String[] line : lines) {
-        		groupID= line[0];
-        		batchSize = Integer.parseInt(line[1]);
-        		groupBatchCount.put(groupID,   batchSize );
+        	globalBatchSize = conf.getInt("global.batch.size", -1);
+        	if (globalBatchSize < 0) {
+        		List<String[]> lines = Utility.parseFileLines(conf,  "group.item.count.path",  ",");
+	        	if (lines.isEmpty()) {
+	        		throw new IllegalStateException("either global batch size or groupwise batch size needs to be defined");
+	        	}
+        		String groupID;
+ 				int batchSize;
+        		for (String[] line : lines) {
+        			groupID= line[0];
+        			batchSize = Integer.parseInt(line[1]);
+        			groupBatchCount.put(groupID,   batchSize );
+        		}
         	}
-        	
         }
 
         /* (non-Javadoc)
@@ -151,7 +157,7 @@ public class AuerDeterministic  extends Configured implements Tool {
          * @return
          */
         private int getBatchSize() {
-        	int batchSize = groupBatchCount.isEmpty() ? 1 : groupBatchCount.get(curGroupID);
+        	int batchSize = groupBatchCount.isEmpty() ? globalBatchSize : groupBatchCount.get(curGroupID);
         	return batchSize;
         }
         
