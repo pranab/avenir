@@ -189,43 +189,26 @@ public class AuerDeterministic  extends Configured implements Tool {
         	List<String> items = new ArrayList<String>();
         	int batchSize = getBatchSize();
         	int count = (roundNum -1) * batchSize;
-    		int maxReward = 0;
-    		String item = null;
-			int thisCount;
-    		int reward;
-
-    		//collect items not tried before
-    		List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
-    		count += collectedItems.size();
-    		for (DynamicBean it : collectedItems) {
-    			items.add(it.getString(ITEM_ID));
-    		}
-
     		
-    		//collect items according to UBC 
-    		while (items.size() < batchSize) {
-        		//max reward in this group
-        		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
-        		maxReward = maxRewardItem.getInt(ITEM_REWARD);
-    			
-    			double valueMax = 0.0;
-    			double value;
-    			DynamicBean selectedGroupItem = null;
-    			List<DynamicBean> groupItems = groupedItems.getGroupItems();
-        		for (DynamicBean groupItem : groupItems) {
-        			reward = groupItem.getInt(ITEM_REWARD);
-        			thisCount = groupItem.getInt(ITEM_COUNT);
-        			value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(count) / thisCount);
-        			if (value > valueMax) {
-        				item = groupItem.getString(ITEM_ID);
-        				valueMax = value;
-        				selectedGroupItem = groupItem;
-        			}
-        		}
-        		
-				items.add(item);
-				groupItems.remove(selectedGroupItem);
-				++count;
+    		if (groupedItems.anyItemTried()) {
+    			//some items have been tried and we have the reawrd value for them
+    			while (items.size() < batchSize) {
+    				//clear all use counts and start over
+    				groupedItems.clearAllUseCount();
+    				
+    				//collect items not tried before
+    				count = collectUntriedItems(items, batchSize, count);
+    		
+    				//collect items according to UBC 
+    				count = collectItemsByValue(items, batchSize, count);
+    			}
+    		} else {
+    			//nothing tried yet
+    			while (items.size() < batchSize) {
+    				//clear all use counts and start over
+    				groupedItems.clearAllUseCount();
+    				count = collectUntriedItems(items, batchSize, count);
+    			}
     		}
     		
         	//emit all selected items
@@ -236,6 +219,69 @@ public class AuerDeterministic  extends Configured implements Tool {
         	
         }
 
+        /**
+         * @param items
+         * @param batchSize
+         * @return
+         */
+        private int collectUntriedItems(List<String> items, int batchSize, int count) {
+			List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
+			for (DynamicBean it : collectedItems) {
+				items.add(it.getString(ITEM_ID));
+				++count;
+			}
+			
+			return count;
+        }
+        
+        /**
+         * @param items
+         * @param batchSize
+         * @return
+         */
+        private int collectItemsByValue(List<String> items, int batchSize, int count) {
+    		int maxReward = 0;
+    		String item = null;
+			int thisCount = 0;
+    		int reward = 0;
+    		int thisUseCount = 0;
+    		
+			while (items.size() < batchSize) {
+				//max reward in this group
+				DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
+				maxReward = maxRewardItem.getInt(ITEM_REWARD);
+		
+				double valueMax = 0.0;
+				double value;
+				DynamicBean selectedGroupItem = null;
+				List<DynamicBean> groupItems = groupedItems.getGroupItems();
+				for (DynamicBean groupItem : groupItems) {
+					reward = groupItem.getInt(GroupedItems.ITEM_REWARD);
+					thisCount = groupItem.getInt(GroupedItems.ITEM_COUNT);
+					thisUseCount = groupItem.getInt(GroupedItems.ITEM_USE_COUNT);
+					if (thisUseCount == 0  && thisCount > 0) {
+						value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(count) / thisCount);
+						if (value > valueMax) {
+							item = groupItem.getString(ITEM_ID);
+							valueMax = value;
+							selectedGroupItem = groupItem;
+						}
+					}
+				}
+		
+				if (null != selectedGroupItem) {
+					items.add(item);
+					groupedItems.setUseCount(selectedGroupItem);
+					++count;
+				} else {
+					//all items with reward have been selected
+					break;
+				}
+			}
+       	
+        	return count;
+        }
+        
 	}	
 	
     /**

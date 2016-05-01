@@ -33,7 +33,10 @@ public class GroupedItems {
 	public static final String ITEM_ID = "itemID";
 	public static final String ITEM_COUNT = "count";
 	public  static final String ITEM_REWARD = "reward";
-
+	public static final String ITEM_USE_COUNT = "useCount";
+	private static final int ZERO_COUNT = 0;
+	private static final int ONE_COUNT = 1;
+	
 	/**
 	 * 
 	 */
@@ -51,6 +54,8 @@ public class GroupedItems {
 		item.set(ITEM_ID, itemID);
 		item.set(ITEM_COUNT, count);
 		item.set(ITEM_REWARD, reward);
+		item.set(ITEM_USE_COUNT, ZERO_COUNT);
+		
 		groupItems.add(item);
     }
 	
@@ -94,15 +99,17 @@ public class GroupedItems {
     public List<DynamicBean> collectItemsNotTried( int batchSize) {
 		//collect items not tried before
     	int thisCount = 0;
+    	int thisUseCount = 0;
     	List<DynamicBean> collectedItems = new ArrayList<DynamicBean>();
 		ListIterator<DynamicBean> iter = groupItems.listIterator();
 		while (iter.hasNext()) {
 			DynamicBean groupItem = iter.next();
 			thisCount = groupItem.getInt(ITEM_COUNT);
-			if (thisCount == 0) {
+			thisUseCount = groupItem.getInt(ITEM_USE_COUNT);
+			if (thisCount == ZERO_COUNT && thisUseCount == ZERO_COUNT) {
 				if (collectedItems.size() < batchSize) {
 					collectedItems.add(groupItem);
-					iter.remove();
+					setUseCount(groupItem);
 				} else if (collectedItems.size() == batchSize) {
 					break;
 				}
@@ -120,6 +127,7 @@ public class GroupedItems {
 		int select = (int)Math.round( Math.random() * groupItems.size());
 		select = select < groupItems.size() ? select : groupItems.size() -1; 
 		DynamicBean item = groupItems.get(select);
+		setUseCount(item);
 		return item;
     }
 
@@ -133,7 +141,7 @@ public class GroupedItems {
     	DynamicBean maxRewardItem = null;
 		//max reward in this group
 		for (DynamicBean groupItem : groupItems) {
-				reward = groupItem.getInt(ITEM_REWARD);
+			reward = groupItem.getInt(ITEM_REWARD);
 			if (reward > maxReward) {
 				maxReward = reward;
 				maxRewardItem = groupItem;
@@ -142,4 +150,41 @@ public class GroupedItems {
     	return maxRewardItem;
     }
     
+    /**
+     * @return
+     */
+    public boolean anyItemTried() {
+    	boolean anyTried = false;
+		for (DynamicBean groupItem : groupItems) {
+			if (groupItem.getInt(ITEM_COUNT) > 0) {
+				anyTried = true;
+				break;
+			}
+		}    	
+		
+		return anyTried;
+    }
+    
+    /**
+     * @param groupItem
+     */
+    public void setUseCount(DynamicBean groupItem) {
+    	groupItem.set(ITEM_USE_COUNT, ONE_COUNT);
+    }
+    
+    /**
+     * @param groupItem
+     */
+    public void clearUseCount(DynamicBean groupItem) {
+    	groupItem.set(ITEM_USE_COUNT, ZERO_COUNT);
+    }
+
+    /**
+     * 
+     */
+    public void clearAllUseCount() {
+    	for (DynamicBean groupItem : groupItems) {
+    		groupItem.set(ITEM_USE_COUNT, ZERO_COUNT);
+		}    	
+    }
 }
