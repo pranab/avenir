@@ -96,6 +96,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private int auerGreedyConstant;
 		private GroupedItems groupedItems = new GroupedItems();
 		private int globalBatchSize;
+		private boolean selectionUnique;
 		
 		
 		/* (non-Javadoc)
@@ -113,7 +114,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
         	auerGreedyConstant = conf.getInt("auer.greedy.constant", 5);
- 
+        	selectionUnique = conf.getBoolean("selection.unique", false);
+        	
         	//batch size is the number items selected in each round for each group
         	globalBatchSize = conf.getInt("global.batch.size", -1);
         	if (globalBatchSize < 0) {
@@ -218,8 +220,10 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         		}
         		curProb = curProb <= randomSelectionProb ? curProb : randomSelectionProb;
             	itemID = linearSelectHelper(curProb, context);
-            	while(items.contains(itemID)) {
-            		itemID = linearSelectHelper(curProb, context);
+            	if (selectionUnique) {
+            		while(items.contains(itemID)) {
+            			itemID = linearSelectHelper(curProb, context);
+            		}
             	}
             	items.add(itemID);
         	}
@@ -289,6 +293,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          */
         private String linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
         	String itemID = null;
+        	groupedItems.clearAllUseCount();
         	if (curProb < Math.random()) {
         		//select random
         		itemID = groupedItems.selectRandom().getString(ITEM_ID);
