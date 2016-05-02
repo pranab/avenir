@@ -97,6 +97,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private GroupedItems groupedItems = new GroupedItems();
 		private int globalBatchSize;
 		private boolean selectionUnique;
+		private int minReward;
 		
 		
 		/* (non-Javadoc)
@@ -115,6 +116,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
         	auerGreedyConstant = conf.getInt("auer.greedy.constant", 5);
         	selectionUnique = conf.getBoolean("selection.unique", false);
+        	minReward = conf.getInt("min.reward",  5);
         	
         	//batch size is the number items selected in each round for each group
         	globalBatchSize = conf.getInt("global.batch.size", -1);
@@ -189,13 +191,20 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws IOException 
          */
         private void select(Context context) throws IOException, InterruptedException {
+        	List<String> selItems = null;
 			if (probRedAlgorithm.equals(PROB_RED_LINEAR )) {
-				 linearSelect(context, false);
+				selItems = linearSelect(context, false);
 			} else if (probRedAlgorithm.equals(PROB_RED_LOG_LINEAR )) {
-				 linearSelect(context, true);
+				selItems = linearSelect(context, true);
 			}  else if (probRedAlgorithm.equals(AUER_GREEDY )) {
-				 greedyAuerSelect(context);
+				selItems = greedyAuerSelect(context);
 			}
+			
+        	//emit all selected items
+          	for (String item : selItems) {
+    			outVal.set(curGroupID + fieldDelim + item);
+        		context.write(NullWritable.get(), outVal);
+          	}
         }        
         
         /**
@@ -203,8 +212,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws InterruptedException 
          * @throws IOException 
          */
-        private void linearSelect(Context context, boolean logLinear) throws IOException, InterruptedException {
-        	Set<String> items = new HashSet<String>();
+        private List<String> linearSelect(Context context, boolean logLinear) throws IOException, InterruptedException {
+        	List<String> items = new ArrayList<String>();
         	int batchSize = getBatchSize();
         	int count = (roundNum -1) * batchSize;
         	String itemID = null;
@@ -228,11 +237,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
             	items.add(itemID);
         	}
         	
-        	//emit all selected items
-          	for (String item : items) {
-    			outVal.set(curGroupID + fieldDelim + item);
-        		context.write(NullWritable.get(), outVal);
-          	}
+          	return items;
         }
         
 
@@ -241,48 +246,60 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * @throws IOException
          * @throws InterruptedException
          */
-        private void greedyAuerSelect(Context context) throws IOException, InterruptedException {
+        private List<String> greedyAuerSelect(Context context) throws IOException, InterruptedException {
         	List<String> items = new ArrayList<String>();
         	int batchSize = getBatchSize();
         	int count = (roundNum -1) * batchSize;
     		int maxReward = 0;
+    		int nextMaxreward = 0;
  
     		//max reward in this group
-    		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
-    		maxReward = maxRewardItem.getInt(ITEM_REWARD);
     		int groupCount = groupedItems.size();
     		
-    		//collect items not tried before
-    		List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
-    		count += collectedItems.size();
-    		for (DynamicBean it : collectedItems) {
-    			items.add(it.getString(ITEM_ID));
-    		}
+    		//until we have full batch
+			while (items.size() < batchSize) {
+				//clear all use counts and start over
+				groupedItems.clearAllUseCount();
+
+				//collect items not tried before
+				List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
+				count += collectedItems.size();
+				for (DynamicBean it : collectedItems) {
+					items.add(it.getString(ITEM_ID));
+					groupedItems.select(it, minReward);
+				}
     		
-    		//collect items according to greedy algorithm 
-    		if (items.size() < batchSize) {
-    			groupedItems.remove(maxRewardItem);
-    			int nextMaxreward = groupedItems.getMaxRewardItem().getInt(ITEM_REWARD);
-    			double rewardDiff = (double)((maxReward - nextMaxreward)) / maxReward;
-    			groupedItems.add(maxRewardItem);
-    			
-    			//select as per Auer greedy algorithm
-    			while (items.size() < batchSize) {
-    				double prob = auerGreedyConstant * groupCount / (rewardDiff * rewardDiff * count);
-    	   			prob = prob > 1.0 ? 1.0 : prob;
-    	   		    DynamicBean selectedItem = null;
-	            	if (prob < Math.random()) {
-	            		//select random
-	            		selectedItem = groupedItems.selectRandom();
-	            	} else {
-	            		//select one with best reward
-	            		selectedItem = groupedItems.getMaxRewardItem();
-	            	}    	
-	            	items.add(selectedItem.getString(ITEM_ID));
-	            	groupedItems.remove(selectedItem);
-	            	++count;
-    			}
-    		}        
+	    		
+				//collect items according to greedy algorithm 
+				while (items.size() < batchSize) {
+		    		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
+					groupedItems.remove(maxRewardItem);
+					DynamicBean nextMaxRewardItem = groupedItems.getMaxRewardItem();
+					groupedItems.add(maxRewardItem);
+					
+					maxReward = maxRewardItem.getInt(ITEM_REWARD);
+					nextMaxreward = nextMaxRewardItem.getInt(ITEM_REWARD);
+					double rewardDiff = (double)((maxReward - nextMaxreward)) / maxReward;
+			
+					//select as per Auer greedy algorithm
+					double prob = maxReward == nextMaxreward ? 1.0 : 
+						auerGreedyConstant * groupCount / (rewardDiff * rewardDiff * count);
+					prob = prob > 1.0 ? 1.0 : prob;
+					DynamicBean selectedItem = null;
+					if (prob < Math.random()) {
+						//select random
+						selectedItem = groupedItems.selectRandom();
+					} else {
+						//select one with best reward
+						selectedItem = groupedItems.select(maxRewardItem);
+					}    	
+					items.add(selectedItem.getString(ITEM_ID));
+					groupedItems.select(selectedItem, minReward);
+					++count;
+				}
+			}
+			
+			return items;
         }        
         
         /**
@@ -293,21 +310,25 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          */
         private String linearSelectHelper(float curProb, Context context) throws IOException, InterruptedException {
         	String itemID = null;
+        	DynamicBean selItem = null;
         	groupedItems.clearAllUseCount();
         	if (curProb < Math.random()) {
         		//select random
-        		itemID = groupedItems.selectRandom().getString(ITEM_ID);
+        		selItem = groupedItems.selectRandom();
+        		itemID = selItem.getString(ITEM_ID);
         	} else {
         		//choose best so far
         		DynamicBean maxRewardItem = groupedItems.getMaxRewardItem();
-        		
         		if (null == maxRewardItem) {
             		//nothing tried, choose randomly
-            		itemID =  groupedItems.selectRandom().getString(ITEM_ID);
+            		selItem = groupedItems.selectRandom();
+            		itemID =  selItem.getString(ITEM_ID);
         		} else {
-        			itemID = maxRewardItem.getString(ITEM_ID);
+        			selItem = maxRewardItem;
+        			itemID = selItem.getString(ITEM_ID);
         		}
         	}
+			groupedItems.select(selItem, minReward);
     		return itemID;
         }
 

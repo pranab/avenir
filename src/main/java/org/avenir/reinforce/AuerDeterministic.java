@@ -89,6 +89,7 @@ public class AuerDeterministic  extends Configured implements Tool {
 		private Map<String, Integer> groupBatchCount = new HashMap<String, Integer>();
 		private GroupedItems groupedItems = new GroupedItems();
 		private int globalBatchSize;
+		private int minReward;
 		
 		
 		/* (non-Javadoc)
@@ -103,7 +104,8 @@ public class AuerDeterministic  extends Configured implements Tool {
         	detAlgorithm = conf.get("det.algorithm", AUER_DET_UBC1 );
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
- 
+        	minReward = conf.getInt("min.reward",  5);
+        	
         	//batch size
         	globalBatchSize = conf.getInt("global.batch.size", -1);
         	if (globalBatchSize < 0) {
@@ -176,7 +178,9 @@ public class AuerDeterministic  extends Configured implements Tool {
         private void select(Context context) throws IOException, InterruptedException {
 			 if (detAlgorithm.equals(AUER_DET_UBC1 )) {
 				 deterministicAuerSelect(context);
-			} 
+			} else {
+				throw new IllegalArgumentException("inalid auer deterministic algorithm");
+			}
         }        
         
         
@@ -189,28 +193,13 @@ public class AuerDeterministic  extends Configured implements Tool {
         	List<String> items = new ArrayList<String>();
         	int batchSize = getBatchSize();
         	int count = (roundNum -1) * batchSize;
-    		
-    		if (groupedItems.anyItemTried()) {
-    			//some items have been tried and we have the reawrd value for them
-    			while (items.size() < batchSize) {
-    				//clear all use counts and start over
-    				groupedItems.clearAllUseCount();
-    				
-    				//collect items not tried before
-    				count = collectUntriedItems(items, batchSize, count);
-    		
-    				//collect items according to UBC 
-    				count = collectItemsByValue(items, batchSize, count);
-    			}
-    		} else {
-    			//nothing tried yet
-    			while (items.size() < batchSize) {
-    				//clear all use counts and start over
-    				groupedItems.clearAllUseCount();
-    				count = collectUntriedItems(items, batchSize, count);
-    			}
-    		}
-    		
+
+			//collect items not tried before
+			count = collectUntriedItems(items, batchSize, count);
+	
+			//collect items according to UBC 
+			count = collectItemsByValue(items, batchSize, count);
+        	
         	//emit all selected items
           	for (String it : items) {
     			outVal.set(curGroupID + fieldDelim + it);
@@ -226,11 +215,11 @@ public class AuerDeterministic  extends Configured implements Tool {
          */
         private int collectUntriedItems(List<String> items, int batchSize, int count) {
 			List<DynamicBean> collectedItems = groupedItems.collectItemsNotTried(batchSize);
+			count += collectedItems.size();
 			for (DynamicBean it : collectedItems) {
 				items.add(it.getString(ITEM_ID));
-				++count;
+				groupedItems.select(it, minReward);
 			}
-			
 			return count;
         }
         
@@ -244,7 +233,6 @@ public class AuerDeterministic  extends Configured implements Tool {
     		String item = null;
 			int thisCount = 0;
     		int reward = 0;
-    		int thisUseCount = 0;
     		
 			while (items.size() < batchSize) {
 				//max reward in this group
@@ -256,10 +244,9 @@ public class AuerDeterministic  extends Configured implements Tool {
 				DynamicBean selectedGroupItem = null;
 				List<DynamicBean> groupItems = groupedItems.getGroupItems();
 				for (DynamicBean groupItem : groupItems) {
-					reward = groupItem.getInt(GroupedItems.ITEM_REWARD);
-					thisCount = groupItem.getInt(GroupedItems.ITEM_COUNT);
-					thisUseCount = groupItem.getInt(GroupedItems.ITEM_USE_COUNT);
-					if (thisUseCount == 0  && thisCount > 0) {
+					reward = groupedItems.getReward(groupItem);
+					thisCount = groupedItems.getTotalCount(groupItem);
+					if (thisCount > 0) {
 						value = ((double)reward) / maxReward  +   Math.sqrt(2.0 * Math.log(count) / thisCount);
 						if (value > valueMax) {
 							item = groupItem.getString(ITEM_ID);
@@ -271,17 +258,14 @@ public class AuerDeterministic  extends Configured implements Tool {
 		
 				if (null != selectedGroupItem) {
 					items.add(item);
-					groupedItems.setUseCount(selectedGroupItem);
+					groupedItems.select(selectedGroupItem, minReward);
 					++count;
 				} else {
-					//all items with reward have been selected
-					break;
+					throw new IllegalArgumentException("Should not be here. Failed to select item by value");
 				}
 			}
-       	
         	return count;
         }
-        
 	}	
 	
     /**
