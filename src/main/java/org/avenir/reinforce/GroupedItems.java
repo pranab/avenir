@@ -96,7 +96,7 @@ public class GroupedItems {
      * @param batchSize
      * @return
      */
-    public List<DynamicBean> collectItemsNotTried( int batchSize) {
+    public List<DynamicBean> collectItemsNotTried(int batchSize) {
 		//collect items not tried before
     	int thisCount = 0;
     	int thisUseCount = 0;
@@ -109,7 +109,6 @@ public class GroupedItems {
 			if (thisCount == ZERO_COUNT && thisUseCount == ZERO_COUNT) {
 				if (collectedItems.size() < batchSize) {
 					collectedItems.add(groupItem);
-					setUseCount(groupItem);
 				} else if (collectedItems.size() == batchSize) {
 					break;
 				}
@@ -151,6 +150,37 @@ public class GroupedItems {
     }
     
     /**
+     * select item with maximum reward
+     * @return
+     */
+    public DynamicBean selectMaxRewardItem() {
+    	DynamicBean maxRewardItem = getMaxRewardItem();
+    	if (null != maxRewardItem) {
+    		setUseCount(maxRewardItem);
+    	}
+    	return maxRewardItem;
+    }    
+    
+    /**
+     * @param selectedItem
+     */
+    public DynamicBean select(DynamicBean selectedItem) {
+    	incrUseCount(selectedItem);
+    	return selectedItem;
+    }    
+
+    /**
+     * @param selectedItem
+     * @param reward
+     * @return
+     */
+    public DynamicBean select(DynamicBean selectedItem, int reward) {
+    	updateReward(selectedItem, reward);
+    	incrUseCount(selectedItem);
+    	return selectedItem;
+    }    
+
+    /**
      * @return
      */
     public boolean anyItemTried() {
@@ -167,9 +197,45 @@ public class GroupedItems {
     
     /**
      * @param groupItem
+     * @return
+     */
+    public int getUsageCount(DynamicBean groupItem) {
+    	return groupItem.getInt(ITEM_USE_COUNT);
+    }
+    
+    /**
+     * @param groupItem
+     */
+    public int getTrialCount(DynamicBean groupItem) {
+    	return groupItem.getInt(ITEM_COUNT);
+    }
+    
+    /**
+     * @param groupItem
+     */
+    public int getReward(DynamicBean groupItem) {
+    	return groupItem.getInt(ITEM_REWARD);
+    }
+
+    /**
+     * @param groupItem
+     */
+    public void setReward(DynamicBean groupItem, int reward) {
+    	groupItem.set(ITEM_REWARD, reward);
+    }
+
+    /**
+     * @param groupItem
      */
     public void setUseCount(DynamicBean groupItem) {
     	groupItem.set(ITEM_USE_COUNT, ONE_COUNT);
+    }
+    
+    /**
+     * @param groupItem
+     */
+    public void incrUseCount(DynamicBean groupItem) {
+    	groupItem.set(ITEM_USE_COUNT, groupItem.getInt(ITEM_USE_COUNT) + ONE_COUNT);
     }
     
     /**
@@ -187,4 +253,31 @@ public class GroupedItems {
     		groupItem.set(ITEM_USE_COUNT, ZERO_COUNT);
 		}    	
     }
+    
+    /**
+     * @param groupItem
+     * @return
+     */
+    public int getTotalCount(DynamicBean groupItem) {
+    	return groupItem.getInt(ITEM_COUNT) + groupItem.getInt(ITEM_USE_COUNT);
+    }
+    
+    /**
+     * @param groupItem
+     * @return
+     */
+    public boolean isAlreadySelected(DynamicBean groupItem) {
+    	return groupItem.getInt(ITEM_USE_COUNT) > ZERO_COUNT;
+    }
+    
+    /**
+     * @param groupItem
+     * @return
+     */
+    public void updateReward(DynamicBean groupItem, int reward) {
+    	int count = getTotalCount(groupItem);
+    	int newReward = (getReward(groupItem)  * count  + reward) / (count + 1);
+    	setReward(groupItem, newReward);
+    }
+    
 }
