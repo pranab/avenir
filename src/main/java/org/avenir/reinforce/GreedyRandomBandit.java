@@ -98,6 +98,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private int globalBatchSize;
 		private boolean selectionUnique;
 		private int minReward;
+		private boolean outputDecisionCount;
 		
 		
 		/* (non-Javadoc)
@@ -117,6 +118,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	auerGreedyConstant = conf.getInt("auer.greedy.constant", 5);
         	selectionUnique = conf.getBoolean("selection.unique", false);
         	minReward = conf.getInt("min.reward",  5);
+        	outputDecisionCount = conf.getBoolean("output.decision.count", false);
         	
         	//batch size is the number items selected in each round for each group
         	globalBatchSize = conf.getInt("global.batch.size", -1);
@@ -201,10 +203,25 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 			}
 			
         	//emit all selected items
-          	for (String item : selItems) {
-    			outVal.set(curGroupID + fieldDelim + item);
-        		context.write(NullWritable.get(), outVal);
-          	}
+			if (outputDecisionCount) {
+				Map<String, Integer> decisionCount = new HashMap<String, Integer>();
+	          	for (String item : selItems) {
+	          		Integer itemCount = decisionCount.get(item);
+	          		if (null == itemCount) {
+	          			itemCount = 0;
+	          		} 
+	          		decisionCount.put(item, itemCount + 1);
+	          	}
+	          	for (String item : decisionCount.keySet()) {
+	    			outVal.set(curGroupID + fieldDelim + item + fieldDelim + decisionCount.get(item));
+	        		context.write(NullWritable.get(), outVal);
+	          	}
+			} else {
+	          	for (String item : selItems) {
+	    			outVal.set(curGroupID + fieldDelim + item);
+	        		context.write(NullWritable.get(), outVal);
+	          	}
+			}
         }        
         
         /**
