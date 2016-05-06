@@ -90,6 +90,7 @@ public class AuerDeterministic  extends Configured implements Tool {
 		private GroupedItems groupedItems = new GroupedItems();
 		private int globalBatchSize;
 		private int minReward;
+		private boolean outputDecisionCount;
 		
 		
 		/* (non-Javadoc)
@@ -105,6 +106,7 @@ public class AuerDeterministic  extends Configured implements Tool {
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);
         	minReward = conf.getInt("min.reward",  5);
+        	outputDecisionCount = conf.getBoolean("output.decision.count", false);
         	
         	//batch size
         	globalBatchSize = conf.getInt("global.batch.size", -1);
@@ -190,22 +192,36 @@ public class AuerDeterministic  extends Configured implements Tool {
          * @throws InterruptedException
          */
         private void deterministicAuerSelect(Context context) throws IOException, InterruptedException {
-        	List<String> items = new ArrayList<String>();
+        	List<String> selItems = new ArrayList<String>();
         	int batchSize = getBatchSize();
         	int count = (roundNum -1) * batchSize;
 
 			//collect items not tried before
-			count = collectUntriedItems(items, batchSize, count);
+			count = collectUntriedItems(selItems, batchSize, count);
 	
 			//collect items according to UBC 
-			count = collectItemsByValue(items, batchSize, count);
+			count = collectItemsByValue(selItems, batchSize, count);
         	
         	//emit all selected items
-          	for (String it : items) {
-    			outVal.set(curGroupID + fieldDelim + it);
-        		context.write(NullWritable.get(), outVal);
-          	}
-        	
+			if (outputDecisionCount) {
+				Map<String, Integer> decisionCount = new HashMap<String, Integer>();
+	          	for (String item : selItems) {
+	          		Integer itemCount = decisionCount.get(item);
+	          		if (null == itemCount) {
+	          			itemCount = 0;
+	          		} 
+	          		decisionCount.put(item, itemCount + 1);
+	          	}
+	          	for (String item : decisionCount.keySet()) {
+	    			outVal.set(curGroupID + fieldDelim + item + fieldDelim + decisionCount.get(item));
+	        		context.write(NullWritable.get(), outVal);
+	          	}
+			} else {
+				for (String item : items) {
+					outVal.set(curGroupID + fieldDelim + item);
+					context.write(NullWritable.get(), outVal);
+				}
+			}
         }
 
         /**
