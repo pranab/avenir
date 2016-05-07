@@ -101,7 +101,7 @@ public class AuerDeterministic  extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim", ",");
 
-        	roundNum = conf.getInt("current.round.num",  -1);
+        	roundNum = Utility.assertIntConfigParam(conf, "current.round.num", "missing round number config param");
         	detAlgorithm = conf.get("det.algorithm", AUER_DET_UBC1 );
         	countOrdinal = conf.getInt("count.ordinal",  -1);
         	rewardOrdinal = conf.getInt("reward.ordinal",  -1);

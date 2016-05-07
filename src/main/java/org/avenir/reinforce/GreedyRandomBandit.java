@@ -109,7 +109,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
         	fieldDelim = conf.get("field.delim", ",");
 
-        	roundNum = conf.getInt("current.round.num",  -1);
+        	roundNum = Utility.assertIntConfigParam(conf, "current.round.num", "missing round number config param");
         	randomSelectionProb = conf.getFloat("random.selection.prob", (float)0.5);
         	probRedAlgorithm = conf.get("prob.reduction.algorithm", PROB_RED_LINEAR );
         	probReductionConstant = conf.getFloat("prob.reduction.constant",  (float)1.0);
