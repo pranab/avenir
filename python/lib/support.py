@@ -8,7 +8,7 @@ import jprops
 from random import randint
 
 # load configuration
-def getConfigs(configFile):
+def get_configs(configFile):
 	configs = {}
 	print "using following configurations"
 	with open(configFile) as fp:
@@ -38,6 +38,24 @@ def find_min_distances(X1, X2):
 
 	return min_dist
 
+# finds minimum distance between each row f X(n x p) and other rows in X
+# returns (1 x n-1) array
+def find_min_distances_between_rows(X):
+	num_rows = X.shape[0] - 1
+	min_dist = np.zeros(num_rows)
+	
+	for i,x1 in enumerate(X):
+		row_min_dist = []
+		for j,x2 in enumerate(X):
+			if j > i:
+				# upper diagonal only
+				dist = np.sqrt(np.sum((x1 - x2)**2))
+				row_min_dist.append(dist)
+		if i < num_rows: 
+			min_dist[i] = min(row_min_dist)
+
+	return min_dist
+
 # splits data randomly to create two arrays	
 def split_data_random(X, split_size):
 	#copy data
@@ -52,3 +70,11 @@ def split_data_random(X, split_size):
 	#remaining
 	XRE = np.delete(XC, np.s_[lo:up:1], 0)
 	return (XSP, XRE)
+
+# min max scaling between 0 and 1
+def scale_min_max(arr):
+	min = np.min(arr)
+	max = np.max(arr)
+	new_arr = (arr - min) / (max - min)
+	return new_arr
+	

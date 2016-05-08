@@ -217,7 +217,7 @@ public class AuerDeterministic  extends Configured implements Tool {
 	        		context.write(NullWritable.get(), outVal);
 	          	}
 			} else {
-				for (String item : items) {
+				for (String item : selItems) {
 					outVal.set(curGroupID + fieldDelim + item);
 					context.write(NullWritable.get(), outVal);
 				}
