@@ -42,8 +42,10 @@ model_file_directory, model_file_prefix):
 
 	inter_cluster_distances = find_min_distances_between_rows(clusters)
 	print inter_cluster_distances
-	print "min inter cluster distance: %.3f" %(inter_cluster_distances.min())
+	min_inter_cluster_distance = inter_cluster_distances.min()
+	print "min inter cluster distance: %.3f" %(min_inter_cluster_distance)
 	
+	return (cohesion, num_clusters/min_inter_cluster_distance)
 
 # agglomerative clustering
 def train_agglomerative():
@@ -137,19 +139,23 @@ def expl_kdist(configs):
 	print "calculating distance to nearest kth neighbor ..."
 	X = extract_data("train.data.file", "train.data.feature.fields")
 	neighbor_index = int(configs["expl.kdist.neighbor.index"])	
+	output_first_order_diff = configs["expl.kdist.output.dist.first.order.diff"].lower() == "true"
+	
 	neigh = NearestNeighbors(n_neighbors=neighbor_index)
 	neigh.fit(X)
 	dist = neigh.kneighbors(return_distance=True)[0]
 	#print dist
 	print "after sorting"
 	dist.sort(axis=0)
-	print dist
+	#print dist
 	for k in range(0, neighbor_index):
-		print "neighbor index %d" %(k)
 		dist_kth = dist[:,k]
-		print "sorted distance to kth neighbor"
+		print "sorted distance to nearest neighbor at position %d " %(k)
 		print dist_kth	
-
+		if output_first_order_diff:
+			print "1st order diff of sorted distance to kth neighbor"
+			diff_dist_kth = np.diff(dist_kth)
+			print diff_dist_kth
 
 # loads file and extracts specific columns
 def extract_data(file_name_param, field_indices_param):
@@ -158,8 +164,13 @@ def extract_data(file_name_param, field_indices_param):
 	if (preprocess == "scale"):
 		X = sk.preprocessing.scale(X)
 	return X
-	
 
+def validity_index(un_part, ov_part):	
+	un_part = scale_min_max(un_part)
+	ov_part = scale_min_max(ov_part)
+	validity = un_part + ov_part
+	return validity
+	
 # main
 configs = get_configs(sys.argv[1])
 mode = configs["common.mode"]
@@ -168,8 +179,10 @@ preprocess = configs["common.preprocessing"]
 if mode == "train":
 	#train
 	print "running in training mode..."
-	algo = configs["train.algo"]	
-	num_clusters = int(configs["train.num.clusters"])
+	algo = configs["train.algo"]
+	num_cluster_list = 	configs["train.num.clusters"].split(",")
+	num_cluster_list = [int(a) for a in num_cluster_list]
+	num_clusters = num_cluster_list[0]
 	num_iters = int(configs["train.num.iters"])
 	if num_iters == -1:
 		num_iters = 300
@@ -195,8 +208,28 @@ if mode == "train":
 		elif not precom_dist == "auto":
 			print "ivalid parameter for train.precompute.distance"
 			sys.exit()
-		train_kmeans(num_clusters, init_strategy, num_inits, num_iters, precom_dist, 
-		model_file_directory, model_file_prefix)
+
+		num_partition_tries = len(num_cluster_list)		
+		if num_partition_tries == 1:
+			train_kmeans(num_cluster_list[0], init_strategy, num_inits, num_iters, precom_dist, 
+			model_file_directory, model_file_prefix)
+		else:
+			un_part = np.zeros(num_partition_tries)	
+			ov_part = np.zeros(num_partition_tries)	
+			for i,num_clusters in enumerate(num_cluster_list):
+				print "starting with num of clusters %d ..." %(num_clusters)
+				result = train_kmeans(num_clusters, init_strategy, num_inits, num_iters, precom_dist, 
+				model_file_directory, model_file_prefix)
+				print "partition measure"
+				print result
+				un_part[i] = result[0]
+				ov_part[i] = result[1]
+				
+			#validity index
+			validity = validity_index(un_part, ov_part)
+			print "validity index"
+			for c,v in zip(num_cluster_list, validity):
+				print "num cluster %d validity %.3f" %(c, v)
 	
 	elif algo == "agglomerative":
 		aggl_affinity = configs["train.affinity"]
@@ -232,8 +265,13 @@ elif mode == "explore":
 	expl_algo = configs["expl.algo"]
 	if 	expl_algo == "hopkins":
 		expl_hopkins(configs)
+	
 	elif expl_algo == "kdist":
 		expl_kdist(configs)
+	
+	else:
+		print "invalid cluster exploration algorithm"
+		sys.exit()
 	
 	
 	
