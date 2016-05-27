@@ -15,7 +15,7 @@ class Histogram:
 	
 	# create with bins already created	
 	@classmethod
-	def createWithData(cls, min, binWidth, values):
+	def createInitialized(cls, min, binWidth, values):
 		instance = cls(min, binWidth)
 		instance.xmax = min + binWidth * (len(values) - 1)
 		instance.ymin = 0

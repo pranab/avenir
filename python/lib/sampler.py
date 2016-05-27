@@ -4,6 +4,7 @@ import sys
 import random 
 import time
 import math
+from stats import Histogram
 
 def randomFloat(low, high):
 	return random.random() * (high-low) + low
@@ -44,35 +45,6 @@ class GaussianRejectSampler:
 				samp = x
 		return samp
 
-# histogram class
-class Histogram:
-	def __init__(self, min, binWidth, values):
-		self.xmin = min
-		self.xmax = min + binWidth * (len(values) - 1)
-		self.ymin = 0
-		self.binWidth = binWidth
-		self.values = values
-		self.fmax = 0
-		for v in values:
-			if (v > self.fmax):
-				self.fmax = v
-		self.ymin = 0.0
-		self.ymax = self.fmax
-
-	def value(self, x):
-		bin = int((x - self.xmin) / self.binWidth)
-		f = self.values[bin]
-		return f
-		
-	def getMinMax(self):
-		return (self.xmin, self.xmax)
-		
-	def boundedValue(self, x):
-		if x < self.xmin:
-			x = self.xmin
-		elif x > self.xmax:
-			x = self.xmax
-		return x
 
 # non parametric sampling using given distribution based on rejection sampling	
 class NonParamRejectSampler:
@@ -105,7 +77,7 @@ class NonParamRejectSampler:
 # metropolitan sampler		
 class MetropolitanSampler:
 	def __init__(self, propStdDev, min, binWidth, *values):
-		self.targetDistr = Histogram(min, binWidth, values)
+		self.targetDistr = Histogram.createInitialized(min, binWidth, values)
 		self.propsalDistr = GaussianRejectSampler(0, propStdDev)
 		
 		# bootstrap sample
@@ -114,6 +86,12 @@ class MetropolitanSampler:
 		self.curDistr = self.targetDistr.value(self.curSample)
 		self.transCount = 0
 		
+	def initialize(self):
+		(min, max) = self.targetDistr.getMinMax()
+		self.curSample = random.randint(min, max)
+		self.curDistr = self.targetDistr.value(self.curSample)
+		self.transCount = 0
+	
 	def sample(self):
 		nextSample = self.curSample + self.propsalDistr.sample()
 		nextSample = self.targetDistr.boundedValue(nextSample)
