@@ -47,6 +47,23 @@ class Histogram:
 		total = self.bins.sum()
 		self.bins = np.divide(self.bins, total)
 	
+	
+	# cumulative dists
+	def cumDistr(self):
+		self.cbins = np.cumsum(self.bins)
+	
+	# return value corresponding to a percentile	
+	def percentile(self, percent):
+		if self.cbins is None:
+			raise ValueError("cumulative distribution is not available")
+			
+		for i,cuml in enumerate(self.cbins):
+			if percent > cuml:
+				value = i * self.binWidth - self.binWidth / 2 + \
+				(percent - self.cbins[i-1]) * self.binWidth / (self.cbins[i] - self.cbins[i-1]) 
+				break
+		return value
+		
 	# return max bin value	
 	def max(self):
 		return self.bins.max()

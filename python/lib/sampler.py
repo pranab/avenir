@@ -76,7 +76,7 @@ class NonParamRejectSampler:
 
 # metropolitan sampler		
 class MetropolitanSampler:
-	def __init__(self, propStdDev, min, binWidth, *values):
+	def __init__(self, propStdDev, min, binWidth, values):
 		self.targetDistr = Histogram.createInitialized(min, binWidth, values)
 		self.propsalDistr = GaussianRejectSampler(0, propStdDev)
 		
@@ -92,6 +92,11 @@ class MetropolitanSampler:
 		self.curDistr = self.targetDistr.value(self.curSample)
 		self.transCount = 0
 	
+	# set custom proposal distribution
+	def setProposalDistr(self, propsalDistr):
+		self.propsalDistr = propsalDistr
+	
+	# sample	
 	def sample(self):
 		nextSample = self.curSample + self.propsalDistr.sample()
 		nextSample = self.targetDistr.boundedValue(nextSample)
@@ -111,7 +116,12 @@ class MetropolitanSampler:
 			self.transCount += 1
 			
 		return self.curSample;
-
+	
+	# sub sample
+	def subSample(self, skip):
+		for i in range(skip):
+			value = sample()
+		return value
 
 
 
