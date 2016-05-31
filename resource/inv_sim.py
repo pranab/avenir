@@ -13,12 +13,15 @@ sys.path.append(os.path.abspath("../lib"))
 from sampler import *
 from support import *
 
-def eval_earning_inventory():
-	print "earning for different inventory"
+
+# mean earning for various inventory
+def earning_mean():
+	print "mean earning for different inventory"
 	earnings = np.zeros(sample_size)
+	sqr_sample = math.sqrt(sample_size - burn_in_sample_size)
 
 	# num of inventory levels
-	for i in range(num_inv):
+	for inv in inv_list:
 		print "*** next inventory %d ***" %(inv)
 		excess_cnt = 0
 		deficit_cnt = 0
@@ -27,26 +30,54 @@ def eval_earning_inventory():
 		demand_distr.initialize()
 		for s in range(sample_size):
 			dem = demand_distr.sample()
-			(earning, in_excess) = get_earning(dem)
+			(earning, in_excess) = get_earning(dem, inv)
 			earnings[s] = earning
 			if in_excess:
 				excess_cnt += 1
 			else:
 				deficit_cnt += 1
 	
-			earnings_stable = earnings[burn_in_sample:]
-			if earning_stat == "mean":
-				mean_earning = earnings_stable.mean()
-	
+		earnings_stable = earnings[burn_in_sample_size:]
+		mean_earning = earnings_stable.mean()
+		err = earnings_stable.std() / sqr_sample
 		if verbose:
-			err = earnings_stable.std() / sqr_sample
 			out = (inv, mean_earning, err, excess_cnt, deficit_cnt, demand_distr.transCount)
 			print "inventory %d average earning %.2f error %.3f excess count %d deficit count %d transition count %d" %out
 		else:
-			print "inventory %d average earning %.2f error %.3f excess count %d deficit count %d transition count %d" %(inv, mean_earning)
-			
+			print "inventory %d average earning %.2f " %(inv, mean_earning)
+
+# percentile earning for various inventory
+def earning_percentile():
+	print "percentile earning for different inventory"
+	earning_hist = Histogram.createUninitialized(-5000, 20000, 100)
+
+	# num of inventory levels
+	for inv in inv_list:
+		print "*** next inventory %d ***" %(inv)
+		excess_cnt = 0
+		deficit_cnt = 0
 	
-		inv += inv_step
+		#num of simulation samples
+		demand_distr.initialize()
+		earning_hist.initialize()
+		for s in range(sample_size):
+			dem = demand_distr.sample()
+			(earning, in_excess) = get_earning(dem, inv)
+			if (s > burn_in_sample_size):
+				earning_hist.add(earning)
+			if in_excess:
+				excess_cnt += 1
+			else:
+				deficit_cnt += 1
+	
+		earning_hist.normalize()
+		earning_hist.cumDistr()
+		earning = earning_hist.percentile(1.0 - earn_percentile)
+		if verbose:
+			out = (inv, earning,  excess_cnt, deficit_cnt, demand_distr.transCount)
+			print "inventory %d  earning %.2f excess count %d deficit count %d transition count %d" %out
+		else:
+			print "inventory %d  earning %.2f " %(inv, earning)
 	
 # evaluate sample size effect
 def eval_sample_size():
@@ -59,7 +90,7 @@ def eval_sample_size():
 
 		for s in range(samp_size):
 			dem = demand_distr.sample()
-			(earning, in_excess) = get_earning(dem)
+			(earning, in_excess) = get_earning(dem, inv)
 			earnings[s] = earning
 			if in_excess:
 				excess_cnt += 1
@@ -89,7 +120,7 @@ def eval_burn_in_size():
 		
 		for s in range(samp_size):
 			dem = demand_distr.sample()
-			(earning, in_excess) = get_earning(dem)
+			(earning, in_excess) = get_earning(dem, inv)
 			earnings[s] = earning
 			if in_excess:
 				excess_cnt += 1
@@ -103,7 +134,7 @@ def eval_burn_in_size():
 		print "sample size %d earning mean %.3f  earning mean std dev %.3f" %(samp_size, mean_earning, error)
 		prev_burn_in_sample_size = burn_in_sample_size
 		
-def get_earning(dem):
+def get_earning(dem, inv):
 	in_excess = False
 	if inv >= dem:
 		#excess inventory
@@ -166,8 +197,19 @@ elif op == "burinin_size":
 else:
 	sample_size = int(configs["sample.size"])
 	burn_in_sample_size = int(configs["burn.in.sample.size"])
-	inv_step = int(configs["inv.step"])
-	num_inv = int(configs["num.inv"])
+	
+	if "," in configs["inv.size"]: 
+		inv_list = get_int_array(configs["inv.size"])
+	else:
+		inv = int(configs["inv.size"])
+		inv_step = int(configs["inv.step"])
+		num_inv = int(configs["num.inv"])
+		inv_list = build_array(inv, inv_step, num_inv)
+	
 	earning_stat = configs["earning.stat"]
-	sqr_sample = math.sqrt(sample_size - burn_in_sample_size)
-	eval_earning_inventory()
+	if earning_stat == "mean":
+		earning_mean()
+	elif earning_stat == "percentile":
+		earn_percentile = float(configs["earning.precentile"])
+		earning_percentile()
+		

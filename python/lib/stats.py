@@ -33,13 +33,19 @@ class Histogram:
 	def createUninitialized(cls, min, max, binWidth):
 		instance = cls(min, binWidth)
 		instance.xmax = max
-		numBin = (max - min) / binWidth + 1
-		instance.bins = np.zeros(numBin)
+		instance.numBin = (max - min) / binWidth + 1
+		instance.bins = np.zeros(instance.numBin)
 		return instance
+	
+	def initialize(self):
+		self.bins = np.zeros(self.numBin)
 		
 	# add a value to a bin	
 	def add(self, value):
-		bin = (value - self.xmin) / self.binWidth 
+		bin = (value - self.xmin) / self.binWidth
+		if (bin < 0 or  bin > self.numBin - 1):
+			print bin
+			raise ValueError("outside histogram range")
 		self.bins[bin] += 1.0
 	
 	# normalize 	
@@ -59,7 +65,7 @@ class Histogram:
 			
 		for i,cuml in enumerate(self.cbins):
 			if percent > cuml:
-				value = i * self.binWidth - self.binWidth / 2 + \
+				value = (i * self.binWidth) - (self.binWidth / 2) + \
 				(percent - self.cbins[i-1]) * self.binWidth / (self.cbins[i] - self.cbins[i-1]) 
 				break
 		return value
@@ -73,6 +79,12 @@ class Histogram:
 		bin = int((x - self.xmin) / self.binWidth)
 		f = self.bins[bin]
 		return f
+	
+	def cumValue(self, x):
+		bin = int((x - self.xmin) / self.binWidth)
+		c = self.cbins[bin]
+		return c
+	
 		
 	def getMinMax(self):
 		return (self.xmin, self.xmax)
