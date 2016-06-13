@@ -85,7 +85,8 @@ class MetropolitanSampler:
 		self.curSample = random.randint(min, max)
 		self.curDistr = self.targetDistr.value(self.curSample)
 		self.transCount = 0
-		
+	
+	# initialize	
 	def initialize(self):
 		(min, max) = self.targetDistr.getMinMax()
 		self.curSample = random.randint(min, max)
@@ -96,6 +97,10 @@ class MetropolitanSampler:
 	def setProposalDistr(self, propsalDistr):
 		self.propsalDistr = propsalDistr
 	
+	# set custom proposal distribution
+	def setGlobalProposalDistr(self, globalProposalDistr):
+		self.globalProposalDistr = globalProposalDistr
+
 	# sample	
 	def sample(self):
 		nextSample = self.curSample + self.propsalDistr.sample()
@@ -123,5 +128,19 @@ class MetropolitanSampler:
 			value = sample()
 		return value
 
+	# mixture proposal
+	def setMixtureProposal(self, globPropStdDev, mixtureThreshold):
+		self.globalProposalDistr = GaussianRejectSampler(0, globPropStdDev)
+		self.mixtureThreshold = mixtureThreshold
+	
+	# sample from proposal distr
+	def samplePropsal(self):
+		if self.globalPropsalDistr is None:
+			proposal = self.propsalDistr.sample()
+		else:
+			if random.random() < self.mixtureThreshold:
+				proposal = self.propsalDistr.sample()
+			else:
+				proposal = self.globalProposalDistr.sample()
 
-
+		return proposal

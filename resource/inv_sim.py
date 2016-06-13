@@ -49,7 +49,7 @@ def earning_mean():
 # percentile earning for various inventory
 def earning_percentile():
 	print "percentile earning for different inventory"
-	earning_hist = Histogram.createUninitialized(-5000, 20000, 100)
+	earning_hist = Histogram.createUninitialized(earn_distr_min, earn_distr_max, earn_distr_bin_width)
 
 	# num of inventory levels
 	for inv in inv_list:
@@ -211,5 +211,8 @@ else:
 		earning_mean()
 	elif earning_stat == "percentile":
 		earn_percentile = float(configs["earning.precentile"])
+		earn_distr_min = int(configs["earning.distr.min"]);
+		earn_distr_max = int(configs["earning.distr.max"]);
+		earn_distr_bin_width = int(configs["earning.distr.bin.width"]);
 		earning_percentile()
 		
