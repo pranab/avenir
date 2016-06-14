@@ -194,6 +194,7 @@ elif op == "burinin_size":
 		burn_in_sample_size_step = int(configs["burn.in.sample.size.step"])
 		burn_in_num_sample_size = int(configs["burn.in.num.sample.size"])
 		list_burn_in_sample_size = build_array(burn_in_sample_size, burn_in_sample_size_step, burn_in_num_sample_size)
+	eval_burn_in_size()
 else:
 	sample_size = int(configs["sample.size"])
 	burn_in_sample_size = int(configs["burn.in.sample.size"])

@@ -1,0 +1,54 @@
+This tutorial is for estimating earning statistic for inventory planning using Makov Chain
+Monte Carlo (MCMC) simulation 
+
+Dependent script
+================
+Make sure util.py and sampler.py  from this  project  are in ../lib directory with respect 
+the directory containing inv_sim.py
+
+Configuration
+=============
+The file inv_sim.properties file has all the configuration parameters. Change them as needed.
+
+Determining sample size
+=======================
+Make sure the configuration parameters related to starting sample size, sample size step and
+number of sample sizes are set properly. Then run the following
+
+./inv_sim.py inv_sim.properties samp_size
+
+Determining burn in size
+========================
+If you want to test for proper burn in size, make sure configuration parameters related to
+starting burn in sample size, burn in sample size step and the number of burn in sample size 
+are set properly. Then run
+
+./inv_sim.py inv_sim.properties burinin_size
+
+Earning Statistic
+=================
+Make sure sample size, proposal distribution standard deviation, stating inventory level
+inventory level step size and the number of inventory level are set properly in configuration.
+The inventory statistic  parameter should be set. The choice either average or percentile. 
+If percentile the percentile value should be set. In this tutorial we are using percentile
+Run the following
+
+./inv_sim.py inv_sim.properties earn_stat
+
+Proposal distribution mixture
+=============================
+To use this feature, you have to global proposal related parameters. You also have to  
+modify the python code to to properly configure metropolis sampler python object to enable
+proposal mixtures.
+
+Sub sampling
+============
+To enable this feature, you have to define the subsampling interval parameter. You also have to
+modify python code to call the subSample() method on the metropolis sampler object instead of
+the sample() method
+
+
+
+
+
+
