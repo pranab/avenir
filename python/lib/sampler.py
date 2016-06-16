@@ -103,8 +103,19 @@ class MetropolitanSampler:
 
 	# sample	
 	def sample(self):
-		nextSample = self.curSample + self.propsalDistr.sample()
-		nextSample = self.targetDistr.boundedValue(nextSample)
+		nextSample = self.proposalSample(1)
+		self.targetSample(nextSample)
+		return self.curSample;
+	
+	# sample from proposal distribution
+	def proposalSample(self, skip):
+		for i in range(skip):
+			nextSample = self.curSample + self.propsalDistr.sample()
+			nextSample = self.targetDistr.boundedValue(nextSample)
+		return nextSample
+	
+	# target sample
+	def targetSample(self, nextSample):
 		nextDistr = self.targetDistr.value(nextSample)
 			
 		transition = False
@@ -112,21 +123,20 @@ class MetropolitanSampler:
 			transition = True
 		else:
 			distrRatio = float(nextDistr) / self.curDistr
-			if distrRatio < random.random():
+			if random.random() < distrRatio:
 				transition = True
 					
 		if transition:
 			self.curSample = nextSample
 			self.curDistr = nextDistr
 			self.transCount += 1
-			
-		return self.curSample;
+	
 	
 	# sub sample
 	def subSample(self, skip):
-		for i in range(skip):
-			value = sample()
-		return value
+		nextSample = self.proposalSample(skip)
+		self.targetSample(nextSample)
+		return self.curSample;
 
 	# mixture proposal
 	def setMixtureProposal(self, globPropStdDev, mixtureThreshold):
