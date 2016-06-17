@@ -79,6 +79,7 @@ class MetropolitanSampler:
 	def __init__(self, propStdDev, min, binWidth, values):
 		self.targetDistr = Histogram.createInitialized(min, binWidth, values)
 		self.propsalDistr = GaussianRejectSampler(0, propStdDev)
+		self.proposalMixture = False
 		
 		# bootstrap sample
 		(min, max) = self.targetDistr.getMinMax()
@@ -98,8 +99,10 @@ class MetropolitanSampler:
 		self.propsalDistr = propsalDistr
 	
 	# set custom proposal distribution
-	def setGlobalProposalDistr(self, globalProposalDistr):
-		self.globalProposalDistr = globalProposalDistr
+	def setGlobalProposalDistr(self, globPropStdDev, proposalChoiceThreshold):
+		self.globalProposalDistr = GaussianRejectSampler(0, globPropStdDev)
+		self.proposalChoiceThreshold = proposalChoiceThreshold
+		self.proposalMixture = True
 
 	# sample	
 	def sample(self):
@@ -110,8 +113,18 @@ class MetropolitanSampler:
 	# sample from proposal distribution
 	def proposalSample(self, skip):
 		for i in range(skip):
-			nextSample = self.curSample + self.propsalDistr.sample()
-			nextSample = self.targetDistr.boundedValue(nextSample)
+			if not self.proposalMixture:
+				#one proposal distr
+				nextSample = self.curSample + self.propsalDistr.sample()
+				nextSample = self.targetDistr.boundedValue(nextSample)
+			else:
+				#mixture of proposal distr
+				if random.random() < self.proposalChoiceThreshold:
+					nextSample = self.curSample + self.propsalDistr.sample()
+				else:
+					nextSample = self.curSample + self.globalProposalDistr.sample()
+				nextSample = self.targetDistr.boundedValue(nextSample)
+				
 		return nextSample
 	
 	# target sample
