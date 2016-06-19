@@ -12,7 +12,7 @@ import jprops
 sys.path.append(os.path.abspath("../lib"))
 from sampler import *
 from support import *
-
+from mcconverge import *
 
 # mean earning for various inventory
 def earning_mean():
@@ -134,6 +134,7 @@ def eval_burn_in_size():
 		print "sample size %d earning mean %.3f  earning mean std dev %.3f" %(samp_size, mean_earning, error)
 		prev_burn_in_sample_size = burn_in_sample_size
 		
+# earning from demand and inventory		
 def get_earning(dem, inv):
 	in_excess = False
 	if inv >= dem:
@@ -152,6 +153,47 @@ def get_earning(dem, inv):
 		earning += back_ordered * profit_per_unit
 		earning -= net_cost
 	return (earning, in_excess)
+
+# gweke convergence stats
+def gweke_conv(list_sample_size, list_burn_in_sample_size):
+	print "running gweke convergence analysis"
+	conv = GewekeConvergence(list_burn_in_sample_size)
+	for samp_size in list_sample_size:
+		print "next sample size %d" %(samp_size)
+		earnings = np.zeros(samp_size)
+		demand_distr.initialize()
+		for s in range(samp_size):
+			dem = demand_distr.sample()
+			(earning, in_excess) = get_earning(dem, inv)
+			earnings[s] = earning
+		conv.calculate_zscore(earnings)
+
+	z_scores = conv. get_zscores()
+	for z_score in z_scores:
+		print "sample size %d  burn in size %d  z score %.3f" %z_score
+
+# sample size list
+def get_sample_size_list():
+	if "," in configs["sample.size"]: 
+		list_sample_size = get_int_array(configs["sample.size"])
+	else:
+		sample_size = int(configs["sample.size"])
+		sample_size_step = int(configs["sample.size.step"])
+		num_sample_size = int(configs["num.sample.size"])
+		list_sample_size = build_array(sample_size, sample_size_step, num_sample_size)
+	return list_sample_size
+
+# burn in size list
+def get_burn_in_size_list():
+	if "," in configs["burn.in.sample.size"]: 
+		list_burn_in_sample_size = get_int_array(configs["burn.in.sample.size"])
+	else:
+		burn_in_sample_size = int(configs["burn.in.sample.size"])
+		burn_in_sample_size_step = int(configs["burn.in.sample.size.step"])
+		burn_in_num_sample_size = int(configs["burn.in.num.sample.size"])
+		list_burn_in_sample_size = build_array(burn_in_sample_size, burn_in_sample_size_step, burn_in_num_sample_size)
+
+	return 	list_burn_in_sample_size
 
 ########## main #################
 configs = get_configs(sys.argv[1])
@@ -174,27 +216,17 @@ verbose = configs["output.verbose"] == "true"
 
 
 if  op == "samp_size":
-	if "," in configs["sample.size"]: 
-		list_sample_size = get_int_array(configs["sample.size"])
-	else:
-		sample_size = int(configs["sample.size"])
-		sample_size_step = int(configs["sample.size.step"])
-		num_sample_size = int(configs["num.sample.size"])
-		list_sample_size = build_array(sample_size, sample_size_step, num_sample_size)
-		
+	list_sample_size = get_sample_size_list()
 	burn_in_sample_size = int(configs["burn.in.sample.size"])
 	eval_sample_size()
 elif op == "burinin_size":
 	sample_size = int(configs["sample.size"])
-	
-	if "," in configs["burn.in.sample.size"]: 
-		list_burn_in_sample_size = get_int_array(configs["burn.in.sample.size"])
-	else:
-		burn_in_sample_size = int(configs["burn.in.sample.size"])
-		burn_in_sample_size_step = int(configs["burn.in.sample.size.step"])
-		burn_in_num_sample_size = int(configs["burn.in.num.sample.size"])
-		list_burn_in_sample_size = build_array(burn_in_sample_size, burn_in_sample_size_step, burn_in_num_sample_size)
+	list_burn_in_sample_size = get_burn_in_size_list()
 	eval_burn_in_size()
+elif op == "gweke_conv":
+	list_sample_size = get_sample_size_list()
+	list_burn_in_sample_size = get_burn_in_size_list()
+	gweke_conv(list_sample_size, list_burn_in_sample_size)
 else:
 	sample_size = int(configs["sample.size"])
 	burn_in_sample_size = int(configs["burn.in.sample.size"])
