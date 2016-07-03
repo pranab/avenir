@@ -19,6 +19,9 @@ package org.avenir.spark.markov
 
 import org.chombo.spark.common.JobConfiguration
 import org.apache.spark.SparkContext
+import org.chombo.spark.common.Record
+import scala.collection.JavaConverters._
+import org.apache.spark.HashPartitioner
 
 object StateTransitionRate extends JobConfiguration {
   
@@ -34,8 +37,57 @@ object StateTransitionRate extends JobConfiguration {
 	   
 	   val fieldDelimIn = config.getString("app.field.delim.in")
 	   val fieldDelimOut = config.getString("app.field.delim.out")
+	   val keyFieldOrdinals = config.getIntList("app.key.field.ordinals").asScala
+	   val timeFieldOrdinal = config.getInt("app.time.field.ordinal")
+	   val stateFieldOrdinal = config.getInt("app.state.field.ordinal")
 	   
+	  
+	  //paired RDD 
+	  val data = sparkCntxt.textFile(inputPath)
+	  val pairedData = data.map(line => {
+	    val items = line.split(fieldDelimIn)
+	    
+	    val keyRec = new Record(keyFieldOrdinals.length)
+	    keyFieldOrdinals.foreach(ord => {
+	      keyRec.addString(items(ord))
+	    })
+	    
+	    val valRec = new Record(2)
+	    valRec.addLong(items(timeFieldOrdinal))
+	    valRec.addString(items(stateFieldOrdinal))
+	    (keyRec, valRec)
+	  })	   
 	   
-	   
+	  //partition by key
+	  val partDate = pairedData.groupByKey(4)
+	  
+	  //state transition and time elapsed
+	  val stateTrans = partDate.mapValues( d => {
+	    //sort each partition by time 
+	    val ar = d.toArray
+	    val sotrtedAr = ar.sortBy(a => {a.getLong(0)})
+	    
+	    var prevRec : Record = new Record(1)
+	    val stateAr = new Array[Record](sotrtedAr.length - 1)
+	    for (i <- sotrtedAr.indices) {
+	      i match {
+	        case 0 => prevRec = sotrtedAr(0)
+	        case _ => {
+	          val curState = prevRec.getString(1)
+	          val nexState = sotrtedAr(i).getString(1)
+	          val timeElapsed = sotrtedAr(i).getLong(0) - prevRec.getLong(0)
+	          val stateTrans = new Record(3)
+	          stateTrans.add(curState, nexState, timeElapsed)
+	          stateAr(i - 1) = stateTrans
+	        }
+	        
+	      }
+	      
+	    }
+	    stateAr
+	  })
+	  
+	  
+	  
    }  
 }
