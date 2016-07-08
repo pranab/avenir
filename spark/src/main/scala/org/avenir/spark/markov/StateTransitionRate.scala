@@ -22,6 +22,7 @@ import org.apache.spark.SparkContext
 import org.chombo.spark.common.Record
 import scala.collection.JavaConverters._
 import org.apache.spark.HashPartitioner
+import org.chombo.util.DoubleTable
 
 object StateTransitionRate extends JobConfiguration {
   
@@ -40,7 +41,8 @@ object StateTransitionRate extends JobConfiguration {
 	   val keyFieldOrdinals = config.getIntList("app.key.field.ordinals").asScala
 	   val timeFieldOrdinal = config.getInt("app.time.field.ordinal")
 	   val stateFieldOrdinal = config.getInt("app.state.field.ordinal")
-	   
+	   val states = config.getStringList("app.state.values")
+	   val timeUnit = config.getString("app.time.unit")
 	  
 	  //paired RDD 
 	  val data = sparkCntxt.textFile(inputPath)
@@ -84,7 +86,34 @@ object StateTransitionRate extends JobConfiguration {
 	      }
 	      
 	    }
-	    stateAr
+	    
+	    //convert to rate matrix
+	    val rateMatrix = new DoubleTable(states, states)
+	    val duration = scala.collection.mutable.Map[String, Double]()
+	    stateAr.foreach(a => {
+	      //state transition
+	      rateMatrix.add(a.getString(0), a.getString(1), 1.0)
+	      
+	      //state duration
+	      val timeElapsed = a.getLong(2)
+	      val timeElapsedScaled = timeUnit match {
+	        case "day" => timeElapsed / (1000.0 * 60 * 60 * 24)
+	        case "hour" => timeElapsed / (1000.0 * 60 * 60)
+	        case _ => throw new IllegalArgumentException("invalid time unit") 
+	      } 
+	      
+	      duration(a.getString(0)) = duration.getOrElse(a.getString(0), 0.0) + timeElapsedScaled
+	    })
+	    
+	    //convert to rate
+	    states.asScala.foreach(s => {
+	    	val scale = 1.0 / duration(s)
+	    	rateMatrix.scaleRow(s, scale)
+	    	val rowSum = rateMatrix.getRowSum(s)
+	    	rateMatrix.set(s, s, -rowSum)
+	    })
+	    
+	    rateMatrix
 	  })
 	  
 	  
