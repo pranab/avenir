@@ -23,6 +23,8 @@ import org.chombo.spark.common.Record
 import scala.collection.JavaConverters._
 import org.apache.spark.HashPartitioner
 import org.chombo.util.DoubleTable
+import java.text.SimpleDateFormat
+import org.chombo.util.Utility
 
 object StateTransitionRate extends JobConfiguration {
   
@@ -42,7 +44,15 @@ object StateTransitionRate extends JobConfiguration {
 	   val timeFieldOrdinal = config.getInt("app.time.field.ordinal")
 	   val stateFieldOrdinal = config.getInt("app.state.field.ordinal")
 	   val states = config.getStringList("app.state.values")
-	   val timeUnit = config.getString("app.time.unit")
+	   val rateTimeUnit = config.getString("app.rate.time.unit")
+	   val inputTimeUnit = config.getString("app.input.time.unit")
+	   val dateFormat : Option[SimpleDateFormat] = inputTimeUnit match {
+	     case "formatted" => {
+	       val inputTimeFormat = config.getString("app.input.time.format")
+	       Some(new SimpleDateFormat(inputTimeFormat))
+	     }
+	     case _ => None
+	   }
 	  
 	  //paired RDD 
 	  val data = sparkCntxt.textFile(inputPath)
@@ -54,8 +64,17 @@ object StateTransitionRate extends JobConfiguration {
 	      keyRec.addString(items(ord))
 	    })
 	    
+	    //convert time stamp to epoch time
+	    val dateTime = items(timeFieldOrdinal)
+	    val epochTime : Long = inputTimeUnit match {
+	    	case "ms" => dateTime.toLong
+	    	case "sec" => dateTime.toLong * 1000
+	    	case "formatted" => Utility.getEpochTime(dateTime, dateFormat.get)
+	    	case _ => throw new IllegalArgumentException("invalid input time unit")
+	    }
+	    
 	    val valRec = new Record(2)
-	    valRec.addLong(items(timeFieldOrdinal))
+	    valRec.addLong(epochTime)
 	    valRec.addString(items(stateFieldOrdinal))
 	    (keyRec, valRec)
 	  })	   
@@ -82,9 +101,7 @@ object StateTransitionRate extends JobConfiguration {
 	          stateTrans.add(curState, nexState, timeElapsed)
 	          stateAr(i - 1) = stateTrans
 	        }
-	        
 	      }
-	      
 	    }
 	    
 	    //convert to rate matrix
@@ -96,10 +113,10 @@ object StateTransitionRate extends JobConfiguration {
 	      
 	      //state duration
 	      val timeElapsed = a.getLong(2)
-	      val timeElapsedScaled = timeUnit match {
+	      val timeElapsedScaled = rateTimeUnit match {
 	        case "day" => timeElapsed / (1000.0 * 60 * 60 * 24)
 	        case "hour" => timeElapsed / (1000.0 * 60 * 60)
-	        case _ => throw new IllegalArgumentException("invalid time unit") 
+	        case _ => throw new IllegalArgumentException("invalid rate time unit") 
 	      } 
 	      
 	      duration(a.getString(0)) = duration.getOrElse(a.getString(0), 0.0) + timeElapsedScaled
@@ -116,6 +133,11 @@ object StateTransitionRate extends JobConfiguration {
 	    rateMatrix
 	  })
 	  
+	  val trans = stateTrans.collect
+	  trans.foreach(t => {
+	    print(t._1.toString())
+	    print(t._2.serializeTabular())
+	  })
 	  
 	  
    }  
