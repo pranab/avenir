@@ -33,22 +33,28 @@ object StateTransitionRate extends JobConfiguration {
  * @return
  */
    def main(args: Array[String]) {
+	   val appName = "stateTransitionRate"
 	   val Array(master: String, inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
-	   val sparkConf = createSparkConf("stateTransitionRate", config)
+	   val sparkConf = createSparkConf(appName, config, false)
 	   val sparkCntxt = new SparkContext(sparkConf)
+	   val appConfig = config.getConfig(appName)
 	   
-	   val fieldDelimIn = config.getString("app.field.delim.in")
-	   val fieldDelimOut = config.getString("app.field.delim.out")
-	   val keyFieldOrdinals = config.getIntList("app.key.field.ordinals").asScala
-	   val timeFieldOrdinal = config.getInt("app.time.field.ordinal")
-	   val stateFieldOrdinal = config.getInt("app.state.field.ordinal")
-	   val states = config.getStringList("app.state.values")
-	   val rateTimeUnit = config.getString("app.rate.time.unit")
-	   val inputTimeUnit = config.getString("app.input.time.unit")
+	   //add jars
+	   this.addJars(sparkCntxt, appConfig, true, "lib.jars")
+	   
+	   //config params
+	   val fieldDelimIn = appConfig.getString("field.delim.in")
+	   val fieldDelimOut = appConfig.getString("field.delim.out")
+	   val keyFieldOrdinals = appConfig.getIntList("key.field.ordinals").asScala
+	   val timeFieldOrdinal = appConfig.getInt("time.field.ordinal")
+	   val stateFieldOrdinal = appConfig.getInt("state.field.ordinal")
+	   val states = appConfig.getStringList("state.values")
+	   val rateTimeUnit = appConfig.getString("rate.time.unit")
+	   val inputTimeUnit = appConfig.getString("input.time.unit")
 	   val dateFormat : Option[SimpleDateFormat] = inputTimeUnit match {
 	     case "formatted" => {
-	       val inputTimeFormat = config.getString("app.input.time.format")
+	       val inputTimeFormat = appConfig.getString("input.time.format")
 	       Some(new SimpleDateFormat(inputTimeFormat))
 	     }
 	     case _ => None
