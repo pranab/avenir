@@ -34,7 +34,7 @@ object StateTransitionRate extends JobConfiguration {
  */
    def main(args: Array[String]) {
 	   val appName = "stateTransitionRate"
-	   val Array(master: String, inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
+	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
 	   val sparkCntxt = new SparkContext(sparkConf)
@@ -130,10 +130,12 @@ object StateTransitionRate extends JobConfiguration {
 	    
 	    //convert to rate
 	    states.asScala.foreach(s => {
-	    	val scale = 1.0 / duration(s)
-	    	rateMatrix.scaleRow(s, scale)
-	    	val rowSum = rateMatrix.getRowSum(s)
-	    	rateMatrix.set(s, s, -rowSum)
+	    	if (duration.contains(s)) {
+	    		val scale = 1.0 / duration(s)
+	    		rateMatrix.scaleRow(s, scale)
+	    		val rowSum = rateMatrix.getRowSum(s)
+	    		rateMatrix.set(s, s, -rowSum)
+	    	}
 	    })
 	    
 	    rateMatrix
