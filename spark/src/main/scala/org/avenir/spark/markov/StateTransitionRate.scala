@@ -86,14 +86,17 @@ object StateTransitionRate extends JobConfiguration {
 	  })	   
 	   
 	  //partition by key
-	  val partDate = pairedData.groupByKey(4)
+	  println("size before grouping:" + pairedData.count())
+	  val partDate = pairedData.combineByKey(x => List[Record](x), (c : List[Record], y) => y :: c, 
+	      (c1 : List[Record], c2 : List[Record]) => c1 ::: c2)
+	  println("size after grouping:" + partDate.count())
+	  
 	  
 	  //state transition and time elapsed
 	  val stateTrans = partDate.mapValues( d => {
 	    //sort each partition by time 
-	    val ar = d.toArray
-	    val sotrtedAr = ar.sortBy(a => {a.getLong(0)})
-	    
+	    val sotrtedAr = d.sortBy(a => {a.getLong(0)})
+	    println("state sequence length:" + sotrtedAr.length)
 	    var prevRec : Record = new Record(1)
 	    val stateAr = new Array[Record](sotrtedAr.length - 1)
 	    for (i <- sotrtedAr.indices) {
@@ -110,6 +113,7 @@ object StateTransitionRate extends JobConfiguration {
 	      }
 	    }
 	    
+	    println("state tran array length:" + stateAr.length)
 	    //convert to rate matrix
 	    val rateMatrix = new DoubleTable(states, states)
 	    val duration = scala.collection.mutable.Map[String, Double]()
@@ -131,6 +135,7 @@ object StateTransitionRate extends JobConfiguration {
 	    //convert to rate
 	    states.asScala.foreach(s => {
 	    	if (duration.contains(s)) {
+	    		println("scaling rate matrix for state:" + s)
 	    		val scale = 1.0 / duration(s)
 	    		rateMatrix.scaleRow(s, scale)
 	    		val rowSum = rateMatrix.getRowSum(s)
@@ -142,9 +147,12 @@ object StateTransitionRate extends JobConfiguration {
 	  })
 	  
 	  val trans = stateTrans.collect
+	  println("num of state trans rate tables:" + trans.length)
 	  trans.foreach(t => {
-	    print(t._1.toString())
-	    print(t._2.serializeTabular())
+	    println(t._1.toString())
+	    val table = t._2 
+	    println("row:" + table.getNumRow() + "col:" + table.getNumCol())
+	    //print(t._2.serializeTabular())
 	  })
 	  
 	  
