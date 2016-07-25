@@ -59,6 +59,7 @@ object StateTransitionRate extends JobConfiguration {
 	     }
 	     case _ => None
 	   }
+	   val outputPrecision = appConfig.getInt("trans.rate.output.precision")
 	  
 	  //paired RDD 
 	  val data = sparkCntxt.textFile(inputPath)
@@ -104,11 +105,13 @@ object StateTransitionRate extends JobConfiguration {
 	        case 0 => prevRec = sotrtedAr(0)
 	        case _ => {
 	          val curState = prevRec.getString(1)
-	          val nexState = sotrtedAr(i).getString(1)
-	          val timeElapsed = sotrtedAr(i).getLong(0) - prevRec.getLong(0)
+	          val curRec = sotrtedAr(i)
+	          val nexState = curRec.getString(1)
+	          val timeElapsed = curRec.getLong(0) - prevRec.getLong(0)
 	          val stateTrans = new Record(3)
 	          stateTrans.add(curState, nexState, timeElapsed)
 	          stateAr(i - 1) = stateTrans
+	          prevRec = curRec
 	        }
 	      }
 	    }
@@ -116,11 +119,12 @@ object StateTransitionRate extends JobConfiguration {
 	    println("state tran array length:" + stateAr.length)
 	    //convert to rate matrix
 	    val rateMatrix = new DoubleTable(states, states)
+	    rateMatrix.setOutputPrecision(outputPrecision)
 	    val duration = scala.collection.mutable.Map[String, Double]()
 	    stateAr.foreach(a => {
 	      //state transition
 	      rateMatrix.add(a.getString(0), a.getString(1), 1.0)
-	      
+	      //println("table[" + a.getString(0) + "," + a.getString(1) + "]=" + rateMatrix.get(a.getString(0), a.getString(1)))
 	      //state duration
 	      val timeElapsed = a.getLong(2)
 	      val timeElapsedScaled = rateTimeUnit match {
@@ -130,15 +134,17 @@ object StateTransitionRate extends JobConfiguration {
 	      } 
 	      
 	      duration(a.getString(0)) = duration.getOrElse(a.getString(0), 0.0) + timeElapsedScaled
+	      //println("duration " + a.getString(0) + "=" + duration(a.getString(0)))
 	    })
 	    
 	    //convert to rate
 	    states.asScala.foreach(s => {
 	    	if (duration.contains(s)) {
-	    		println("scaling rate matrix for state:" + s)
 	    		val scale = 1.0 / duration(s)
+	    		println("scaling rate matrix for state:" + s + " scale:" + scale)
 	    		rateMatrix.scaleRow(s, scale)
 	    		val rowSum = rateMatrix.getRowSum(s)
+	    		println("rowSum:" + rowSum)
 	    		rateMatrix.set(s, s, -rowSum)
 	    	}
 	    })
@@ -152,7 +158,7 @@ object StateTransitionRate extends JobConfiguration {
 	    println(t._1.toString())
 	    val table = t._2 
 	    println("row:" + table.getNumRow() + "col:" + table.getNumCol())
-	    //print(t._2.serializeTabular())
+	    println(t._2.serializeTabular())
 	  })
 	  
 	  
