@@ -1,0 +1,70 @@
+This tutorial is for clustering  customer based on their online behavior with K Means using 
+scikit-learn. 
+
+Dependent script
+================
+Take the script util.py and sampler.py  from that avenir python durectory and 
+place them in ../lib directory with respect the directory containing cust_seg.py
+
+Other dependency
+================
+The script uses numpy and scikit-leran. It’s best to install anaconda to get all related packages.
+
+I used properties file for configuration and python module called jprops for processing properties 
+file. Here is how you install it
+
+pip install jprops
+
+All python scripts
+==================
+You may to change the first line of all python script depending upon your pyton installation
+directory
+
+Creating training data
+======================
+To create test data use the python script telecom_churn.py as below. 
+./cust_seg.py <num_cust>  <noise_rate> > <output_file>
+
+num_cust = number of customers (e.g. 5000)
+noise_rate = percentage of noisy data (e.g. 10)
+output_file = output file
+
+Cluster tendency with Hopkins statistic
+=======================================
+Set the following config params
+
+common.mode=explore
+expl.algo=hopkins
+expl.hopkins.data.file=cust_seg_ran_500.txt  (for example)
+expl.hopkins.data.feature.fields=1,2,3,4,5  (for example)
+expl.hopkins.sample.size=50 (for example)
+expl.hopkins.num.iters=10 (for example)
+
+Run as follows
+./cluster.py cluster.properties
+
+k means clustering
+==================
+Set the following config params
+
+common.mode=train
+common.preprocessing=scale
+train.algo=kmeans
+train.num.clusters=2,3,4,5 (for example)
+train.num.iters=300 (for example)
+train.num.inits=10 (for example)
+train.init.strategy=k-means++
+train.precompute.distance=auto
+train.data.file=cust_seg_1000.txt (for example)
+train.data.feature.fields=1,2,3,4,5 (for example)
+
+There are additional parameters that need to be set if the output clusters need to be saved
+in files.
+
+Run as follows
+./cluster.py cluster.properties
+
+
+
+
+
