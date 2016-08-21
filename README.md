@@ -36,6 +36,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2016/03/14/is-neural-network-better-off-with-big-data/
 * https://pkghosh.wordpress.com/2016/04/13/customer-churn-prediction-with-svm-using-scikit-learn/
 * https://pkghosh.wordpress.com/2016/06/14/inventory-forecasting-with-markov-chain-monte-carlo/
+* https://pkghosh.wordpress.com/2016/07/30/customer-segmentation-based-on-online-behavior-using-scikitlearn/
 
 
 ## Getting started
