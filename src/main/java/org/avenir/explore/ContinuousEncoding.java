@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -65,6 +66,7 @@ public class ContinuousEncoding extends Configured implements Tool {
         Utility.setConfiguration(job.getConfiguration());
         
         job.setMapperClass(ContinuousEncoding.EncoderMapper.class);
+        job.setCombinerClass(ContinuousEncoding.EncoderCombiner.class);
         job.setReducerClass(ContinuousEncoding.EncoderReducer.class);
 
         job.setMapOutputKeyClass(Tuple.class);
@@ -151,6 +153,29 @@ public class ContinuousEncoding extends Configured implements Tool {
     		}
         }
         
+	}
+	
+	/**
+	 * @author pranab
+	 *
+	 */
+	public static class EncoderCombiner extends Reducer<Tuple, Tuple, Tuple, Tuple> {
+		private Tuple outVal = new Tuple();
+		private ClassAttributeCounter classAttrCounter = new ClassAttributeCounter();
+		
+        /* (non-Javadoc)
+         * @see org.apache.hadoop.mapreduce.Reducer#reduce(KEYIN, java.lang.Iterable, org.apache.hadoop.mapreduce.Reducer.Context)
+         */
+        protected void reduce(Tuple  key, Iterable<Tuple> values, Context context)
+        		throws IOException, InterruptedException {
+        	classAttrCounter.initialize();
+        	for (Tuple value : values){
+        		classAttrCounter.add(value.getInt(0), value.getInt(0));
+        	}
+        	outVal.initialize();
+        	outVal.add(classAttrCounter.getPosCount(), classAttrCounter.getNegCount());
+    		context.write(key, outVal);
+        }		
 	}
 	
     /**

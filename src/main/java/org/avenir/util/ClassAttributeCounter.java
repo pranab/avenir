@@ -26,6 +26,11 @@ public class ClassAttributeCounter {
 	private int posCount;
 	private int negCount;
 	
+	public void initialize() {
+		posCount = 0;
+		negCount = 0;
+	}
+	
 	public void add(int posCount, int negCount) {
 		this.posCount += posCount;
 		this.negCount += negCount;
