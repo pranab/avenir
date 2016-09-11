@@ -127,10 +127,14 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         				"missing max interval maximum  parameter");
         		List<String> preferredStrategies = Arrays.asList(Utility.assertStringArrayConfigParam(conf, "preferred.strategies", 
         				configDelim, "missing preferred strategies list"));
-        		strategyContext  = new EventLocality.Context( minOccurence, maxIntervalAverage, maxIntervalMax, 
-        				preferredStrategies);
+        		boolean anyCond = Utility.assertBooleanConfigParam(conf, "any.cond", "missing any condition flag");
+        		long minRangeLength = conf.getLong("min.range.length", 0);
+        		strategyContext  = new EventLocality.Context( minOccurence, maxIntervalAverage, maxIntervalMax, minRangeLength,
+        				preferredStrategies,  anyCond);
         	}
-        	window = new TimeBoundEventLocalityAnalyzer(windowTimeSpan, timeStep, strategyContext);
+        	long minEventTimeInterval = conf.getLong("min.event.time.interval", 100);
+        	double scoreThreshold = Utility.assertDoubleConfigParam(conf, "score.threshold", "missing score threshold");
+        	window = new TimeBoundEventLocalityAnalyzer(windowTimeSpan, timeStep, minEventTimeInterval, scoreThreshold, strategyContext);
         	scoreThreshold = Utility.assertDoubleConfigParam(conf, "score.threshold",  "missing score threhold parameter");
         	
         	String condExpression = Utility.assertStringConfigParam(conf, "cond.expression", "mission conditional expression");
