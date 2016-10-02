@@ -67,11 +67,6 @@ import org.chombo.util.PoisonDistr
 	     case None => None
 	   }
 	   
-	   val endState = getOptionalStringParam(appConfig,"end.state")
-	   val endStateIndx = endState match  {
-	     case Some(st:String) => states.indexOf(st)
-	     case None => -1
-	   }
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
 	   	   
@@ -122,18 +117,28 @@ import org.chombo.util.PoisonDistr
 	   val output = initState.map(line => {
 		 val items = line.split(fieldDelimIn)
 		 val key = Record(items, 0, keyFieldLen)
+		 
+		 //initial state
 		 val initState = items(keyFieldLen)
 		 val initStateIndx = states.indexOf(initState)
+		 
+		 //optional final state
+		 val endStateIndx = if (items.length > keyFieldLen + 1) {
+		   val endState = items(keyFieldLen + 1)
+		   states.indexOf(endState)
+		 } else {
+		   -1
+		 }
 		 val (maxRate:Double, transMult:Array[Matrix]) = brStateTransMultMap.value.get(key).get
 		 val count = maxRate * timeHorizon
 		 val limit = (4 + 6 * Math.sqrt(count) + count).toInt
-		 val targetStateIndx = targetStatesIndx.get.head
 		 val poison = new PoisonDistr(count)
 		 var st = Array[Double](1)
 		     
 	     transStat match {
 		    //how long in certain state
 	     	case "stateDwellTime" => {
+		      val targetStateIndx = targetStatesIndx.get.head
 	     	  var sumOuter:Double = 0
 		      for (i <- 0 to limit) {
 		       var sumInner:Double = 0
@@ -143,22 +148,47 @@ import org.chombo.util.PoisonDistr
 		           case indx  if indx >= 0 => transMult(i-j).get(targetStateIndx, endStateIndx)
 		           case _ => 1.0
 		         }
-		       
 		         sumInner += (startTargetPr * targetEndPr)
 		       }
 		       sumOuter += (timeHorizon/(i + 1)) * sumInner * poison.next()
-		     }
-		     st = Array[Double](1)
-		     st(0) = sumOuter
+		      }
+		      st = Array[Double](1)
+		      st(0) = sumOuter
 	     	}
 	     	
-	     	//future state distribution
-	     	case "futureStateDistr" => {
-	     	  val futTransStates = transMult(1).multiply(poison.next())
-	     	  for (i <- 1 to limit) {
-	     	    futTransStates.sum(transMult(i).multiply(poison.next()))
+	     	case "StateTransitionCount" => {
+		      val targetStateIndxOne = targetStatesIndx.get.head
+		      val targetStateIndxTwo = targetStatesIndx.get.tail.head
+	     	  var sumOuter:Double = 0
+		      for (i <- 0 to limit) {
+		       var sumInner:Double = 0
+		       for (j <- 0 to i) {
+		         val startTargetPr = transMult(j).get(initStateIndx, targetStateIndxOne)
+		         val targeOneTwoPr = transMult(1).get(targetStateIndxOne, targetStateIndxTwo)
+		         val targetEndPr = endStateIndx match {
+		           case indx  if indx >= 0 => transMult(i-j).get(targetStateIndxTwo, endStateIndx)
+		           case _ => 1.0
+		         }
+		         sumInner += (startTargetPr * targeOneTwoPr *targetEndPr)
+		       }
+		       sumOuter += sumInner * poison.next()
+		      }
+		      st = Array[Double](1)
+		      st(0) = sumOuter
+	     	}
+	     	
+	     	//future state probability
+	     	case "futureStateProb" => {
+	     	  if (endStateIndx == -1) {
+	     	    throw new IllegalStateException("for future state probability, end state must be defined")
 	     	  }
-	     	  st = futTransStates.getRow(initStateIndx)
+	     	  var sum:Double = 0
+	     	  for (i <- 0 to limit) {
+	     	    val intiToEndPr = transMult(i).get(initStateIndx, endStateIndx)
+	     	    sum += intiToEndPr * poison.next()
+	     	  }
+		     st = Array[Double](1)
+		     st(0) = sum
 	     	}
 	     	
 	     	case _ => {
