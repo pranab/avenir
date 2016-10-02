@@ -55,18 +55,27 @@ import org.chombo.util.PoisonDistr
 	   val numStates = states.size()
 	   val timeHorizon = appConfig.getInt("time.horizon")
 	   val stateTransFilePath = appConfig.getString("state.trans.file.path")
-	   val transStats = appConfig.getString("state.trans.stats")
-	   val targetState = appConfig.getString("target.state")
-	   val targetStateIndx = states.indexOf(targetState)
-	   val endStateDefined = appConfig.hasPath("end.state")
-	   val endStateIndx = endStateDefined match  {
-	     case true => states.indexOf(appConfig.getString("end.state"))
-	     case false => -1
+	   val transStat = appConfig.getString("state.trans.stat")
+	   val targetStates = getOptionalStringListParam(appConfig, "target.states")
+	   val targetStatesIndx = targetStates match {
+	     case Some(lst:java.util.List[String]) => {
+	       val indxs = lst.asScala.map(s => {
+	         states.indexOf(s)
+	       })
+	       Some(indxs)
+	     }
+	     case None => None
+	   }
+	   
+	   val endState = getOptionalStringParam(appConfig,"end.state")
+	   val endStateIndx = endState match  {
+	     case Some(st:String) => states.indexOf(st)
+	     case None => -1
 	   }
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
 	   	   
-	   //state transition rates
+	   //load state transition rates
 	   val stateTransData = sparkCntxt.textFile(stateTransFilePath)
 	   val stateTrans = stateTransData.map(line => {
 		   val items = line.substring(1, line.length()-1).split(fieldDelimIn)
@@ -80,7 +89,6 @@ import org.chombo.util.PoisonDistr
 	   //normalized state transition rate and multiplications
 	   val idenMatrx = new Matrix()
 	   idenMatrx.initialize(numStates, numStates,0).initializeDiagonal(1)
-	   
 	   val stateTransMult  = stateTrans.map(keySt => {
 	     val trans = keySt._2
 	     val maxRate = -trans.getMinDiagonalElement()
@@ -100,55 +108,68 @@ import org.chombo.util.PoisonDistr
 	     (keySt._1, maxRate, matrixPowers)
 	   })
 	   
-	   //collect and convert to map
+	   //collect and convert to map and broadcast
 	   val stateTransMultMap = scala.collection.mutable.Map[Record, (Double, Array[Matrix])]()
 	   stateTransMult.collect.foreach(s => {
 	     stateTransMultMap += (s._1 -> (s._2,s._3))
 	   })
-	   
-	   //initial state
 	   val brStateTransMultMap = sparkCntxt.broadcast(stateTransMultMap)
+	   
+	   //key and initial state
 	   val initState = sparkCntxt.textFile(inputPath)
 	   
 	   //statistic
-	   val stat = transStats match {
-	     case "dwellTime" => {
-		   initState.map(line => {
-		     val items = line.split(fieldDelimIn)
-		     val key = Record(items, 0, keyFieldLen)
-		     val initState = items(keyFieldLen)
-		     val initStateIndx = states.indexOf(initState)
-		     val (maxRate:Double, transMult:Array[Matrix]) = brStateTransMultMap.value.get(key).get
-		     val count = maxRate * timeHorizon
-		     val limit = (4 + 6 * Math.sqrt(count) + count).toInt
-		
-		     val poison = new PoisonDistr(count)
+	   val output = initState.map(line => {
+		 val items = line.split(fieldDelimIn)
+		 val key = Record(items, 0, keyFieldLen)
+		 val initState = items(keyFieldLen)
+		 val initStateIndx = states.indexOf(initState)
+		 val (maxRate:Double, transMult:Array[Matrix]) = brStateTransMultMap.value.get(key).get
+		 val count = maxRate * timeHorizon
+		 val limit = (4 + 6 * Math.sqrt(count) + count).toInt
+		 val targetStateIndx = targetStatesIndx.get.head
+		 val poison = new PoisonDistr(count)
+		 var st = Array[Double](1)
 		     
-		     var sumOuter:Double = 0
-		     for (i <- 0 to limit) {
+	     transStat match {
+		    //how long in certain state
+	     	case "stateDwellTime" => {
+	     	  var sumOuter:Double = 0
+		      for (i <- 0 to limit) {
 		       var sumInner:Double = 0
 		       for (j <- 0 to i) {
 		         val startTargetPr = transMult(j).get(initStateIndx, targetStateIndx)
-		         val targetEndPr = endStateDefined match {
-		           case true => transMult(i-j).get(targetStateIndx, endStateIndx)
-		           case false => 1.0
+		         val targetEndPr = endStateIndx match {
+		           case indx  if indx >= 0 => transMult(i-j).get(targetStateIndx, endStateIndx)
+		           case _ => 1.0
 		         }
+		       
 		         sumInner += (startTargetPr * targetEndPr)
 		       }
 		       sumOuter += (timeHorizon/(i + 1)) * sumInner * poison.next()
 		     }
-		     (key,sumOuter)
-		   })
-
-	     }
-	     
-	     case _ => {
+		     st = Array[Double](1)
+		     st(0) = sumOuter
+	     	}
+	     	
+	     	//future state distribution
+	     	case "futureStateDistr" => {
+	     	  val futTransStates = transMult(1).multiply(poison.next())
+	     	  for (i <- 1 to limit) {
+	     	    futTransStates.sum(transMult(i).multiply(poison.next()))
+	     	  }
+	     	  st = futTransStates.getRow(initStateIndx)
+	     	}
+	     	
+	     	case _ => {
 	    	 throw new IllegalArgumentException("invalid state transition stats")
+	     	}
 	     }
-	   }
+		 (key,st)
+	   })
 	   
 	   if(saveOutput) {	   
-	   	stat.saveAsTextFile(outputPath) 
+		   output.saveAsTextFile(outputPath) 
    	   }
 	   
    }
