@@ -30,7 +30,7 @@ import org.chombo.util.Matrix
 import org.chombo.util.PoisonDistr
 
  /**
-  * Calculates statistics for continuous time markov chain process
+  * Calculates statistics for continuous time Markov chain process using unionization algorithm
  * @param args
  * @return
  */
@@ -78,6 +78,11 @@ import org.chombo.util.PoisonDistr
 	       val key = Record(items, 0, keyFieldLen)
 		   val trans = new Matrix(numStates, numStates)
 		   trans.deseralize(items, keyFieldLen)
+		   
+		   if (false) {
+			   println("key: " + key)
+			   println("tarns rate: " + trans)
+		   } 
 		   (key, trans)
 	   })
   
@@ -91,15 +96,20 @@ import org.chombo.util.PoisonDistr
 	     val discreetTrans = trans.add(idenMatrx)
 	     val count = maxRate * timeHorizon
 	     val limit = (4 + 6 * Math.sqrt(count) + count).toInt
+	     if (debugOn) {
+	       println("maxRate: " + maxRate + " count: " + count + " limit: " + limit)
+	     }
 	     
 	     val matrixPowers = new Array[Matrix](limit+1)
 	     matrixPowers(0) = idenMatrx
 	     matrixPowers(1) = discreetTrans
 	     for (i <- 2 to limit) {
-	       val next = matrixPowers.last.dot(discreetTrans)
+	       if (false) {
+	         println("next matrix multiply: " + i)
+	       }
+	       val next = matrixPowers(i-1).dot(discreetTrans)
 	       matrixPowers(i) = next
 	     }
-	     
 	     (keySt._1, maxRate, matrixPowers)
 	   })
 	   
@@ -109,18 +119,31 @@ import org.chombo.util.PoisonDistr
 	     stateTransMultMap += (s._1 -> (s._2,s._3))
 	   })
 	   val brStateTransMultMap = sparkCntxt.broadcast(stateTransMultMap)
+	   if (debugOn) {
+	     println("broadcast done")
+	   }
 	   
 	   //key and initial state
 	   val initState = sparkCntxt.textFile(inputPath)
+	   if (debugOn) {
+	     println("input path: " + inputPath + " size: " + initState.count)
+	   }
+	   
 	   
 	   //statistic
 	   val output = initState.map(line => {
+	     if (debugOn) {
+	       println("next record: " + line)
+	     }
 		 val items = line.split(fieldDelimIn)
 		 val key = Record(items, 0, keyFieldLen)
 		 
 		 //initial state
 		 val initState = items(keyFieldLen)
 		 val initStateIndx = states.indexOf(initState)
+		 if (debugOn) {
+		   println("initStateIndx: " + initStateIndx)
+		 }
 		 
 		 //optional final state
 		 val endStateIndx = if (items.length > keyFieldLen + 1) {
@@ -139,6 +162,9 @@ import org.chombo.util.PoisonDistr
 		    //how long in certain state
 	     	case "stateDwellTime" => {
 		      val targetStateIndx = targetStatesIndx.get.head
+		      if (debugOn) {
+		        println("targetStateIndx: " + targetStateIndx)
+		      }
 	     	  var sumOuter:Double = 0
 		      for (i <- 0 to limit) {
 		       var sumInner:Double = 0
@@ -148,12 +174,22 @@ import org.chombo.util.PoisonDistr
 		           case indx  if indx >= 0 => transMult(i-j).get(targetStateIndx, endStateIndx)
 		           case _ => 1.0
 		         }
+		         if (false) {
+		           println("startTargetPr: " + startTargetPr + " targetEndPr: " + targetEndPr)
+		         }
 		         sumInner += (startTargetPr * targetEndPr)
 		       }
-		       sumOuter += (timeHorizon/(i + 1)) * sumInner * poison.next()
+		       val pois = poison.next()
+		       if (debugOn) {
+		         println("sumInner: " + sumInner + " pois: " + pois)
+		       }
+		       sumOuter += (timeHorizon/(i + 1)) * sumInner * pois
 		      }
 		      st = Array[Double](1)
 		      st(0) = sumOuter
+		      if (debugOn) {
+		        println("key: " + key + " duration: " + st(0))
+		      }
 	     	}
 	     	
 	     	case "StateTransitionCount" => {
@@ -175,6 +211,9 @@ import org.chombo.util.PoisonDistr
 		      }
 		      st = Array[Double](1)
 		      st(0) = sumOuter
+		      if (debugOn) {
+		        println("key: " + key + " transition count: " + st(0))
+		      }
 	     	}
 	     	
 	     	//future state probability
@@ -198,6 +237,7 @@ import org.chombo.util.PoisonDistr
 		 (key,st)
 	   })
 	   
+	   val stats = output.collect
 	   if(saveOutput) {	   
 		   output.saveAsTextFile(outputPath) 
    	   }
