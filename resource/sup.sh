@@ -21,6 +21,7 @@ case "$1" in
 	CLASS_NAME=org.avenir.spark.markov.ContTimeStateTransitionStats
 	INPUT=file:///Users/pranab/Projects/bin/avenir/input/sup/fulfill_states.txt
 	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/sup/ras
+	rm -rf ./output/sup/ras
 	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
 	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT sup.conf
 ;;

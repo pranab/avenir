@@ -239,7 +239,7 @@ import org.chombo.util.PoisonDistr
 	   
 	   val stats = output.collect
 	   if(saveOutput) {	   
-		   output.saveAsTextFile(outputPath) 
+		   output.map({case(id,stat) => (id,stat.mkString(","))}).saveAsTextFile(outputPath) 
    	   }
 	   
    }
