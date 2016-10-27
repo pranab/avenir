@@ -1,0 +1,59 @@
+This tutorial is supplier fulfillment forecasting in a supply chain. The solution is
+based on continuous time markov chain (CTMC). You should make necessary changes to scripts
+and config files to suit your environment
+
+Build
+=====
+chombo
+mvn install
+sbt publishLocal
+
+chombo/spark
+sbt package
+sbt publishLocal
+
+avenir/spark
+sbt package
+
+Input data
+==========
+Run
+./supplier.py <num_product> <num_weeks> > fulfill.txt
+
+num_product = number of products e.g. 5
+num_weeks = number of weeks in past for data generation e.g. 100
+
+Place the data file in the input path specified in sup.sh
+
+Start your cluster
+==================
+Start HDFS
+Start Spark
+
+
+Create state transition rate matrix
+===================================
+Run spark job
+./sup.sh transRate
+
+Predict time spent in a state
+=============================
+Create a file with content as below. Pick up the product Ids from the input file created earlier
+For the second field choose any of the 3 states in the input file
+
+DS86LWL2N563,L
+FYB54YDCP418,L
+Q05SQLVC40X9,L
+..............
+
+The configuration parameter state.trans.file.path should point to a directory containing the out 
+files from the first job
+
+Run spark job
+./sup.sh rateStat
+
+Configuration
+=============
+It's in sup.conf. Please make necessary changes based on your environment
+
+
