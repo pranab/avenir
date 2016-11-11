@@ -647,7 +647,7 @@ public class MutualInformation extends Configured implements Tool {
 		   			stBld.delete(0, stBld.length());
 		   			double distr = ((double)featureDistr.get(featureVal)) / (classDistr.get(classVal) + additionalClassCounts.get(classVal));
 		   			stBld.append(featureOrdinalClassVal.getLeft()).append(fieldDelim).
-		   				append(featureOrdinalClassVal.getRight()).append(fieldDelim).append(featureVal).append(fieldDelim).
+		   				append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
 		   				append(distr);
 		   			byte[] data = stBld.toString().getBytes();
 	            	os.write(data);
