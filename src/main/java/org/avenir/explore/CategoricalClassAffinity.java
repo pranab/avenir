@@ -220,7 +220,7 @@ public class CategoricalClassAffinity extends Configured implements Tool {
         		stBld.append(key.get(0)).append(fieldDelimOut).append(score.getLeft()).
         			append(fieldDelimOut).append(score.getRight()).append("\n");
         	}
-        	outVal.set(stBld.toString());
+        	outVal.set(stBld.substring(0, stBld.length() -1));
         	context.write(NullWritable.get(), outVal);
         }
         
