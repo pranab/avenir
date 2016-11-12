@@ -36,7 +36,7 @@
 			"ordinal" : 5,
 			"dataType" : "int",
 			"feature" : true,
-			"bucketWidth" : 100
+			"bucketWidth" : 60
 		},
 		{
 			"name" : "hungup",
