@@ -1,0 +1,10 @@
+<project name="avenir_for_hadoop" default="uber-jar" basedir=".">
+<target name="uber-jar">
+    <echo>Packaging into a single uber JAR</echo>
+	<jar destfile="uber-avenir-1.0.jar">
+		<zipgroupfileset dir="/Users/pranab/Projects/avenir/target" includes="avenir-1.0.jar" /> 
+		<zipgroupfileset dir="/Users/pranab/Projects/chombo/target" includes="chombo-1.0.jar" /> 
+		<zipgroupfileset dir="/Users/pranab/Projects/lib" includes="aws-java-sdk-1.3.22.jar" /> 
+	</jar>
+</target>
+</project>
