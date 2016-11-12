@@ -627,7 +627,10 @@ public class MutualInformation extends Configured implements Tool {
 	   		}
 	   		
 	   		//Laplace correction
+        	Configuration config = context.getConfiguration();
+            OutputStream os = Utility.getCreateFileOutputStream(config, "mut.feature.class.distr.output.file.path");
 	   		for (int featureOrd : featureClassCondDistr.keySet()) {
+	   			additionalClassCounts.clear();
 	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
 	   			List<String> classValues = featureClassValues.get(featureOrd);
 	   			if (distrList.size() != 2) {
@@ -636,31 +639,26 @@ public class MutualInformation extends Configured implements Tool {
 	   			
 	   			addMissingFeatureValue(distrList, classValues, additionalClassCounts, 0, 1);
 	   			addMissingFeatureValue(distrList, classValues, additionalClassCounts, 1, 0);
-	   		}
-	   		
-	   		//output
-        	Configuration config = context.getConfiguration();
-            OutputStream os = Utility.getCreateFileOutputStream(config, "mut.feature.class.distr.output.file.path");
-	   		
-            for (int featureOrd : featureClassCondDistr.keySet()) {
-	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
+	   			
+		   		//output
 	   			int i = 0;
-	   			List<String> classValues = featureClassValues.get(featureOrd);
 	   			for (Map<String, Integer> featureDistr : distrList) {
 	   				String classVal = classValues.get(i++);
 	   				for(String featureVal : featureDistr.keySet()) {
 	   					stBld.delete(0, stBld.length());
-	   					double distr = ((double)featureDistr.get(featureVal)) / (classDistr.get(classVal) + 
-	   						additionalClassCounts.get(classVal));
+	   					int count = classDistr.get(classVal) + (additionalClassCounts.containsKey(classVal) ? 
+	   							additionalClassCounts.get(classVal) : 0);
+	   					double distr = ((double)featureDistr.get(featureVal)) / count;
 			   			stBld.append(featureOrd).append(fieldDelim).
 		   					append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
 		   					append(distr);
-		   			byte[] data = stBld.toString().getBytes();
-	            	os.write(data);
+			   			byte[] data = stBld.toString().getBytes();
+			   			os.write(data);
 	   					
 	   				}
 	   			}
-	   		}      
+	   			
+	   		}
 	   		
 	   		/*
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
