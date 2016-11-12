@@ -1,0 +1,47 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "customer type",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "area code",
+			"ordinal" : 2,
+			"dataType" : "categorical",
+			"feature" : true			
+		},
+		{
+			"name" : "issue",
+			"ordinal" : 3,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "time of day",
+			"ordinal" : 4,
+			"dataType" : "categorical",
+			"feature" : true
+		},
+		{
+			"name" : "hold time",
+			"ordinal" : 5,
+			"dataType" : "int",
+			"feature" : true,
+			"bucketWidth" : 100
+		},
+		{
+			"name" : "hungup",
+			"ordinal" : 6,
+			"dataType" : "categorical"
+		}
+	]
+}
