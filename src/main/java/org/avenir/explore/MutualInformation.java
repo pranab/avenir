@@ -639,7 +639,7 @@ public class MutualInformation extends Configured implements Tool {
 	   		
 	   		//output
         	Configuration config = context.getConfiguration();
-            OutputStream os = Utility.getAppendFileOutputStream(config, "mut.feature.class.distr.output.file.path");
+            OutputStream os = Utility.getCreateFileOutputStream(config, "mut.feature.class.distr.output.file.path");
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
 	   			String classVal = featureOrdinalClassVal.getRight();
 	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
@@ -666,9 +666,9 @@ public class MutualInformation extends Configured implements Tool {
 	   	 */
 	   	private void addMissingFeatureValue(List<Map<String, Integer>> distrList, List<String> classValues,
 	   			Map<String, Integer> additionalClassCounts, int thisDistr, int thatDistr) {
+			Map<String, Integer> otherDistr = distrList.get(thatDistr);
+			String otherClass = classValues.get(thatDistr);
    			for (String featureVal : distrList.get(thisDistr).keySet()) {
-   				Map<String, Integer> otherDistr = distrList.get(thatDistr);
-   				String otherClass = classValues.get(thatDistr);
    				if (!otherDistr.containsKey(featureVal)) {
    					otherDistr.put(featureVal, 1);
    					Integer classCount = additionalClassCounts.get(otherClass);
