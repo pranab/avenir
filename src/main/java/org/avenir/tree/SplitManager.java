@@ -53,7 +53,18 @@ public class SplitManager {
 	private Map<String, List<Integer>> randomRemainingAttributes = new HashMap<String, List<Integer>>();
 	private static final Logger LOG = Logger.getLogger(SplitManager.class);
 	private static final String SPACE = " ";
+	private int[] customBaseAttributeOrdinals;
 	 
+	
+	/**
+	 * @param schema
+	 * @throws IOException
+	 */
+	public SplitManager(FeatureSchema schema){
+		super();
+		this.schema = schema;
+	}
+	
 	/**
 	 * @param config
 	 * @param statFilePathParam
@@ -99,6 +110,15 @@ public class SplitManager {
 	}
 
 	/**
+	 * @param customBaseAttributeOrdinals
+	 * @return
+	 */
+	public SplitManager withCustomBaseAttributeOrdinals(int[] customBaseAttributeOrdinals) {
+		this.customBaseAttributeOrdinals = customBaseAttributeOrdinals;
+		return this;
+	}
+	
+	/**
 	 * 
 	 */
 	public void initialize() {
@@ -110,9 +130,17 @@ public class SplitManager {
 	/**
 	 * @return
 	 */
+	private int[] getBaseAttributeOrdinals() {
+		return customBaseAttributeOrdinals != null ? customBaseAttributeOrdinals : 
+			schema.getFeatureFieldOrdinals();
+	}
+	
+	/**
+	 * @return
+	 */
 	public List<Integer> getAllAttributes() {
 		if (null == allAttributes) {
-			allAttributes = Utility.fromIntArrayToList(schema.getFeatureFieldOrdinals());
+			allAttributes = Utility.fromIntArrayToList(getBaseAttributeOrdinals());
 		}
 		return allAttributes;
 	}
@@ -168,15 +196,15 @@ public class SplitManager {
 		if (null != currentDecPath) {
 			candidateAttrs = remainingAttributes.get(currentDecPath);
 			if (null == candidateAttrs) {
-				List<Integer> currentAttrs = getCurrentAttributes(currentDecPath);
+				List<Integer> currentAttrs =  currentDecPath.equals(DecisionTreeBuilder.ROOT_PATH) ? 
+					new ArrayList<Integer>() : getCurrentAttributes(currentDecPath);
 				candidateAttrs = new ArrayList<Integer>();
-			
-				for (FeatureField field :  schema.getFeatureAttrFields()) {
-					if (!currentAttrs.contains(field.getOrdinal())) {
-						candidateAttrs.add(field.getOrdinal());
+				for (int fieldOrd :  getBaseAttributeOrdinals()) {
+					if (!currentAttrs.contains(fieldOrd)) {
+						candidateAttrs.add(fieldOrd);
 					}
 				}
-				 remainingAttributes.put(currentDecPath, candidateAttrs);
+				remainingAttributes.put(currentDecPath, candidateAttrs);
 			}
 		} else {
 			candidateAttrs = getAllAttributes();
@@ -215,7 +243,7 @@ public class SplitManager {
 		//converts to predicates
 		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
 		for (int[] splits :  splitList) {
-			splitAttrPredicates.add( createIntAttrPredicates( attr, splits));
+			splitAttrPredicates.add(createIntAttrPredicates( attr, splits));
 		}
 		
 		return splitAttrPredicates;

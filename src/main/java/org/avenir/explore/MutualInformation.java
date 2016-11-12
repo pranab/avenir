@@ -19,6 +19,8 @@ package org.avenir.explore;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -436,6 +438,7 @@ public class MutualInformation extends Configured implements Tool {
 		private String[] mututalInfoScoreAlgList;
 		private MutualInformationScore mutualInformationScore = new MutualInformationScore();
 		private double redundancyFactor;
+		private boolean featureClassCondDstrSepOutput;
  		
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -453,6 +456,8 @@ public class MutualInformation extends Configured implements Tool {
             String mututalInfoScoreAlg =  conf.get("mut.mutual.info.score.algorithms", "mutual.info.maximization");
             mututalInfoScoreAlgList = mututalInfoScoreAlg.split(",");
             redundancyFactor = Double.parseDouble(conf.get("mut.mutual.info.redundancy.factor", "1.0"));
+            
+            featureClassCondDstrSepOutput = conf.getBoolean("mut.feature.class.cond.dstr.sep.output", false);
 		}
 		
 	   	/* (non-Javadoc)
@@ -552,7 +557,11 @@ public class MutualInformation extends Configured implements Tool {
 	   		}
 	   		
 	   		
-	   		//feature class conditional distr
+	   		//feature class conditional distr separate output
+	   		if (featureClassCondDstrSepOutput) {
+	   			writeSepOutputFeatureClassDstr(context);
+	   		} 
+	   		
 	   		outVal.set("distribution:featureClassConditional");
 	   		context.write(NullWritable.get(), outVal);
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
@@ -565,9 +574,9 @@ public class MutualInformation extends Configured implements Tool {
 		   				append(((double)featureDistr.get(featureVal)) / classDistr.get(classVal));
 			   		outVal.set(stBld.toString());
 			   		context.write(NullWritable.get(), outVal);
+		   		
 		   		}
 	   		}
-	  
 	   		//feature pair class conditional distr
 	   		outVal.set("distribution:featurePairClassConditional");
 	   		context.write(NullWritable.get(), outVal);
@@ -589,6 +598,89 @@ public class MutualInformation extends Configured implements Tool {
 	   		
 	   	}
 	   	
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 */
+	   	private void writeSepOutputFeatureClassDstr(Context context) throws IOException  {
+	   		//get everything with right structure
+	   		Map<Integer, List<Map<String, Integer>>> featureClassCondDistr = 
+	   				new HashMap<Integer, List<Map<String, Integer>>>();
+	   		Map<Integer, List<String>> featureClassValues = new HashMap<Integer, List<String>>();
+	   		Map<String, Integer> additionalClassCounts = new HashMap<String, Integer>();
+	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
+	   			String classVal = featureOrdinalClassVal.getRight();
+	   			int featureOrd = featureOrdinalClassVal.getLeft();
+	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
+	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
+	   			List<String> classValues = featureClassValues.get(featureOrd);
+	   			if (null == distrList) {
+	   				distrList = new ArrayList<Map<String, Integer>>();
+	   				featureClassCondDistr.put(featureOrd, distrList);
+	   				
+	   				classValues = new ArrayList<String>();
+	   				featureClassValues.put(featureOrd, classValues);
+	   			}
+   				distrList.add(featureDistr);
+   				classValues.add(classVal);
+	   		}
+	   		
+	   		//Laplace correction
+	   		for (int featureOrd : featureClassCondDistr.keySet()) {
+	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
+	   			List<String> classValues = featureClassValues.get(featureOrd);
+	   			if (distrList.size() != 2) {
+	   				throw new IllegalStateException("expecting class attribute");
+	   			}
+	   			
+	   			addMissingFeatureValue(distrList, classValues, additionalClassCounts, 0, 1);
+	   			addMissingFeatureValue(distrList, classValues, additionalClassCounts, 1, 0);
+	   		}
+	   		
+	   		//output
+        	Configuration config = context.getConfiguration();
+            OutputStream os = Utility.getAppendFileOutputStream(config, "mut.feature.class.distr.output.file.path");
+	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
+	   			String classVal = featureOrdinalClassVal.getRight();
+	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
+		   		for (String featureVal :  featureDistr.keySet()) {
+		   			stBld.delete(0, stBld.length());
+		   			double distr = ((double)featureDistr.get(featureVal)) / (classDistr.get(classVal) + additionalClassCounts.get(classVal));
+		   			stBld.append(featureOrdinalClassVal.getLeft()).append(fieldDelim).
+		   				append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
+		   				append(distr);
+		   			byte[] data = stBld.toString().getBytes();
+	            	os.write(data);
+		   		}
+	   		}
+            os.flush();
+            os.close();
+	   	}
+	   	
+	   	/**
+	   	 * @param distrList
+	   	 * @param classValues
+	   	 * @param additionalClassCounts
+	   	 * @param thisDistr
+	   	 * @param thatDistr
+	   	 */
+	   	private void addMissingFeatureValue(List<Map<String, Integer>> distrList, List<String> classValues,
+	   			Map<String, Integer> additionalClassCounts, int thisDistr, int thatDistr) {
+   			for (String featureVal : distrList.get(thisDistr).keySet()) {
+   				Map<String, Integer> otherDistr = distrList.get(thatDistr);
+   				String otherClass = classValues.get(thatDistr);
+   				if (!otherDistr.containsKey(featureVal)) {
+   					otherDistr.put(featureVal, 1);
+   					Integer classCount = additionalClassCounts.get(otherClass);
+   					if (null == classCount) {
+   						additionalClassCounts.put(otherClass, 1);
+   					} else {
+   						additionalClassCounts.put(otherClass, classCount + 1);
+   					}
+   				}
+   			}
+	   	}
+
 	   	/**
 	   	 * Outputs mutual information value
 	   	 * @param context

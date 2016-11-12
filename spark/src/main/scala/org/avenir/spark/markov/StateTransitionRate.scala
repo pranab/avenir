@@ -25,6 +25,7 @@ import org.apache.spark.HashPartitioner
 import org.chombo.util.DoubleTable
 import java.text.SimpleDateFormat
 import org.chombo.util.Utility
+import org.chombo.util.BasicUtils
 
 object StateTransitionRate extends JobConfiguration {
   
@@ -61,23 +62,20 @@ object StateTransitionRate extends JobConfiguration {
 	   }
 	   val outputPrecision = appConfig.getInt("trans.rate.output.precision")
 	   val debugOn = appConfig.getBoolean("debug.on")
+	   val saveOutput = appConfig.getBoolean("save.output")
 	  
 	  //paired RDD 
 	  val data = sparkCntxt.textFile(inputPath)
 	  val pairedData = data.map(line => {
 	    val items = line.split(fieldDelimIn)
 	    
-	    val keyRec = new Record(keyFieldOrdinals.length)
-	    keyFieldOrdinals.foreach(ord => {
-	      keyRec.addString(items(ord))
-	    })
-	    
+	    val keyRec = Record(items, keyFieldOrdinals)
 	    //convert time stamp to epoch time
 	    val dateTime = items(timeFieldOrdinal)
 	    val epochTime : Long = inputTimeUnit match {
 	    	case "ms" => dateTime.toLong
 	    	case "sec" => dateTime.toLong * 1000
-	    	case "formatted" => Utility.getEpochTime(dateTime, dateFormat.get)
+	    	case "formatted" => BasicUtils.getEpochTime(dateTime, dateFormat.get)
 	    	case _ => throw new IllegalArgumentException("invalid input time unit")
 	    }
 	    
@@ -129,14 +127,15 @@ object StateTransitionRate extends JobConfiguration {
 	    stateAr.foreach(a => {
 	      //state transition
 	      rateMatrix.add(a.getString(0), a.getString(1), 1.0)
-	      if (debugOn)
+	      if (false)
 	    	  println("table[" + a.getString(0) + "," + a.getString(1) + "]=" + rateMatrix.get(a.getString(0), a.getString(1)))
 	      
 	      //state duration
-	      val timeElapsed = a.getLong(2)
+	      val timeElapsed = a.getLong(2).toDouble
 	      val timeElapsedScaled = rateTimeUnit match {
-	        case "day" => timeElapsed / (1000.0 * 60 * 60 * 24)
-	        case "hour" => timeElapsed / (1000.0 * 60 * 60)
+	        case BasicUtils.TIME_UNIT_WEEK => timeElapsed / BasicUtils.MILISEC_PER_WEEK;
+	        case BasicUtils.TIME_UNIT_DAY => timeElapsed / BasicUtils.MILISEC_PER_DAY;
+	        case BasicUtils.TIME_UNIT_HOUR => timeElapsed / BasicUtils.MILISEC_PER_HOUR;
 	        case _ => throw new IllegalArgumentException("invalid rate time unit") 
 	      } 
 	      
@@ -149,13 +148,19 @@ object StateTransitionRate extends JobConfiguration {
 	    states.asScala.foreach(s => {
 	    	if (duration.contains(s)) {
 	    		val scale = 1.0 / duration(s)
-	    		if (debugOn)
-	    			println("scaling rate matrix for state:" + s + " scale:" + scale)
+	    		if (debugOn) {
+	    			println("scaling state: " + s + " scale: " + scale + " duration: " + duration(s))
+	    			println("row: " + rateMatrix.serializeRow(s))
+	    		} 
 	    		rateMatrix.scaleRow(s, scale)
 	    		val rowSum = rateMatrix.getRowSum(s)
 	    		if (debugOn)
-	    			println("rowSum:" + rowSum)
-	    		rateMatrix.set(s, s, -rowSum)
+	    			println("rowSum: " + rowSum)
+	    		val subRowSum = rowSum - rateMatrix.get(s, s)
+	    		rateMatrix.set(s, s, -subRowSum)
+	    		if (debugOn) {
+	    			println("after scaling and substracting row: " + rateMatrix.serializeRow(s))
+	    		} 
 	    	}
 	    })
 	    
@@ -173,7 +178,8 @@ object StateTransitionRate extends JobConfiguration {
 		  })
 	  }
 	   
-	  stateTrans.saveAsTextFile(outputPath) 
+	  if (saveOutput)
+		  stateTrans.saveAsTextFile(outputPath) 
 	  
    }  
 }

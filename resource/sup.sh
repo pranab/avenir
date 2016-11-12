@@ -9,19 +9,21 @@ case "$1" in
 "transRate")
 	echo "running transRate"
 	CLASS_NAME=org.avenir.spark.markov.StateTransitionRate
-	INPUT=file:///Users/pranab/Projects/bin/avenir/atm_trans.txt
-	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/str
+	INPUT=file:///Users/pranab/Projects/bin/avenir/input/sup/fulfill.txt
+	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/sup/tra
+	rm -rf ./output/sup/tra
 	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
-	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT atmTrans.conf
+	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT sup.conf
 ;;
 
 "rateStat")
 	echo "running rateStat"
 	CLASS_NAME=org.avenir.spark.markov.ContTimeStateTransitionStats
-	INPUT=file:///Users/pranab/Projects/bin/avenir/atm_states.txt
-	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/ras
+	INPUT=file:///Users/pranab/Projects/bin/avenir/input/sup/fulfill_states.txt
+	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/sup/ras
+	rm -rf ./output/sup/ras
 	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
-	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT atmTrans.conf
+	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT sup.conf
 ;;
 
 *) 
@@ -29,5 +31,3 @@ case "$1" in
 	;;
 
 esac
-
-

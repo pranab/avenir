@@ -57,7 +57,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  *
  */
 public class DecisionTreeBuilder   extends Configured implements Tool {
-    private static final String ROOT_PATH = "$root";
+    public static final String ROOT_PATH = "$root";
     private static final String CHILD_PATH = "$child";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
@@ -143,12 +143,19 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             if (null != fs) {
             	ObjectMapper  mapper = new ObjectMapper();
             	decPathList = mapper.readValue(fs, DecisionPathList.class);
+            	treeAvailable = true;
             }
            
             //split manager
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
-            splitManager = new SplitManager(conf, "dtb.dec.path.file.path",  decPathDelim , schema); 
-            treeAvailable = splitManager.isTreeAvailable();
+            splitManager = new SplitManager(schema); 
+            String customBaseAttributeOrdinalsStr = conf.get("dtb.custom.base.attributes");
+            
+            //use limited set of candidate attributes instead of all
+            if (null != customBaseAttributeOrdinalsStr) {
+            	int[] customBaseAttributeOrdinals = Utility.intArrayFromString(customBaseAttributeOrdinalsStr);
+            	splitManager.withCustomBaseAttributeOrdinals(customBaseAttributeOrdinals);
+            }
             
             //attribute selection strategy
             attrSelectStrategy = conf.get("dtb.split.attribute.selection.strategy", "notUsedYet");
@@ -244,7 +251,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
          */
         private void pathMapHelper(String record, Context context)
                 throws IOException, InterruptedException {
-       		items  =  record.split(fieldDelimRegex);
+       		items  =  record.split(fieldDelimRegex, -1);
        	    classVal = items[classField.getOrdinal()];
             	
              currenttDecPath = null;
@@ -269,7 +276,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                 }
                 
               //get split attributes
-             getSplitAttributes();
+              getSplitAttributes();
                 
               //all attributes
               for (int attr :  splitAttrs) {
@@ -292,9 +299,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                     
                 	//evaluate split predicates
                     for (List<AttributePredicate> predicates : allSplitPredicates) {
+                    	//predicates for a split
+                    	boolean predicateMatched = false;
                     	for (AttributePredicate predicate : predicates) {
                     		if (predicate.evaluate(attrValue)) {
                     			//data belongs to this split segment
+                    			predicateMatched = true;
                     			outKey.initialize();
                     			if (null == currenttDecPath) {
                     				outKey.add(predicate.toString());
@@ -315,6 +325,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                     			}               		
                 				context.write(outKey, outVal);
                     		}	
+                    	}
+                    	if (!predicateMatched) {
+                    		throw new IllegalStateException("no matching predicate for attribute: " + attr);
                     	}
                     }
               }
@@ -357,12 +370,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private int classAttrOrdinal;
         private String classAttrValue;
         private String parentDecPath;
-        private  String decPath;
+        private String decPath;
         private String childPath;
         private String decPathDelim;
         private DecisionPathStoppingStrategy pathStoppingStrategy;
         private DecisionPathList decPathList;
-        private  boolean decTreeAvailable;
+        private boolean decTreeAvailable;
         
 	   	@Override
 	   	protected void setup(Context context) throws IOException, InterruptedException {
@@ -438,7 +451,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   			//parent decision path in existing tree
 	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
 	   			if (null  == parentDecPath) {
-	   				throw new IllegalStateException("parent path not found");
+	   				throw new IllegalStateException("parent decision path not found");
 	   			}
 	   			parentStat = parentDecPath.getInfoContent();
 	   			
