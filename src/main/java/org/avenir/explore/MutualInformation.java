@@ -608,6 +608,7 @@ public class MutualInformation extends Configured implements Tool {
 	   				new HashMap<Integer, List<Map<String, Integer>>>();
 	   		Map<Integer, List<String>> featureClassValues = new HashMap<Integer, List<String>>();
 	   		Map<String, Integer> additionalClassCounts = new HashMap<String, Integer>();
+	   		
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
 	   			String classVal = featureOrdinalClassVal.getRight();
 	   			int featureOrd = featureOrdinalClassVal.getLeft();
@@ -640,6 +641,28 @@ public class MutualInformation extends Configured implements Tool {
 	   		//output
         	Configuration config = context.getConfiguration();
             OutputStream os = Utility.getCreateFileOutputStream(config, "mut.feature.class.distr.output.file.path");
+	   		
+            for (int featureOrd : featureClassCondDistr.keySet()) {
+	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
+	   			int i = 0;
+	   			List<String> classValues = featureClassValues.get(featureOrd);
+	   			for (Map<String, Integer> featureDistr : distrList) {
+	   				String classVal = classValues.get(i++);
+	   				for(String featureVal : featureDistr.keySet()) {
+	   					stBld.delete(0, stBld.length());
+	   					double distr = ((double)featureDistr.get(featureVal)) / (classDistr.get(classVal) + 
+	   						additionalClassCounts.get(classVal));
+			   			stBld.append(featureOrd).append(fieldDelim).
+		   					append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
+		   					append(distr);
+		   			byte[] data = stBld.toString().getBytes();
+	            	os.write(data);
+	   					
+	   				}
+	   			}
+	   		}      
+	   		
+	   		/*
 	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
 	   			String classVal = featureOrdinalClassVal.getRight();
 	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
@@ -653,6 +676,7 @@ public class MutualInformation extends Configured implements Tool {
 	            	os.write(data);
 		   		}
 	   		}
+	   		*/
             os.flush();
             os.close();
 	   	}
