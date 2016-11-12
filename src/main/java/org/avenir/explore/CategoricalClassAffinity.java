@@ -96,7 +96,6 @@ public class CategoricalClassAffinity extends Configured implements Tool {
 		private Tuple outKey = new Tuple();
 		private Tuple outVal = new Tuple();
         private String fieldDelimRegex;
-        private int[] attrOrdinals;
         private String[] items;
         private String posClassAttrValue;
         private String classAttrValue;
@@ -110,7 +109,7 @@ public class CategoricalClassAffinity extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
-        	posClassAttrValue = Utility.assertStringConfigParam(config, "cco.pos.class.attr.value", 
+        	posClassAttrValue = Utility.assertStringConfigParam(config, "cca.pos.class.attr.value", 
         			"missing positive class attribute value");
         }	
 	    
@@ -191,24 +190,21 @@ public class CategoricalClassAffinity extends Configured implements Tool {
         	
         	String classVal = null;
         	Map<String, Double> distr = null;
-        	for (int i = 0; i < 2; ++i){
-        		featureClassCondDistr.get(i).clear();;
-        	}
         	for (Tuple value : values){
+    			String thisClassVal = value.getString(0);
         		if (null == classVal) {
-        			classVal = value.getString(0);
+        			classVal = thisClassVal;
         			distr = featureClassCondDistr.get(0);
         			distr.clear();
         		} else {
-        			String thisClassVal = value.getString(0);
         			if (!thisClassVal.equals(classVal)) {
         				//switching to other class value
         				classVal = thisClassVal;
         				distr  = featureClassCondDistr.get(1);
             			distr.clear();
         			}
-    				distr.put(value.getString(1), value.getDouble(2));
         		}
+				distr.put(value.getString(1), value.getDouble(2));
         	}
         	
         	//affinity score 
