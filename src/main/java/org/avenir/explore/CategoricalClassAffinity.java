@@ -218,7 +218,7 @@ public class CategoricalClassAffinity extends Configured implements Tool {
         	stBld.delete(0, stBld.length());
         	for (AffinityScore score : affinityScores) {
         		stBld.append(key.get(0)).append(fieldDelimOut).append(score.getLeft()).
-        			append(fieldDelimOut).append(score.getRight());
+        			append(fieldDelimOut).append(score.getRight()).append("\n");
         	}
         	outVal.set(stBld.toString());
         	context.write(NullWritable.get(), outVal);
