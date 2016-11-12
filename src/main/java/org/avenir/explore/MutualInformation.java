@@ -626,10 +626,10 @@ public class MutualInformation extends Configured implements Tool {
    				classValues.add(classVal);
 	   		}
 	   		
-	   		//Laplace correction
         	Configuration config = context.getConfiguration();
             OutputStream os = Utility.getCreateFileOutputStream(config, "mut.feature.class.distr.output.file.path");
 	   		for (int featureOrd : featureClassCondDistr.keySet()) {
+		   		//Laplace correction
 	   			additionalClassCounts.clear();
 	   			List<Map<String, Integer>> distrList = featureClassCondDistr.get(featureOrd);
 	   			List<String> classValues = featureClassValues.get(featureOrd);
@@ -651,7 +651,7 @@ public class MutualInformation extends Configured implements Tool {
 	   					double distr = ((double)featureDistr.get(featureVal)) / count;
 			   			stBld.append(featureOrd).append(fieldDelim).
 		   					append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
-		   					append(distr);
+		   					append(distr).append("\n");
 			   			byte[] data = stBld.toString().getBytes();
 			   			os.write(data);
 	   					
@@ -659,22 +659,6 @@ public class MutualInformation extends Configured implements Tool {
 	   			}
 	   			
 	   		}
-	   		
-	   		/*
-	   		for (Pair<Integer, String> featureOrdinalClassVal : allFeatureClassCondDistr.keySet()) {
-	   			String classVal = featureOrdinalClassVal.getRight();
-	   			Map<String, Integer> featureDistr = allFeatureClassCondDistr.get(featureOrdinalClassVal);
-		   		for (String featureVal :  featureDistr.keySet()) {
-		   			stBld.delete(0, stBld.length());
-		   			double distr = ((double)featureDistr.get(featureVal)) / (classDistr.get(classVal) + additionalClassCounts.get(classVal));
-		   			stBld.append(featureOrdinalClassVal.getLeft()).append(fieldDelim).
-		   				append(classVal).append(fieldDelim).append(featureVal).append(fieldDelim).
-		   				append(distr);
-		   			byte[] data = stBld.toString().getBytes();
-	            	os.write(data);
-		   		}
-	   		}
-	   		*/
             os.flush();
             os.close();
 	   	}
