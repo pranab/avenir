@@ -152,8 +152,8 @@ public class CategoricalClassAffinity extends Configured implements Tool {
     public static class AffinityScoreComparator  implements Comparator<AffinityScore>  {
 		@Override
 		public int compare(AffinityScore thisAffinity, AffinityScore thatAffinity) {
-			return thisAffinity.getRight() < thatAffinity.getRight() ? -1 :
-				(thisAffinity.getRight() > thatAffinity.getRight() ? 1 : 0);
+			return thisAffinity.getRight() < thatAffinity.getRight() ? 1 :
+				(thisAffinity.getRight() > thatAffinity.getRight() ? -1 : 0);
 		}
     }
 	
@@ -165,7 +165,7 @@ public class CategoricalClassAffinity extends Configured implements Tool {
 		private Text outVal = new Text();
 		private String fieldDelimOut;
 		private StringBuilder stBld = new  StringBuilder();
-        private String affinityStrategy;
+        private String[] affinityStrategies;
         private List<Map<String, Double>> featureClassCondDistr = new ArrayList<Map<String, Double>>();
         private List<AffinityScore> affinityScores = new ArrayList<AffinityScore>();
         private AffinityScoreComparator scoreComparator = new AffinityScoreComparator();
@@ -176,7 +176,8 @@ public class CategoricalClassAffinity extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimOut = config.get("field.delim", ",");
-        	affinityStrategy = Utility.assertStringConfigParam(config, "cca.affinity.strategy","missing affinity strategy");
+        	affinityStrategies = Utility.assertStringArrayConfigParam(config, "cca.affinity.strategy",
+        			Utility.DEF_FIELD_DELIM, "missing affinity strategy list");
            	for (int i = 0; i < 2; ++i){
            		featureClassCondDistr.add(new HashMap<String, Double>());
            	}
@@ -207,27 +208,33 @@ public class CategoricalClassAffinity extends Configured implements Tool {
 				distr.put(value.getString(1), value.getDouble(2));
         	}
         	
-        	//affinity score 
-        	affinityScores.clear();
-        	findAffinityScore();
-        	
-        	//sort by score
-        	Collections.sort(affinityScores, scoreComparator);
-        	
-        	//emit
-        	stBld.delete(0, stBld.length());
-        	for (AffinityScore score : affinityScores) {
-        		stBld.append(key.get(0)).append(fieldDelimOut).append(score.getLeft()).
-        			append(fieldDelimOut).append(score.getRight()).append("\n");
+        	//all algorithms
+        	for (String  affinityStrategy : affinityStrategies) {
+        		outVal.set("algorithm: " + affinityStrategy);
+	        	context.write(NullWritable.get(), outVal);
+        		
+	        	//affinity score 
+	        	affinityScores.clear();
+	        	findAffinityScore(affinityStrategy);
+	        	
+	        	//sort by score
+	        	Collections.sort(affinityScores, scoreComparator);
+	        	
+	        	//emit
+	        	stBld.delete(0, stBld.length());
+	        	for (AffinityScore score : affinityScores) {
+	        		stBld.append(key.get(0)).append(fieldDelimOut).append(score.getLeft()).
+	        			append(fieldDelimOut).append(score.getRight()).append("\n");
+	        	}
+	        	outVal.set(stBld.substring(0, stBld.length() -1));
+	        	context.write(NullWritable.get(), outVal);
         	}
-        	outVal.set(stBld.substring(0, stBld.length() -1));
-        	context.write(NullWritable.get(), outVal);
         }
         
         /**
          * 
          */
-        private void  findAffinityScore() {
+        private void  findAffinityScore(String  affinityStrategy) {
         	Map<String, Double> posDistr = featureClassCondDistr.get(0);
         	Map<String, Double> negDistr = featureClassCondDistr.get(1);
         	for (String featureVal : posDistr.keySet()) {
