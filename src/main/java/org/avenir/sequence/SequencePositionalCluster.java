@@ -129,8 +129,8 @@ public class SequencePositionalCluster  extends Configured implements Tool {
         				configDelim, "missing preferred strategies list"));
         		boolean anyCond = Utility.assertBooleanConfigParam(conf, "any.cond", "missing any condition flag");
         		long minRangeLength = conf.getLong("min.range.length", 0);
-        		strategyContext  = new EventLocality.Context( minOccurence, maxIntervalAverage, maxIntervalMax, minRangeLength,
-        				preferredStrategies,  anyCond);
+        		strategyContext  = new EventLocality.Context(minOccurence, (long)maxIntervalAverage, (long)maxIntervalMax, 
+        				(long)minRangeLength, preferredStrategies,  anyCond);
         	}
         	long minEventTimeInterval = conf.getLong("min.event.time.interval", 100);
         	double scoreThreshold = Utility.assertDoubleConfigParam(conf, "score.threshold", "missing score threshold");
