@@ -1,0 +1,50 @@
+{
+	"fields" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "customer type",
+			"ordinal" : 1,
+			"dataType" : "categorical",
+			"feature" : true,
+			"maxSplit" : 2,
+			"cardinality" : ["business", "residence"]
+		},
+		{
+			"name" : "issue",
+			"ordinal" : 3,
+			"dataType" : "categorical",
+			"feature" : true,
+			"maxSplit" : 2,
+			"cardinality" : ["internet", "cable", "billing", "other"]
+		},
+		{
+			"name" : "time of day",
+			"ordinal" : 4,
+			"dataType" : "categorical",
+			"feature" : true,
+			"maxSplit" : 2,
+			"cardinality" : ["AM", "PM"]
+		},
+		{
+			"name" : "hold time",
+			"ordinal" : 5,
+			"dataType" : "int",
+			"feature" : true,
+			"bucketWidth" : 60,
+			"min" : 0,
+			"max" : 600,
+			"splitScanInterval" : 60
+		},
+		{
+			"name" : "hungup",
+			"ordinal" : 6,
+			"dataType" : "categorical"
+		}
+	]
+}

@@ -43,6 +43,9 @@ public class DecisionPathList {
 	}
 
 	public void addDecisionPath(DecisionPath decPath) {
+		if (null == decisionPaths) {
+			decisionPaths = new ArrayList<DecisionPath>();
+		}
 		decisionPaths.add(decPath);
 	}
 	
