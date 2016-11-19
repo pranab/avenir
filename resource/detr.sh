@@ -31,8 +31,12 @@ case "$1" in
 	hadoop fs -ls $HDFS_META_BASE_DIR/detr
 ;;
 
-"mvDecPathFile")
-	hadoop fs -mv /user/pranab/detr/other/decPathOut.txt /user/pranab/detr/other/decPathIn.txt
+"mvDecFiles")
+	hadoop fs -mv $HDFS_BASE_DIR/detr/other/decPathOut.txt $HDFS_BASE_DIR/detr/other/decPathIn.txt
+	hadoop fs -ls $HDFS_BASE_DIR/detr/other
+	haddop fs -rm $HDFS_BASE_DIR/detr/input/call_hangup.txt
+	hadoop fs -mv $HDFS_BASE_DIR/detr/output/part-r-00000 $HDFS_BASE_DIR/detr/input/call_hangup.txt
+	hadoop fs -ls $HDFS_BASE_DIR/detr/input
 ;;
 
 "decTree")

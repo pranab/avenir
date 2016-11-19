@@ -59,6 +59,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class DecisionTreeBuilder   extends Configured implements Tool {
     public static final String ROOT_PATH = "$root";
     private static final String CHILD_PATH = "$child";
+    public static final String PRED_DELIM = ";";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
 	@Override
@@ -286,15 +287,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                 	List<List<AttributePredicate>> allSplitPredicates = null;
                 	if (field.isInteger()) {
                 		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
-                		Integer iValue = Integer.parseInt(items[attr]);
+                		Integer iValue = Integer.parseInt(items[attr + 1]);
                 		attrValue = iValue;
                 	} else if (field.isDouble()) {
                 		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
-                		Double dValue = Double.parseDouble(items[attr]);
+                		Double dValue = Double.parseDouble(items[attr + 1]);
                 		attrValue = dValue;
                 	} else if (field.isCategorical()) {
                 		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
-                		attrValue = items[attr];
+                		attrValue = items[attr + 1];
                 	}
                     
                 	//evaluate split predicates
