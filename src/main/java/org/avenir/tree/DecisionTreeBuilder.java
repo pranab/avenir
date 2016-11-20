@@ -117,6 +117,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private int samplingBufferSize;
         private String[]  samplingBuffer;
         private int count;
+        private boolean debugOn;
         private static final String SUB_SAMPLING_WITH_REPLACE = "withReplace";
         private static final String SUB_SAMPLING_WITHOUT_REPLACE = "withoutReplace";
         private static final String SUB_SAMPLING_WITHOUT_NONE = "none";
@@ -131,7 +132,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
          */
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
-            if (conf.getBoolean("debug.on", false)) {
+        	debugOn = conf.getBoolean("debug.on", false);
+            if (debugOn) {
             	LOG.setLevel(Level.DEBUG);
             }
         	fieldDelimRegex = conf.get("field.delim.regex", ",");
@@ -150,6 +152,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             //split manager
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
             splitManager = new SplitManager(schema); 
+            splitManager.setDebugOn(debugOn);
             String customBaseAttributeOrdinalsStr = conf.get("dtb.custom.base.attributes");
             
             //use limited set of candidate attributes instead of all
