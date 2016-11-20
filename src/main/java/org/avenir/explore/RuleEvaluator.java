@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.avenir.util.RuleExpression;
+import org.chombo.util.AttributeFilter;
 import org.chombo.util.BasicUtils;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -98,6 +99,11 @@ public class RuleEvaluator extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
+
+        	String condDelim = config.get("rue.cond.delim");
+        	if (null != condDelim) {
+        		AttributeFilter.setCondSeparator(condDelim);
+        	}
         	String[] ruleNames = Utility.assertStringArrayConfigParam(config, "rue.rule.names", Utility.configDelim, 
         			"missing rule list");
         	for (String ruleName : ruleNames) {
@@ -108,6 +114,8 @@ public class RuleEvaluator extends Configured implements Tool {
         	}
         	classAttrOrdinal = Utility.assertIntConfigParam(config, "rue.class.attr.ord", 
         			"missing class attribute ordinal");
+        	
+        	
         }	
 	    
         @Override
