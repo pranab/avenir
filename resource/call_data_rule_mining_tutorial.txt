@@ -1,0 +1,46 @@
+This tutorial for mining simple rules from call center call data. This tutorial
+is for Hadoop2. Please make necessary changes in configuration and scripts based on your environment
+
+Dependency
+==========
+Build chombo first
+mvn install
+
+Building uber jar
+=================
+ ant -f avenir_hadoop.xml
+
+Generate training data
+======================
+./call_hangup.py <num_calls>  > <training_data_file>
+num_calls = number of calls  e.g. 5000
+training_data_file = output file name
+
+Export training data to HDFS
+============================
+hdfs dfs -put  <training_data_file> /projects/carm/mut/input
+
+where
+training_data_file = training data file e.g., visit_hist.txt
+ 
+Export meta data file to HDFS
+=============================
+hdfs dfs -put  cust_call.json /projects/carm/meta
+
+Run relevance analysis MR
+=========================
+./carm.sh mutInfo
+
+Copy output of relevance analysis MR
+====================================
+hdfs dfs -cp  /projects/carm/mut/output/feat_cond_distr.txt  /projects/carm/cca/input/
+
+Run discrimination analysis
+===========================
+./carm.sh classAffinity
+
+
+Configuration
+=============
+Configuration is in carm.properties. The meta data is in cust_call.json
+

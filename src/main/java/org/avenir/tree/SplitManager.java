@@ -54,6 +54,8 @@ public class SplitManager {
 	private static final Logger LOG = Logger.getLogger(SplitManager.class);
 	private static final String SPACE = " ";
 	private int[] customBaseAttributeOrdinals;
+	private Map<Integer, List<List<AttributePredicate>>> allSplitPredicates = new HashMap<Integer, List<List<AttributePredicate>>>();
+	
 	 
 	
 	/**
@@ -236,16 +238,20 @@ public class SplitManager {
 	 * @return
 	 */
 	public List<List<AttributePredicate>> createIntAttrSplitPredicates(int attr) {
-		FeatureField field = schema.findFieldByOrdinal(attr);
-		List<int[]> splitList = new ArrayList<int[]>();
-		createIntPartitions(null, field, splitList);
-		
-		//converts to predicates
-		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
-		for (int[] splits :  splitList) {
-			splitAttrPredicates.add(createIntAttrPredicates( attr, splits));
+		List<List<AttributePredicate>> splitAttrPredicates = allSplitPredicates.get(attr);
+		if (null == splitAttrPredicates) {
+			FeatureField field = schema.findFieldByOrdinal(attr);
+			List<int[]> splitList = new ArrayList<int[]>();
+			createIntPartitions(null, field, splitList);
+			
+			//converts to predicates
+			splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+			for (int[] splits :  splitList) {
+				splitAttrPredicates.add(createIntAttrPredicates( attr, splits));
+			}
+			
+			allSplitPredicates.put(attr,  splitAttrPredicates);
 		}
-		
 		return splitAttrPredicates;
 	}
 	
@@ -301,14 +307,18 @@ public class SplitManager {
 	 * @return
 	 */
 	public List<List<AttributePredicate>> createDoubleAttrSplitPredicates(int attr) {
-		FeatureField field = schema.findFieldByOrdinal(attr);
-		List<double[]> splitList = new ArrayList<double[]>();
-		createDoublePartitions(null, field, splitList);
-		
-		//converts to predicates
-		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
-		for (double[] splits :  splitList) {
-			splitAttrPredicates.add( createDoubleAttrPredicates( attr, splits));
+		List<List<AttributePredicate>> splitAttrPredicates = allSplitPredicates.get(attr);
+		if (null == splitAttrPredicates) {
+			FeatureField field = schema.findFieldByOrdinal(attr);
+			List<double[]> splitList = new ArrayList<double[]>();
+			createDoublePartitions(null, field, splitList);
+			
+			//converts to predicates
+			splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+			for (double[] splits :  splitList) {
+				splitAttrPredicates.add( createDoubleAttrPredicates( attr, splits));
+			}
+			allSplitPredicates.put(attr,  splitAttrPredicates);
 		}
 		return splitAttrPredicates;
 	}
@@ -365,28 +375,31 @@ public class SplitManager {
 	 * @return
 	 */
 	public List<List<AttributePredicate>> createCategoricalAttrSplitPredicates(int attr) {
-		List<List<AttributePredicate>> splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
-		FeatureField field = schema.findFieldByOrdinal(attr);
-		int numGroups = field.getMaxSplit();
-		List<List<List<String>>> totalSplitList = new ArrayList<List<List<String>>>();
-
-		//all group levels
-		for (int gr = 2; gr <= numGroups; ++gr) {
-			LOG.debug("num of split sets:" + gr);
-			List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
-			createCategoricalPartitions(splitList,  field.getCardinality(), 0, gr);
-			totalSplitList.addAll(splitList);
-		}
-		
-		//convert to predicates
-		for (List<List<String>> splits : totalSplitList) {
-			List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
-			for (List<String> split : splits) {
-				predicates.add(new CategoricalPredicate(attr, OPERATOR_IN, split));
+		List<List<AttributePredicate>> splitAttrPredicates = allSplitPredicates.get(attr);
+		if (null == splitAttrPredicates) {
+			splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
+			FeatureField field = schema.findFieldByOrdinal(attr);
+			int numGroups = field.getMaxSplit();
+			List<List<List<String>>> totalSplitList = new ArrayList<List<List<String>>>();
+	
+			//all group levels
+			for (int gr = 2; gr <= numGroups; ++gr) {
+				LOG.debug("num of split sets:" + gr);
+				List<List<List<String>>> splitList = new ArrayList<List<List<String>>>();
+				createCategoricalPartitions(splitList,  field.getCardinality(), 0, gr);
+				totalSplitList.addAll(splitList);
 			}
-			splitAttrPredicates.add(predicates);
+			
+			//convert to predicates
+			for (List<List<String>> splits : totalSplitList) {
+				List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
+				for (List<String> split : splits) {
+					predicates.add(new CategoricalPredicate(attr, OPERATOR_IN, split));
+				}
+				splitAttrPredicates.add(predicates);
+			}
+			allSplitPredicates.put(attr,  splitAttrPredicates);
 		}
-		
 		return splitAttrPredicates;
 	}
     

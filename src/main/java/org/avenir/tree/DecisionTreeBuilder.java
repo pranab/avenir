@@ -59,6 +59,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class DecisionTreeBuilder   extends Configured implements Tool {
     public static final String ROOT_PATH = "$root";
     private static final String CHILD_PATH = "$child";
+    public static final String PRED_DELIM = ";";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
 	@Override
@@ -139,7 +140,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             schema = Utility.getFeatureSchema(conf, "dtb.feature.schema.file.path");
             
             //decision path list  file
-            InputStream  fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path");
+            InputStream  fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path.in");
             if (null != fs) {
             	ObjectMapper  mapper = new ObjectMapper();
             	decPathList = mapper.readValue(fs, DecisionPathList.class);
@@ -286,15 +287,15 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                 	List<List<AttributePredicate>> allSplitPredicates = null;
                 	if (field.isInteger()) {
                 		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
-                		Integer iValue = Integer.parseInt(items[attr]);
+                		Integer iValue = Integer.parseInt(items[attr + 1]);
                 		attrValue = iValue;
                 	} else if (field.isDouble()) {
                 		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
-                		Double dValue = Double.parseDouble(items[attr]);
+                		Double dValue = Double.parseDouble(items[attr + 1]);
                 		attrValue = dValue;
                 	} else if (field.isCategorical()) {
                 		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
-                		attrValue = items[attr];
+                		attrValue = items[attr + 1];
                 	}
                     
                 	//evaluate split predicates
@@ -376,11 +377,13 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private DecisionPathStoppingStrategy pathStoppingStrategy;
         private DecisionPathList decPathList;
         private boolean decTreeAvailable;
+        private boolean debugOn;
         
 	   	@Override
 	   	protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration conf = context.getConfiguration();
-            if (conf.getBoolean("debug.on", false)) {
+        	debugOn = conf.getBoolean("debug.on", false);
+            if (debugOn) {
             	LOG.setLevel(Level.DEBUG);
             	AttributeSplitStat.enableLog();
             }
@@ -389,7 +392,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             schema = Utility.getFeatureSchema(conf, "dtb.feature.schema.file.path");
 
             //decision path list  file
-            InputStream fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path");
+            InputStream fs = Utility.getFileStream(context.getConfiguration(), "dtb.decision.file.path.in");
             if (null != fs) {
             	ObjectMapper mapper = new ObjectMapper();
             	decPathList = mapper.readValue(fs, DecisionPathList.class);
@@ -526,7 +529,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		}
 	   		
 	   		//save new decision path list
-	   		writeDecisioList(newDecPathList, "dtb.decision.file.path",  context.getConfiguration() );
+	   		writeDecisioList(newDecPathList, "dtb.decision.file.path.out",  context.getConfiguration() );
 	   		
 	   	}	   	
 	   	
@@ -547,7 +550,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		newDecPathList.addDecisionPath(decPath);
 	   		
 	   		//save new decision path list
-	   		writeDecisioList(newDecPathList, "dtb.decision.file.path",  context.getConfiguration() );
+	   		writeDecisioList(newDecPathList, "dtb.decision.file.path.out",  context.getConfiguration() );
 	   	}
 	   	
 	   	/**
@@ -617,7 +620,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	
         	
         	for (Text value : values) {
-        		classAttrValue = values.toString().split(fieldDelim)[classAttrOrdinal];
+        		classAttrValue = value.toString().split(fieldDelim)[classAttrOrdinal];
         		classStats.incrClassValCount(classAttrValue);
             	outVal.set(decPath + fieldDelim + value.toString());
             	context.write(NullWritable.get(), outVal);

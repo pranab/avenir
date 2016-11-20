@@ -60,7 +60,7 @@ public class DecisionPathStoppingStrategy {
 			toBeStopped = stat.getTotalCount() < minPopulationLimit;
 		} else if (stoppingStrategy.equals(STOP_MIN_INFO_GAIN)) {
 			toBeStopped = (parentStat - stat.getStat()) < minInfoGainLimit;
-		} else if (stoppingStrategy.equals(maxDepthLimit)) {
+		} else if (stoppingStrategy.equals(STOP_MAX_DEPTH)) {
 			toBeStopped = currentDepth >= maxDepthLimit;
 		} else {
 			throw new IllegalArgumentException("invalid stopping strategy " + stoppingStrategy);

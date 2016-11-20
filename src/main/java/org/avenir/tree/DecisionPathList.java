@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.chombo.mr.FeatureField;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
 
 
@@ -43,6 +44,9 @@ public class DecisionPathList {
 	}
 
 	public void addDecisionPath(DecisionPath decPath) {
+		if (null == decisionPaths) {
+			decisionPaths = new ArrayList<DecisionPath>();
+		}
 		decisionPaths.add(decPath);
 	}
 	
@@ -122,25 +126,33 @@ public class DecisionPathList {
 		 * @return
 		 */
 		public boolean isMatchedByPredicates(String[] predcateStrings) {
-			boolean matched = true;;
-			int i = 0;
-			for (DecisionPathPredicate predicate : predicates) {
-				if (!predicate.getPredicateStr().equals(predcateStrings[i++])) {
-					matched = false;
-					break;
+			boolean matched = true;
+			
+			if (null == predicates ) {
+				//root 
+				matched = predcateStrings[0].equals(DecisionTreeBuilder.ROOT_PATH);
+			} else {
+				int i = 0;
+				for (DecisionPathPredicate predicate : predicates) {
+					if (!predicate.getPredicateStr().equals(predcateStrings[i++])) {
+						matched = false;
+						break;
+					}
 				}
 			}
 			return matched;
 		}
 		
+		/**
+		 * @param predcateString
+		 * @return
+		 */
 		public boolean isMatchedByPredicateString(String predcateString) {
 			boolean matched = false;;
-			int i = 0;
-			for (DecisionPathPredicate predicate : predicates) {
-				if (!predicate.getPredicateStr().equals(predcateString)) {
-					matched = true;
-					break;
-				}
+			if (null == predicates) {
+				matched = predcateString.equals(DecisionTreeBuilder.ROOT_PATH);
+			} else {
+				matched =  toStringAllPredicate().equals(predcateString);
 			}
 			return matched;
 		}
@@ -169,6 +181,14 @@ public class DecisionPathList {
 
 		public void setStopped(boolean stopped) {
 			this.stopped = stopped;
+		}
+		
+		public String toStringAllPredicate() {
+			List<String> strPredicates = new ArrayList<String>();
+			for (DecisionPathPredicate predicate : predicates) {
+				strPredicates.add(predicate.toString());
+			}
+			return BasicUtils.join(strPredicates, DecisionTreeBuilder.PRED_DELIM);
 		}
 	}
 	
@@ -255,12 +275,16 @@ public class DecisionPathList {
 	   	 */
 	   	public static List< DecisionPathList.DecisionPathPredicate> createPredicates(String predicatesStr, FeatureSchema schema) {
 	   		List< DecisionPathList.DecisionPathPredicate> predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
-	   		String[] predicateItems = predicatesStr.split(";");
-	   		for (String predicateItem : predicateItems) {
-	   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
-	   			FeatureField field = schema.findFieldByOrdinal(attr);
-	   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
-	   			predicates.add(predicate);
+	   		if (predicatesStr.equals(DecisionTreeBuilder.ROOT_PATH)) {
+	   			predicates.add(DecisionPathPredicate.createRootPredicate(predicatesStr));
+	   		} else {
+		   		String[] predicateItems = predicatesStr.split(";");
+		   		for (String predicateItem : predicateItems) {
+		   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
+		   			FeatureField field = schema.findFieldByOrdinal(attr);
+		   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
+		   			predicates.add(predicate);
+		   		}
 	   		}
 	   		return predicates;
 	   	}
