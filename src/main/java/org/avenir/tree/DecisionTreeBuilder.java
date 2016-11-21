@@ -151,7 +151,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
            
             //split manager
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
-            splitManager = new SplitManager(schema); 
+            splitManager = new SplitManager(schema, decPathDelim); 
             splitManager.setDebugOn(debugOn);
             String customBaseAttributeOrdinalsStr = conf.get("dtb.custom.base.attributes");
             

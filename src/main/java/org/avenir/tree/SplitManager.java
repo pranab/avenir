@@ -63,9 +63,10 @@ public class SplitManager {
 	 * @param schema
 	 * @throws IOException
 	 */
-	public SplitManager(FeatureSchema schema){
+	public SplitManager(FeatureSchema schema,  String predDelim){
 		super();
 		this.schema = schema;
+		this.predDelim = predDelim;
 	}
 	
 	/**
@@ -187,9 +188,11 @@ public class SplitManager {
 		if (null != currentDecPath) {
 			String[] splits = currentDecPath.split(predDelim);
 			for (String split : splits) {
-				String[] splitItems = split.split("\\s+");
-				int attr = Integer.parseInt(splitItems[0]);
-				attributes.add(attr);
+				if (!split.equals(DecisionTreeBuilder.ROOT_PATH)) {
+					String[] splitItems = split.split("\\s+");
+					int attr = Integer.parseInt(splitItems[0]);
+					attributes.add(attr);
+				}
 			}			
 		}
 		return attributes;
@@ -248,6 +251,18 @@ public class SplitManager {
 			FeatureField field = schema.findFieldByOrdinal(attr);
 			List<int[]> splitList = new ArrayList<int[]>();
 			createIntPartitions(null, field, splitList);
+			
+			if (debugOn) {
+				System.out.println("int attr:  " + attr);
+				for (int[] split  :  splitList) {
+					StringBuilder stBld = new StringBuilder();
+					stBld.append("split: ");
+					for (int part : split) {
+						stBld.append("  " + part +  ":");
+					}
+					System.out.println(stBld.substring(0, stBld.length()-1));
+				}
+			}
 			
 			//converts to predicates
 			splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
@@ -396,7 +411,7 @@ public class SplitManager {
 			}
 			
 			if (debugOn) {
-				System.out.println("attr:  " + attr);
+				System.out.println("categorical attr:  " + attr);
 				for (List<List<String>> split  :  totalSplitList) {
 					StringBuilder stBld = new StringBuilder();
 					stBld.append("split: ");
