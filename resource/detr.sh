@@ -32,9 +32,10 @@ case "$1" in
 ;;
 
 "mvDecFiles")
+	hadoop fs -rm $HDFS_BASE_DIR/detr/other/decPathIn.txt
 	hadoop fs -mv $HDFS_BASE_DIR/detr/other/decPathOut.txt $HDFS_BASE_DIR/detr/other/decPathIn.txt
 	hadoop fs -ls $HDFS_BASE_DIR/detr/other
-	haddop fs -rm $HDFS_BASE_DIR/detr/input/call_hangup.txt
+	hadoop fs -rm $HDFS_BASE_DIR/detr/input/call_hangup.txt
 	hadoop fs -mv $HDFS_BASE_DIR/detr/output/part-r-00000 $HDFS_BASE_DIR/detr/input/call_hangup.txt
 	hadoop fs -ls $HDFS_BASE_DIR/detr/input
 ;;
@@ -46,7 +47,8 @@ case "$1" in
 	OUT_PATH=$HDFS_BASE_DIR/detr/output
 	echo "input $IN_PATH output $OUT_PATH"
 	hadoop fs -rmr $OUT_PATH
-	echo "removed output dir"
+	hadoop fs -rm $HDFS_BASE_DIR/detr/other/decPathOut.txt
+	echo "removed output dir $OUT_PATH decision path file "
 	hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=$PROP_FILE  $IN_PATH  $OUT_PATH
 	hadoop fs -ls $HDFS_BASE_DIR/detr/output
 ;;

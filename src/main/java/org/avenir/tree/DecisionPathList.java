@@ -280,10 +280,14 @@ public class DecisionPathList {
 	   		} else {
 		   		String[] predicateItems = predicatesStr.split(";");
 		   		for (String predicateItem : predicateItems) {
-		   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
-		   			FeatureField field = schema.findFieldByOrdinal(attr);
-		   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
-		   			predicates.add(predicate);
+		   			if(predicateItem.equals(DecisionTreeBuilder.ROOT_PATH)) {
+		   				predicates.add(DecisionPathPredicate.createRootPredicate(predicateItem));
+		   			} else {
+		   				int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
+		   				FeatureField field = schema.findFieldByOrdinal(attr);
+		   				DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
+		   				predicates.add(predicate);
+		   			}
 		   		}
 	   		}
 	   		return predicates;
