@@ -547,7 +547,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
    					//create new decision path
    					boolean toBeStopped = pathStoppingStrategy.shouldStop(stat, parentStat, parentPredicates.size() + 1);
    					DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(predicates, stat.getTotalCount(),
-   							stat.getStat(),  toBeStopped);
+   							stat.getStat(),  toBeStopped, stat.getClassValPr());
    					newDecPathList.addDecisionPath(decPath);
    				}	   			
 	   		}
@@ -568,7 +568,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		childStat.processStat(isAlgoEntropy);
 	   		
 	   		DecisionPathList newDecPathList = new DecisionPathList();
-	   		DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(childStat.getTotalCount(), childStat.getStat());
+	   		DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(childStat.getTotalCount(), childStat.getStat(),
+	   				childStat.getClassValPr());
 	   		DecisionPathPredicate predicate = DecisionPathPredicate.createRootPredicate(ROOT_PATH);
 	   		
 	   		newDecPathList.addDecisionPath(decPath);
@@ -675,7 +676,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 					InfoContentStat stat = predInfoContent.get(predicateStr);
    					boolean toBeStopped = pathStoppingStrategy.shouldStop(stat, parentStat, parentPredicates.size() + 1);
    					DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(predicates, stat.getTotalCount(),
-   							stat.getStat(),  toBeStopped);
+   							stat.getStat(),  toBeStopped, stat.getClassValPr());
    					newDecPathList.addDecisionPath(decPath);
    					
   				}

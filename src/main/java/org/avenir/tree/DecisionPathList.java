@@ -21,6 +21,7 @@ package org.avenir.tree;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.chombo.mr.FeatureField;
 import org.chombo.util.BasicUtils;
@@ -109,6 +110,7 @@ public class DecisionPathList {
 		private int population;
 		private double infoContent;
 		private boolean stopped;
+		private Map<String, Double> classValPr;
 		
 		public DecisionPath() {
 		}
@@ -120,22 +122,24 @@ public class DecisionPathList {
 		 * @param stopped
 		 */
 		public DecisionPath(List<DecisionPathPredicate> predicates,
-			int population, double infoContent,  boolean stopped) {
+			int population, double infoContent,  boolean stopped, Map<String, Double> classValPr) {
 			super();
 			this.predicates = predicates;
 			this.population = population;
 			this.infoContent = infoContent;
 			this.stopped = stopped;
+			this.classValPr = classValPr;
 		}
 		
 		/**
 		 * @param population
 		 * @param infoContent
 		 */
-		public DecisionPath(int population, double infoContent) {
+		public DecisionPath(int population, double infoContent,  Map<String, Double> classValPr) {
 			this.population = population;
 			this.infoContent = infoContent;
 			this.stopped = false;
+			this.classValPr = classValPr;
 		}
 
 		/**
@@ -200,6 +204,14 @@ public class DecisionPathList {
 			this.stopped = stopped;
 		}
 		
+		public Map<String, Double> getClassValPr() {
+			return classValPr;
+		}
+
+		public void setClassValPr(Map<String, Double> classValPr) {
+			this.classValPr = classValPr;
+		}
+
 		public String toStringAllPredicate() {
 			List<String> strPredicates = new ArrayList<String>();
 			for (DecisionPathPredicate predicate : predicates) {
