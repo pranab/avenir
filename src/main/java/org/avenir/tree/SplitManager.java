@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.chombo.mr.FeatureField;
 import org.chombo.util.BaseAttribute;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
 import org.hoidla.query.Predicate;
@@ -55,16 +56,17 @@ public class SplitManager {
 	private static final String SPACE = " ";
 	private int[] customBaseAttributeOrdinals;
 	private Map<Integer, List<List<AttributePredicate>>> allSplitPredicates = new HashMap<Integer, List<List<AttributePredicate>>>();
-	
+	private boolean debugOn;
 	 
 	
 	/**
 	 * @param schema
 	 * @throws IOException
 	 */
-	public SplitManager(FeatureSchema schema){
+	public SplitManager(FeatureSchema schema,  String predDelim){
 		super();
 		this.schema = schema;
+		this.predDelim = predDelim;
 	}
 	
 	/**
@@ -129,6 +131,10 @@ public class SplitManager {
 		randomRemainingAttributes.clear();
 	}
 	
+	public void setDebugOn(boolean debugOn) {
+		this.debugOn = debugOn;
+	}
+
 	/**
 	 * @return
 	 */
@@ -182,9 +188,11 @@ public class SplitManager {
 		if (null != currentDecPath) {
 			String[] splits = currentDecPath.split(predDelim);
 			for (String split : splits) {
-				String[] splitItems = split.split("\\s+");
-				int attr = Integer.parseInt(splitItems[0]);
-				attributes.add(attr);
+				if (!split.equals(DecisionTreeBuilder.ROOT_PATH)) {
+					String[] splitItems = split.split("\\s+");
+					int attr = Integer.parseInt(splitItems[0]);
+					attributes.add(attr);
+				}
 			}			
 		}
 		return attributes;
@@ -243,6 +251,18 @@ public class SplitManager {
 			FeatureField field = schema.findFieldByOrdinal(attr);
 			List<int[]> splitList = new ArrayList<int[]>();
 			createIntPartitions(null, field, splitList);
+			
+			if (debugOn) {
+				System.out.println("int attr:  " + attr);
+				for (int[] split  :  splitList) {
+					StringBuilder stBld = new StringBuilder();
+					stBld.append("split: ");
+					for (int part : split) {
+						stBld.append("  " + part +  ":");
+					}
+					System.out.println(stBld.substring(0, stBld.length()-1));
+				}
+			}
 			
 			//converts to predicates
 			splitAttrPredicates = new ArrayList<List<AttributePredicate>>();
@@ -390,6 +410,18 @@ public class SplitManager {
 				totalSplitList.addAll(splitList);
 			}
 			
+			if (debugOn) {
+				System.out.println("categorical attr:  " + attr);
+				for (List<List<String>> split  :  totalSplitList) {
+					StringBuilder stBld = new StringBuilder();
+					stBld.append("split: ");
+					for (List<String> part : split) {
+						stBld.append("  " + BasicUtils.join(part, ":"));
+					}
+					System.out.println(stBld.toString());
+				}
+			}
+			
 			//convert to predicates
 			for (List<List<String>> splits : totalSplitList) {
 				List<AttributePredicate> predicates = new ArrayList<AttributePredicate>();
@@ -416,17 +448,17 @@ public class SplitManager {
     	if (0 == cardinalityIndex) {
 			//initial full splits
 			List<List<String>> fullSp = createInitialCategoricalSplit(cardinality, numGroups);
-
-			//partial split shorter in length by one 
-			List<List<List<String>>> partialSpList = createPartialCategoricalSplit(cardinality,numGroups-1, numGroups);
-			
-			//split list
 			splitList.add(fullSp);
-			splitList.addAll(partialSpList);
 			
-			//recurse
-			cardinalityIndex += numGroups;
-			createCategoricalPartitions(splitList, cardinality,cardinalityIndex, numGroups);
+			if (cardinality.size() > numGroups) {
+				//partial split shorter in length by one 
+				List<List<List<String>>> partialSpList = createPartialCategoricalSplit(cardinality,numGroups-1, numGroups);
+				splitList.addAll(partialSpList);
+				
+				//recurse
+				cardinalityIndex += numGroups;
+				createCategoricalPartitions(splitList, cardinality,cardinalityIndex, numGroups);
+			}
     	} else if (cardinalityIndex < cardinality.size()){
     		//more elements to consume	
     		List<List<List<String>>>  newSplitList = new ArrayList<List<List<String>>>(); 
@@ -439,8 +471,10 @@ public class SplitManager {
         				List<List<String>> newSp = new ArrayList<List<String>>();
     					for (int j = 0; j < sp.size(); ++j) {
     						List<String> gr = Utility.cloneList(sp.get(j));
+    						
+    						//one of the groups in the split is expanded
     						if (j == i) {
-    							//add new element
+    							//add new element to exiting group
     							gr.add(newElement);
     						}
     						newSp.add(gr);
@@ -448,7 +482,7 @@ public class SplitManager {
     					newSplitList.add(newSp);
     				}
     			} else {
-    				//if partial split, create new group with new element and add to split
+    				//if partial split i.e split size less than group size, create new group with new element and add to split
     				LOG.debug("creating new split from partial split");
     				List<List<String>> newSp = new ArrayList<List<String>>();
 					for (int i = 0; i < sp.size(); ++i) {

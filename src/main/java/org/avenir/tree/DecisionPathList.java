@@ -21,6 +21,7 @@ package org.avenir.tree;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.chombo.mr.FeatureField;
 import org.chombo.util.BasicUtils;
@@ -83,6 +84,23 @@ public class DecisionPathList {
 	}
 
 	/**
+	 * @param predicates
+	 * @return
+	 */
+	public static String[] stripSplitId(String[] predicates) {
+		 String[] strippedPredicates = new String[predicates.length];
+		 for (int i = 0; i < predicates.length; ++i ) {
+			 if  (predicates[i].equals(DecisionTreeBuilder.ROOT_PATH)) {
+				 strippedPredicates[i] = predicates[i];
+			 } else {
+				 strippedPredicates[i]  = BasicUtils.splitOnFirstOccurence(predicates[i], DecisionTreeBuilder.SPLIT_DELIM, true)[1];
+			 }
+		 }
+		 return strippedPredicates;
+	}
+	
+	
+	/**
 	 * Decision path containing a list of predicates
 	 * @author pranab
 	 *
@@ -92,6 +110,7 @@ public class DecisionPathList {
 		private int population;
 		private double infoContent;
 		private boolean stopped;
+		private Map<String, Double> classValPr;
 		
 		public DecisionPath() {
 		}
@@ -103,22 +122,24 @@ public class DecisionPathList {
 		 * @param stopped
 		 */
 		public DecisionPath(List<DecisionPathPredicate> predicates,
-			int population, double infoContent,  boolean stopped) {
+			int population, double infoContent,  boolean stopped, Map<String, Double> classValPr) {
 			super();
 			this.predicates = predicates;
 			this.population = population;
 			this.infoContent = infoContent;
 			this.stopped = stopped;
+			this.classValPr = classValPr;
 		}
 		
 		/**
 		 * @param population
 		 * @param infoContent
 		 */
-		public DecisionPath(int population, double infoContent) {
+		public DecisionPath(int population, double infoContent,  Map<String, Double> classValPr) {
 			this.population = population;
 			this.infoContent = infoContent;
 			this.stopped = false;
+			this.classValPr = classValPr;
 		}
 
 		/**
@@ -183,6 +204,14 @@ public class DecisionPathList {
 			this.stopped = stopped;
 		}
 		
+		public Map<String, Double> getClassValPr() {
+			return classValPr;
+		}
+
+		public void setClassValPr(Map<String, Double> classValPr) {
+			this.classValPr = classValPr;
+		}
+
 		public String toStringAllPredicate() {
 			List<String> strPredicates = new ArrayList<String>();
 			for (DecisionPathPredicate predicate : predicates) {
@@ -280,10 +309,14 @@ public class DecisionPathList {
 	   		} else {
 		   		String[] predicateItems = predicatesStr.split(";");
 		   		for (String predicateItem : predicateItems) {
-		   			int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
-		   			FeatureField field = schema.findFieldByOrdinal(attr);
-		   			DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
-		   			predicates.add(predicate);
+		   			if(predicateItem.equals(DecisionTreeBuilder.ROOT_PATH)) {
+		   				predicates.add(DecisionPathPredicate.createRootPredicate(predicateItem));
+		   			} else {
+		   				int attr = Integer.parseInt(predicateItem.split("\\s+")[0]);
+		   				FeatureField field = schema.findFieldByOrdinal(attr);
+		   				DecisionPathList.DecisionPathPredicate  predicate = deserializePredicate(predicateItem, field); 
+		   				predicates.add(predicate);
+		   			}
 		   		}
 	   		}
 	   		return predicates;
