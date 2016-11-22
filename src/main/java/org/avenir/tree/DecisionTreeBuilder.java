@@ -47,6 +47,7 @@ import org.avenir.tree.SplitManager.AttributePredicate;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -60,6 +61,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
     public static final String ROOT_PATH = "$root";
     private static final String CHILD_PATH = "$child";
     public static final String PRED_DELIM = ";";
+    public static final String SPLIT_DELIM = ":";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
 	@Override
@@ -260,13 +262,16 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             	
              currenttDecPath = null;
               if (treeAvailable) {
+            	    //strip split ID
                 	currenttDecPath = items[0];
-                	
+            		String[] predicates = DecisionPathList.stripSplitId(currenttDecPath.split(decPathDelim));
+            		currenttDecPath = BasicUtils.join(predicates, decPathDelim);
+            		
                 	//find decision path status
                 	Boolean status = validDecPaths.get(currenttDecPath);
                 	if (null == status) {
                 		//from decision path list object
-                		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(currenttDecPath.split(decPathDelim)) ;
+                		DecisionPathList.DecisionPath decPathObj = decPathList.findDecisionPath(predicates) ;
                 		status = null == decPathObj ? false : true;
                 		
                 		//cache it
@@ -283,6 +288,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
               getSplitAttributes();
                 
               //all attributes
+          	 int splitId = 0;
               for (int attr :  splitAttrs) {
                 	FeatureField field = schema. findFieldByOrdinal(attr);
                 	Object attrValue = null;
@@ -303,6 +309,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                     
                 	//evaluate split predicates
                     for (List<AttributePredicate> predicates : allSplitPredicates) {
+                    	//unique split id for each partion in a split
+                    	++splitId;
+                    	
                     	//predicates for a split
                     	boolean predicateMatched = false;
                     	for (AttributePredicate predicate : predicates) {
@@ -321,7 +330,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
                     				}
                     				
                     				//new predicate
-                     				outKey.add(predicate.toString());
+                     				outKey.add("" + splitId + SPLIT_DELIM +   predicate.toString());
                      				int pos = record.indexOf(fieldDelimRegex);
                      				
                      				//exclude predicate
@@ -371,6 +380,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 		private String  infoAlgorithm;
         private boolean outputSplitProb;
         private Map<String, Map<String, InfoContentStat>> decPaths = new HashMap<String, Map<String, InfoContentStat>>();
+        private Map<String, Map<String, Map<String, InfoContentStat>>> decPathsInfoContentBySplit = 
+        		new HashMap<String, Map<String, Map<String, InfoContentStat>>>();
         private int classAttrOrdinal;
         private String classAttrValue;
         private String parentDecPath;
@@ -429,7 +440,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	@Override
 	   	protected void cleanup(Context context)  throws IOException, InterruptedException {
 	   		if (decTreeAvailable) {
-	   			generateTree(context);
+	   			//generateTree(context);
+	   			expandTree(context);
 	   		} else {
 	   			generateRoot(context);
 	   		}
@@ -465,6 +477,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   			for (String childPath :  childStats.keySet()) {
 	   				//each child path
 	   				InfoContentStat stat = childStats.get(childPath);
+	   				if (debugOn) {
+	   					System.out.println("childPath: " + childPath);
+	   				}
 	   				//stat.processStat(infoAlgorithm.equals("entropy"));
 	   				int attr = Integer.parseInt(childPath.split("\\s+")[0]);
 	   				
@@ -487,6 +502,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				for (InfoContentStat stat : attrInfoContent.get(attr)) {
 	   					weightedInfoContent += stat.processStat(isAlgoEntropy) * stat.getTotalCount();
 	   					totalCount += stat.getTotalCount();
+	   					if (debugOn) {
+	   						System.out.println("attr: "  + attr + " predicate:" + stat.getPredicate());
+	   					}
 	   				}
 	   				
 	   				//average info content across splits
@@ -496,6 +514,9 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				if (avInfoContent  < minInfoContent) {
 	   					minInfoContent = avInfoContent;
 	   					selectedSplitAttr = attr;
+	   					if (debugOn) {
+	   						System.out.println("selectedSplitAttr: "  +  selectedSplitAttr  +  "  minInfoContent:" + minInfoContent);
+	   					}
 	   				}
 	   			}
 	   			
@@ -554,6 +575,148 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		
 	   		//save new decision path list
 	   		writeDecisioList(newDecPathList, "dtb.decision.file.path.out",  context.getConfiguration() );
+	   	}
+	   	
+	   	/**
+	   	 * @param context
+	   	 * @throws IOException
+	   	 */
+	   	private void expandTree(Context context) throws IOException {
+	   		//group by split
+	   		infoContentBySplit();
+	   		
+	   		DecisionPathList newDecPathList = new DecisionPathList();
+	   		boolean isAlgoEntropy = infoAlgorithm.equals("entropy");
+	   		double parentStat = 0;
+		    List< DecisionPathList.DecisionPathPredicate> predicates = null;
+	   		
+	   		//parent paths
+	   		Map<String, Map<String, InfoContentStat>> splitInfoContent;
+	   		for (String parentPath :  decPathsInfoContentBySplit.keySet()) {
+	   			
+	   			//parent decision path in existing tree
+	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
+	   			if (null  == parentDecPath) {
+	   				throw new IllegalStateException("parent decision path not found");
+	   			}
+	   			parentStat = parentDecPath.getInfoContent();
+	   			 
+	   			//splits
+	   			double minInfoContent = 1000000;
+   				String selectedSplit = null;
+   				int selectedSplitAttr = -1;
+	   			splitInfoContent = decPathsInfoContentBySplit.get(parentPath);
+	   			for (String splitId :  splitInfoContent.keySet()) {
+	   				Map<String, InfoContentStat> predInfoContent = splitInfoContent.get(splitId);
+	   				if (debugOn) {
+	   					System.out.println("split: " + splitId);
+	   				}
+	   				
+	   				//predicates
+	   				double weightedInfoContent = 0;
+	   				int totalCount = 0;
+	   				int attr = -1;
+	   				for (String predicate : predInfoContent.keySet()) {
+	   					if (debugOn) {
+		   					System.out.println("predicate: " + predicate);
+	   					}
+	   					
+	   					attr = Integer.parseInt(predicate.split("\\s+")[0]);
+	   					InfoContentStat stat = predInfoContent.get(predicate);
+	   					weightedInfoContent += stat.processStat(isAlgoEntropy) * stat.getTotalCount();
+	   					totalCount += stat.getTotalCount();
+	   				}
+	   				//average info content across splits
+	   				double  avInfoContent = weightedInfoContent / totalCount;
+	   				
+	   				//pick split with  minimum info content
+	   				if (avInfoContent  < minInfoContent) {
+	   					minInfoContent = avInfoContent;
+	   					selectedSplit = splitId;
+	   					selectedSplitAttr = attr;
+	   					if (debugOn) {
+	   						System.out.println("selectedSplit: " +  selectedSplit +  "  selectedSplitAttr:  "  +  selectedSplitAttr  + 
+	   								"  minInfoContent: " + minInfoContent);
+	   					}
+	   				}
+	   			}
+	   			
+	   			//expand based on selected split
+   				Map<String, InfoContentStat> predInfoContent = splitInfoContent.get(selectedSplit);
+   				if (debugOn) {
+   					System.out.println("selected split: " + selectedSplit  +  " selected attribute: " +selectedSplitAttr );
+   				}
+   				
+	   			//parent predicates
+	   			List<DecisionPathList.DecisionPathPredicate> parentPredicates = 
+	   					DecisionPathList.DecisionPathPredicate.createPredicates(parentPath, schema);
+	   			 
+	   			//generate new path based on predicates of selected split 
+				FeatureField field = schema.findFieldByOrdinal(selectedSplitAttr);
+   				for (String predicateStr : predInfoContent.keySet()) {
+   					if (debugOn) {
+   						System.out.println("predicate in selected split: " + predicateStr );
+   					}
+   					DecisionPathList.DecisionPathPredicate predicate = null;
+   					if (field.isInteger()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createIntPredicate(predicateStr);
+   					} else if (field.isDouble()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createDoublePredicate(predicateStr);
+   					} else if (field.isCategorical()) {
+   						predicate = DecisionPathList.DecisionPathPredicate.createCategoricalPredicate(predicateStr);
+   					} 
+   					
+ 					//append new predicate to parent predicate list
+   				    predicates = new ArrayList< DecisionPathList.DecisionPathPredicate>();
+					predicates.addAll(parentPredicates);
+					predicates.add(predicate);
+   				
+  					//create new decision path
+					InfoContentStat stat = predInfoContent.get(predicateStr);
+   					boolean toBeStopped = pathStoppingStrategy.shouldStop(stat, parentStat, parentPredicates.size() + 1);
+   					DecisionPathList.DecisionPath decPath = new DecisionPathList.DecisionPath(predicates, stat.getTotalCount(),
+   							stat.getStat(),  toBeStopped);
+   					newDecPathList.addDecisionPath(decPath);
+   					
+  				}
+	   		}
+	   		
+	   		//save new decision path list
+	   		writeDecisioList(newDecPathList, "dtb.decision.file.path.out",  context.getConfiguration() );
+	   	}
+	   	
+	   	/**
+	   	 * 
+	   	 */
+	   	private void infoContentBySplit() {
+	   		decPathsInfoContentBySplit.clear();
+	   		
+	   		//parent paths
+	   		for (String parentPath :  decPaths.keySet() ) {		   		
+	   			Map<String, Map<String, InfoContentStat>> splitInfoContent = decPathsInfoContentBySplit.get(parentPath);
+	   			if (null == splitInfoContent) {
+	   				splitInfoContent = new HashMap<String, Map<String, InfoContentStat>>();
+	   				decPathsInfoContentBySplit.put(parentPath, splitInfoContent);
+	   			}
+	   					
+	   			//child paths
+	   			Map<String, InfoContentStat> childStats = decPaths.get(parentPath);
+	   			for (String pred :  childStats.keySet()) {
+	   				String[] items = BasicUtils.splitOnFirstOccurence(pred, SPLIT_DELIM , true);
+	   				String splitId = items[0];
+	   				String predicate = items[1];
+	   				if (debugOn) {
+	   					System.out.println("parentPath: " + parentPath +   " splitId: " + splitId + " predicate: " + predicate);
+	   				}
+	   				Map<String, InfoContentStat> predInfoContent = splitInfoContent.get(splitId);
+	   				if (null == predInfoContent) {
+	   					predInfoContent = new HashMap<String, InfoContentStat>();
+	   					splitInfoContent.put(splitId, predInfoContent);
+	   				}
+	   				predInfoContent.put(predicate, childStats.get(pred) );
+	   				
+	   			}
+	   		}
 	   	}
 	   	
 	   	/**

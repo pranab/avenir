@@ -83,6 +83,23 @@ public class DecisionPathList {
 	}
 
 	/**
+	 * @param predicates
+	 * @return
+	 */
+	public static String[] stripSplitId(String[] predicates) {
+		 String[] strippedPredicates = new String[predicates.length];
+		 for (int i = 0; i < predicates.length; ++i ) {
+			 if  (predicates[i].equals(DecisionTreeBuilder.ROOT_PATH)) {
+				 strippedPredicates[i] = predicates[i];
+			 } else {
+				 strippedPredicates[i]  = BasicUtils.splitOnFirstOccurence(predicates[i], DecisionTreeBuilder.SPLIT_DELIM, true)[1];
+			 }
+		 }
+		 return strippedPredicates;
+	}
+	
+	
+	/**
 	 * Decision path containing a list of predicates
 	 * @author pranab
 	 *
