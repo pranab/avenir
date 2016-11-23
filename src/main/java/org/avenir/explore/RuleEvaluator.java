@@ -250,11 +250,11 @@ public class RuleEvaluator extends Configured implements Tool {
        		String ruleName = key.getString(0);
     		classVal = ruleConsequents.get(ruleName);
     		if (confStrategy.equals(CONF_ACCURACY)) {
-    			confidence = ((double)classCounts.get(classVal)) / totalCount;
+    			confidence = ((double)getConsCount(classVal)) / totalCount;
         	} else if (confStrategy.equals(CONF_ENTROPY)) {
         		String otherClassVal = getOtherClassValue(classVal);
-        		double prThisClass =  ((double)classCounts.get(classVal)) / totalCount;
-        		double prOtherClass =  ((double)classCounts.get(otherClassVal)) / totalCount;
+        		double prThisClass =  ((double)getConsCount(classVal)) / totalCount;
+        		double prOtherClass =  ((double)getConsCount(otherClassVal)) / totalCount;
         		confidence = (prThisClass * Math.log(prThisClass) + prOtherClass * Math.log(prOtherClass)) / Math.log(2);
         		confidence += 1.0;
         	} else {
@@ -265,6 +265,16 @@ public class RuleEvaluator extends Configured implements Tool {
     		outVal.set(ruleName + fieldDelimOut + BasicUtils.formatDouble(confidence, 3) + 
     				fieldDelimOut + BasicUtils.formatDouble(support, 3));
         	context.write(NullWritable.get(), outVal);
+        }
+        
+        /**
+         * @param clVal
+         * @return
+         */
+        private int getConsCount(String clVal) {
+        	Integer count = classCounts.get(clVal);
+        	count = count != null ?  count : 0;
+        	return count;
         }
         
         /**
