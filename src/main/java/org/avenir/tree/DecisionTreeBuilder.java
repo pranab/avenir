@@ -487,7 +487,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   			//parent decision path in existing tree
 	   			DecisionPathList.DecisionPath parentDecPath = findParentDecisionPath(parentPath);
 	   			if (null  == parentDecPath) {
-	   				throw new IllegalStateException("parent decision path not found");
+	   				throw new IllegalStateException("parent decision path not found: "  + parentPath);
 	   			}
 	   			parentStat = parentDecPath.getInfoContent();
 	   			 
@@ -582,11 +582,14 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		decPathsInfoContentBySplit.clear();
 	   		
 	   		//parent paths
-	   		for (String parentPath :  decPaths.keySet() ) {		   		
-	   			Map<String, Map<String, InfoContentStat>> splitInfoContent = decPathsInfoContentBySplit.get(parentPath);
+	   		for (String parentPath :  decPaths.keySet() ) {		
+	   			//strip off slit IDs
+	   			String filtParentPath = stripSplitIds(parentPath);
+	   			
+	   			Map<String, Map<String, InfoContentStat>> splitInfoContent = decPathsInfoContentBySplit.get(filtParentPath);
 	   			if (null == splitInfoContent) {
 	   				splitInfoContent = new HashMap<String, Map<String, InfoContentStat>>();
-	   				decPathsInfoContentBySplit.put(parentPath, splitInfoContent);
+	   				decPathsInfoContentBySplit.put(filtParentPath, splitInfoContent);
 	   			}
 	   					
 	   			//child paths
@@ -607,6 +610,25 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				
 	   			}
 	   		}
+	   	}
+	   	
+	   	/**
+	   	 * @param decPath
+	   	 * @return
+	   	 */
+	   	private  String stripSplitIds(String decPath) {
+	   		String filtDecPath = null;
+	   		String[] predicates = decPath.split(PRED_DELIM);
+	   		String[] filtPredicates = new String[predicates.length];
+	   		for (int i = 0; i < predicates.length; ++i )  {
+	   			if (predicates[i].equals(ROOT_PATH)) {
+	   				filtPredicates[i] = predicates[i];
+	   			} else {
+	   				filtPredicates[i] = BasicUtils.splitOnFirstOccurence(predicates[i], SPLIT_DELIM , true)[1];
+	   			}
+	   		}
+	   		filtDecPath = BasicUtils.join(filtPredicates, PRED_DELIM);
+	   		return filtDecPath;
 	   	}
 	   	
 	   	/**
