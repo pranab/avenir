@@ -104,13 +104,13 @@ public class ContinuousEncoding extends Configured implements Tool {
         	Configuration config = context.getConfiguration();
         	fieldDelimRegex = config.get("field.delim.regex", ",");
         	
-        	attrOrdinals = Utility.assertIntArrayConfigParam(config, "cat.attribute.ordinals", Utility.DEF_FIELD_DELIM, 
+        	attrOrdinals = Utility.assertIntArrayConfigParam(config, "coe.cat.attribute.ordinals", Utility.DEF_FIELD_DELIM, 
         			"missing categorical attribute ordinals");
-        	encodingStrategy = Utility.assertStringConfigParam(config, "encoding.strategy", 
+        	encodingStrategy = Utility.assertStringConfigParam(config, "coe.encoding.strategy", 
         			"missing encoding strategy");
-        	classAttrOrd = Utility.assertIntConfigParam(config, "class.attr.ord ", 
+        	classAttrOrd = Utility.assertIntConfigParam(config, "coe.class.attr.ord ", 
         			"missing class atrribute ordinal");
-        	posClassAttrValue = Utility.assertStringConfigParam(config, "pos.class.attr.value", 
+        	posClassAttrValue = Utility.assertStringConfigParam(config, "coe.pos.class.attr.value", 
         			"missing positive class attribute value");
         	isWeightOfEvidence = encodingStrategy.equals(WEIGHT_OF_EVIDENCE);
         }	
@@ -118,7 +118,7 @@ public class ContinuousEncoding extends Configured implements Tool {
         @Override
 	    protected void map(LongWritable key, Text value, Context context)
 	    		throws IOException, InterruptedException {
-        	items  = value.toString().split(fieldDelimRegex);
+        	items  = value.toString().split(fieldDelimRegex, -1);
         	classAttrValue = items[classAttrOrd];
         	boolean isPositive = items[classAttrOrd].equals(posClassAttrValue);
         	
@@ -168,7 +168,7 @@ public class ContinuousEncoding extends Configured implements Tool {
         		throws IOException, InterruptedException {
         	classAttrCounter.initialize();
         	for (Tuple value : values){
-        		classAttrCounter.add(value.getInt(0), value.getInt(0));
+        		classAttrCounter.add(value.getInt(0), value.getInt(1));
         	}
         	outVal.initialize();
         	outVal.add(classAttrCounter.getPosCount(), classAttrCounter.getNegCount());
@@ -194,10 +194,10 @@ public class ContinuousEncoding extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	Configuration config = context.getConfiguration();
         	fieldDelimOut = config.get("field.delim", ",");
-        	String encodingStrategy = Utility.assertStringConfigParam(config, "encoding.strategy", 
+        	String encodingStrategy = Utility.assertStringConfigParam(config, "coe.encoding.strategy", 
         			"missing encoding strategy");
         	isWeightOfEvidence = encodingStrategy.equals(WEIGHT_OF_EVIDENCE);
-        	scale = Utility.assertIntConfigParam(config, "output.scale", 
+        	scale = Utility.assertIntConfigParam(config, "coe.output.scale", 
         			"missing class atrribute ordinal");
         }
         
@@ -245,7 +245,7 @@ public class ContinuousEncoding extends Configured implements Tool {
         	
         	//update counts
         	for (Tuple value : values){
-        		counter.add(value.getInt(0), value.getInt(0));
+        		counter.add(value.getInt(0), value.getInt(1));
         	}
         }
     }
