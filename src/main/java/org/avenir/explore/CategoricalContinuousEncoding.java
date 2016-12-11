@@ -44,7 +44,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class ContinuousEncoding extends Configured implements Tool {
+public class CategoricalContinuousEncoding extends Configured implements Tool {
 	private static String ANY_VALUE = "*";
 	private static String SUPERVISED_RATIO = "spervisedRatio";
 	private static String WEIGHT_OF_EVIDENCE = "weightOfEvidence";
@@ -56,16 +56,16 @@ public class ContinuousEncoding extends Configured implements Tool {
         String jobName = "Categorical attribute continuous encoding  MR";
         job.setJobName(jobName);
         
-        job.setJarByClass(ContinuousEncoding.class);
+        job.setJarByClass(CategoricalContinuousEncoding.class);
 
         FileInputFormat.addInputPaths(job, args[0]);
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
         Utility.setConfiguration(job.getConfiguration());
         
-        job.setMapperClass(ContinuousEncoding.EncoderMapper.class);
-        job.setCombinerClass(ContinuousEncoding.EncoderCombiner.class);
-        job.setReducerClass(ContinuousEncoding.EncoderReducer.class);
+        job.setMapperClass(CategoricalContinuousEncoding.EncoderMapper.class);
+        job.setCombinerClass(CategoricalContinuousEncoding.EncoderCombiner.class);
+        job.setReducerClass(CategoricalContinuousEncoding.EncoderReducer.class);
 
         job.setMapOutputKeyClass(Tuple.class);
         job.setMapOutputValueClass(Tuple.class);
@@ -254,7 +254,7 @@ public class ContinuousEncoding extends Configured implements Tool {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-        int exitCode = ToolRunner.run(new ContinuousEncoding(), args);
+        int exitCode = ToolRunner.run(new CategoricalContinuousEncoding(), args);
         System.exit(exitCode);
 	}
     
