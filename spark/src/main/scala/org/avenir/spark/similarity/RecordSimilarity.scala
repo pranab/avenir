@@ -47,7 +47,7 @@ object RecordSimilarity extends JobConfiguration {
 	   //configurations
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
-	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala
+	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
 	   val richAttrSchemaPath = getMandatoryStringParam(appConfig, "rich.attr.schema.path")
 	   val richAttrSchema = BasicUtils.getRichAttributeSchema(richAttrSchemaPath)
 	   val distAttrSchemaPath = getMandatoryStringParam(appConfig, "dist.attr.schema.path")
@@ -87,7 +87,7 @@ object RecordSimilarity extends JobConfiguration {
 	   val bucketedDistances = bucketedData.groupByKey().flatMapValues(recs => {
 	     val firstBucket = recs.filter(r => r._1 == 0)
 	     val secondBucket = recs.filter(r => r._1 == 1)
-	     var distances = new ListBuffer[(Record, Record, Double)]()
+	     val distances = new ListBuffer[(Record, Record, Double)]()
 	     firstBucket.foreach(f => {
 	       val firstRec = f._2
 	       val firstKey = Record(firstRec.split(fieldDelimIn, -1), keyFieldOrdinals)

@@ -43,13 +43,13 @@ object GroupedRecordSimilarity extends JobConfiguration {
 	   //configurations
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
-	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala
+	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
 	   val richAttrSchemaPath = getMandatoryStringParam(appConfig, "rich.attr.schema.path")
 	   val richAttrSchema = BasicUtils.getRichAttributeSchema(richAttrSchemaPath)
 	   val distAttrSchemaPath = getMandatoryStringParam(appConfig, "dist.attr.schema.path")
 	   val distAttrSchema = BasicUtils.getDistanceSchema(distAttrSchemaPath)
 	   val distFinder = new InterRecordDistance(richAttrSchema, distAttrSchema, fieldDelimIn)
-	   val groupFieldOrdinals = getMandatoryIntListParam(appConfig, "group.field.ordinals").asScala
+	   val groupFieldOrdinals = getMandatoryIntListParam(appConfig, "group.field.ordinals").asScala.toArray
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
@@ -67,7 +67,7 @@ object GroupedRecordSimilarity extends JobConfiguration {
 	   val groupedDistances = groupedData.groupByKey().flatMapValues(recs => {
 	     val size = recs.size
 	     val records = recs.toArray
-	     var distances = new ListBuffer[(Record, Record, Double)]()
+	     val distances = new ListBuffer[(Record, Record, Double)]()
 
 	     for (i <- 0 to (size -1)) {
 	       val firstKey = Record(records(i).split(fieldDelimIn, -1), keyFieldOrdinals)

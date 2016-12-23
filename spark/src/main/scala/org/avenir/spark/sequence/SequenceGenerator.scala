@@ -19,19 +19,23 @@ package org.avenir.spark.sequence
 
 import org.chombo.spark.common.JobConfiguration
 import org.apache.spark.SparkContext
-import org.chombo.spark.common.Record
 import scala.collection.JavaConverters._
+import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
-import org.chombo.util.HistogramStat
+import org.chombo.spark.common.RecordPartitioner
 
-object EventTimeDistribution extends JobConfiguration {
-  
+/**
+ * @param args
+ * @return
+ */
+object SequenceGenerator extends JobConfiguration {
+
    /**
     * @param args
     * @return
     */
-   def main(args: Array[String]) {
-	   val appName = "eventTimeDistribution"
+   def main(args: Array[String])  {
+	   val appName = "sequenceGenerator"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -42,55 +46,37 @@ object EventTimeDistribution extends JobConfiguration {
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
-	   val timeFieldOrdinal = getMandatoryIntParam(appConfig, "time.field.ordinal")
-	   val timeResolution = getStringParamOrElse(appConfig, "time.resolution", "hourOfDay")
-	   val hourGranularity = getOptionalIntParam(appConfig, "hour.granularity")
+	   val valFieldOrdinals = getMandatoryIntListParam(appConfig, "val.field.ordinals").asScala.toArray
+	   val seqField = Array[Int](1)
+	   seqField(0) = getMandatoryIntParam(appConfig, "seq.field")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
-	   val binWidth = hourGranularity match  {
-		   	case Some(gr:Int) => gr
-		   	case None => 1
-	   }
-	   
+
+	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
-	   val pairedData = data.map(line => {
+
+	   //
+	   val keyedData = data.map(line => {
 		   val items = line.split(fieldDelimIn, -1)
 		   val keyRec = Record(items, keyFieldOrdinals)
-		   val dateTime = items(timeFieldOrdinal).toLong
-		   val timeCycle = timeResolution match {
-		   	case "hourOfDay" => {
-		   		var tm = dateTime % BasicUtils.MILISEC_PER_DAY
-		   		tm /= BasicUtils.MILISEC_PER_HOUR
-		   		tm = hourGranularity match  {
-		   			case Some(gr:Int) => tm / gr
-		   			case None => tm
-		   		}
-		   		tm
-		   	}
-		   	case "dayOfWeek" => {
-		   		var tm = dateTime / BasicUtils.MILISEC_PER_WEEK
-		   		tm /= BasicUtils.MILISEC_PER_DAY
-		   		tm
-		   	}
-		   }
-		   val valRec = new HistogramStat(binWidth)
-		   valRec.add(timeCycle)
+		   val valRec = Record(items, valFieldOrdinals).withSortFields(seqField)
 		   (keyRec, valRec)
 	   })
 	   
-	   //merge histograms
-	   val stats = pairedData.reduceByKey((h1, h2) => h1.merge(h2))
+	   //sort values
+	   val sortedData = keyedData.groupByKey.mapValues(vals => vals.toList.sorted)
 	   
 	   if (debugOn) {
-	     val colStats = stats.collect
-	     colStats.foreach(s => {
-	       println("id:" + s._1)
-	       println("distr:" + s._2)
+	     val distCol = sortedData.collect
+	     distCol.foreach(d => {
+	       println(d)
 	     })
-	   }
+	   }	
 	   
 	   if (saveOutput) {
-	     stats.saveAsTextFile(outputPath)
+	     sortedData.saveAsTextFile(outputPath)
 	   }
-   }
+	   
+
+  }
 }
