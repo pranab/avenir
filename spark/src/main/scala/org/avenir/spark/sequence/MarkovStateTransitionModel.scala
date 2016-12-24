@@ -15,6 +15,7 @@
  * permissions and limitations under the License.
  */
 
+
 package org.avenir.spark.sequence
 
 import org.chombo.spark.common.JobConfiguration
@@ -22,20 +23,20 @@ import org.apache.spark.SparkContext
 import scala.collection.JavaConverters._
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
-import org.chombo.spark.common.RecordPartitioner
 
 /**
+ * generates Markov state transition probability matrix for data with or without class labels
  * @param args
  * @return
  */
-object SequenceGenerator extends JobConfiguration {
-
+object MarkovStateTransitionModel extends JobConfiguration {
+  
    /**
     * @param args
     * @return
     */
-   def main(args: Array[String])  {
-	   val appName = "sequenceGenerator"
+   def main(args: Array[String]) {
+	   val appName = "numericalAttrDistrStats"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -46,37 +47,59 @@ object SequenceGenerator extends JobConfiguration {
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
-	   val valFieldOrdinals = getMandatoryIntListParam(appConfig, "val.field.ordinals").asScala.toArray
-	   val seqField = Array[Int](1)
-	   seqField(0) = getMandatoryIntParam(appConfig, "seq.field")
+	   val classAttrOrdinal = getOptionalIntParam(appConfig, "class.attr.ordinal")
+	   val seqStartOrdinal = getMandatoryIntParam(appConfig, "seq.start.ordinal")
+	   val states = getMandatoryStringListParam(appConfig, "state.list", "missing state list")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
-
+	   
 	   //key value records
-	   val keyedData = data.map(line => {
+	   val keyedTransData = data.flatMap(line => {
 		   val items = line.split(fieldDelimIn, -1)
-		   val keyRec = Record(items, keyFieldOrdinals)
-		   val valRec = Record(items, valFieldOrdinals).withSortFields(seqField)
-		   (keyRec, valRec)
+		   val seqValIndexes = List.range(seqStartOrdinal+1, items.length)
+		   
+		   val stateTrans = seqValIndexes.map(idx => {
+			   val keyRec = classAttrOrdinal match {
+			   		case Some(classOrd:Int) => {
+			   			val classVal = items(classOrd)
+			   			val keyRec = Record(keyFieldOrdinals.length + 3, items, keyFieldOrdinals)
+			   			keyRec.addString(classVal)
+			   			keyRec
+			   		}
+		     
+			   		case None => {
+			   			val keyRec = Record(keyFieldOrdinals.length + 2, items, keyFieldOrdinals)
+			   			keyRec
+			   		}
+			   }
+			   keyRec.addString(items(idx-1)).addString(items(idx))
+			   (keyRec, 1)
+		     
+		   	})
+		   stateTrans
+	   }).reduceByKey(_ + _)
+	   
+	   //move state pairs from key to value
+	   val transData = keyedTransData.map(kv => {
+	     //key: id and optional class value
+		 val newKeyRec = classAttrOrdinal match {
+		 	case Some(classOrd:Int) => Record(kv._1, 0, 3)
+			case None => Record(kv._1, 0, 2)
+		 }
+		 
+		 //value: state pairs and count
+	     val newValRec = Record(3)
+	     val size = kv._1.size
+	     newValRec.add(kv._1, size-2, size)
+		 newValRec.add(kv._2)
+		 (newKeyRec, newValRec)
 	   })
 	   
-	   //sort values
-	   val sortedData = keyedData.groupByKey.mapValues(vals => vals.toList.sorted)
+	   //group by key and map values to convert sate transition matrix
 	   
-	   if (debugOn) {
-	     val distCol = sortedData.collect
-	     distCol.foreach(d => {
-	       println(d)
-	     })
-	   }	
 	   
-	   if (saveOutput) {
-	     sortedData.saveAsTextFile(outputPath)
-	   }
-	   
-
-  }
+   }
 }
