@@ -10,6 +10,7 @@ spark/lib_managed
 spark/src_managed
 spark/project/boot
 spark/tmp
+project/
 .history
 spark/dist
 .DS_Store

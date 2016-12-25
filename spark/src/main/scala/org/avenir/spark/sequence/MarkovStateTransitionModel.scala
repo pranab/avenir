@@ -23,6 +23,7 @@ import org.apache.spark.SparkContext
 import scala.collection.JavaConverters._
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
+import org.avenir.util.StateTransitionProbability
 
 /**
  * generates Markov state transition probability matrix for data with or without class labels
@@ -50,6 +51,9 @@ object MarkovStateTransitionModel extends JobConfiguration {
 	   val classAttrOrdinal = getOptionalIntParam(appConfig, "class.attr.ordinal")
 	   val seqStartOrdinal = getMandatoryIntParam(appConfig, "seq.start.ordinal")
 	   val states = getMandatoryStringListParam(appConfig, "state.list", "missing state list")
+	   val statesArr = BasicUtils.fromListToStringArray(states)
+	   val scale = getMandatoryIntParam(appConfig, "trans.prob.scale")
+	   val outputPrecision = getIntParamOrElse(appConfig, "output.precision", 3);
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -99,7 +103,27 @@ object MarkovStateTransitionModel extends JobConfiguration {
 	   })
 	   
 	   //group by key and map values to convert sate transition matrix
+	   val transProb = transData.groupByKey().mapValues(stc => {
+	     val stTransProb = new StateTransitionProbability(statesArr, statesArr)
+	     stTransProb.withScale(scale).withFloatPrecision(outputPrecision)
+	     stc.foreach(c => {
+	       stTransProb.add(c.getString(0), c.getString(1), c.getInt(2))
+	     })
+	     stTransProb.normalizeRows()
+	     stTransProb
+	   })
 	   
-	   
+	   if (debugOn) {
+	     val colTransProb = transProb.collect
+	     colTransProb.foreach(s => {
+	       println("id:" + s._1)
+	       println("state trans probability:" + s._2)
+	     })
+	   }
+
+	   if (saveOutput) {
+	     transProb.saveAsTextFile(outputPath)
+	   }
+
    }
 }
