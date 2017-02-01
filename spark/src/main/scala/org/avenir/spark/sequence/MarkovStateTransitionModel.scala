@@ -27,6 +27,7 @@ import org.avenir.util.StateTransitionProbability
 
 /**
  * generates Markov state transition probability matrix for data with or without class labels
+ * Handles multiple entities. Creates Markov state transition probability matrix for each entity.
  * @param args
  * @return
  */
@@ -37,7 +38,7 @@ object MarkovStateTransitionModel extends JobConfiguration {
     * @return
     */
    def main(args: Array[String]) {
-	   val appName = "numericalAttrDistrStats"
+	   val appName = "markovStateTransitionModel"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -68,6 +69,7 @@ object MarkovStateTransitionModel extends JobConfiguration {
 		   val stateTrans = seqValIndexes.map(idx => {
 			   val keyRec = classAttrOrdinal match {
 			   		case Some(classOrd:Int) => {
+			   			//with class attribute
 			   			val classVal = items(classOrd)
 			   			val keyRec = Record(keyFieldOrdinals.length + 3, items, keyFieldOrdinals)
 			   			keyRec.addString(classVal)
@@ -75,6 +77,7 @@ object MarkovStateTransitionModel extends JobConfiguration {
 			   		}
 		     
 			   		case None => {
+			   			//without class attribute
 			   			val keyRec = Record(keyFieldOrdinals.length + 2, items, keyFieldOrdinals)
 			   			keyRec
 			   		}
@@ -90,11 +93,14 @@ object MarkovStateTransitionModel extends JobConfiguration {
 	   val transData = keyedTransData.map(kv => {
 	     //key: id and optional class value
 		 val newKeyRec = classAttrOrdinal match {
-		 	case Some(classOrd:Int) => Record(kv._1, 0, 3)
-			case None => Record(kv._1, 0, 2)
+			 //entity key and class attribute value
+		 	 case Some(classOrd:Int) => Record(kv._1, 0, 3)
+		 	 
+		 	 //entity key
+			 case None => Record(kv._1, 0, 2)
 		 }
 		 
-		 //value: state pairs and count
+		 //value: state pairs from key  and count from value
 	     val newValRec = Record(3)
 	     val size = kv._1.size
 	     newValRec.add(kv._1, size-2, size)

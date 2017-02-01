@@ -156,5 +156,35 @@ public class StateTransitionProbability extends TabularData {
 		}
 	}
 	
+	/**
+	 * @param items
+	 * @param start
+	 * @param row
+	 */
+	public void deseralizeRow(String[] items, int start, int row) {
+		int k = start;
+		for (int c = 0; c < numCol; ++c) {
+			if (scale > 1) {
+				table[row][c]  = Integer.parseInt(items[k++]);
+			} else {
+				dTable[row][c]  = Double.parseDouble(items[k++]);
+			}
+		}
+	}
 	
+	/**
+	 * @param rowLabel
+	 * @param colLabel
+	 * @return
+	 */
+	public double get(String rowLabel, String colLabel) {
+		double value = 0;
+		int[] rowCol = getRowCol(rowLabel, colLabel);
+		if (scale > 1) {
+			value = table[rowCol[0]][rowCol[1]];
+		} else {
+			value = dTable[rowCol[0]][rowCol[1]];
+		}
+		return value;
+	}
 }
