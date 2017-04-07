@@ -4,6 +4,11 @@ we will be using epsilon-greedy and UCB1 algorithm.
 There are set of products. Each product has a set of candidate prices. The goal is to find
 the optimum price for each product
 
+Dependency
+==========
+Please read dependency.txt for dependency on other jars and how to handle it
+
+
 Generate candiate prices
 ========================
 Run the python script as below. We are generating prices for 100 products. Certain

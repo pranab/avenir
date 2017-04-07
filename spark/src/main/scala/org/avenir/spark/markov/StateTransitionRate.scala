@@ -47,7 +47,7 @@ object StateTransitionRate extends JobConfiguration {
 	   //config params
 	   val fieldDelimIn = appConfig.getString("field.delim.in")
 	   val fieldDelimOut = appConfig.getString("field.delim.out")
-	   val keyFieldOrdinals = appConfig.getIntList("key.field.ordinals").asScala
+	   val keyFieldOrdinals = appConfig.getIntList("key.field.ordinals").asScala.toArray
 	   val timeFieldOrdinal = appConfig.getInt("time.field.ordinal")
 	   val stateFieldOrdinal = appConfig.getInt("state.field.ordinal")
 	   val states = appConfig.getStringList("state.values")

@@ -18,6 +18,7 @@
 
 package org.avenir.util;
 
+import org.chombo.util.BasicUtils;
 import org.chombo.util.TabularData;
 
 /**
@@ -28,6 +29,7 @@ import org.chombo.util.TabularData;
 public class StateTransitionProbability extends TabularData {
 	private int scale = 100;
 	private double[][] dTable;
+	private int floatPrecision = 3;
 	
 	/**
 	 * 
@@ -58,7 +60,25 @@ public class StateTransitionProbability extends TabularData {
 	public void setScale(int scale) {
 		this.scale = scale;
 	}
+	
+	/**
+	 * @param scale
+	 * @return
+	 */
+	public StateTransitionProbability withScale(int scale) {
+		this.scale = scale;
+		return this;
+	}
 
+	/**
+	 * @param floatPrecision
+	 * @return
+	 */
+	public StateTransitionProbability withFloatPrecision(int floatPrecision) {
+		this.floatPrecision = floatPrecision;
+		return this;
+	}
+	
 	/**
 	 * 
 	 */
@@ -95,6 +115,17 @@ public class StateTransitionProbability extends TabularData {
 	}
 	
 	/* (non-Javadoc)
+	 * @see org.chombo.util.TabularData#toString()
+	 */
+	public String toString() {
+		StringBuilder stBld = new StringBuilder();
+		for (int i = 0; i < numRow; ++i) {
+			stBld.append(serializeRow(i)).append(DELIMETER);
+		}
+		return stBld.substring(0, stBld.length()-1);
+	}
+	
+	/* (non-Javadoc)
 	 * @see org.chombo.util.TabularData#serializeRow(int)
 	 */
 	public String serializeRow(int row) {
@@ -103,7 +134,7 @@ public class StateTransitionProbability extends TabularData {
 			if (scale > 1) {
 				stBld.append(table[row][c]).append(DELIMETER);
 			} else {
-				stBld.append(dTable[row][c]).append(DELIMETER);
+				stBld.append(BasicUtils.formatDouble(dTable[row][c], floatPrecision)).append(DELIMETER);
 			}
 		}
 		
@@ -125,5 +156,35 @@ public class StateTransitionProbability extends TabularData {
 		}
 	}
 	
+	/**
+	 * @param items
+	 * @param start
+	 * @param row
+	 */
+	public void deseralizeRow(String[] items, int start, int row) {
+		int k = start;
+		for (int c = 0; c < numCol; ++c) {
+			if (scale > 1) {
+				table[row][c]  = Integer.parseInt(items[k++]);
+			} else {
+				dTable[row][c]  = Double.parseDouble(items[k++]);
+			}
+		}
+	}
 	
+	/**
+	 * @param rowLabel
+	 * @param colLabel
+	 * @return
+	 */
+	public double get(String rowLabel, String colLabel) {
+		double value = 0;
+		int[] rowCol = getRowCol(rowLabel, colLabel);
+		if (scale > 1) {
+			value = table[rowCol[0]][rowCol[1]];
+		} else {
+			value = dTable[rowCol[0]][rowCol[1]];
+		}
+		return value;
+	}
 }
