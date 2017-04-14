@@ -8,19 +8,27 @@ Dependency
 ==========
 Please read dependency.txt for dependency on other jars and how to handle it
 
-
 Generate candiate prices
 ========================
 Run the python script as below. We are generating prices for 100 products. Certain
-statistics about prices are saved in price_stat.txt file
+statistics about prices are saved in price_stat.txt file. The file price_stat.txt will 
+contain base revenue data, from revenue data is generated later . The file price.txt will
+contain number of candidate prices for each product. This will be used in the first iteration
 
-./price_opt.py price 100 price_stat.txt > price.txt
+./price_opt.py price 100 price_stat.txt > inc_return1.txt
+
+First round
+============
+Set the parameter current.round.num=1 and go to the step for aggregate MR
 
 Rum multi arm bandit MR
 =======================
 Run the map reduce as below. The price file should be copied to the HDFS input
 directory prior to running. For UCB1 algorithm, the MR class should be changed to 
-org.avenir.reinforce.AuerDeterministic
+org.avenir.reinforce.AuerDeterministic.
+
+If option #4 in dependency.txt is used, then the jar name should be the jar file name 
+generated following option #4
 
 JAR_NAME=/home/pranab/Projects/avenir/target/avenir-1.0.jar
 CLASS_NAME=org.avenir.reinforce.GreedyRandomBandit
@@ -36,7 +44,7 @@ hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/p
 
 Generate profit data for selected price for each product
 ========================================================
-Copy the output od MR to a file select2.txt. The number 3 indicates that the output 
+Copy the output od MR to a file select3.txt. The number 3 indicates that the output 
 is for round 3. Run the python script as below. The profit data for the selected prices 
 will be in the file inc_return.txt
 
@@ -44,8 +52,13 @@ will be in the file inc_return.txt
 
 Generate running aggregate MR for profit data
 =============================================
-Copy inc_return3.txt to /user/pranab/grba/input. The directory already has the current 
-running aggregate profit data. Run the RunningAggregate MR as below
+if first iteration copy inc_return1.txt to /user/pranab/grba/input. Otherwise for subsequent 
+iteration copy inc_return3.txt (iteration 3 for example) to /user/pranab/grba/input. For iteration 
+2 onwards the input directory  already has the current  running aggregate profit data. Run the 
+RunningAggregate MR as below
+
+If option #4 in dependency.txt is used, then the jar name should be the jar file name 
+generated following option #4
 
 JAR_NAME=/home/pranab/Projects/chombo/target/chombo-1.0.jar
 CLASS_NAME=org.chombo.mr.RunningAggregator
@@ -59,6 +72,7 @@ hadoop fs -rmr $OUT_PATH
 echo "removed output dir"
 
 hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/prop.properties  $IN_PATH  $OUT_PATH
+
 
 Next round
 ==========
@@ -75,11 +89,16 @@ field.delim.regex=,
 field.delim=,
 num.reducer=1
 
-current.round.num=8
-count.ordinal=2
-reward.ordinal=4
+#common MAB configurations
+current.round.num=1
+count.ordinal=3
+reward.ordinal=6
+global.batch.size=1
 
-#GreedyRandomBandit
+
+#GreedyRandomBandit 
+#There are other parameters which dafault to some vale. If you want to override 
+# default, explicitly add them.
 random.selection.prob=0.3
 prob.reduction.algorithm=linear
 prob.reduction.constant=2.0
@@ -88,7 +107,8 @@ prob.reduction.constant=2.0
 det.algorithm=AuerUBC1
 
 #RunningAggregator
-quantity.attr=2
+rug.quantity.attr.ordinals=2
+rug.id.field.ordinals=0,1
 incremental.file.prefix=inc
 
 
