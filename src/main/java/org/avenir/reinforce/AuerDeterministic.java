@@ -140,6 +140,7 @@ public class AuerDeterministic  extends Configured implements Tool {
     		if (null == curGroupID || !groupID.equals(curGroupID)) {
     			//new group
     			if (null == curGroupID) {
+    				//first group
     				collectGroupItems();
         			curGroupID = groupID;
     			} else  {
@@ -169,7 +170,7 @@ public class AuerDeterministic  extends Configured implements Tool {
          * 
          */
         private void collectGroupItems() {
-        	groupedItems.createtem(items[1], Integer.parseInt(items[countOrdinal]), Integer.parseInt(items[rewardOrdinal]));
+        	groupedItems.createtem(items[countOrdinal], Integer.parseInt(items[countOrdinal]), Integer.parseInt(items[rewardOrdinal]));
         }
         
         /**
