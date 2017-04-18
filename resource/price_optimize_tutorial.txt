@@ -19,12 +19,14 @@ contain number of candidate prices for each product. This will be used in the fi
 
 First round
 ============
-Set the parameter current.round.num=1 and go to the step for aggregate MR
+Create initial revenue data as follows
+./price_opt.py inret price_stat.txt 2 > agr_ret.txt
+
+Copy agr_ret.txt to input path of multi arm bandit MR
 
 Rum multi arm bandit MR
 =======================
-Run the map reduce as below. The price file should be copied to the HDFS input
-directory prior to running. For UCB1 algorithm, the MR class should be changed to 
+Run the map reduce as below. For UCB1 algorithm, the MR class should be changed to 
 org.avenir.reinforce.AuerDeterministic.
 
 If option #4 in dependency.txt is used, then the jar name should be the jar file name 
@@ -44,17 +46,15 @@ hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/p
 
 Generate profit data for selected price for each product
 ========================================================
-Copy the output od MR to a file select3.txt. The number 3 indicates that the output 
-is for round 3. Run the python script as below. The profit data for the selected prices 
-will be in the file inc_return.txt
+Copy the output of multi arm bandit MR to a file select3.txt. The number 3 indicates that 
+the output is for round 3. We are using round 3 as example, Run the python script as below. 
+The profit data for the selected prices  will be in the file inc_return3.txt
 
 ./price_opt.py return price_stat.txt  select3.txt > inc_return3.txt
 
 Generate running aggregate MR for profit data
 =============================================
-if first iteration copy inc_return1.txt to /user/pranab/grba/input. Otherwise for subsequent 
-iteration copy inc_return3.txt (iteration 3 for example) to /user/pranab/grba/input. For iteration 
-2 onwards the input directory  already has the current  running aggregate profit data. Run the 
+Copy inc_return3.txt (iteration 3 for example) to /user/pranab/grba/input.  Run the 
 RunningAggregate MR as below
 
 If option #4 in dependency.txt is used, then the jar name should be the jar file name 
@@ -76,9 +76,10 @@ hadoop jar $JAR_NAME  $CLASS_NAME -Dconf.path=/home/pranab/Projects/bin/avenir/p
 
 Next round
 ==========
-Delete all files in /user/pranab/grba/input and copy /user/pranab/ruag/output/part-r-00000 to 
-/user/pranab/grba/input. Increment the parameter current.round.num. Go back to running 
-multi arm bandit MR and repeat all the susequent steps.
+1. Delete all files in /user/pranab/grba/input and 
+2. copy /user/pranab/ruag/output/part-r-00000 to /user/pranab/grba/input. 
+3. Increment the parameter current.round.num
+4. Go back to running multi arm bandit MR and repeat all the susequent steps.
 
 
 Configuration
@@ -94,7 +95,7 @@ current.round.num=1
 count.ordinal=3
 reward.ordinal=6
 global.batch.size=1
-
+min.reward=0
 
 #GreedyRandomBandit 
 #There are other parameters which dafault to some vale. If you want to override 
