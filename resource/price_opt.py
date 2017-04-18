@@ -24,6 +24,14 @@ def create_price(prod_count, stat_file):
 			else:
 				rev -= rev_delta + randrange(-20,20)
 	fp.close()
+
+# generate initial revenue for all items		
+def create_init_return(price_file, quant_ord):
+	fp = open(price_file, "r")
+	for line in fp:
+		items = line.split(",")
+		print "%s,%s,%d,0,0,0,0,0" %(items[0], items[1], quant_ord)
+	fp.close()
 		
 # generate revenue for selected items		
 def create_return(price_file, sel_file):
@@ -64,6 +72,10 @@ if (op == "price"):
 	prod_count = int(sys.argv[2])
 	stat_file = sys.argv[3]
 	create_price(prod_count, stat_file)
+elif (op == "inret"):
+	price_file = sys.argv[2]
+	quant_ord = int(sys.argv[3])
+	create_init_return(price_file, quant_ord)
 elif (op == "return"):
 	price_file = sys.argv[2]
 	sel_file = sys.argv[3]

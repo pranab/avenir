@@ -12,9 +12,13 @@ jackson-core-lgpl-1.6.3.jar
 jackson-mapper-lgpl-1.6.3.jar
 lucene-core-3.5.0.jar 
 chombo-1.0.jar
+hoidla-1.0.jar
 aws-java-sdk-1.3.22.jar 
 
 To build chombo run from chombo project root directory
+mvn clean install
+
+To build hoidla run from hoidla project root directory
 mvn clean install
 
 Handling dependency
@@ -59,6 +63,7 @@ jackson-core-lgpl-1.6.3.jar
 jackson-mapper-lgpl-1.6.3.jar
 lucene-core-3.5.0.jar 
 
-If not, add them to avenir_hadoop.xml
+If not, add them to avenir_hadoop.xml. If you get ClassNotFound exception at run time, add the 
+necessary jar to avenir_hadoop.xml and re build jar
 
 
