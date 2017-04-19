@@ -91,6 +91,8 @@ public class AuerDeterministic  extends Configured implements Tool {
 		private int globalBatchSize;
 		private int minReward;
 		private boolean outputDecisionCount;
+		private static final int GR_ORD = 0;
+		private static final int IT_ORD = 1;
 		
 		
 		/* (non-Javadoc)
@@ -136,7 +138,7 @@ public class AuerDeterministic  extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
-            groupID = items[0];
+            groupID = items[GR_ORD];
     		if (null == curGroupID || !groupID.equals(curGroupID)) {
     			//new group
     			if (null == curGroupID) {
@@ -170,7 +172,8 @@ public class AuerDeterministic  extends Configured implements Tool {
          * 
          */
         private void collectGroupItems() {
-        	groupedItems.createtem(items[countOrdinal], Integer.parseInt(items[countOrdinal]), Integer.parseInt(items[rewardOrdinal]));
+        	groupedItems.createtem(items[IT_ORD], Integer.parseInt(items[countOrdinal]), 
+        			Integer.parseInt(items[rewardOrdinal]));
         }
         
         /**
@@ -235,7 +238,9 @@ public class AuerDeterministic  extends Configured implements Tool {
 			count += collectedItems.size();
 			for (DynamicBean it : collectedItems) {
 				items.add(it.getString(ITEM_ID));
-				groupedItems.select(it, minReward);
+				if (minReward > 0) {
+					groupedItems.select(it, minReward);
+				}
 			}
 			return count;
         }
@@ -275,7 +280,9 @@ public class AuerDeterministic  extends Configured implements Tool {
 		
 				if (null != selectedGroupItem) {
 					items.add(item);
-					groupedItems.select(selectedGroupItem, minReward);
+					if (minReward > 0) {
+						groupedItems.select(selectedGroupItem, minReward);
+					}
 					++count;
 				} else {
 					throw new IllegalArgumentException("Should not be here. Failed to select item by value");
