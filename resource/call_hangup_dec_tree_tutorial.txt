@@ -1,0 +1,41 @@
+This tutorial is for predicting call hangup using customer service call data.
+Solution is based on decision tree and random forest.
+
+Path etc shown here corresposnds to my environment. Please Change them  as needed 
+for your environment
+
+Dependency
+==========
+Please refer to dependency.txt
+
+Input
+=====
+Generate input tarining data
+./detr.sh genData  <num_calls> call_hangup.txt
+num_calls = number of calls e.g., 5000
+
+Copy input file to HDFS input path
+./detr.sh loadInput call_hangup.txt
+
+Metadata
+========
+Copy JSOn meta data file to HDFS meta data path
+./detr.sh loadMeta call_hangup.json
+
+Map reduce
+==========
+./detr.sh decTree
+
+Move and copy files around
+==========================
+./detr.sh mvDecFiles
+
+Next iteration
+==============
+Go back to map reduce step
+
+
+Configuration
+=============
+They are in detr.properties. Make changes as per your need
+
