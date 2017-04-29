@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -49,6 +50,7 @@ import org.avenir.util.InfoContentStat;
 import org.chombo.mr.FeatureField;
 import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
+import org.chombo.util.Pair;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -391,7 +393,11 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private DecisionPathStoppingStrategy pathStoppingStrategy;
         private DecisionPathList decPathList;
         private boolean decTreeAvailable;
+        private String spltSelStrategy;
+        private int topSplitCount;
         private boolean debugOn;
+        private static String  SPLIT_SEL_BEST = "best";
+        private static String  SPLIT_SEL_RANDOM_TOP = "randomAmongTop";
         
 	   	@Override
 	   	protected void setup(Context context) throws IOException, InterruptedException {
@@ -418,6 +424,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	outputSplitProb = conf.getBoolean("dtb.output.split.prob", false);
         	classAttrOrdinal = schema.findClassAttrField().getOrdinal();
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
+            
+            //split selection strategy
+            spltSelStrategy = conf.get("dtb.path.stopping.strategy", SPLIT_SEL_BEST);
+            if (spltSelStrategy.equals(SPLIT_SEL_RANDOM_TOP)) {
+            	topSplitCount = conf.getInt("dtb.top.split.count", 3);
+            }
 
         	//stopping strategy
         	String stoppingStrategy =  conf.get("dtb.path.stopping.strategy", DecisionPathStoppingStrategy.STOP_MIN_INFO_GAIN);
@@ -472,6 +484,8 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	 * @throws IOException
 	   	 */
 	   	private void expandTree(Context context) throws IOException {
+	   		Map<Double, Pair<String, Integer>> splits = new TreeMap<Double, Pair<String, Integer>>();
+	   		
 	   		//group by split
 	   		infoContentBySplit();
 	   		
@@ -495,6 +509,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   			double minInfoContent = 1000000;
    				String selectedSplit = null;
    				int selectedSplitAttr = -1;
+   				splits.clear();
 	   			splitInfoContent = decPathsInfoContentBySplit.get(parentPath);
 	   			for (String splitId :  splitInfoContent.keySet()) {
 	   				Map<String, InfoContentStat> predInfoContent = splitInfoContent.get(splitId);
@@ -518,17 +533,29 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				}
 	   				//average info content across splits
 	   				double  avInfoContent = weightedInfoContent / totalCount;
-	   				
-	   				//pick split with  minimum info content
-	   				if (avInfoContent  < minInfoContent) {
-	   					minInfoContent = avInfoContent;
-	   					selectedSplit = splitId;
-	   					selectedSplitAttr = attr;
-	   					if (debugOn) {
-	   						System.out.println("selectedSplit: " +  selectedSplit +  "  selectedSplitAttr:  "  +  selectedSplitAttr  + 
-	   								"  minInfoContent: " + minInfoContent);
-	   					}
+	   				if (spltSelStrategy.equals(SPLIT_SEL_BEST)) {
+		   				//pick split with  minimum info content
+		   				if (avInfoContent  < minInfoContent) {
+		   					minInfoContent = avInfoContent;
+		   					selectedSplit = splitId;
+		   					selectedSplitAttr = attr;
+		   					if (debugOn) {
+		   						System.out.println("selectedSplit: " +  selectedSplit +  "  selectedSplitAttr:  "  +  selectedSplitAttr  + 
+		   								"  minInfoContent: " + minInfoContent);
+		   					}
+		   				}
+	   				} else if (spltSelStrategy.equals(SPLIT_SEL_RANDOM_TOP)) {
+	   					splits.put(avInfoContent, new Pair<String, Integer>(splitId, attr));
+	   				} else {
+	   					throw new IllegalStateException("ivalid split slection strategy");
 	   				}
+	   			}
+	   			
+	   			//select randomly from top k splits
+	   			if (spltSelStrategy.equals(SPLIT_SEL_RANDOM_TOP)) {
+	   				Pair<String, Integer> split =  selectRandomSplitFromTop(splits);
+	   				selectedSplit = split.getLeft();
+	   				selectedSplitAttr = split.getRight();
 	   			}
 	   			
 	   			//expand based on selected split
@@ -574,6 +601,21 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   		//save new decision path list
 	   		writeDecisioList(newDecPathList, "dtb.decision.file.path.out",  context.getConfiguration() );
 	   	}
+	   	
+	   	/**
+	   	 * @param splits
+	   	 * @return
+	   	 */
+	   	private Pair<String, Integer> selectRandomSplitFromTop(Map<Double, Pair<String, Integer>> splits) {
+	   		List<Pair<String, Integer>> topSplits = new ArrayList<Pair<String, Integer>>();
+			int i = 0;
+			for (Double inforContent : splits.keySet()) {
+				topSplits.add(splits.get(inforContent));
+				if (++i == topSplitCount)
+					break;
+			}
+			return BasicUtils.selectRandom(topSplits);
+		}
 	   	
 	   	/**
 	   	 * 
