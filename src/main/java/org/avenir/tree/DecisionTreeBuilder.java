@@ -426,7 +426,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
             
             //split selection strategy
-            spltSelStrategy = conf.get("dtb.path.stopping.strategy", SPLIT_SEL_BEST);
+            spltSelStrategy = conf.get("dtb.split.select.strategy", SPLIT_SEL_BEST);
             if (spltSelStrategy.equals(SPLIT_SEL_RANDOM_TOP)) {
             	topSplitCount = conf.getInt("dtb.top.split.count", 3);
             }

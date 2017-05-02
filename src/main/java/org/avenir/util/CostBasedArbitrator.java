@@ -18,12 +18,22 @@
 
 package org.avenir.util;
 
+/**
+ * @author pranab
+ *
+ */
 public class CostBasedArbitrator {
 	private String posClass;
 	private String negClass;
 	private int falseNegCost;
 	private int falsePosCost;
 	
+	/**
+	 * @param negClass
+	 * @param posClass
+	 * @param falseNegCost
+	 * @param falsePosCost
+	 */
 	public CostBasedArbitrator(String negClass, String posClass,
 			int falseNegCost, int falsePosCost) {
 		this.posClass = posClass;
@@ -32,6 +42,11 @@ public class CostBasedArbitrator {
 		this.falsePosCost = falsePosCost;
 	}
 	
+	/**
+	 * @param posProb
+	 * @param negProb
+	 * @return
+	 */
 	public String arbitrate(int posProb, int negProb) {
 		int negCost = falseNegCost * posProb + negProb;
 		int posCost = falsePosCost * negProb + posProb;
@@ -39,6 +54,10 @@ public class CostBasedArbitrator {
 		return predClass;
 	}
 	
+	/**
+	 * @param posProb
+	 * @return
+	 */
 	public String classify(int posProb) {
 		String predClass =  posProb > (falsePosCost * 100) / (falsePosCost + falseNegCost)  ? posClass : negClass;
 		return predClass;
