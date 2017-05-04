@@ -19,6 +19,7 @@
 package org.avenir.model;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -32,10 +33,12 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.avenir.tree.DecisionTreeModel;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
 
 /**
+ * Generic classification model predictor MR 
  * @author pranab
  *
  */
@@ -44,7 +47,7 @@ public class ModelPredictor extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
         Job job = new Job(getConf());
-        String jobName = "model predictor   MR";
+        String jobName = "model predictor MR";
         job.setJobName(jobName);
         
         job.setJarByClass(ModelPredictor.class);
@@ -72,9 +75,18 @@ public class ModelPredictor extends Configured implements Tool {
 		private Text outVal = new Text();
         private String fieldDelimRegex;
         private String fieldDelim;
-        private FeatureSchema schema;
-		private String[] classAttrValues;
-		private int probThreshHold = 50;
+		private PredictiveModel model;
+		private EnsemblePredictiveModel ensembleModel;
+		private String predClass;
+		private String outputMode;
+		private int idOrdinal;
+		private int classAttrOrdinal;
+		private StringBuilder stBld =  new StringBuilder();;
+		private static String CLASS_DEC_TREE = "decTreeClassifier";
+		private static final String OUTPUT_WITH_RECORD = "withRecord";
+		private static final String OUTPUT_WITH_ID = "withKId";
+		private static final String OUTPUT_WITH_CLASS_ATTR = "withActualClassAttr";
+		
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -86,18 +98,132 @@ public class ModelPredictor extends Configured implements Tool {
         	fieldDelim = config.get("field.delim.out", ",");
 
         	//schema
-            schema = Utility.getFeatureSchema(config, "mop.feature.schema.file.path");
-            classAttrValues = Utility.assertStringArrayConfigParam(config, "mop.class.attr.values", Utility.configDelim, 
-            		"missing class attribute values");
-            double falsePosErrorCost = (double)config.getFloat("mop.false.pos.error.cost", (float)1.0);
-            double falseNegErrorCost = (double)config.getFloat("mop.false.neg.error.cost", (float)1.0);
+        	FeatureSchema schema = Utility.getFeatureSchema(config, "mop.feature.schema.file.path");
             
+            //model files
+            String modelDirPath = Utility.assertStringConfigParam(config, "mop.model.dir.path", 
+            		"missing model directory path");
+            String[] modelFileNames = Utility.assertStringArrayConfigParam(config, "mop.model.file.names", Utility.configDelim,
+            		"missing mode file names");
+            String classifierType = Utility.assertStringConfigParam(config, "mop.classifier.type", 
+            		"missing classifier type");
+            
+            //error counting
+            boolean errorCountingEnabled = config.getBoolean("mop.error.counting.enabled", false);
+            int classAttrOrd = -1;
+            if (errorCountingEnabled) {
+            	classAttrOrd = Utility.assertIntConfigParam(config, "mop.class.attr.ord", "");
+            }
+ 
+            //cost based classification
+            boolean costBasedPredictionEnabled = config.getBoolean("mop.cost.based.prediction.enabled", false);
+            String[] classAttrValues = null;
+            double[] misclassCosts = null;
+            if (costBasedPredictionEnabled) {
+            	classAttrValues = Utility.assertStringArrayConfigParam(config, "mop.class.attr.values", Utility.configDelim,
+                		"missing class atrribute values, need for for cost based prediction");
+            	if (classAttrValues.length > 2) {
+            		throw new IllegalStateException("csta based classification possible only for binary classification");
+            	}
+            	misclassCosts = Utility.assertDoubleArrayConfigParam(config, "mop.miss.class.costs", Utility.configDelim, 
+            			"missing misclassification costs");
+            }
+            
+            //build model
+            if (modelFileNames.length > 1) {
+            	//ensemble
+            	double[] memeberWeights = Utility.optionalDoubleArrayConfigParam(config, "mop.ensemble.memeber.weights", 
+            			Utility.configDelim);
+            	ensembleModel = new EnsemblePredictiveModel();
+            	for (int i = 0; i <  modelFileNames.length; ++i) {
+            		PredictiveModel memberModel = buildModel(schema, modelDirPath, modelFileNames[i],  classifierType,
+                   		 false,  classAttrOrd, classAttrValues, misclassCosts);
+            		double weight = null != memeberWeights ? memeberWeights[i] : 1.0;
+            		ensembleModel.addModel(memberModel, weight);
+            	}
+            	
+            	//error counting 
+                if (errorCountingEnabled) {
+                	ensembleModel.enableErrorCounting(classAttrOrd);
+                }
+
+            } else {
+            	//single
+            	model = buildModel(schema, modelDirPath, modelFileNames[0],  classifierType,
+                		 errorCountingEnabled,  classAttrOrd, classAttrValues, misclassCosts);
+            }
+            
+            //output
+            outputMode = config.get("mop.output.mode", OUTPUT_WITH_RECORD);
+            if (outputMode.equals(OUTPUT_WITH_ID)) {
+            	idOrdinal = Utility.assertIntConfigParam(config, "mop.rec.id.ordinal", "missing id ordinal");
+            }
+            if (outputMode.equals(OUTPUT_WITH_CLASS_ATTR)) {
+            	classAttrOrdinal = Utility.assertIntConfigParam(config, "mop.rec.class.attr.ordinal", 
+            			"missing class attribute ordinal");
+            }
         }   
+        
+        /**
+         * @param modelDirPath
+         * @param modelFileName
+         * @param classifierType
+         * @param errorCountingEnabled
+         * @param classAttrOrd
+         * @param classAttrValues
+         * @param misclassCosts
+         * @return
+         * @throws IOException
+         */
+        private PredictiveModel buildModel(FeatureSchema schema,String modelDirPath, String modelFileName, String classifierType,
+        		boolean errorCountingEnabled, int classAttrOrd, String [] classAttrValues, double[] misclassCosts) throws IOException {
+        	PredictiveModel model = null;
+        	String modelFilePath = modelDirPath + "/" + modelFileName;
+        	InputStream modelStream = Utility.getFileStream(modelFilePath);
+        	if (classifierType.equals(CLASS_DEC_TREE)) {
+        		model = new DecisionTreeModel(schema, modelStream);
+        	}
+        	
+        	//error counting 
+            if (errorCountingEnabled) {
+            	model.enableErrorCounting(classAttrOrd);
+            }
+        	
+            //cost based classification
+            if (null != classAttrValues) {
+            	model.enableCostBasedPrediction(classAttrValues[0], classAttrValues[1], 
+            			misclassCosts[0], misclassCosts[1]);
+            }
+        	return model;
+        }
+        
         
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
+            predClass = null != model ? model.predict(items) : ensembleModel.predict(items);
+            
+			stBld.delete(0, stBld.length());
+            if (outputMode.equals(OUTPUT_WITH_RECORD)) {
+            	//full record
+            	stBld.append(value.toString()).append(fieldDelim).append(predClass);
+            } else  {
+            	//partial record
+            	if (outputMode.equals(OUTPUT_WITH_ID)) {
+            		stBld.append(items[idOrdinal]).append(fieldDelim);
+            	} 
+            	if (outputMode.equals(OUTPUT_WITH_CLASS_ATTR)) {
+            		stBld.append(items[classAttrOrdinal]).append(fieldDelim);
+            	} 
+             
+            	if (stBld.length() == 0) {
+            		throw new IllegalStateException("invalid output mode");
+            	}
+            	stBld.append(predClass);
+            }
+            outVal.set(stBld.toString());
+			context.write(NullWritable.get(), outVal);
         }        
 	}	
 	

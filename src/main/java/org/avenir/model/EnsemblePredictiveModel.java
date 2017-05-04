@@ -29,13 +29,13 @@ import org.chombo.util.Pair;
  * @author pranab
  *
  */
-public class EnsembleModelPredictor  extends PredictiveModel {
+public class EnsemblePredictiveModel  extends PredictiveModel {
 	private List<WeightedModel> models = new ArrayList<WeightedModel>();
 	private Map<String, Double> votes = new HashMap<String, Double>();
 	private List<VoteCount> sortedVotes = new ArrayList<VoteCount>();
 	private double minOddsRatio = -1.0;
 	
-	public EnsembleModelPredictor() {
+	public EnsemblePredictiveModel() {
 		super();
 	}
 	
@@ -43,7 +43,7 @@ public class EnsembleModelPredictor  extends PredictiveModel {
 	 * @param minOdds
 	 * @return
 	 */
-	public EnsembleModelPredictor withMinOdds(double minOddsRatio) {
+	public EnsemblePredictiveModel withMinOdds(double minOddsRatio) {
 		this.minOddsRatio = minOddsRatio;
 		return this;
 	}
