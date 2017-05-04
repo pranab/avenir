@@ -40,6 +40,12 @@ public abstract class PredictiveModel {
 	protected Pair<String, Double> predClassProb;
 	private int totalCount;
 	private int errorCount;
+
+	/**
+	 * 
+	 */
+	public PredictiveModel() {
+	}
 	
 	/**
 	 * @param schema
@@ -53,29 +59,33 @@ public abstract class PredictiveModel {
 	 * @param posClass
 	 * @param negClass
 	 */
-	public void enableErrorCounting(int classAttributeOrd, String posClass, String negClass) {
+	public PredictiveModel enableErrorCounting(int classAttributeOrd) {
 		errorCountingEnabled = true;
 		this.classAttributeOrd = classAttributeOrd;
-		this.posClass = posClass;
-		this.negClass = negClass;
+		return this;
 	}
 	
 	/**
 	 * @param falsePosCost
 	 * @param falseNegCost
 	 */
-	public void enableCostBasedPrediction(double falsePosCost, double falseNegCost) {
+	public PredictiveModel enableCostBasedPrediction(String posClass, String negClass, 
+			double falsePosCost, double falseNegCost) {
 		costBasedPredictionEnabled = true;
+		this.posClass = posClass;
+		this.negClass = negClass;
 		this.falsePosCost = falsePosCost;
 		this.falseNegCost = falseNegCost;
+		return this;
 	}
 	
 	/**
 	 * 
 	 */
 	protected void countError() {
-		String actualClass = items[classAttributeOrd];
 		++totalCount;
+
+		String actualClass = items[classAttributeOrd];
 		if (!actualClass.equals(predClass)) {
 			++errorCount;
 		}
@@ -91,6 +101,20 @@ public abstract class PredictiveModel {
 	 * @param items
 	 * @return
 	 */
-	public abstract Pair<String, Double>  predictClassProb(String[] items);
+	protected abstract Pair<String, Double>  predictClassProb(String[] items);
+	
+	/**
+	 * @return
+	 */
+	public double getError() {
+		double error = 0;
+		if (errorCountingEnabled) {
+			error = ((double)errorCount) / totalCount;
+		}
+		else {
+			throw new IllegalStateException("error counting is not enabled");
+		}
+		return error;
+	}
 	
 }

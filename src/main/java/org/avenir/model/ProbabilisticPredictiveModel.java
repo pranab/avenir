@@ -26,6 +26,9 @@ import org.chombo.util.FeatureSchema;
  */
 public abstract class ProbabilisticPredictiveModel extends PredictiveModel {
 	
+	/**
+	 * @param schema
+	 */
 	public ProbabilisticPredictiveModel(FeatureSchema schema) {
 		super(schema);
 	}
@@ -34,6 +37,7 @@ public abstract class ProbabilisticPredictiveModel extends PredictiveModel {
 	 * @param items
 	 * @return
 	 */
+	@Override
 	public String predict(String[] items) {
 		predictClassProb(items);
 		
