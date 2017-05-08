@@ -119,14 +119,17 @@ public class ModelPredictor extends Configured implements Tool {
             boolean costBasedPredictionEnabled = config.getBoolean("mop.cost.based.prediction.enabled", false);
             String[] classAttrValues = null;
             double[] misclassCosts = null;
-            if (costBasedPredictionEnabled) {
+            if (costBasedPredictionEnabled || errorCountingEnabled) {
             	classAttrValues = Utility.assertStringArrayConfigParam(config, "mop.class.attr.values", Utility.configDelim,
                 		"missing class atrribute values, need for for cost based prediction");
             	if (classAttrValues.length > 2) {
             		throw new IllegalStateException("csta based classification possible only for binary classification");
             	}
-            	misclassCosts = Utility.assertDoubleArrayConfigParam(config, "mop.miss.class.costs", Utility.configDelim, 
+            	
+            	if (costBasedPredictionEnabled) {
+            		misclassCosts = Utility.assertDoubleArrayConfigParam(config, "mop.miss.class.costs", Utility.configDelim, 
             			"missing misclassification costs");
+            	}
             }
             
             //build model
@@ -144,9 +147,8 @@ public class ModelPredictor extends Configured implements Tool {
             	
             	//error counting 
                 if (errorCountingEnabled) {
-                	ensembleModel.enableErrorCounting(classAttrOrd);
+                	ensembleModel.enableErrorCounting(classAttrOrd, classAttrValues[0], classAttrValues[1]);
                 }
-
             } else {
             	//single
             	model = buildModel(schema, modelDirPath, modelFileNames[0],  classifierType,
@@ -182,11 +184,14 @@ public class ModelPredictor extends Configured implements Tool {
         	InputStream modelStream = Utility.getFileStream(modelFilePath);
         	if (classifierType.equals(CLASS_DEC_TREE)) {
         		model = new DecisionTreeModel(schema, modelStream);
+        		modelStream.close();
+        	} else {
+        		throw new IllegalStateException("invalid classifier type");
         	}
         	
         	//error counting 
             if (errorCountingEnabled) {
-            	model.enableErrorCounting(classAttrOrd);
+            	model.enableErrorCounting(classAttrOrd, classAttrValues[0], classAttrValues[1]);
             }
         	
             //cost based classification
@@ -228,6 +233,10 @@ public class ModelPredictor extends Configured implements Tool {
 	}	
 	
 	
+    /**
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
         int exitCode = ToolRunner.run(new ModelPredictor(), args);
         System.exit(exitCode);

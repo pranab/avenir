@@ -40,6 +40,9 @@ public abstract class PredictiveModel {
 	protected Pair<String, Double> predClassProb;
 	private int totalCount;
 	private int errorCount;
+	private int falsePosErrorCount;
+	private int falseNegErrorCount;
+	
 
 	/**
 	 * 
@@ -59,9 +62,10 @@ public abstract class PredictiveModel {
 	 * @param posClass
 	 * @param negClass
 	 */
-	public PredictiveModel enableErrorCounting(int classAttributeOrd) {
+	public PredictiveModel enableErrorCounting(int classAttributeOrd, String posClass, String negClass) {
 		errorCountingEnabled = true;
 		this.classAttributeOrd = classAttributeOrd;
+		withClassValues(posClass, negClass);
 		return this;
 	}
 	
@@ -72,11 +76,21 @@ public abstract class PredictiveModel {
 	public PredictiveModel enableCostBasedPrediction(String posClass, String negClass, 
 			double falsePosCost, double falseNegCost) {
 		costBasedPredictionEnabled = true;
-		this.posClass = posClass;
-		this.negClass = negClass;
+		withClassValues(posClass, negClass);
 		this.falsePosCost = falsePosCost;
 		this.falseNegCost = falseNegCost;
 		return this;
+	}
+	
+	/**
+	 * @param posClass
+	 * @param negClass
+	 */
+	private void withClassValues(String posClass, String negClass) {
+		if (null == this.posClass) {
+			this.posClass = posClass;
+			this.negClass = negClass;
+		}
 	}
 	
 	/**
@@ -84,9 +98,13 @@ public abstract class PredictiveModel {
 	 */
 	protected void countError() {
 		++totalCount;
-
 		String actualClass = items[classAttributeOrd];
 		if (!actualClass.equals(predClass)) {
+			if (predClass.equals(posClass)) {
+				++falsePosErrorCount;
+			} else {
+				++falseNegErrorCount;
+			}
 			++errorCount;
 		}
 	}
@@ -117,4 +135,31 @@ public abstract class PredictiveModel {
 		return error;
 	}
 	
+	/**
+	 * @return
+	 */
+	public double getFalsePosError() {
+		double error = 0;
+		if (errorCountingEnabled) {
+			error = ((double)falsePosErrorCount) / totalCount;
+		}
+		else {
+			throw new IllegalStateException("error counting is not enabled");
+		}
+		return error;
+	}
+
+	/**
+	 * @return
+	 */
+	public double getFalseNegError() {
+		double error = 0;
+		if (errorCountingEnabled) {
+			error = ((double)falseNegErrorCount) / totalCount;
+		}
+		else {
+			throw new IllegalStateException("error counting is not enabled");
+		}
+		return error;
+	}
 }
