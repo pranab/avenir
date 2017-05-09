@@ -18,10 +18,6 @@
 package org.avenir.explore;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -32,17 +28,16 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
-import org.avenir.explore.CategoricalClassAffinity.AffinityScore;
-import org.avenir.explore.CategoricalClassAffinity.AffinityScoreComparator;
+import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.BasicUtils;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
 
 /**
+ * Calculate classification error weighted by sample boost
  * @author pranab
  *
  */
@@ -71,8 +66,6 @@ public class AdaBoostError extends Configured implements Tool {
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
-        Utility.setTuplePairSecondarySorting(job);
-        
         int numReducer = job.getConfiguration().getInt("abe.num.reducer", -1);
         numReducer = -1 == numReducer ? job.getConfiguration().getInt("num.reducer", 1) : numReducer;
         job.setNumReduceTasks(numReducer);
@@ -171,5 +164,13 @@ public class AdaBoostError extends Configured implements Tool {
         }
     }
     
+	/**
+	 * @param args
+	 * @throws Exception
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new AdaBoostError(), args);
+        System.exit(exitCode);
+	}
     
 }
