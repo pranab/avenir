@@ -136,6 +136,7 @@ public class AdaBoostError extends Configured implements Tool {
 		private String fieldDelimOut;
 		private StringBuilder stBld = new  StringBuilder();
 		private int outputPrecision;
+		private boolean weightNormalized;
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -144,6 +145,7 @@ public class AdaBoostError extends Configured implements Tool {
         	Configuration config = context.getConfiguration();
         	fieldDelimOut = config.get("field.delim", ",");
         	outputPrecision = config.getInt("abe.output.precision", 6);
+        	weightNormalized = config.getBoolean("abe.weight.normalized", false);
         }
     
 		/* (non-Javadoc)
@@ -158,7 +160,7 @@ public class AdaBoostError extends Configured implements Tool {
             	errorCount += value.getInt(0);
             	errorSum += value.getDouble(1);
             }
-            double error = errorSum / errorCount;
+            double error = weightNormalized? errorSum : errorSum / errorCount;
             outVal.set("error=" + BasicUtils.formatDouble(error, outputPrecision));
             context.write(NullWritable.get(), outVal);
         }

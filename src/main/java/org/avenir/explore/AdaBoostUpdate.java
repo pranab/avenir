@@ -81,6 +81,7 @@ public class AdaBoostUpdate extends Configured implements Tool {
         private double alpha;
         private double boost;
         private int outputPrecision;
+        private double initialWeight;
         
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -104,6 +105,8 @@ public class AdaBoostUpdate extends Configured implements Tool {
         	alpha = 0.5 * Math.log((1.0 - error) / error);
         	
         	outputPrecision = config.getInt("abe.output.precision", 6);
+        	initialWeight = Utility.assertDoubleConfigParam(config, "abu.intial.weight", 
+        			"missing adabost intial weight");
         }	
 
 	   	
@@ -114,14 +117,19 @@ public class AdaBoostUpdate extends Configured implements Tool {
 	    protected void map(LongWritable key, Text value, Context context)
 	    	throws IOException, InterruptedException {
         	items  = value.toString().split(fieldDelimRegex, -1);
-        	
-        	boost = Double.parseDouble(items[boostAttrOrd]);
-        	if (!items[actualClassAttrOrd].equals(items[predClassAttrOrd])) {
-        		//incorrect prediction
-        		boost *= Math.exp(alpha);
+        	if (error < 0.5) {
+        		//update current weight
+	        	boost = Double.parseDouble(items[boostAttrOrd]);
+	        	if (!items[actualClassAttrOrd].equals(items[predClassAttrOrd])) {
+	        		//incorrect prediction
+	        		boost *= Math.exp(alpha);
+	        	} else {
+	        		//correct prediction
+	        		boost *= Math.exp(-alpha);
+	        	}
         	} else {
-        		//correct prediction
-        		boost *= Math.exp(-alpha);
+        		//reset to initial weight
+        		boost = initialWeight;
         	}
         	items[boostAttrOrd] = BasicUtils.formatDouble(boost, outputPrecision);
         	outVal.set(BasicUtils.join(items, fieldDelimRegex));
