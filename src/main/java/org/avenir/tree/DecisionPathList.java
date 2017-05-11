@@ -26,6 +26,7 @@ import java.util.Map;
 import org.chombo.mr.FeatureField;
 import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
+import org.chombo.util.Pair;
 
 
 /**
@@ -178,46 +179,100 @@ public class DecisionPathList {
 			return matched;
 		}
 
+		/**
+		 * @return
+		 */
 		public List<DecisionPathPredicate> getPredicates() {
 			return predicates;
 		}
+		
+		/**
+		 * @param predicates
+		 */
 		public void setPredicates(List<DecisionPathList.DecisionPathPredicate> predicates) {
 			this.predicates = predicates;
 		}
+		
+		/**
+		 * @return
+		 */
 		public int getPopulation() {
 			return population;
 		}
+		
+		/**
+		 * @param population
+		 */
 		public void setPopulation(int population) {
 			this.population = population;
 		}
+		
+		/**
+		 * @return
+		 */
 		public double getInfoContent() {
 			return infoContent;
 		}
+		
+		/**
+		 * @param infoContent
+		 */
 		public void setInfoContent(double infoContent) {
 			this.infoContent = infoContent;
 		}
+		
+		/**
+		 * @return
+		 */
 		public boolean isStopped() {
 			return stopped;
 		}
 
+		/**
+		 * @param stopped
+		 */
 		public void setStopped(boolean stopped) {
 			this.stopped = stopped;
 		}
 		
+		/**
+		 * @return
+		 */
 		public Map<String, Double> getClassValPr() {
 			return classValPr;
 		}
 
+		/**
+		 * @param classValPr
+		 */
 		public void setClassValPr(Map<String, Double> classValPr) {
 			this.classValPr = classValPr;
 		}
 
+		/**
+		 * @return
+		 */
 		public String toStringAllPredicate() {
 			List<String> strPredicates = new ArrayList<String>();
 			for (DecisionPathPredicate predicate : predicates) {
 				strPredicates.add(predicate.toString());
 			}
 			return BasicUtils.join(strPredicates, DecisionTreeBuilder.PRED_DELIM);
+		}
+		
+		/**
+		 * @return
+		 */
+		public Pair<String, Double> getPrediction() {
+			String predClVal = null;
+			double maxProb = 0;
+			for (String clVal : classValPr.keySet()) {
+				if (classValPr.get(clVal) > maxProb) {
+					predClVal = clVal;
+					maxProb = classValPr.get(clVal);
+				}
+			}
+			return new Pair<String, Double>(predClVal, maxProb);
 		}
 	}
 	
@@ -235,6 +290,10 @@ public class DecisionPathList {
 		private Integer otherBoundInt;
 		private Double otherBoundDbl;
 		private String predicateStr;
+		public static final String OP_LE = "le";
+		public static final String OP_GT = "gt";
+		public static final String OP_IN = "in";
+		
 
 		/**
 		 * @param predicateStr
@@ -392,6 +451,11 @@ public class DecisionPathList {
 			this.predicateStr = predicateStr;
 		}
 
+		@Override
+		public int hashCode() {
+			return predicateStr.hashCode();
+		}
+		
 		@Override
 		public boolean equals(Object obj) {
 			DecisionPathPredicate that = (DecisionPathPredicate)obj;
