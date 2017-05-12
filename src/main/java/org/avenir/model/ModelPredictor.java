@@ -123,7 +123,7 @@ public class ModelPredictor extends Configured implements Tool {
             	classAttrValues = Utility.assertStringArrayConfigParam(config, "mop.class.attr.values", Utility.configDelim,
                 		"missing class atrribute values, need for for cost based prediction");
             	if (classAttrValues.length > 2) {
-            		throw new IllegalStateException("csta based classification possible only for binary classification");
+            		throw new IllegalStateException("cost based classification possible only for binary classification");
             	}
             	
             	if (costBasedPredictionEnabled) {
@@ -184,10 +184,10 @@ public class ModelPredictor extends Configured implements Tool {
         	InputStream modelStream = Utility.getFileStream(modelFilePath);
         	if (classifierType.equals(CLASS_DEC_TREE)) {
         		model = new DecisionTreeModel(schema, modelStream);
-        		modelStream.close();
         	} else {
         		throw new IllegalStateException("invalid classifier type");
         	}
+    		modelStream.close();
         	
         	//error counting 
             if (errorCountingEnabled) {
@@ -195,7 +195,7 @@ public class ModelPredictor extends Configured implements Tool {
             }
         	
             //cost based classification
-            if (null != classAttrValues) {
+            if (null != misclassCosts) {
             	model.enableCostBasedPrediction(classAttrValues[0], classAttrValues[1], 
             			misclassCosts[0], misclassCosts[1]);
             }

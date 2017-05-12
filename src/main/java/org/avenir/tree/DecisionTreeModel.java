@@ -16,6 +16,7 @@
  */
 package org.avenir.tree;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +39,7 @@ public class DecisionTreeModel extends ProbabilisticPredictiveModel {
     private Map<DecisionPathPredicate, Boolean> predicateValues = new HashMap<DecisionPathPredicate, Boolean>();
     private Map<Integer, FeatureField> fields = new HashMap<Integer, FeatureField>();
 
-	public DecisionTreeModel(FeatureSchema schema, InputStream modelStream) throws Exception {
+	public DecisionTreeModel(FeatureSchema schema, InputStream modelStream) throws IOException {
 		super(schema);
         if (null != modelStream) {
         	ObjectMapper  mapper = new ObjectMapper();
