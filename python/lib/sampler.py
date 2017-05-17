@@ -4,6 +4,8 @@ import sys
 import random 
 import time
 import math
+from random import randint
+
 from stats import Histogram
 
 def randomFloat(low, high):
@@ -21,6 +23,12 @@ def rangeLimit(val, min, max):
 		val = max
 	return val
 
+def sampleUniform(min, max):
+	return randint(min, max)
+
+def sampleFromBase(value, dev):
+	return randint(value - dev, value + dev)
+	
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:
 	def __init__(self, mean, stdDev):

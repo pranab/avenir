@@ -38,6 +38,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2016/06/14/inventory-forecasting-with-markov-chain-monte-carlo/
 * https://pkghosh.wordpress.com/2016/07/30/customer-segmentation-based-on-online-behavior-using-scikitlearn/
 * https://pkghosh.wordpress.com/2016/10/27/supplier-fulfillment-forecasting-with-continuous-time-markov-chain-using-spark/
+* https://pkghosh.wordpress.com/2017/04/30/predicting-call-hangup-in-customer-service-calls-with-decision-tree-and-random-forest/
 
 
 
