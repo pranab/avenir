@@ -118,7 +118,6 @@ public class SequentialMinimalOptimization {
 		
 		double r = err2nd * target2nd;
 		boolean status = false;
-		//double[] row1st = null;
 		int index1st = 0;
 		if (r < -tolerance && alpha2nd < penaltyFactor || r > tolerance && alpha2nd > 0) {
 			//choose optimum partner 
@@ -198,6 +197,10 @@ public class SequentialMinimalOptimization {
 				high = BasicUtils.min(penaltyFactor, alpha1st + alpha2nd);
 			}
 			
+			if (low == high) {
+				return status;
+			}
+			
 			//second derivative of objective function
 			double k11 = getKernelValue(index1st, index1st);
 			double k12 = getKernelValue(index1st, index2nd);
@@ -235,6 +238,13 @@ public class SequentialMinimalOptimization {
 			}
 			if (Math.abs(alpha2ndNew - alpha2nd) > eps* (alpha2ndNew + alpha2nd + eps)) {
 				double alpha1stNew =  alpha1st + s * (alpha2nd - alpha2ndNew);
+				if (alpha1stNew < 0) {
+					alpha2ndNew += s * alpha1stNew;
+					alpha1stNew = 0;
+				} else if (alpha1stNew > penaltyFactor) {
+					alpha2ndNew += s * (alpha1stNew - penaltyFactor);
+					alpha1stNew = penaltyFactor;
+				}
 				
 				//update threshold
 				double thresholdNew = 0;
@@ -257,14 +267,16 @@ public class SequentialMinimalOptimization {
 					
 				}
 				
-				//update error cache for non bound lagrangian
-				updateErrorCache(index1st, target1st, alpha1st, alpha1stNew, 
-						index2nd, target2nd, alpha2nd, alpha2ndNew, thresholdNew);
-				
 				//update lagrangian
 				data.get(index1st)[lagrangianOrd] = alpha1stNew;
 				data.get(index2nd)[lagrangianOrd] = alpha2ndNew;
 				updateSupVecs();
+				double thresholdDiff = threshold - thresholdNew;
+				threshold = thresholdNew;
+				
+				//update error cache for non bound lagrangian
+				updateErrorCache(index1st, target1st, alpha1st, alpha1stNew, 
+						index2nd, target2nd, alpha2nd, alpha2ndNew, thresholdDiff);
 				
 				status = true;
 			}
@@ -282,6 +294,7 @@ public class SequentialMinimalOptimization {
 		errors.clear();
 		kernelValues.clear();
 		supVecs.clear();
+		threshold = 0;
 	}
 
 	/**
@@ -351,16 +364,18 @@ public class SequentialMinimalOptimization {
 	 * @param thresholdNew
 	 */
 	private void updateErrorCache(int index1st, double target1st, double alpha1st, double alpha1stNew, 
-			int index2nd, double target2nd, double alpha2nd, double alpha2ndNew, double thresholdNew) {
+			int index2nd, double target2nd, double alpha2nd, double alpha2ndNew, double thresholdDiff) {
+		double t1 = alpha1stNew - alpha1st;
+		double t2 = alpha2ndNew - alpha2nd;
 		for (int i : supVecs) {
 			if (i == index1st || i == index2nd) {
 				errors.put(i, 0.0);
 			} else {
 				double error = errors.get(i);
 				double errorNew = error + 
-						target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  i) +
-						target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index2nd,  i) +
-						threshold - thresholdNew;
+						target1st * t1 * getKernelValue(index1st,  i) +
+						target2nd * t2 * getKernelValue(index2nd,  i) +
+						thresholdDiff;
 				errors.put(i, errorNew);
 			}
 		}
@@ -372,8 +387,8 @@ public class SequentialMinimalOptimization {
 	private void updateSupVecs() {
 		supVecs.clear();
 		for (int i = 0; i < data.size() ; ++i) {
-			double[] row = data.get(i);
-			if (row[lagrangianOrd] > 0 && row[lagrangianOrd] < penaltyFactor) {
+			double alpha = data.get(i)[lagrangianOrd];
+			if (alpha > 0 && alpha < penaltyFactor) {
 				supVecs.add(i);
 			}
 		}
@@ -410,7 +425,7 @@ public class SequentialMinimalOptimization {
 	 * @return
 	 */
 	private int choosePartner(int index2nd, double err2nd) {
-		int index1st = 0;
+		int index1st = -1;
 		double err1st = 0;
 		double maxErrDiff = 0;
 		
