@@ -33,14 +33,15 @@ public class SequentialMinimalOptimization {
 	private double penaltyFactor;
 	private int classAttrOrd;
 	private int lagrangianOrd;
-	private double tolerance;
-	private double eps;
+	private double tolerance = 0.001;
+	private double eps = 0.001;
 	private double threshold;
 	private List<double[]> data;
 	private List<Integer> supVecs = new ArrayList<Integer>();
 	private Kernel kernel;
 	private Map<Integer, Double> errors = new HashMap<Integer, Double>();
 	private Map<int[], Double> kernelValues = new HashMap<int[], Double>();
+	private String kernelType;
 	public static final String KERNEL_LINER = "linear";
 	public static final String KERNEL_POLY = "polynomial";
 	public static final String KERNEL_RADIAL = "radial";
@@ -63,15 +64,15 @@ public class SequentialMinimalOptimization {
 		} else {
 			throw new IllegalStateException("invalid kernel type");
 		}
+		this.kernelType = kernelType;
 	}
 	
 	/**
 	 * @param data
 	 */
-	public void process(List<double[]> data, double threshold) {
+	public void process(List<double[]> data) {
 		this.data = data;
-		this.threshold = threshold;
-		buildSupVecs();
+		init();
 		
 		int numChanged = 0;
 		boolean examineAll = true;
@@ -90,12 +91,10 @@ public class SequentialMinimalOptimization {
 				//this loop run run 1 or more times after each run of the other loop
 				index2nd = 0;
 				for ( ; index2nd < data.size(); ++index2nd) {
-					double[] row = data.get(index2nd);
-					double lagrange = row[lagrangianOrd];
-					if (lagrange > 0 && lagrange < penaltyFactor) {
+					double alpha = getLagrangian(index2nd);
+					if (isNotBound(alpha)) {
 						numChanged += examine(index2nd);
 					}
-					++index2nd;
 				}
 			} 
 			
@@ -119,12 +118,12 @@ public class SequentialMinimalOptimization {
 		
 		double r = err2nd * target2nd;
 		boolean status = false;
-		double[] row1st = null;
+		//double[] row1st = null;
 		int index1st = 0;
 		if (r < -tolerance && alpha2nd < penaltyFactor || r > tolerance && alpha2nd > 0) {
 			//choose optimum partner 
 			if (!supVecs.isEmpty()) {
-				index1st = choosePartner();
+				index1st = choosePartner(index2nd, err2nd);
 				status = step(index1st, index2nd);
 			}
 			
@@ -150,21 +149,16 @@ public class SequentialMinimalOptimization {
 			//all starting at random
 			if (!status) {
 				int pos = (int)(Math.random() * data.size());
-				index1st = pos;
 
 				//from pos to end
-				for (int i = pos; i < data.size() && !status; ++i) {
-					row1st = data.get(i);
+				for (index1st = pos; index1st < data.size() && !status; ++index1st) {
 					status = step(index1st, index2nd);
-					++index1st;
 				}
 				
 				if (!status) {
-					index1st = 0;
-					//from pos to end
-					for (int i = 0; i < pos && !status; ++i) {
+					//from beginning to pos
+					for (index1st = 0; index1st < pos && !status; ++index1st) {
 						status = step(index1st, index2nd);
-						++index1st;
 					}
 				}
 			}
@@ -182,6 +176,7 @@ public class SequentialMinimalOptimization {
 		boolean status = false;
 		double[] row1st = data.get(index1st);
 		double[] row2nd = data.get(index2nd);
+		
 		if (index1st != index2nd) {
 			double alpha1st = row1st[lagrangianOrd];
 			double target1st = row1st[classAttrOrd];
@@ -204,9 +199,9 @@ public class SequentialMinimalOptimization {
 			}
 			
 			//second derivative of objective function
-			double k11 = kernel.compute(row1st, row1st);
-			double k12 = kernel.compute(row1st, row2nd);
-			double k22 = kernel.compute(row2nd, row2nd);
+			double k11 = getKernelValue(index1st, index1st);
+			double k12 = getKernelValue(index1st, index2nd);
+			double k22 = getKernelValue(index2nd, index2nd);
 			double eta = 2 * k12 - k11 - k22;
 			double alpha2ndNew = 0;
 			boolean atBound = false;
@@ -224,21 +219,9 @@ public class SequentialMinimalOptimization {
 
 				//objective fun value at boundary
 				double alpha2ndLow = low;
-				double temp = gama -s * alpha2ndLow;
-				double objValLow = temp + alpha2ndLow - 
-						0.5 * getKernelValue(index1st,  index1st) * temp * temp - 
-						0.5 * getKernelValue(index2nd,  index2nd)  * alpha2ndLow * alpha2ndLow -
-						s * getKernelValue(index1st,  index2nd) * temp * alpha2ndLow  -
-						target1st * temp  * v1 -
-						target2nd  * alpha2ndLow * v2;
+				double objValLow = objFunctionAtBoundary(index1st, index2nd, target1st, target2nd, gama, s, alpha2ndLow, v1, v2);
 				double alpha2ndHigh = high;
-				temp = gama -s * alpha2ndHigh;
-				double objValHigh = temp + alpha2ndHigh - 
-						0.5 * getKernelValue(index1st,  index1st) * temp * temp - 
-						0.5 * getKernelValue(index2nd,  index2nd)  * alpha2ndHigh * alpha2ndHigh -
-						s * getKernelValue(index1st,  index2nd) * temp * alpha2ndHigh  -
-						target1st * temp  * v1 -
-						target2nd  * alpha2ndHigh * v2;
+				double objValHigh = objFunctionAtBoundary(index1st, index2nd, target1st, target2nd, gama, s, alpha2ndHigh, v1, v2);
 				
 				//choose by higher value
 				if ( objValLow > objValHigh + eps) {
@@ -256,55 +239,144 @@ public class SequentialMinimalOptimization {
 				//update threshold
 				double thresholdNew = 0;
 				if (isNotBound(alpha1stNew)) {
-					double b1 = error1st + 
-							target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index1st) +
-							target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index1st,  index2nd) +
-							threshold;
-					thresholdNew = b1;
+					thresholdNew = computeThreshold(index1st, error1st, target1st, alpha1stNew, alpha1st,
+							index2nd, error2nd, target2nd, alpha2ndNew, alpha2nd, true);
 				} else if (isNotBound(alpha2ndNew)) {
-					double b2 = error2nd + 
-							target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index2nd) +
-							target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index2nd,  index2nd) +
-							threshold;
-					thresholdNew = b2;
+					thresholdNew = computeThreshold(index1st, error1st, target1st, alpha1stNew, alpha1st,
+							index2nd, error2nd, target2nd, alpha2ndNew, alpha2nd, false);
 				} else {
-					double b1 = error1st + 
-							target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index1st) +
-							target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index1st,  index2nd) +
-							threshold;
-					double b2 = error2nd + 
-							target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index2nd) +
-							target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index2nd,  index2nd) +
-							threshold;
+					double b1 = computeThreshold(index1st, error1st, target1st, alpha1stNew, alpha1st,
+							index2nd, error2nd, target2nd, alpha2ndNew, alpha2nd, true);
+					double b2 = computeThreshold(index1st, error1st, target1st, alpha1stNew, alpha1st,
+							index2nd, error2nd, target2nd, alpha2ndNew, alpha2nd, false);
 					thresholdNew = (b1 + b2) / 2;
 				}
 				
 				//update weight vector for linear
+				if (kernelType.equals(KERNEL_LINER)) {
+					
+				}
 				
 				//update error cache for non bound lagrangian
+				updateErrorCache(index1st, target1st, alpha1st, alpha1stNew, 
+						index2nd, target2nd, alpha2nd, alpha2ndNew, thresholdNew);
 				
 				//update lagrangian
 				data.get(index1st)[lagrangianOrd] = alpha1stNew;
 				data.get(index2nd)[lagrangianOrd] = alpha2ndNew;
-			}
-			
+				updateSupVecs();
 				
+				status = true;
+			}
 		}
 		return status;
 	}
-
+	
 	/**
 	 * 
 	 */
-	private void buildSupVecs() {
+	private void init() {
+		for (double[] row : data) {
+			row[lagrangianOrd] = 0;
+		}
+		errors.clear();
+		kernelValues.clear();
 		supVecs.clear();
-		for (int i = 0; i < data.size(); ++i) {
+	}
+
+	/**
+	 * @param index1st
+	 * @param index2nd
+	 * @param target1st
+	 * @param target2nd
+	 * @param gama
+	 * @param s
+	 * @param alpha
+	 * @param v1
+	 * @param v2
+	 * @return
+	 */
+	private double objFunctionAtBoundary(int index1st, int index2nd, double target1st, double target2nd, 
+			double gama, double s, double alpha, double v1, double v2) {
+		double temp = gama -s * alpha;
+		double objVal = temp + alpha - 
+				0.5 * getKernelValue(index1st,  index1st) * temp * temp - 
+				0.5 * getKernelValue(index2nd,  index2nd)  * alpha * alpha -
+				s * getKernelValue(index1st,  index2nd) * temp * alpha  -
+				target1st * temp  * v1 -
+				target2nd  * alpha * v2;
+		return objVal;
+	}
+	/**
+	 * @param index1st
+	 * @param error1st
+	 * @param target1st
+	 * @param alpha1stNew
+	 * @param alpha1st
+	 * @param index2nd
+	 * @param error2nd
+	 * @param target2nd
+	 * @param alpha2ndNew
+	 * @param alpha2nd
+	 * @param first
+	 * @return
+	 */
+	private double computeThreshold(int index1st, double error1st, double target1st, double alpha1stNew, double alpha1st,
+			int index2nd, double error2nd, double target2nd, double alpha2ndNew, double alpha2nd, boolean first) {
+		double b = 0;
+		if (first) {
+			b = error1st + 
+				target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index1st) +
+				target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index1st,  index2nd) +
+				threshold;
+		} else {
+			b = error2nd + 
+				target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  index2nd) +
+				target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index2nd,  index2nd) +
+				threshold;
+		}
+		
+		return b;
+	}
+	
+	/**
+	 * @param index1st
+	 * @param target1st
+	 * @param alpha1st
+	 * @param alpha1stNew
+	 * @param index2nd
+	 * @param target2nd
+	 * @param alpha2nd
+	 * @param alpha2ndNew
+	 * @param thresholdNew
+	 */
+	private void updateErrorCache(int index1st, double target1st, double alpha1st, double alpha1stNew, 
+			int index2nd, double target2nd, double alpha2nd, double alpha2ndNew, double thresholdNew) {
+		for (int i : supVecs) {
+			if (i == index1st || i == index2nd) {
+				errors.put(i, 0.0);
+			} else {
+				double error = errors.get(i);
+				double errorNew = error + 
+						target1st * (alpha1stNew - alpha1st) * getKernelValue(index1st,  i) +
+						target2nd * (alpha2ndNew - alpha2nd) * getKernelValue(index2nd,  i) +
+						threshold - thresholdNew;
+				errors.put(i, errorNew);
+			}
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	private void updateSupVecs() {
+		supVecs.clear();
+		for (int i = 0; i < data.size() ; ++i) {
 			double[] row = data.get(i);
-			double alpha = row[lagrangianOrd];
-			if (alpha > 0 && alpha < penaltyFactor) {
+			if (row[lagrangianOrd] > 0 && row[lagrangianOrd] < penaltyFactor) {
 				supVecs.add(i);
 			}
-		}		
+		}
 	}
 	
 	/**
@@ -327,17 +399,32 @@ public class SequentialMinimalOptimization {
 	 * @param row
 	 * @return
 	 */
-	private double predict(int indx) {
+	public double predict(int indx) {
 		double prediction = evaluate(indx) >= 0 ? 1 : 0;
 		return prediction;
 	}	
 	
 	/**
+	 * @param index2nd
+	 * @param err2nd
 	 * @return
 	 */
-	private int choosePartner() {
+	private int choosePartner(int index2nd, double err2nd) {
 		int index1st = 0;
+		double err1st = 0;
+		double maxErrDiff = 0;
 		
+		//based on max error difference
+		for (int i : supVecs) {
+			if (i != index2nd) {
+				err1st = getError(i);
+				double diff = Math.abs(err1st - err2nd);
+				if (diff > maxErrDiff) {
+					index1st = i;
+					maxErrDiff = diff;
+				}
+			}
+		}
 		return index1st;
 	}
 	
@@ -349,15 +436,15 @@ public class SequentialMinimalOptimization {
 	private double getError(int index) {
 		double[] row = data.get(index);
 		Double error = null;
-		if (isBound(index)) {
-			//bound in cache
+		if (isNotBound(index)) {
+			//if not bound in cache
 			error = errors.get(index);
 			if (null == error) {
 				error = 0.0;
 				errors.put(index, error);
 			}			
 		} else {
-			//always evaluate for non bound
+			//always evaluate for  bound
 			double target = row[classAttrOrd];
 			error = evaluate(index) - target;
 		}
@@ -368,9 +455,9 @@ public class SequentialMinimalOptimization {
 	 * @param index
 	 * @return
 	 */
-	private boolean isBound(int index) {
+	private boolean isNotBound(int index) {
 		double alpha = data.get(index)[lagrangianOrd];
-		return alpha < tolerance || alpha > penaltyFactor - tolerance;
+		return alpha > 0 && alpha < penaltyFactor;
 	}
 	
 	private boolean isNotBound(double alpha) {
@@ -394,4 +481,22 @@ public class SequentialMinimalOptimization {
 		}
 		return kernelVal;
 	}
+	
+	/**
+	 * @param index
+	 * @return
+	 */
+	private double getLagrangian(int index) {
+		double[] row = data.get(index);
+		return row[lagrangianOrd];
+	}
+
+	/**
+	 * @return
+	 */
+	public List<Integer> getSupVecIndexes() {
+		return supVecs;
+	}
+	
+	
 }
