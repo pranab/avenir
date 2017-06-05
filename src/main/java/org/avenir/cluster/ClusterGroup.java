@@ -32,8 +32,8 @@ public class ClusterGroup {
 	private List<Cluster> clusters = new ArrayList<Cluster>();
 	private double movementThreshold;
 	private boolean active;
-	private static final String STATUS_ACTIVE = "active";
-	private static final String STATUS_STOPPED = "stopped";
+	public static final String STATUS_ACTIVE = "active";
+	public static final String STATUS_STOPPED = "stopped";
 	
 	/**
 	 * @param movementThreshold
@@ -53,6 +53,9 @@ public class ClusterGroup {
 		clusters.add( new Cluster(centroid,  movement, status, delim));
 	}
 
+	/**
+	 * 
+	 */
 	public void initialize() {
 		active = false;
 		for( Cluster cluster : clusters ) {
@@ -100,6 +103,12 @@ public class ClusterGroup {
 		private String[] items;
 		private double distance;
 		
+		/**
+		 * @param centroid
+		 * @param movement
+		 * @param status
+		 * @param delim
+		 */
 		public Cluster(String centroid,  double movement, String status, String delim) {
 			this.centroid = centroid;
             this.movement = movement;
@@ -107,14 +116,23 @@ public class ClusterGroup {
             this.items = centroid.split(delim, -1);
 		}
 
+		/**
+		 * @return
+		 */
 		public String getCentroid() {
 			return centroid;
 		}
 
+		/**
+		 * @return
+		 */
 		public double getMovement() {
 			return movement;
 		}
 
+		/**
+		 * @return
+		 */
 		public String getStatus() {
 			return status;
 		}
@@ -130,6 +148,9 @@ public class ClusterGroup {
 			return distance;
 		}
 
+		/**
+		 * @return
+		 */
 		public double getDistance() {
 			return distance;
 		}

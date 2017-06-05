@@ -64,7 +64,7 @@ public class KmeansCluster extends Configured implements Tool {
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
-        Utility.setConfiguration(job.getConfiguration(), "chombo");
+        Utility.setConfiguration(job.getConfiguration(), "avenir");
         job.setMapperClass(KmeansCluster.ClusterMapper.class);
         job.setReducerClass(KmeansCluster.ClusterReducer.class);
                 
@@ -74,7 +74,7 @@ public class KmeansCluster extends Configured implements Tool {
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
 
-        int numReducer = job.getConfiguration().getInt("nads.num.reducer", -1);
+        int numReducer = job.getConfiguration().getInt("kmc.num.reducer", -1);
         numReducer = -1 == numReducer ? job.getConfiguration().getInt("num.reducer", 1) : numReducer;
         job.setNumReduceTasks(numReducer);
 
@@ -164,7 +164,7 @@ public class KmeansCluster extends Configured implements Tool {
             		outKey.add(clGrpName,  nearest.getCentroid());
             		
             		outVal.initialize();
-            		outVal.add(value.toString());
+            		outVal.add(value.toString(), nearest.getDistance());
                 	context.write(outKey, outVal);
             	}
             }
@@ -189,6 +189,10 @@ public class KmeansCluster extends Configured implements Tool {
         private Map<Integer, Double> numSums = new HashMap<Integer, Double>();
         private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
         private int outputPrecision;
+        private int count;
+        private double sumDistSq;
+        private double avError;
+        private double movement;
 
 		/* (non-Javadoc)
 		 * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
@@ -233,7 +237,8 @@ public class KmeansCluster extends Configured implements Tool {
 			int recSize = centroid.length;
 			initialize();
 			
-			int count = 0;
+			count = 0;
+			sumDistSq = 0;
 			for (Tuple val : values) {
 				String[] rec = val.getString(0).split(fieldDelim, -1);
 				for (int i = 0 ; i < rec.length; ++i) {
@@ -247,9 +252,12 @@ public class KmeansCluster extends Configured implements Tool {
 					} else {
 						//attribute not included
 					}
+					double dist = val.getDouble(1);
+					sumDistSq += dist * dist;
 					++count;
 				}
 			}
+			avError = sumDistSq / count;
 			
 			//numerical attr mean
 			List<Integer> attrs = new ArrayList<Integer>(numSums.keySet());
@@ -273,15 +281,17 @@ public class KmeansCluster extends Configured implements Tool {
 				}
 			}
 			
-			//movement
-			double movement = distanceFinder.findDistance(centroid, newCentroid);
-			
+			//centroid, movement, status, sse, count
+			movement = distanceFinder.findDistance(centroid, newCentroid);
 			stBld.delete(0, stBld.length());
 			stBld.append(clusterGroup).append(fieldDelim);
 			for (String item : newCentroid) {
 				stBld.append(clusterGroup).append(fieldDelim);
 			}
-			stBld.append(BasicUtils.formatDouble(movement,outputPrecision ));
+			stBld.append(BasicUtils.formatDouble(movement,outputPrecision)).append(fieldDelim).
+				append(ClusterGroup.STATUS_ACTIVE).append(fieldDelim).
+				append(BasicUtils.formatDouble(avError,outputPrecision)).append(fieldDelim).
+				append(count);
 			outVal.set(stBld.toString());
 			context.write(NullWritable.get(), outVal);
 		}		
