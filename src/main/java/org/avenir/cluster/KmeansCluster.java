@@ -286,7 +286,7 @@ public class KmeansCluster extends Configured implements Tool {
 			stBld.delete(0, stBld.length());
 			stBld.append(clusterGroup).append(fieldDelim);
 			for (String item : newCentroid) {
-				stBld.append(clusterGroup).append(fieldDelim);
+				stBld.append(item).append(fieldDelim);
 			}
 			stBld.append(BasicUtils.formatDouble(movement,outputPrecision)).append(fieldDelim).
 				append(ClusterGroup.STATUS_ACTIVE).append(fieldDelim).
