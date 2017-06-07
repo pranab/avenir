@@ -18,12 +18,14 @@
 
 package org.avenir.optimize;
 
+import java.io.Serializable;
+
 /**
  * Interface between optimization algorithm and business domain logic
  * @author pranab
  *
  */
-public abstract class  BasicSearchDomain {
+public abstract class  BasicSearchDomain implements Serializable {
 	protected String currentCandidate;
 	protected int neighborhoodSize;
 	protected boolean refCurrent;
@@ -32,6 +34,11 @@ public abstract class  BasicSearchDomain {
 	 * @param configFile
 	 */
 	public abstract void intialize(String configFile);
+	
+	/**
+	 * @return
+	 */
+	public abstract  BasicSearchDomain createClone();
 	
 	/**
 	 * creates initial set of candidates

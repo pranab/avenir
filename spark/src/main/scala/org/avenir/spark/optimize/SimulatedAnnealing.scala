@@ -1,0 +1,106 @@
+/*
+ * avenir-spark: Predictive analytic based on Spark
+ * Author: Pranab Ghosh
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+
+package org.avenir.spark.optimize
+
+import org.chombo.spark.common.JobConfiguration
+import org.apache.spark.SparkContext
+import scala.collection.JavaConverters._
+import org.chombo.spark.common.Record
+import org.chombo.util.BasicUtils
+import org.avenir.optimize.BasicSearchDomain
+
+object SimulatedAnnealing extends JobConfiguration {
+   /**
+    * @param args
+    * @return
+    */
+   def main(args: Array[String]) {
+	   val appName = "simulatedAnnealing"
+	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
+	   val config = createConfig(configFile)
+	   val sparkConf = createSparkConf(appName, config, false)
+	   val sparkCntxt = new SparkContext(sparkConf)
+	   val appConfig = config.getConfig(appName)
+	   
+	   //configurations
+	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
+	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
+	   val maxNumIterations = getMandatoryIntParam(appConfig, "max.num.iterations", "missing number of iterations")
+	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
+	   val initialTemp = getMandatoryDoubleParam(appConfig, "initial.temp","missing initial temperature")
+	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate","missing initial temperature")
+	   val domainCallbackClass = getMandatoryStringParam(config, "domain.callback.class", "missing domain callback class")
+	   val domainCallbackConfigFile = getMandatoryStringParam(config, "domain.callback.config.file", 
+	       "missing domain callback config file name")
+	   
+	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
+	   domainCallback.intialize(domainCallbackConfigFile)
+	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
+	   
+	   //all optimizers
+	   val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createCandidate()).toList
+	   val optStartSolutions = sparkCntxt.parallelize(optList)
+	   
+	   val bestSolutions = optStartSolutions.mapPartitions(p => {
+	     //whole partition
+	     val domanCallback = brDomainCallback.value.createClone
+	     var res = List[String]()
+	     while (p.hasNext) {
+	       //optimizer
+	       var current = p.next
+	       domanCallback.withCurrentCandidate(current)
+	       var curCost = domanCallback.getCandidateCost(current)
+	       var next = ""
+	       var nextCost = 0
+	       var best = current
+	       var bestCost = curCost
+	       var temp = initialTemp
+	       for (i <- 1 to maxNumIterations) {
+	         //iteration for an optimizer
+	         next = domanCallback.createNeighborhoodCandidate()
+	         nextCost = domanCallback.getCandidateCost(next)
+	         if (nextCost < curCost) {
+	        	 //check with best so far
+	        	 if (nextCost < bestCost) {
+	        		 bestCost = nextCost
+	        		 best = next
+	        	 }
+	        	 
+	        	 //set current to a better one found
+	        	 current = next
+	        	 curCost = nextCost
+	        	 domanCallback.withCurrentCandidate(current)
+	         } else {
+	        	if (Math.exp(curCost.toDouble - nextCost.toDouble / temp) > Math.random()) {
+	        		//set current to a worse one probabilistically
+	        		current = next
+	        		curCost = nextCost
+	        		domanCallback.withCurrentCandidate(current)
+	        	}
+	         }
+	         temp *= coolingRate
+	       }
+	       res ::= best
+	     }
+	     res.iterator
+	   }) 
+	   
+   }
+
+}
