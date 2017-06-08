@@ -48,6 +48,8 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val domainCallbackClass = getMandatoryStringParam(config, "domain.callback.class", "missing domain callback class")
 	   val domainCallbackConfigFile = getMandatoryStringParam(config, "domain.callback.config.file", 
 	       "missing domain callback config file name")
+	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
+	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
 	   domainCallback.intialize(domainCallbackConfigFile)
@@ -60,7 +62,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val bestSolutions = optStartSolutions.mapPartitions(p => {
 	     //whole partition
 	     val domanCallback = brDomainCallback.value.createClone
-	     var res = List[String]()
+	     var res = List[(String, Int)]()
 	     while (p.hasNext) {
 	       //optimizer
 	       var current = p.next
@@ -88,7 +90,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 domanCallback.withCurrentCandidate(current)
 	         } else {
 	        	if (Math.exp(curCost.toDouble - nextCost.toDouble / temp) > Math.random()) {
-	        		//set current to a worse one probabilistically
+	        		//set current to a worse one probabilistically with hiher pribabilty at higher temp
 	        		current = next
 	        		curCost = nextCost
 	        		domanCallback.withCurrentCandidate(current)
@@ -96,10 +98,21 @@ object SimulatedAnnealing extends JobConfiguration {
 	         }
 	         temp *= coolingRate
 	       }
-	       res ::= best
+	       res ::= (best, bestCost)
 	     }
 	     res.iterator
 	   }) 
+
+	   if (debugOn) {
+	     val colBestSolutions = bestSolutions.collect
+	     colBestSolutions.foreach(r => println(r))
+	   }	   
+
+	   if (saveOutput) {
+	     bestSolutions.saveAsTextFile(outputPath)
+	   }
+
+	   
 	   
    }
 
