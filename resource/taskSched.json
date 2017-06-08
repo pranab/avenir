@@ -1,0 +1,211 @@
+{
+	"locations" :
+	[
+		{
+			"id" : "6AWII76E",
+			"name" : "new york",
+			"gps" : [42.93708, -75.61070]
+		},
+		{
+			"id" : "E963XKDE",
+			"name" : "boston",
+			"gps" : [42.35866, -71.05674]
+		},
+		{
+			"id" : "E8760NLR",
+			"name" : "boston 100",
+			"gps" : [0.000, 0.000]
+		},
+		{
+			"id" : "3S4VT231"
+			"name" : "boston 101",
+			"gps" : [42.73458, -71.26674]
+		},
+		{
+			"id" : "436MNT12"
+			"name" : "boston 102",
+			"gps" : [42.53208, -71.43674]
+		},
+		{
+			"id" : ""
+			"name" : "",
+			"gps" : [0.000, 0.000]
+		},
+		{
+			"id" : ""
+			"name" : "",
+			"gps" : [0.000, 0.000]
+		},
+		{
+			"id" : ""
+			"name" : "",
+			"gps" : [0.000, 0.000]
+		}
+	],
+	
+	"tasks" : 
+	[
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""],
+			"startDate" : "",
+			"duration" : 3,
+		}
+	],
+
+	"employees" : 
+	[
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		},
+		{
+			"id" : "",
+			"name" : "",
+			"location" : "",
+			"skills" : ["", "", ""]
+		}
+	],
+	
+	"perDiemCost" : 80.00,
+	"hotelCosts" :
+	[
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		},		
+		{
+			"location" : "",
+			"cost" : 120
+		}	
+	],
+	"airFareEstimator" : [2.356, 7.389, 85.984]	
+}

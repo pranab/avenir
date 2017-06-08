@@ -45,6 +45,8 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
 	   val initialTemp = getMandatoryDoubleParam(appConfig, "initial.temp","missing initial temperature")
 	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate","missing initial temperature")
+	   val coolingRateGeometric = getBooleanParamOrElse(config, "cooling.rate.geometric", true)
+	   val tempUpdateInterval = getMandatoryIntParam(appConfig, "temp.update.interval","missing temperature update interval")
 	   val domainCallbackClass = getMandatoryStringParam(config, "domain.callback.class", "missing domain callback class")
 	   val domainCallbackConfigFile = getMandatoryStringParam(config, "domain.callback.config.file", 
 	       "missing domain callback config file name")
@@ -73,6 +75,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	       var best = current
 	       var bestCost = curCost
 	       var temp = initialTemp
+	       var tempUpdateCounter = 0
 	       for (i <- 1 to maxNumIterations) {
 	         //iteration for an optimizer
 	         next = domanCallback.createNeighborhoodCandidate()
@@ -96,7 +99,20 @@ object SimulatedAnnealing extends JobConfiguration {
 	        		domanCallback.withCurrentCandidate(current)
 	        	}
 	         }
-	         temp *= coolingRate
+	         
+	         //temp update
+	         tempUpdateCounter += 1
+	         if (tempUpdateCounter == tempUpdateInterval) {
+	           if (coolingRateGeometric) {
+	        	 temp *= coolingRate
+	           } else {
+	             temp -= initialTemp - i * coolingRate
+	             if (temp < 0.0){
+	               temp = 0
+	             }
+	           }
+	           tempUpdateCounter = 0
+	         }
 	       }
 	       res ::= (best, bestCost)
 	     }
