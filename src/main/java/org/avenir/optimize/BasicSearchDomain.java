@@ -15,10 +15,11 @@
  * permissions and limitations under the License.
  */
 
-
 package org.avenir.optimize;
 
 import java.io.Serializable;
+
+import org.avenir.optimize.StepSize.Strategy;
 
 /**
  * Interface between optimization algorithm and business domain logic
@@ -27,8 +28,10 @@ import java.io.Serializable;
  */
 public abstract class  BasicSearchDomain implements Serializable {
 	protected String currentCandidate;
-	protected int neighborhoodSize;
-	protected boolean refCurrent;
+	protected String initialCandidate;
+	protected boolean refCurrent = true;
+	private StepSize stepSize = new StepSize();
+	
 	
 	/**
 	 * @param configFile
@@ -56,6 +59,15 @@ public abstract class  BasicSearchDomain implements Serializable {
 	}
 	
 	/**
+	 * @param candidate
+	 * @return
+	 */
+	public BasicSearchDomain withInitialCandidate(String candidate) {
+		initialCandidate = candidate;
+		return this;
+	}
+	
+	/**
 	 * creates next candidate based on last candidate
 	 * @return
 	 */
@@ -66,10 +78,38 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * generation
 	 * @param size
 	 */
-	public BasicSearchDomain withNeighborhoodSize(int neighborhoodSize) {
-		this.neighborhoodSize = neighborhoodSize;
+	public BasicSearchDomain withMaxSize(int maxStepSize) {
+		stepSize.withMaxStepSize(maxStepSize);
 		return this;
 	}
+	
+
+	/**
+	 * @return
+	 */
+	public BasicSearchDomain withConstantStepSize() {
+		stepSize.withConstant();
+		return this;
+	}
+
+	/**
+	 * @return
+	 */
+	public BasicSearchDomain withUniformStepSize() {
+		stepSize.withUniform();
+		return this;
+	}
+
+	/**
+	 * @param mean
+	 * @param stdDev
+	 * @return
+	 */
+	public BasicSearchDomain withGaussianStepSize(double mean, double stdDev) {
+		stepSize.withGaussian(mean, stdDev);
+		return this;
+	}
+	
 	
 	/**
 	 * sets the reference for neighborhood based candidate generation either
@@ -86,11 +126,18 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	public abstract String createCandidate();
+	
+	/**
+	 * @return
+	 */
+	public int getStepSize() {
+		return stepSize.getStepSize();
+	}
 
 	/**
 	 * calculates cost for candidate
 	 * @param candidate
 	 * @return
 	 */
-	public abstract int getCandidateCost(String candidate);
+	public abstract double getCandidateCost(String candidate);
 }
