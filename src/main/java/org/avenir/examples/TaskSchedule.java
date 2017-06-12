@@ -27,8 +27,14 @@ public class TaskSchedule {
 	private List<Location> locations;
 	private List<Task> tasks;
 	private List<Employee>  employees;
-	private int perDiemCost;
+	private double maxperDiemRate;
 	private double[] airFareEstimator;
+	private double airTravelDistThreshold;
+	private double perMileDriveCost;
+	private double maxTravelCost;
+	private double costScale;
+	private double maxHotelRate;
+	
 	
 	public List<Location> getLocations() {
 		return locations;
@@ -48,12 +54,6 @@ public class TaskSchedule {
 	public void setEmployees(List<Employee> employees) {
 		this.employees = employees;
 	}
-	public int getPerDiemCost() {
-		return perDiemCost;
-	}
-	public void setPerDiemCost(int perDiemCost) {
-		this.perDiemCost = perDiemCost;
-	}
 	public double[] getAirFareEstimator() {
 		return airFareEstimator;
 	}
@@ -61,4 +61,84 @@ public class TaskSchedule {
 		this.airFareEstimator = airFareEstimator;
 	}
 	
+	public double getAirTravelDistThreshold() {
+		return airTravelDistThreshold;
+	}
+	public void setAirTravelDistThreshold(double airTravelDistThreshold) {
+		this.airTravelDistThreshold = airTravelDistThreshold;
+	}
+	public double getPerMileDriveCost() {
+		return perMileDriveCost;
+	}
+	public void setPerMileDriveCost(double perMileDriveCost) {
+		this.perMileDriveCost = perMileDriveCost;
+	}
+	public double getMaxperDiemRate() {
+		return maxperDiemRate;
+	}
+	public void setMaxperDiemRate(double maxperDiemRate) {
+		this.maxperDiemRate = maxperDiemRate;
+	}
+	public double getMaxTravelCost() {
+		return maxTravelCost;
+	}
+	public void setMaxTravelCost(double maxTravelCost) {
+		this.maxTravelCost = maxTravelCost;
+	}
+	public double getCostScale() {
+		return costScale;
+	}
+	public void setCostScale(double costScale) {
+		this.costScale = costScale;
+	}
+	public double getMaxHotelRate() {
+		return maxHotelRate;
+	}
+	public void setMaxHotelRate(double maxHotelRate) {
+		this.maxHotelRate = maxHotelRate;
+	}
+	/**
+	 * @param taskID
+	 * @return
+	 */
+	public Task findTask(String taskID) {
+		Task foundTask = null;
+		for (Task task : tasks) {
+			if (task.getId().equals(taskID)) {
+				foundTask = task;
+				break;
+			}
+		}
+		return foundTask;
+	}
+	
+	/**
+	 * @param employeeID
+	 * @return
+	 */
+	public Employee findEmployee(String employeeID) {
+		Employee foundEmployee = null;
+		for (Employee employee : employees) {
+			if (employee.getId().equals(employeeID)) {
+				foundEmployee = employee;
+				break;
+			}
+		}
+		return foundEmployee;
+	}
+	
+	/**
+	 * @param employeeID
+	 * @return
+	 */
+	public Location findLocation(String locationID) {
+		Location foundLocation = null;
+		for (Location location : locations) {
+			if (location.getId().equals(locationID)) {
+				foundLocation = location;
+				break;
+			}
+		}
+		return foundLocation;
+	}
 }

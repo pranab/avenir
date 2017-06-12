@@ -5,149 +5,171 @@
 			"id" : "6AWII76E",
 			"name" : "new york",
 			"gps" : [42.93708, -75.61070],
-			"hotelCost" : 170
+			"hotelCost" : 180,
+			"perDiemCost" : 100
 		},
 		{
 			"id" : "E963XKDE",
 			"name" : "boston",
 			"gps" : [42.35866, -71.05674],
-			"hotelCost" : 150
+			"hotelCost" : 150,
+			"perDiemCost" : 90
 		},
 		{
 			"id" : "E8760NLR",
 			"name" : "boston 100",
 			"gps" : [42.73458 -71.26674],
-			"hotelCost" : 130
+			"hotelCost" : 130,
+			"perDiemCost" : 90
 		},
 		{
 			"id" : "3S4VT231"
 			"name" : "boston 101",
 			"gps" : [42.73458, -71.26674],
-			"hotelCost" : 130
+			"hotelCost" : 130,
+			"perDiemCost" : 90
 		},
 		{
 			"id" : "436MNT12"
 			"name" : "boston 102",
 			"gps" : [42.53208, -71.43674],
-			"hotelCost" : 130
+			"hotelCost" : 130,
+			"perDiemCost" : 90
 		},
 		{
 			"id" : "5204A5UE"
 			"name" : "chicago",
 			"gps" : [41.88425, -87.63245],
-			"hotelCost" : 140
+			"hotelCost" : 140,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "397ISDLP"
 			"name" : "pittsburg",
 			"gps" : [40.43851, -79.99734],
-			"hotelCost" : 120
+			"hotelCost" : 120,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "F954XN67"
 			"name" : "minneapolis",
 			"gps" : [44.97903, -93.26493],
-			"hotelCost" : 110
+			"hotelCost" : 110,
+			"perDiemCost" : 60
 		},
 		{
 			"id" : "BN7PP6V0"
 			"name" : "seattle",
 			"gps" : [47.60357, -122.32950],
-			"hotelCost" : 140
+			"hotelCost" : 140,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "9PP39729"
 			"name" : "seattle 100",
 			"gps" : [47.32457, -122.74150],
-			"hotelCost" : 130
+			"hotelCost" : 130,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "C7LHM91D"
 			"name" : "seattle 101",
 			"gps" : [47.52157, -122.91250],
-			"hotelCost" : 125
+			"hotelCost" : 125,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "0PH6IQ56"
 			"name" : "seattle 102",
 			"gps" : [47.43757, -122.83250],
-			"hotelCost" : 135
+			"hotelCost" : 135,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "G8515JMK"
 			"name" : "san francisco",
 			"gps" : [37.77986, -122.42900],
-			"hotelCost" : 180
+			"hotelCost" : 180,
+			"perDiemCost" : 100
 		},
 		{
 			"id" : "Y5D9L1FA"
 			"name" : "los angeles",
 			"gps" : [34.05349, -118.24530],
-			"hotelCost" : 150
+			"hotelCost" : 150,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "N4FBB80C"
 			"name" : "phoenix",
 			"gps" : [33.44277, -112.07280],
-			"hotelCost" : 110
+			"hotelCost" : 110,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "W1B3S3F7"
 			"name" : "cincinati",
 			"gps" : [39.10713, -84.50413],
-			"hotelCost" : 100
+			"hotelCost" : 100,
+			"perDiemCost" : 60
 		},
 		{
 			"id" : "TV8T634K"
 			"name" : "philadelphia",
 			"gps" : [39.95228, -75.16245],
-			"hotelCost" : 130
+			"hotelCost" : 130,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "8FWX52PW"
 			"name" : "dallas",
 			"gps" : [32.77815, -96.79540],
-			"hotelCost" : 100
+			"hotelCost" : 100,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "3EZ637S4"
 			"name" : "dallas 100",
 			"gps" : [32.34215, -96.21440],
-			"hotelCost" : 85
+			"hotelCost" : 85,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "8Z95F5SS"
 			"name" : "dallas 101",
 			"gps" : [32.54315, -96.21340],
-			"hotelCost" : 90
+			"hotelCost" : 90,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "4QCF75Z3"
 			"name" : "dallas 102",
 			"gps" : [32.13215, -96.54340],
-			"hotelCost" : 80
+			"hotelCost" : 80,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "7II6YZ5B"
 			"name" : "dallas 103",
 			"gps" : [32.21715, -96.36140],
-			"hotelCost" : 85
+			"hotelCost" : 85,
+			"perDiemCost" : 70
 		},
 		{
 			"id" : "KBYNJHM9"
 			"name" : "miami",
 			"gps" : [25.77481, -80.19773],
-			"hotelCost" : 125
+			"hotelCost" : 125,
+			"perDiemCost" : 80
 		},
 		{
 			"id" : "09HSWTBA"
 			"name" : "atlanta",
 			"gps" : [33.74831, -84.39111],
-			"hotelCost" : 110
+			"hotelCost" : 110,
+			"perDiemCost" : 60
 		}
 	],
-	
-	
 
 	
 	"tasks" : 
@@ -274,6 +296,12 @@
 		}
 	],
 	
-	"perDiemCost" : 80.00,
-	"airFareEstimator" : [2.356, 7.389, 85.984]	
+	"maxPerDiemCost" : 100,
+	"airFareEstimator" : [2.356, 7.389, 85.984],
+	"airTravelDistThreshold" : 100,
+	"perMileDriveCost" : 0.56,
+	"maxTravelCost" : 800,
+	"costScale" : 100,
+	"maxHotelRate" : 180
+	
 }

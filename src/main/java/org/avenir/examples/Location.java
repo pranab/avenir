@@ -25,6 +25,7 @@ public class Location implements Serializable {
 	private String name;
 	private double[] gps;
 	private int hotelCost;
+	private int perDiemCost;
 	
 	public String getId() {
 		return id;
@@ -49,6 +50,12 @@ public class Location implements Serializable {
 	}
 	public void setHotelCost(int hotelCost) {
 		this.hotelCost = hotelCost;
+	}
+	public int getPerDiemCost() {
+		return perDiemCost;
+	}
+	public void setPerDiemCost(int perDiemCost) {
+		this.perDiemCost = perDiemCost;
 	}
 
 }

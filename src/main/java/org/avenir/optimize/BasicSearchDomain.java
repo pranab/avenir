@@ -17,9 +17,12 @@
 
 package org.avenir.optimize;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.avenir.optimize.StepSize.Strategy;
+import org.chombo.util.BasicUtils;
 
 /**
  * Interface between optimization algorithm and business domain logic
@@ -27,16 +30,19 @@ import org.avenir.optimize.StepSize.Strategy;
  *
  */
 public abstract class  BasicSearchDomain implements Serializable {
-	protected String currentCandidate;
-	protected String initialCandidate;
+	protected String currentSolution;
+	protected String initialSolution;
 	protected boolean refCurrent = true;
 	private StepSize stepSize = new StepSize();
+	private Map<String, Double> compCosts = new HashMap<String, Double>();
+	protected int numComponenets;
 	
 	
 	/**
 	 * @param configFile
+	 * @throws IOException 
 	 */
-	public abstract void intialize(String configFile);
+	public abstract void intialize(String configFile) ;
 	
 	/**
 	 * @return
@@ -44,17 +50,71 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public abstract  BasicSearchDomain createClone();
 	
 	/**
+	 * @param solution
+	 * @return
+	 */
+	public abstract String[] getSolutionComponenets(String solution);
+	
+	/**
+	 * @param components
+	 * @return
+	 */
+	public abstract String aggregateSolutionComponenets(String[] components);
+
+	/**
+	 * replaces solution component at specified position 
+	 * @param comonents
+	 * @param index
+	 */
+	protected abstract void replaceSolutionComponent(String[] comonents, int index);
+	
+	/**
+	 * calculates cost for component
+	 * @param comp
+	 * @return
+	 */
+	protected abstract double calculateCost(String comp);
+	
+	/**
+	 * Check whole solution for validity
+	 * @param components
+	 * @return
+	 */
+	public abstract boolean isValid(String[] components);
+		
+	/**
+	 * checks partial solution up to specified index for validity
+	 * @param componentsex
+	 * @param ind
+	 * @return
+	 */
+	public abstract boolean isValid(String[] componentsex, int index);
+	
+	/**
+	 * adds a component at specified position 
+	 * @param componenets
+	 * @param index
+	 */
+	protected abstract void addComponent(String[] componenets, int index);
+	
+	/**
 	 * creates initial set of candidates
 	 * @return
 	 */
-	public abstract String[] createCandidates(int numCandidates);
+	public  String[] createSolutions(int numSolutions) {
+		String[] solutions = new String[numSolutions];
+		for (int i = 0; i < numSolutions; ++i) {
+			solutions[i] = createSolution();
+		}
+		return solutions;
+	}
 	
 	/**
 	 * @param candidate
 	 * @return
 	 */
-	public BasicSearchDomain withCurrentCandidate(String candidate) {
-		currentCandidate = candidate;
+	public BasicSearchDomain withCurrentSolution(String solution) {
+		currentSolution = solution;
 		return this;
 	}
 	
@@ -62,8 +122,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param candidate
 	 * @return
 	 */
-	public BasicSearchDomain withInitialCandidate(String candidate) {
-		initialCandidate = candidate;
+	public BasicSearchDomain withInitialSolution(String solution) {
+		initialSolution = solution;
 		return this;
 	}
 	
@@ -71,7 +131,19 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * creates next candidate based on last candidate
 	 * @return
 	 */
-	public abstract String createNeighborhoodCandidate();
+	public  String createNeighborhoodSolution() {
+		String[] components = refCurrent ? getSolutionComponenets(currentSolution) :
+			getSolutionComponenets(initialSolution);
+		int step = stepSize.getStepSize();
+		for (int i = 1; i <= step; ++i) {
+			//component to mutate
+			while (!isValid(components)) {
+				int compIndex = BasicUtils.sampleUniform(numComponenets);
+				replaceSolutionComponent(components, compIndex);
+			}
+		}
+		return aggregateSolutionComponenets(components);
+	}
 	
 	/**
 	 * the extent of neighborhood to use  for neighborhood based candidate
@@ -125,7 +197,15 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * creates random candidate
 	 * @return
 	 */
-	public abstract String createCandidate();
+	public  String createSolution() {
+		String[] components = new String[numComponenets];
+		for (int i = 0; i < numComponenets; ++i) {
+			while (!isValid(components,i)) {
+				addComponent(components, i);
+			}
+		}
+		return this.aggregateSolutionComponenets(components);
+	}
 	
 	/**
 	 * @return
@@ -135,9 +215,32 @@ public abstract class  BasicSearchDomain implements Serializable {
 	}
 
 	/**
-	 * calculates cost for candidate
+	 * calculates cost for solution
 	 * @param candidate
 	 * @return
 	 */
-	public abstract double getCandidateCost(String candidate);
+	public  double getSolutionCost(String solution) {
+		double cost = 0;
+		String[] components = getSolutionComponenets(solution);
+		for (String comp : components) {
+			cost += getSolutionComonentCost(comp);
+		}
+		return cost;
+	}
+	
+	
+	/**
+	 * @param comp
+	 * @return
+	 */
+	public double getSolutionComonentCost(String comp) {
+		Double cost = compCosts.get(comp);
+		if (null == cost) {
+			cost = calculateCost(comp);
+			compCosts.put(comp, cost);
+		}
+		return cost;
+	}
+	
+	
 }
