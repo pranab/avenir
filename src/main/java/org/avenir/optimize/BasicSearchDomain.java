@@ -225,7 +225,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 		for (String comp : components) {
 			cost += getSolutionComonentCost(comp);
 		}
-		return cost;
+		return cost / getNumComponents();
 	}
 	
 	
@@ -241,6 +241,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 		}
 		return cost;
 	}
+	
+	public abstract int getNumComponents();
 	
 	
 }

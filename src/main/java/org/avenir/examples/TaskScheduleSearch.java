@@ -1,0 +1,214 @@
+/*
+ * avenir: Predictive analytic based on Hadoop Map Reduce
+ * Author: Pranab Ghosh
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+
+package org.avenir.examples;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.avenir.optimize.BasicSearchDomain;
+import org.chombo.util.BasicUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+
+/**
+ * @author pranab
+ *
+ */
+public class TaskScheduleSearch extends BasicSearchDomain {
+	private TaskSchedule taskSchedule;
+	
+	private static final String compDelim = ";";
+	private static final String compItemDelim = ":";
+	
+
+	@Override
+	public void intialize(String configFile)  {
+		try {
+			InputStream fs = new FileInputStream(configFile);
+			if (null != fs) {
+				ObjectMapper mapper = new ObjectMapper();
+				taskSchedule = mapper.readValue(fs, TaskSchedule.class);
+			}	
+		} catch (IOException ex) {
+			throw new IllegalStateException("failed to initialize search object " + ex.getMessage());
+		}
+		taskSchedule.initialize();
+	}
+
+	@Override
+	public BasicSearchDomain createClone() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String[] getSolutionComponenets(String solution) {
+		return solution.split(compDelim);
+	}
+
+	@Override
+	public String aggregateSolutionComponenets(String[] components) {
+		return BasicUtils.join(components, compDelim);
+	}
+
+	@Override
+	protected void replaceSolutionComponent(String[] components, int index) {
+		String[] items = components[index].split(compItemDelim);
+		String task = items[0];
+		String employee = items[1];
+		
+		//replace employee
+		Set<String> excludes = new HashSet<String>();
+		excludes.add(employee);
+		items[1] = selectEmployee(excludes);
+		components[index] = BasicUtils.join(items, compItemDelim);
+	}
+
+	@Override
+	protected double calculateCost(String comp) {
+		String[] items = comp.split(compItemDelim);
+		String taskID = items[0];
+		String employeeID = items[1];
+		Task task = taskSchedule.findTask(taskID);
+		Employee employee = taskSchedule.findEmployee(employeeID);
+		Location taskLocation = taskSchedule.findLocation(task.getLocation());
+		double[] taskGeo = taskLocation.getGps();
+		Location employeeLocation = taskSchedule.findLocation(employee.getLocation());
+		double[] employeeGeo = employeeLocation.getGps();
+		
+		//travel cost
+		double distance  =  BasicUtils.getGeoDistance(taskGeo[0], taskGeo[1], employeeGeo[0], employeeGeo[1]);
+		double travelCost = 0;
+		if (distance < taskSchedule.getAirTravelDistThreshold()) {
+			travelCost = 2 * distance * taskSchedule.getPerMileDriveCost();
+		} else {
+			double[] airFareEst = taskSchedule.getAirFareEstimator();
+			travelCost = airFareEst[0] * distance * distance + airFareEst[1] * distance + airFareEst[2];
+		}
+		travelCost /= taskSchedule.getMaxTravelCost();
+		travelCost *= taskSchedule.getCostScale();
+		
+		//per diem cost
+		long duration = getStartTime(task) - getEndTime(task) + 4;
+		duration /= BasicUtils.MILISEC_PER_DAY;
+		
+		double perDiemCost = duration * taskLocation.getPerDiemCost();
+		perDiemCost /= duration * taskSchedule.getMaxperDiemRate();
+		perDiemCost *= taskSchedule.getCostScale();
+		
+		//hotel cost
+		double hotelCost = duration * taskLocation.getHotelCost();
+		hotelCost /= duration * taskSchedule.getMaxHotelRate();
+		hotelCost *= taskSchedule.getCostScale();
+		
+		//skill match cost
+		int matchCount = 0;
+		for (String empSkill : employee.getSkills()) {
+			if (BasicUtils.contains(task.getSkills(), empSkill)) {
+				++matchCount;
+			}
+		}
+		int numReqdSkills = task.getSkills().length;
+		double skiilMatchCost = ((double)(numReqdSkills - matchCount) *  taskSchedule.getCostScale()) / numReqdSkills;
+		
+		double avCost = (travelCost + perDiemCost + hotelCost + skiilMatchCost) / 4.0;
+		return avCost;
+	}
+	
+	private long getStartTime(Task task) {
+		long time = 0;
+		try {
+			time = taskSchedule.findDateFormatter().parse(task.getStartDate()).getTime();
+		} catch (Exception ex) {
+			throw new IllegalStateException("date formatting error" + ex.getMessage());
+		}
+		return time;
+	}
+
+	private long getEndTime(Task task) {
+		long time = 0;
+		try {
+			time = taskSchedule.findDateFormatter().parse(task.getEndDate()).getTime();
+		} catch (Exception ex) {
+			throw new IllegalStateException("date formatting error" + ex.getMessage());
+		}
+		return time;
+	}
+
+	@Override
+	public boolean isValid(String[] components) {
+		return isValid(components, components.length -1);
+	}
+
+	@Override
+	public boolean isValid(String[] components, int index) {
+		boolean valid = true;
+		long minGap = taskSchedule.getMinDaysGap() * BasicUtils.MILISEC_PER_DAY;
+		for (int i = 0; i <= index; ++i) {
+			String[] items = components[i].split(compItemDelim);
+			String employeeOneID = items[1];
+			Task taskOne = taskSchedule.findTask(items[1]);
+			long taskOneStart = getStartTime(taskOne);
+			long taskOneEnd = getEndTime(taskOne);
+			for (int j = 0; j < i; ++j) {
+				items = components[i].split(compItemDelim);
+				String employeeTwoID = items[1];
+				if (employeeOneID.equals(employeeTwoID)) {
+					Task taskTwo = taskSchedule.findTask(items[1]);
+					long taskTwoStart = getStartTime(taskTwo);
+					long taskTwoEnd = getEndTime(taskTwo);
+					valid = (taskOneEnd - taskTwoStart)  >= minGap || (taskTwoEnd - taskOneStart)  >= minGap;
+					if (!valid) {
+						break;
+					}
+				}
+			}
+			if (!valid) {
+				break;
+			}
+		}
+		return valid;
+	}
+
+	@Override
+	protected void addComponent(String[] componenets, int index) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	/**
+	 * @param excludes
+	 * @return
+	 */
+	private String selectEmployee(Set<String> excludes) {
+		String thisEmployeeID = BasicUtils.selectRandom(taskSchedule.getEmployees()).getId();
+		while(excludes.contains(thisEmployeeID)) {
+			thisEmployeeID = BasicUtils.selectRandom(taskSchedule.getEmployees()).getId();
+		}
+		return thisEmployeeID;
+	}
+
+	@Override
+	public int getNumComponents() {
+		return taskSchedule.findNumComponents();
+	}
+
+}

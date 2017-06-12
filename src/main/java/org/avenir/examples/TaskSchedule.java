@@ -17,6 +17,7 @@
 
 package org.avenir.examples;
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
@@ -34,6 +35,10 @@ public class TaskSchedule {
 	private double maxTravelCost;
 	private double costScale;
 	private double maxHotelRate;
+	private String dateFormat;
+	private int minDaysGap;
+	private int numComponents;
+	private SimpleDateFormat dateFormatter;
 	
 	
 	public List<Location> getLocations() {
@@ -97,6 +102,18 @@ public class TaskSchedule {
 	public void setMaxHotelRate(double maxHotelRate) {
 		this.maxHotelRate = maxHotelRate;
 	}
+	public String getDateFormat() {
+		return dateFormat;
+	}
+	public void setDateFormat(String dateFormat) {
+		this.dateFormat = dateFormat;
+	}
+	public int getMinDaysGap() {
+		return minDaysGap;
+	}
+	public void setMinDaysGap(int minDaysGap) {
+		this.minDaysGap = minDaysGap;
+	}
 	/**
 	 * @param taskID
 	 * @return
@@ -140,5 +157,27 @@ public class TaskSchedule {
 			}
 		}
 		return foundLocation;
+	}
+	
+	/**
+	 * 
+	 */
+	public void initialize() {
+		numComponents = tasks.size();
+		dateFormatter = new SimpleDateFormat(dateFormat);
+	}
+	
+	/**
+	 * @return
+	 */
+	public SimpleDateFormat findDateFormatter() {
+		return dateFormatter;
+	}
+	
+	/**
+	 * @return
+	 */
+	public int findNumComponents() {
+		return numComponents;
 	}
 }

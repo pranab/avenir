@@ -25,7 +25,7 @@ public class Task implements Serializable {
 	private String location;
 	private String[] skills;
 	private String startDate;
-	private int duration;
+	private String endDate;
 	
 	public String getId() {
 		return id;
@@ -57,11 +57,10 @@ public class Task implements Serializable {
 	public void setStartDate(String startDate) {
 		this.startDate = startDate;
 	}
-	public int getDuration() {
-		return duration;
+	public String getEndDate() {
+		return endDate;
 	}
-	public void setDuration(int duration) {
-		this.duration = duration;
+	public void setEndDate(String endDate) {
+		this.endDate = endDate;
 	}
-
 }
