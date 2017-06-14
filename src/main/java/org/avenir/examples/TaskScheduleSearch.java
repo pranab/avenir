@@ -38,6 +38,8 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	private static final String compDelim = ";";
 	private static final String compItemDelim = ":";
 	
+	public TaskScheduleSearch() {
+	}
 
 	@Override
 	public void intialize(String configFile)  {
@@ -56,8 +58,9 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 
 	@Override
 	public BasicSearchDomain createClone() {
-		// TODO Auto-generated method stub
-		return null;
+		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
+		searchDomain.taskSchedule = this.taskSchedule;
+		return searchDomain;
 	}
 
 	@Override

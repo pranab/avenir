@@ -32,7 +32,9 @@ Move and copy files around
 
 Next iteration
 ==============
-Go back to map reduce step
+Go back to map reduce step. After the first iteration please uncomment the parameter
+dtb.decision.file.path.in in the configuration file and keep it uncommented for subsequent
+iterations.
 
 
 Configuration

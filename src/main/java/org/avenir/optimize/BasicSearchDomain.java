@@ -32,11 +32,19 @@ import org.chombo.util.BasicUtils;
 public abstract class  BasicSearchDomain implements Serializable {
 	protected String currentSolution;
 	protected String initialSolution;
-	protected boolean refCurrent = true;
-	private StepSize stepSize = new StepSize();
-	private Map<String, Double> compCosts = new HashMap<String, Double>();
+	protected boolean refCurrent;
+	protected StepSize stepSize;
+	protected Map<String, Double> compCosts;
 	protected int numComponents;
 	
+	/**
+	 * 
+	 */
+	public BasicSearchDomain() {
+		refCurrent = true;
+		stepSize = new StepSize();
+		compCosts = new HashMap<String, Double>();
+	}
 	
 	/**
 	 * @param configFile
@@ -248,6 +256,5 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public  int getNumComponents(){
 		return numComponents;
 	}
-	
 	
 }
