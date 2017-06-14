@@ -1,0 +1,309 @@
+{
+	"locations" :
+	[
+		{
+			"id" : "6AWII76E",
+			"name" : "new york",
+			"gps" : [42.93708, -75.61070],
+			"hotelCost" : 180,
+			"perDiemCost" : 100
+		},
+		{
+			"id" : "E963XKDE",
+			"name" : "boston",
+			"gps" : [42.35866, -71.05674],
+			"hotelCost" : 150,
+			"perDiemCost" : 90
+		},
+		{
+			"id" : "E8760NLR",
+			"name" : "boston 100",
+			"gps" : [42.73458 -71.26674],
+			"hotelCost" : 130,
+			"perDiemCost" : 90
+		},
+		{
+			"id" : "3S4VT231"
+			"name" : "boston 101",
+			"gps" : [42.73458, -71.26674],
+			"hotelCost" : 130,
+			"perDiemCost" : 90
+		},
+		{
+			"id" : "436MNT12"
+			"name" : "boston 102",
+			"gps" : [42.53208, -71.43674],
+			"hotelCost" : 130,
+			"perDiemCost" : 90
+		},
+		{
+			"id" : "5204A5UE"
+			"name" : "chicago",
+			"gps" : [41.88425, -87.63245],
+			"hotelCost" : 140,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "397ISDLP"
+			"name" : "pittsburg",
+			"gps" : [40.43851, -79.99734],
+			"hotelCost" : 120,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "F954XN67"
+			"name" : "minneapolis",
+			"gps" : [44.97903, -93.26493],
+			"hotelCost" : 110,
+			"perDiemCost" : 60
+		},
+		{
+			"id" : "BN7PP6V0"
+			"name" : "seattle",
+			"gps" : [47.60357, -122.32950],
+			"hotelCost" : 140,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "9PP39729"
+			"name" : "seattle 100",
+			"gps" : [47.32457, -122.74150],
+			"hotelCost" : 130,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "C7LHM91D"
+			"name" : "seattle 101",
+			"gps" : [47.52157, -122.91250],
+			"hotelCost" : 125,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "0PH6IQ56"
+			"name" : "seattle 102",
+			"gps" : [47.43757, -122.83250],
+			"hotelCost" : 135,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "G8515JMK"
+			"name" : "san francisco",
+			"gps" : [37.77986, -122.42900],
+			"hotelCost" : 180,
+			"perDiemCost" : 100
+		},
+		{
+			"id" : "Y5D9L1FA"
+			"name" : "los angeles",
+			"gps" : [34.05349, -118.24530],
+			"hotelCost" : 150,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "N4FBB80C"
+			"name" : "phoenix",
+			"gps" : [33.44277, -112.07280],
+			"hotelCost" : 110,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "W1B3S3F7"
+			"name" : "cincinati",
+			"gps" : [39.10713, -84.50413],
+			"hotelCost" : 100,
+			"perDiemCost" : 60
+		},
+		{
+			"id" : "TV8T634K"
+			"name" : "philadelphia",
+			"gps" : [39.95228, -75.16245],
+			"hotelCost" : 130,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "8FWX52PW"
+			"name" : "dallas",
+			"gps" : [32.77815, -96.79540],
+			"hotelCost" : 100,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "3EZ637S4"
+			"name" : "dallas 100",
+			"gps" : [32.34215, -96.21440],
+			"hotelCost" : 85,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "8Z95F5SS"
+			"name" : "dallas 101",
+			"gps" : [32.54315, -96.21340],
+			"hotelCost" : 90,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "4QCF75Z3"
+			"name" : "dallas 102",
+			"gps" : [32.13215, -96.54340],
+			"hotelCost" : 80,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "7II6YZ5B"
+			"name" : "dallas 103",
+			"gps" : [32.21715, -96.36140],
+			"hotelCost" : 85,
+			"perDiemCost" : 70
+		},
+		{
+			"id" : "KBYNJHM9"
+			"name" : "miami",
+			"gps" : [25.77481, -80.19773],
+			"hotelCost" : 125,
+			"perDiemCost" : 80
+		},
+		{
+			"id" : "09HSWTBA"
+			"name" : "atlanta",
+			"gps" : [33.74831, -84.39111],
+			"hotelCost" : 110,
+			"perDiemCost" : 60
+		}
+	],
+
+	
+	"tasks" : 
+	[
+		{
+			"id" : "6FU70K4HGKRJ",
+			"name" : "",
+			"location" : "E963XKDE",
+			"skills" : ["101",  "103"],
+			"startDate" : "08-02-2017",
+			"endDate" : "08-04-2017"
+		},
+		{
+			"id" : "K31WEUG60UUF",
+			"name" : "",
+			"location" : "397ISDLP",
+			"skills" : ["102", "104", "107","101"],
+			"startDate" : "08-08-2017",
+			"endDate" : "08-09-2017"
+		},
+		{
+			"id" : "2WU834GB4WZ3",
+			"name" : "",
+			"location" : "F954XN67",
+			"skills" : ["103", "108"],
+			"startDate" : "08-09-2017",
+			"endDate" : "08-09-2017"
+		},
+		{
+			"id" : "G9DW6I5U0162",
+			"name" : "",
+			"location" : "Y5D9L1FA",
+			"skills" : ["101", "103", "104"],
+			"startDate" : "08-14-2017",
+			"endDate" : "08-16-2017"
+		},
+		{
+			"id" : "57A87XKI8595",
+			"name" : "",
+			"location" : "TV8T634K",
+			"skills" : ["104", "106"],
+			"startDate" : "08-17-2017",
+			"endDate" : "08-18-2017"
+		},
+		{
+			"id" : "S944IWM236Y0",
+			"name" : "",
+			"location" : "Y5D9L1FA",
+			"skills" : ["102", "104", "101", "106"],
+			"startDate" : "08-22-2017",
+			"endDate" : "08-25-2017"
+		},
+		{
+			"id" : "ZYJT39IU0NTF",
+			"name" : "",
+			"location" : "8FWX52PW",
+			"skills" : ["108", "101", "107"],
+			"startDate" : "08-23-2017",
+			"endDate" : "08-25-2017"
+		},
+		{
+			"id" : "KDXRJS6B7S1O",
+			"name" : "",
+			"location" : "KBYNJHM9",
+			"skills" : ["103", "106"],
+			"startDate" : "08-28-2017",
+			"endDate" : "08-29-2017"
+		},
+		{
+			"id" : "733W31P7B9J5",
+			"name" : "",
+			"location" : "09HSWTBA",
+			"skills" : ["104", "105", "106"],
+			"startDate" : "08-16-2017",
+			"endDate" : "08-18-2017"
+		},
+		{
+			"id" : "LF852I5MONC3",
+			"name" : "",
+			"location" : "KBYNJHM9",
+			"skills" : ["104", "102"],
+			"startDate" : "08-03-2017",
+			"endDate" : "08-05-2017"
+		}
+	],
+	
+	"employees" : 
+	[
+		{
+			"id" : "29OYMGZED9",
+			"name" : "",
+			"location" : "E8760NLR",
+			"skills" : ["103", "102", "105", "106", "108"]
+		},
+		{
+			"id" : "BPA8AF1R61",
+			"name" : "",
+			"location" : "3S4VT231",
+			"skills" : ["101", "103", "104", "108"]
+		},
+		{
+			"id" : "0S64F5G7WF",
+			"name" : "",
+			"location" : "8Z95F5SS",
+			"skills" : ["101", "104", "102", "107", "108"]
+		},
+		{
+			"id" : "QEA56J231J",
+			"name" : "",
+			"location" : "7II6YZ5B",
+			"skills" : ["102", "104", "105", "107", "108", "101"]
+		},
+		{
+			"id" : "3NDZVY6684",
+			"name" : "",
+			"location" : "0PH6IQ56",
+			"skills" : ["105", "101", "106"]
+		},
+		{
+			"id" : "BCRTP73603",
+			"name" : "",
+			"location" : "4QCF75Z3",
+			"skills" : ["101", "103", "108", "106"]
+		}
+	],
+	
+	"maxPerDiemCost" : 100,
+	"airFareEstimator" : [2.356, 7.389, 85.984],
+	"airTravelDistThreshold" : 100,
+	"perMileDriveCost" : 0.56,
+	"maxTravelCost" : 800,
+	"costScale" : 100,
+	"maxHotelRate" : 180,
+	"dateFormat" : "MM-dd-yyyy",
+	"minDaysGap" : 2
+	
+}

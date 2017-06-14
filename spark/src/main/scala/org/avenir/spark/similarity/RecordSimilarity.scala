@@ -49,10 +49,10 @@ object RecordSimilarity extends JobConfiguration {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
 	   val richAttrSchemaPath = getMandatoryStringParam(appConfig, "rich.attr.schema.path")
-	   val richAttrSchema = BasicUtils.getRichAttributeSchema(richAttrSchemaPath)
+	   val genAttrSchema = BasicUtils.getGenericAttributeSchema(richAttrSchemaPath)
 	   val distAttrSchemaPath = getMandatoryStringParam(appConfig, "dist.attr.schema.path")
 	   val distAttrSchema = BasicUtils.getDistanceSchema(distAttrSchemaPath)
-	   val distFinder = new InterRecordDistance(richAttrSchema, distAttrSchema, fieldDelimIn)
+	   val distFinder = new InterRecordDistance(genAttrSchema, distAttrSchema, fieldDelimIn)
 	   val numBuckets = getIntParamOrElse(appConfig, "num.buckets", 16)
 	   val buckets  = List.range(0, numBuckets)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
