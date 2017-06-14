@@ -35,7 +35,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected boolean refCurrent = true;
 	private StepSize stepSize = new StepSize();
 	private Map<String, Double> compCosts = new HashMap<String, Double>();
-	protected int numComponenets;
+	protected int numComponents;
 	
 	
 	/**
@@ -137,8 +137,10 @@ public abstract class  BasicSearchDomain implements Serializable {
 		int step = stepSize.getStepSize();
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
+			int compIndex = BasicUtils.sampleUniform(numComponents);
+			replaceSolutionComponent(components, compIndex);
 			while (!isValid(components)) {
-				int compIndex = BasicUtils.sampleUniform(numComponenets);
+				compIndex = BasicUtils.sampleUniform(numComponents);
 				replaceSolutionComponent(components, compIndex);
 			}
 		}
@@ -198,8 +200,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	public  String createSolution() {
-		String[] components = new String[numComponenets];
-		for (int i = 0; i < numComponenets; ++i) {
+		String[] components = new String[numComponents];
+		for (int i = 0; i < numComponents; ++i) {
+			addComponent(components, i);
 			while (!isValid(components,i)) {
 				addComponent(components, i);
 			}
@@ -242,7 +245,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return cost;
 	}
 	
-	public abstract int getNumComponents();
+	public  int getNumComponents(){
+		return numComponents;
+	}
 	
 	
 }

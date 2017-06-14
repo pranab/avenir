@@ -51,6 +51,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 			throw new IllegalStateException("failed to initialize search object " + ex.getMessage());
 		}
 		taskSchedule.initialize();
+		numComponents = taskSchedule.findNumComponents();
 	}
 
 	@Override
@@ -78,8 +79,19 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		//replace employee
 		Set<String> excludes = new HashSet<String>();
 		excludes.add(employee);
-		items[1] = selectEmployee(excludes);
+		String replEmployee = selectEmployee(excludes);
+		items[1] = replEmployee;
 		components[index] = BasicUtils.join(items, compItemDelim);
+		
+		//if replacement employee was assigned already then swap
+		for (int i = 0; i < components.length; ++i) {
+			items = components[index].split(compItemDelim);
+			String thisEmployee = items[1];
+			if (i != index && thisEmployee.equals(replEmployee)) {
+				items[1] = employee;
+				components[i] = BasicUtils.join(items, compItemDelim);
+			}
+		}
 	}
 
 	@Override
@@ -133,6 +145,10 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		return avCost;
 	}
 	
+	/**
+	 * @param task
+	 * @return
+	 */
 	private long getStartTime(Task task) {
 		long time = 0;
 		try {
@@ -143,6 +159,10 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		return time;
 	}
 
+	/**
+	 * @param task
+	 * @return
+	 */
 	private long getEndTime(Task task) {
 		long time = 0;
 		try {
@@ -165,17 +185,17 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		for (int i = 0; i <= index; ++i) {
 			String[] items = components[i].split(compItemDelim);
 			String employeeOneID = items[1];
-			Task taskOne = taskSchedule.findTask(items[1]);
+			Task taskOne = taskSchedule.findTask(items[0]);
 			long taskOneStart = getStartTime(taskOne);
 			long taskOneEnd = getEndTime(taskOne);
-			for (int j = 0; j < i; ++j) {
-				items = components[i].split(compItemDelim);
+			for (int j = i + 1; j <= index; ++j) {
+				items = components[j].split(compItemDelim);
 				String employeeTwoID = items[1];
 				if (employeeOneID.equals(employeeTwoID)) {
-					Task taskTwo = taskSchedule.findTask(items[1]);
+					Task taskTwo = taskSchedule.findTask(items[0]);
 					long taskTwoStart = getStartTime(taskTwo);
 					long taskTwoEnd = getEndTime(taskTwo);
-					valid = (taskOneEnd - taskTwoStart)  >= minGap || (taskTwoEnd - taskOneStart)  >= minGap;
+					valid = (taskTwoStart - taskOneEnd)  >= minGap || (taskOneStart - taskTwoEnd)  >= minGap;
 					if (!valid) {
 						break;
 					}
@@ -190,12 +210,14 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 
 	@Override
 	protected void addComponent(String[] componenets, int index) {
-		// TODO Auto-generated method stub
-		
+		String taskID = taskSchedule.getTasks().get(index).getId();
+		String employeeID = BasicUtils.selectRandom(taskSchedule.getEmployees()).getId();
+		String comp = taskID + compItemDelim + employeeID;
+		componenets[index] = comp;
 	}
 	
 	/**
-	 * @param excludes
+	 * @param exclude
 	 * @return
 	 */
 	private String selectEmployee(Set<String> excludes) {
@@ -205,10 +227,4 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		}
 		return thisEmployeeID;
 	}
-
-	@Override
-	public int getNumComponents() {
-		return taskSchedule.findNumComponents();
-	}
-
 }
