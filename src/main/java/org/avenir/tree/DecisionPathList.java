@@ -263,7 +263,7 @@ public class DecisionPathList {
 		/**
 		 * @return
 		 */
-		public Pair<String, Double> getPrediction() {
+		public Pair<String, Double> doPrediction() {
 			String predClVal = null;
 			double maxProb = 0;
 			for (String clVal : classValPr.keySet()) {
