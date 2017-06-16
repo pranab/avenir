@@ -41,3 +41,12 @@ def genIpAddress():
 def curTimeMs():
 	return int((datetime.utcnow() - datetime(1970,1,1)).total_seconds() * 1000)
 	
+def secDegPolyFit(x1, y1, x2, y2, x3, y3):
+	t = (y1 - y2) / (x1 - x2)
+	a = t - (y2 - y3) / (x2 - x3)
+	a = a / (x1 - x3)
+	b = t - a * (x1 + x2)
+	c = y1 - a * x1 * x1 - b * x1
+	return (a, b, c)
+	
+	

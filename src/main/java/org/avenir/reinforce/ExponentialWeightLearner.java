@@ -20,7 +20,7 @@ package org.avenir.reinforce;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.chombo.util.CategoricalSampler;
+import org.chombo.stats.CategoricalSampler;
 import org.chombo.util.ConfigUtility;
 
 

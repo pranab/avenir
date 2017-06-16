@@ -37,8 +37,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.chombo.stats.RandomSampler;
 import org.chombo.util.DynamicBean;
-import org.chombo.util.RandomSampler;
 import org.chombo.util.Utility;
 
 /**

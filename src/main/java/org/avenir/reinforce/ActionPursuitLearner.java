@@ -19,9 +19,9 @@ package org.avenir.reinforce;
 
 import java.util.Map;
 
-import org.chombo.util.CategoricalSampler;
+import org.chombo.stats.CategoricalSampler;
+import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
-import org.chombo.util.SimpleStat;
 
 
 /**

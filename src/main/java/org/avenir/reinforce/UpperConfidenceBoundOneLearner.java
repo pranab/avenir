@@ -20,8 +20,8 @@ package org.avenir.reinforce;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
-import org.chombo.util.SimpleStat;
 
 /**
  * UCB1 
