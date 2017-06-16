@@ -84,7 +84,7 @@ public class DecisionTreeModel extends ProbabilisticPredictiveModel {
 				break;
 			}
 		}
-		return decPathMatched.getPrediction();
+		return decPathMatched.doPrediction();
 	}
 	
 	/**
