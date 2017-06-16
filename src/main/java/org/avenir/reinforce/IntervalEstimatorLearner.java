@@ -22,7 +22,7 @@ import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.chombo.util.HistogramStat;
+import org.chombo.stats.HistogramStat;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Utility;
 
