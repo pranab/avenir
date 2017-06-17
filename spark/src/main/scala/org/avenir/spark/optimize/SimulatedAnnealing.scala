@@ -32,7 +32,21 @@ object SimulatedAnnealing extends JobConfiguration {
     */
    def main(args: Array[String]) {
 	   val appName = "simulatedAnnealing"
-	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
+	   var inputPath: Option[String] = None 
+	   var outputPath : String = ""
+	   var configFile : String = ""
+	   args.length match {
+	     	case 3 => {
+	     	  inputPath = Some(args(0))
+	     	  outputPath = args(1)
+	     	  configFile = args(2)
+	     	}
+	     	case 2 => {
+	     	  outputPath = args(0)
+	     	  configFile = args(1)
+	     	} 
+	   }
+	   
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
 	   val sparkCntxt = new SparkContext(sparkConf)
@@ -58,28 +72,37 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   //all optimizers
-	   val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createCandidate()).toList
-	   val optStartSolutions = sparkCntxt.parallelize(optList)
+	   val optStartSolutions = inputPath match {
+	     case Some(path:String) => {
+	       //initial candidate solutions provided
+	       sparkCntxt.textFile(path)
+	     }
+	     case None => {
+	       //no input, generate initial candidates
+	       val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createSolution()).toList
+	       sparkCntxt.parallelize(optList)
+	     }
+	   }
 	   
 	   val bestSolutions = optStartSolutions.mapPartitions(p => {
 	     //whole partition
 	     val domanCallback = brDomainCallback.value.createClone
-	     var res = List[(String, Int)]()
+	     var res = List[(String, Double)]()
 	     while (p.hasNext) {
 	       //optimizer
 	       var current = p.next
-	       domanCallback.withCurrentCandidate(current)
-	       var curCost = domanCallback.getCandidateCost(current)
+	       domanCallback.withCurrentSolution(current)
+	       var curCost = domanCallback.getSolutionCost(current)
 	       var next = ""
-	       var nextCost = 0
+	       var nextCost = 0.0
 	       var best = current
 	       var bestCost = curCost
 	       var temp = initialTemp
 	       var tempUpdateCounter = 0
 	       for (i <- 1 to maxNumIterations) {
 	         //iteration for an optimizer
-	         next = domanCallback.createNeighborhoodCandidate()
-	         nextCost = domanCallback.getCandidateCost(next)
+	         next = domanCallback.createNeighborhoodSolution()
+	         nextCost = domanCallback.getSolutionCost(next)
 	         if (nextCost < curCost) {
 	        	 //check with best so far
 	        	 if (nextCost < bestCost) {
@@ -90,13 +113,13 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 //set current to a better one found
 	        	 current = next
 	        	 curCost = nextCost
-	        	 domanCallback.withCurrentCandidate(current)
+	        	 domanCallback.withCurrentSolution(current)
 	         } else {
 	        	if (Math.exp(curCost.toDouble - nextCost.toDouble / temp) > Math.random()) {
 	        		//set current to a worse one probabilistically with hiher pribabilty at higher temp
 	        		current = next
 	        		curCost = nextCost
-	        		domanCallback.withCurrentCandidate(current)
+	        		domanCallback.withCurrentSolution(current)
 	        	}
 	         }
 	         

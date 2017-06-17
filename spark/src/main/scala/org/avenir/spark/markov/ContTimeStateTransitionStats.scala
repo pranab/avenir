@@ -27,7 +27,7 @@ import org.chombo.util.DoubleTable
 import java.text.SimpleDateFormat
 import org.chombo.util.Utility
 import org.chombo.util.Matrix
-import org.chombo.util.PoisonDistr
+import org.chombo.stats.PoisonDistr
 
  /**
   * Calculates statistics for continuous time Markov chain process using unionization algorithm

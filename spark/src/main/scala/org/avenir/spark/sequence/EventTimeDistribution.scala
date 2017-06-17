@@ -22,7 +22,7 @@ import org.apache.spark.SparkContext
 import org.chombo.spark.common.Record
 import scala.collection.JavaConverters._
 import org.chombo.util.BasicUtils
-import org.chombo.util.HistogramStat
+import org.chombo.stats.HistogramStat
 
 object EventTimeDistribution extends JobConfiguration {
   
