@@ -17,6 +17,7 @@
 
 package org.avenir.examples;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -24,11 +25,11 @@ import java.util.List;
  * @author pranab
  *
  */
-public class TaskSchedule {
+public class TaskSchedule implements Serializable {
 	private List<Location> locations;
 	private List<Task> tasks;
 	private List<Employee>  employees;
-	private double maxperDiemRate;
+	private double maxPerDiemRate;
 	private double[] airFareEstimator;
 	private double airTravelDistThreshold;
 	private double perMileDriveCost;
@@ -78,11 +79,11 @@ public class TaskSchedule {
 	public void setPerMileDriveCost(double perMileDriveCost) {
 		this.perMileDriveCost = perMileDriveCost;
 	}
-	public double getMaxperDiemRate() {
-		return maxperDiemRate;
+	public double getMaxPerDiemRate() {
+		return maxPerDiemRate;
 	}
-	public void setMaxperDiemRate(double maxperDiemRate) {
-		this.maxperDiemRate = maxperDiemRate;
+	public void setMaxPerDiemRate(double maxPerDiemRate) {
+		this.maxPerDiemRate = maxPerDiemRate;
 	}
 	public double getMaxTravelCost() {
 		return maxTravelCost;

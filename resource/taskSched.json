@@ -18,7 +18,7 @@
 		{
 			"id" : "E8760NLR",
 			"name" : "boston 100",
-			"gps" : [42.73458 -71.26674],
+			"gps" : [42.73458, -71.26674],
 			"hotelCost" : 130,
 			"perDiemCost" : 90
 		},
@@ -296,7 +296,7 @@
 		}
 	],
 	
-	"maxPerDiemCost" : 100,
+	"maxPerDiemRate" : 100,
 	"airFareEstimator" : [-0.000037, 0.308824, 69.485294],
 	"airTravelDistThreshold" : 100,
 	"perMileDriveCost" : 0.56,

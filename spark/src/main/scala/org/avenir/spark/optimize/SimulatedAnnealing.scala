@@ -58,11 +58,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val maxNumIterations = getMandatoryIntParam(appConfig, "max.num.iterations", "missing number of iterations")
 	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
 	   val initialTemp = getMandatoryDoubleParam(appConfig, "initial.temp","missing initial temperature")
-	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate","missing initial temperature")
-	   val coolingRateGeometric = getBooleanParamOrElse(config, "cooling.rate.geometric", true)
+	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate.value","missing cooling rate")
+	   val coolingRateGeometric = getBooleanParamOrElse(appConfig, "cooling.rate.geometric", true)
 	   val tempUpdateInterval = getMandatoryIntParam(appConfig, "temp.update.interval","missing temperature update interval")
-	   val domainCallbackClass = getMandatoryStringParam(config, "domain.callback.class", "missing domain callback class")
-	   val domainCallbackConfigFile = getMandatoryStringParam(config, "domain.callback.config.file", 
+	   val domainCallbackClass = getMandatoryStringParam(appConfig, "domain.callback.class.name", "missing domain callback class")
+	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
@@ -115,7 +115,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 curCost = nextCost
 	        	 domanCallback.withCurrentSolution(current)
 	         } else {
-	        	if (Math.exp(curCost.toDouble - nextCost.toDouble / temp) > Math.random()) {
+	        	if (Math.exp(curCost - nextCost / temp) > Math.random()) {
 	        		//set current to a worse one probabilistically with hiher pribabilty at higher temp
 	        		current = next
 	        		curCost = nextCost

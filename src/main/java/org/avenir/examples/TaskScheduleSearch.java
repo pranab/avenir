@@ -60,6 +60,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	public BasicSearchDomain createClone() {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
+		searchDomain.numComponents = this.numComponents;
 		return searchDomain;
 	}
 
@@ -126,7 +127,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		duration /= BasicUtils.MILISEC_PER_DAY;
 		
 		double perDiemCost = duration * taskLocation.getPerDiemCost();
-		perDiemCost /= duration * taskSchedule.getMaxperDiemRate();
+		perDiemCost /= duration * taskSchedule.getMaxPerDiemRate();
 		perDiemCost *= taskSchedule.getCostScale();
 		
 		//hotel cost
