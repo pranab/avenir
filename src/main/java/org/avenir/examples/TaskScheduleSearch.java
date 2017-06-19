@@ -21,6 +21,7 @@ package org.avenir.examples;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,6 +35,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  */
 public class TaskScheduleSearch extends BasicSearchDomain {
 	private TaskSchedule taskSchedule;
+	private SimpleDateFormat dateFormatter;
 	
 	private static final String compDelim = ";";
 	private static final String compItemDelim = ":";
@@ -42,7 +44,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	}
 
 	@Override
-	public void intialize(String configFile)  {
+	public void intialize(String configFile, int maxStepSize, boolean debugOn)  {
 		try {
 			InputStream fs = new FileInputStream(configFile);
 			if (null != fs) {
@@ -54,6 +56,13 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		}
 		taskSchedule.initialize();
 		numComponents = taskSchedule.findNumComponents();
+		System.out.println("numComponents :" + numComponents);
+		dateFormatter = new SimpleDateFormat(taskSchedule.getDateFormat());
+		compCosts.clear();
+		System.out.println("maxStepSize: " + maxStepSize);
+		withMaxStepSize(maxStepSize);
+		withConstantStepSize();
+		this.debugOn = debugOn;
 	}
 
 	@Override
@@ -61,6 +70,11 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
 		searchDomain.numComponents = this.numComponents;
+		searchDomain.dateFormatter = new SimpleDateFormat(taskSchedule.getDateFormat());
+		searchDomain.compCosts.clear();
+		searchDomain.withMaxStepSize(this.getMaxStepSize());
+		searchDomain.withConstantStepSize();
+		searchDomain.debugOn = this.debugOn;
 		return searchDomain;
 	}
 
@@ -79,6 +93,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		String[] items = components[index].split(compItemDelim);
 		String task = items[0];
 		String employee = items[1];
+		System.out.println("existing component: " + components[index]);
 		
 		//replace employee
 		Set<String> excludes = new HashSet<String>();
@@ -86,6 +101,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		String replEmployee = selectEmployee(excludes);
 		items[1] = replEmployee;
 		components[index] = BasicUtils.join(items, compItemDelim);
+		System.out.println("replaced component: " + components[index]);
 		
 		//if replacement employee was assigned already then swap
 		for (int i = 0; i < components.length; ++i) {
@@ -100,6 +116,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 
 	@Override
 	protected double calculateCost(String comp) {
+		System.out.println("calculating cost for component: " + comp);
 		String[] items = comp.split(compItemDelim);
 		String taskID = items[0];
 		String employeeID = items[1];
@@ -123,8 +140,9 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		travelCost *= taskSchedule.getCostScale();
 		
 		//per diem cost
-		long duration = getStartTime(task) - getEndTime(task) + 4;
+		long duration = getEndTime(task) - getStartTime(task)  + 4;
 		duration /= BasicUtils.MILISEC_PER_DAY;
+		//System.out.println("duration days: " + duration);
 		
 		double perDiemCost = duration * taskLocation.getPerDiemCost();
 		perDiemCost /= duration * taskSchedule.getMaxPerDiemRate();
@@ -145,6 +163,8 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		int numReqdSkills = task.getSkills().length;
 		double skiilMatchCost = ((double)(numReqdSkills - matchCount) *  taskSchedule.getCostScale()) / numReqdSkills;
 		
+		//System.out.println("travelCost: " + travelCost + " perDiemCost:" + perDiemCost + 
+		//		" hotelCost: " + hotelCost + " skiilMatchCost:" + skiilMatchCost);
 		double avCost = (travelCost + perDiemCost + hotelCost + skiilMatchCost) / 4.0;
 		return avCost;
 	}
@@ -156,7 +176,8 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	private long getStartTime(Task task) {
 		long time = 0;
 		try {
-			time = taskSchedule.findDateFormatter().parse(task.getStartDate()).getTime();
+			//System.out.println("task ID: " + task.getId() + " start date: " + task.getStartDate());
+			time = dateFormatter.parse(task.getStartDate()).getTime();
 		} catch (Exception ex) {
 			throw new IllegalStateException("date formatting error" + ex.getMessage());
 		}
@@ -170,7 +191,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	private long getEndTime(Task task) {
 		long time = 0;
 		try {
-			time = taskSchedule.findDateFormatter().parse(task.getEndDate()).getTime();
+			time = dateFormatter.parse(task.getEndDate()).getTime();
 		} catch (Exception ex) {
 			throw new IllegalStateException("date formatting error" + ex.getMessage());
 		}
@@ -182,6 +203,9 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		return isValid(components, components.length -1);
 	}
 
+	/* (non-Javadoc)
+	 * @see org.avenir.optimize.BasicSearchDomain#isValid(java.lang.String[], int)
+	 */
 	@Override
 	public boolean isValid(String[] components, int index) {
 		boolean valid = true;
@@ -199,6 +223,8 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 					Task taskTwo = taskSchedule.findTask(items[0]);
 					long taskTwoStart = getStartTime(taskTwo);
 					long taskTwoEnd = getEndTime(taskTwo);
+					System.out.println("taskTwoStart:" + taskTwoStart + " taskOneEnd:" + taskOneEnd +
+							" taskOneStart:" + taskOneStart + " taskTwoEnd:" + taskTwoEnd);
 					valid = (taskTwoStart - taskOneEnd)  >= minGap || (taskOneStart - taskTwoEnd)  >= minGap;
 					if (!valid) {
 						break;

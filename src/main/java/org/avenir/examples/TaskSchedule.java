@@ -39,7 +39,6 @@ public class TaskSchedule implements Serializable {
 	private String dateFormat;
 	private int minDaysGap;
 	private int numComponents;
-	private SimpleDateFormat dateFormatter;
 	
 	
 	public List<Location> getLocations() {
@@ -165,14 +164,6 @@ public class TaskSchedule implements Serializable {
 	 */
 	public void initialize() {
 		numComponents = tasks.size();
-		dateFormatter = new SimpleDateFormat(dateFormat);
-	}
-	
-	/**
-	 * @return
-	 */
-	public SimpleDateFormat findDateFormatter() {
-		return dateFormatter;
 	}
 	
 	/**

@@ -36,6 +36,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected StepSize stepSize;
 	protected Map<String, Double> compCosts;
 	protected int numComponents;
+	protected boolean debugOn;
 	
 	/**
 	 * 
@@ -46,11 +47,15 @@ public abstract class  BasicSearchDomain implements Serializable {
 		compCosts = new HashMap<String, Double>();
 	}
 	
+	public void reset() {
+		compCosts.clear();
+	}
+	
 	/**
 	 * @param configFile
 	 * @throws IOException 
 	 */
-	public abstract void intialize(String configFile) ;
+	public abstract void intialize(String configFile, int maxStepSize, boolean debugOn) ;
 	
 	/**
 	 * @return
@@ -143,12 +148,18 @@ public abstract class  BasicSearchDomain implements Serializable {
 		String[] components = refCurrent ? getSolutionComponenets(currentSolution) :
 			getSolutionComponenets(initialSolution);
 		int step = stepSize.getStepSize();
+		System.out.println("step: " + step);
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
 			int compIndex = BasicUtils.sampleUniform(numComponents);
+			String curComp = components[compIndex];
+			System.out.println("component to replace: " + compIndex);
 			replaceSolutionComponent(components, compIndex);
 			while (!isValid(components)) {
+				components[compIndex] = curComp;
 				compIndex = BasicUtils.sampleUniform(numComponents);
+				System.out.println("found invalid choosing another component to replace: " + compIndex);
+				curComp = components[compIndex];
 				replaceSolutionComponent(components, compIndex);
 			}
 		}
@@ -160,11 +171,17 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * generation
 	 * @param size
 	 */
-	public BasicSearchDomain withMaxSize(int maxStepSize) {
+	public BasicSearchDomain withMaxStepSize(int maxStepSize) {
 		stepSize.withMaxStepSize(maxStepSize);
 		return this;
 	}
 	
+	/**
+	 * @return
+	 */
+	public int getMaxStepSize() {
+		return stepSize.getStepSize();
+	}
 
 	/**
 	 * @return
@@ -234,9 +251,12 @@ public abstract class  BasicSearchDomain implements Serializable {
 		double cost = 0;
 		String[] components = getSolutionComponenets(solution);
 		for (String comp : components) {
-			cost += getSolutionComonentCost(comp);
+			double compCost = getSolutionComonentCost(comp);
+			System.out.println("component: " + comp + " compCost:" + compCost);
+			cost += compCost;
 		}
-		return cost / getNumComponents();
+		System.out.println("cost: " + cost + " num components: " + numComponents);
+		return cost / numComponents;
 	}
 	
 	
@@ -245,11 +265,16 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	public double getSolutionComonentCost(String comp) {
+		
 		Double cost = compCosts.get(comp);
 		if (null == cost) {
+			System.out.println("missing component cost in cache: " + comp);
 			cost = calculateCost(comp);
 			compCosts.put(comp, cost);
+		} else {
+			System.out.println("found component cost in cache: " + comp + " cost: " + cost);
 		}
+		
 		return cost;
 	}
 	

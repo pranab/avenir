@@ -57,6 +57,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val maxNumIterations = getMandatoryIntParam(appConfig, "max.num.iterations", "missing number of iterations")
 	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
+	   val maxStepSize = getMandatoryIntParam(appConfig, "max.step.size", "missing max step size")
 	   val initialTemp = getMandatoryDoubleParam(appConfig, "initial.temp","missing initial temperature")
 	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate.value","missing cooling rate")
 	   val coolingRateGeometric = getBooleanParamOrElse(appConfig, "cooling.rate.geometric", true)
@@ -68,7 +69,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
-	   domainCallback.intialize(domainCallbackConfigFile)
+	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   //all optimizers
@@ -88,7 +89,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	     //whole partition
 	     val domanCallback = brDomainCallback.value.createClone
 	     var res = List[(String, Double)]()
+	     var count = 0
 	     while (p.hasNext) {
+	       if (debugOn) {
+	    	   println("next partition")
+	       }
 	       //optimizer
 	       var current = p.next
 	       domanCallback.withCurrentSolution(current)
@@ -103,11 +108,18 @@ object SimulatedAnnealing extends JobConfiguration {
 	         //iteration for an optimizer
 	         next = domanCallback.createNeighborhoodSolution()
 	         nextCost = domanCallback.getSolutionCost(next)
+	         if (debugOn) {
+	        	 println("next solution: " + next + " cost: " + nextCost + 
+	        	     " current solution: " + current + " cost: " + curCost)
+	         }
 	         if (nextCost < curCost) {
 	        	 //check with best so far
 	        	 if (nextCost < bestCost) {
 	        		 bestCost = nextCost
 	        		 best = next
+	        		 if (debugOn) {
+	        		   println("best: " + best + " cost: " + bestCost)
+	        		 }
 	        	 }
 	        	 
 	        	 //set current to a better one found
@@ -115,8 +127,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 curCost = nextCost
 	        	 domanCallback.withCurrentSolution(current)
 	         } else {
-	        	if (Math.exp(curCost - nextCost / temp) > Math.random()) {
-	        		//set current to a worse one probabilistically with hiher pribabilty at higher temp
+	        	if (Math.exp((curCost - nextCost) / temp) > Math.random()) {
+	        		//set current to a worse one probabilistically with higher probability at higher temp
+	        		if (debugOn) {
+	        		  println("accepted higher cost solution")
+	        		}
 	        		current = next
 	        		curCost = nextCost
 	        		domanCallback.withCurrentSolution(current)
@@ -137,7 +152,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	           tempUpdateCounter = 0
 	         }
 	       }
+	       count = count + 1
 	       res ::= (best, bestCost)
+	     }
+	     if (debugOn) {
+	    	 println("partition size: " + count)
 	     }
 	     res.iterator
 	   }) 
@@ -150,8 +169,6 @@ object SimulatedAnnealing extends JobConfiguration {
 	   if (saveOutput) {
 	     bestSolutions.saveAsTextFile(outputPath)
 	   }
-
-	   
 	   
    }
 
