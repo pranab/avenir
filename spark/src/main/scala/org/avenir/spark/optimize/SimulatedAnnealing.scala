@@ -65,11 +65,14 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val domainCallbackClass = getMandatoryStringParam(appConfig, "domain.callback.class.name", "missing domain callback class")
 	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
+	   val mutationRetryCountLimit = getIntParamOrElse(appConfig, "mutation.retry.count.limit",  100)
+	   val numPartitions = getIntParamOrElse(appConfig, "num.partitions",  2)
+	       
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
-	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, debugOn)
+	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   //all optimizers
@@ -81,7 +84,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	     case None => {
 	       //no input, generate initial candidates
 	       val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createSolution()).toList
-	       sparkCntxt.parallelize(optList)
+	       sparkCntxt.parallelize(optList, numPartitions)
 	     }
 	   }
 	   
@@ -96,6 +99,9 @@ object SimulatedAnnealing extends JobConfiguration {
 	       }
 	       //optimizer
 	       var current = p.next
+	       if (debugOn) {
+	         println("current:" + current)
+	       }
 	       domanCallback.withCurrentSolution(current)
 	       var curCost = domanCallback.getSolutionCost(current)
 	       var next = ""
@@ -109,7 +115,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	         next = domanCallback.createNeighborhoodSolution()
 	         nextCost = domanCallback.getSolutionCost(next)
 	         if (debugOn) {
-	        	 println("next solution: " + next + " cost: " + nextCost + 
+	        	 println("iteration: " + i + " next solution: " + next + " cost: " + nextCost + 
 	        	     " current solution: " + current + " cost: " + curCost)
 	         }
 	         if (nextCost < curCost) {
