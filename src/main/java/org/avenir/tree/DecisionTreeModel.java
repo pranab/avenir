@@ -59,6 +59,11 @@ public class DecisionTreeModel extends ProbabilisticPredictiveModel {
 		for (DecisionPath decPath : decPathList.getDecisionPaths()) {
 			boolean eval = true;
 			for (DecisionPathPredicate predicate :  decPath.getPredicates()) {
+				//skip root predicate
+				if (predicate.getPredicateStr().equals(DecisionTreeBuilder.ROOT_PATH)) {
+					continue;
+				}
+				
 				Boolean predEval = predicateValues.get(predicate);
 				if (null != predEval) {
 					eval = eval && predEval;

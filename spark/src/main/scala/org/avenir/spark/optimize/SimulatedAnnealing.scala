@@ -25,6 +25,12 @@ import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
 
+/**
+ * Performs optimization with simulated annealing. Does parallel meta optimization
+ * with multiple starting solution. Can do local optimization optionally
+ * @param args
+ * @return
+ */
 object SimulatedAnnealing extends JobConfiguration {
    /**
     * @param args
@@ -32,7 +38,21 @@ object SimulatedAnnealing extends JobConfiguration {
     */
    def main(args: Array[String]) {
 	   val appName = "simulatedAnnealing"
-	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
+	   var inputPath: Option[String] = None 
+	   var outputPath : String = ""
+	   var configFile : String = ""
+	   args.length match {
+	     	case 3 => {
+	     	  inputPath = Some(args(0))
+	     	  outputPath = args(1)
+	     	  configFile = args(2)
+	     	}
+	     	case 2 => {
+	     	  outputPath = args(0)
+	     	  configFile = args(1)
+	     	} 
+	   }
+	   
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
 	   val sparkCntxt = new SparkContext(sparkConf)
@@ -43,60 +63,92 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val maxNumIterations = getMandatoryIntParam(appConfig, "max.num.iterations", "missing number of iterations")
 	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
+	   val maxStepSize = getMandatoryIntParam(appConfig, "max.step.size", "missing max step size")
 	   val initialTemp = getMandatoryDoubleParam(appConfig, "initial.temp","missing initial temperature")
-	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate","missing initial temperature")
-	   val coolingRateGeometric = getBooleanParamOrElse(config, "cooling.rate.geometric", true)
+	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate.value","missing cooling rate")
+	   val coolingRateGeometric = getBooleanParamOrElse(appConfig, "cooling.rate.geometric", true)
 	   val tempUpdateInterval = getMandatoryIntParam(appConfig, "temp.update.interval","missing temperature update interval")
-	   val domainCallbackClass = getMandatoryStringParam(config, "domain.callback.class", "missing domain callback class")
-	   val domainCallbackConfigFile = getMandatoryStringParam(config, "domain.callback.config.file", 
+	   val domainCallbackClass = getMandatoryStringParam(appConfig, "domain.callback.class.name", "missing domain callback class")
+	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
+	   val mutationRetryCountLimit = getIntParamOrElse(appConfig, "mutation.retry.count.limit",  100)
+	   val locallyOptimize = getBooleanParamOrElse(appConfig, "locally.optimize", true)
+	   val maxNumLocalIterations = getMandatoryIntParam(appConfig, "max.num.local iterations", "missing number of local iterations")
+	   val numPartitions = getIntParamOrElse(appConfig, "num.partitions",  2)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
-	   domainCallback.intialize(domainCallbackConfigFile)
+	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
-	   //all optimizers
-	   val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createCandidate()).toList
-	   val optStartSolutions = sparkCntxt.parallelize(optList)
+	   //starting solutions are either auto generated user provided through an input file
+	   val optStartSolutions = inputPath match {
+	     case Some(path:String) => {
+	       //initial candidate solutions provided
+	       sparkCntxt.textFile(path)
+	     }
+	     case None => {
+	       //no input, generate initial candidates
+	       val optList = (for (i <- 1 to numOptimizers) yield domainCallback.createSolution()).toList
+	       sparkCntxt.parallelize(optList, numPartitions)
+	     }
+	   }
 	   
+	   //global optimization
 	   val bestSolutions = optStartSolutions.mapPartitions(p => {
 	     //whole partition
 	     val domanCallback = brDomainCallback.value.createClone
-	     var res = List[(String, Int)]()
+	     var res = List[(String, Double)]()
+	     var count = 0
 	     while (p.hasNext) {
+	       if (debugOn) {
+	    	   println("next partition")
+	       }
 	       //optimizer
 	       var current = p.next
-	       domanCallback.withCurrentCandidate(current)
-	       var curCost = domanCallback.getCandidateCost(current)
+	       if (debugOn) {
+	         println("current:" + current)
+	       }
+	       domanCallback.withCurrentSolution(current)
+	       var curCost = domanCallback.getSolutionCost(current)
 	       var next = ""
-	       var nextCost = 0
+	       var nextCost = 0.0
 	       var best = current
 	       var bestCost = curCost
 	       var temp = initialTemp
 	       var tempUpdateCounter = 0
 	       for (i <- 1 to maxNumIterations) {
 	         //iteration for an optimizer
-	         next = domanCallback.createNeighborhoodCandidate()
-	         nextCost = domanCallback.getCandidateCost(next)
+	         next = domanCallback.createNeighborhoodSolution()
+	         nextCost = domanCallback.getSolutionCost(next)
+	         if (debugOn) {
+	        	 println("iteration: " + i + " next solution: " + next + " cost: " + nextCost + 
+	        	     " current solution: " + current + " cost: " + curCost)
+	         }
 	         if (nextCost < curCost) {
 	        	 //check with best so far
 	        	 if (nextCost < bestCost) {
 	        		 bestCost = nextCost
 	        		 best = next
+	        		 if (debugOn) {
+	        		   println("best: " + best + " cost: " + bestCost)
+	        		 }
 	        	 }
 	        	 
 	        	 //set current to a better one found
 	        	 current = next
 	        	 curCost = nextCost
-	        	 domanCallback.withCurrentCandidate(current)
+	        	 domanCallback.withCurrentSolution(current)
 	         } else {
-	        	if (Math.exp(curCost.toDouble - nextCost.toDouble / temp) > Math.random()) {
-	        		//set current to a worse one probabilistically with hiher pribabilty at higher temp
+	        	if (Math.exp((curCost - nextCost) / temp) > Math.random()) {
+	        		//set current to a worse one probabilistically with higher probability at higher temp
+	        		if (debugOn) {
+	        		  println("accepted higher cost solution")
+	        		}
 	        		current = next
 	        		curCost = nextCost
-	        		domanCallback.withCurrentCandidate(current)
+	        		domanCallback.withCurrentSolution(current)
 	        	}
 	         }
 	         
@@ -114,21 +166,64 @@ object SimulatedAnnealing extends JobConfiguration {
 	           tempUpdateCounter = 0
 	         }
 	       }
+	       count = count + 1
 	       res ::= (best, bestCost)
+	     }
+	     if (debugOn) {
+	    	 println("partition size: " + count)
 	     }
 	     res.iterator
 	   }) 
 
+	   
+	   //optional local optimization 
+	   val bestSolutionsFinal = locallyOptimize match {
+	     case true => {
+	       val localOpt = bestSolutions.mapPartitions(p => {
+	    	   val domanCallback = brDomainCallback.value.createClone
+	           var res = List[(String, Double)]()
+	           while (p.hasNext) {
+	        	   val rec =  p.next
+	        	   val current = rec._1
+	        	   val curCost = rec._2
+	        	   domanCallback.withInitialSolution(current)
+	        	   domanCallback.withNeighborhoodReference(false)
+	        	   var next = ""
+	        	   var nextCost = 0.0
+	        	   var best = current
+	        	   var bestCost = curCost
+	        	   for (i <- 1 to maxNumLocalIterations) {
+	        		   //iteration for an optimizer
+	        		   next = domanCallback.createNeighborhoodSolution()
+	        		   nextCost = domanCallback.getSolutionCost(next)
+	        		   if (nextCost < bestCost) {
+	        			   bestCost = nextCost
+	        			   best = next
+	        		   }
+	        	   }
+	        	   res ::= (best, bestCost)
+	           }
+	    	   res.iterator
+	       })
+	       localOpt
+	     }
+	     
+	     case false => {
+	       bestSolutions
+	     }
+	   
+	   }
+	   
+	   //console output
 	   if (debugOn) {
-	     val colBestSolutions = bestSolutions.collect
+	     val colBestSolutions = bestSolutionsFinal.collect
 	     colBestSolutions.foreach(r => println(r))
 	   }	   
 
+	   //file output
 	   if (saveOutput) {
-	     bestSolutions.saveAsTextFile(outputPath)
+	     bestSolutionsFinal.saveAsTextFile(outputPath)
 	   }
-
-	   
 	   
    }
 

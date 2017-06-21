@@ -20,7 +20,9 @@ package org.avenir.optimize;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.chombo.util.BasicUtils;
 
@@ -36,6 +38,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected StepSize stepSize;
 	protected Map<String, Double> compCosts;
 	protected int numComponents;
+	protected int mutationRetryCountLimit;
+	protected Set<String> invalidSolutions;
+	protected boolean debugOn;
 	
 	/**
 	 * 
@@ -44,13 +49,18 @@ public abstract class  BasicSearchDomain implements Serializable {
 		refCurrent = true;
 		stepSize = new StepSize();
 		compCosts = new HashMap<String, Double>();
+		invalidSolutions = new HashSet<String>();
+	}
+	
+	public void reset() {
+		compCosts.clear();
 	}
 	
 	/**
 	 * @param configFile
 	 * @throws IOException 
 	 */
-	public abstract void intialize(String configFile) ;
+	public abstract void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, boolean debugOn) ;
 	
 	/**
 	 * @return
@@ -140,19 +150,45 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	public  String createNeighborhoodSolution() {
+		if (debugOn) {
+			System.out.println("currentSolution before creating new:" + currentSolution);
+		}
+		boolean valid = true;
 		String[] components = refCurrent ? getSolutionComponenets(currentSolution) :
 			getSolutionComponenets(initialSolution);
 		int step = stepSize.getStepSize();
+		//System.out.println("step: " + step);
+		int tryCount = 0;
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
 			int compIndex = BasicUtils.sampleUniform(numComponents);
+			String curComp = components[compIndex];
+			System.out.println("component to replace: " + compIndex);
 			replaceSolutionComponent(components, compIndex);
-			while (!isValid(components)) {
+			valid = isValid(components);
+			tryCount = 0;
+			while (!valid && tryCount < mutationRetryCountLimit) {
+				components[compIndex] = curComp;
 				compIndex = BasicUtils.sampleUniform(numComponents);
+				System.out.println("found invalid choosing another component to replace: " + compIndex +
+						" tryCount: " + tryCount);
+				curComp = components[compIndex];
 				replaceSolutionComponent(components, compIndex);
+				valid = isValid(components);
+				++tryCount;
 			}
 		}
-		return aggregateSolutionComponenets(components);
+		String newSoln =  aggregateSolutionComponenets(components);
+		if (!valid && tryCount == mutationRetryCountLimit) {
+			if (debugOn) {
+				System.out.println("max retry limit reached creating new solution");
+			}
+			invalidSolutions.add(newSoln);
+		}
+		if (debugOn) {
+			System.out.println("created newSoln: " + newSoln);
+		}
+		return newSoln;
 	}
 	
 	/**
@@ -160,11 +196,17 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * generation
 	 * @param size
 	 */
-	public BasicSearchDomain withMaxSize(int maxStepSize) {
+	public BasicSearchDomain withMaxStepSize(int maxStepSize) {
 		stepSize.withMaxStepSize(maxStepSize);
 		return this;
 	}
 	
+	/**
+	 * @return
+	 */
+	public int getMaxStepSize() {
+		return stepSize.getStepSize();
+	}
 
 	/**
 	 * @return
@@ -204,6 +246,14 @@ public abstract class  BasicSearchDomain implements Serializable {
 	}
 	
 	/**
+	 * @param mutationRetryCountLimit
+	 * @return
+	 */
+	public BasicSearchDomain withMutationRetryCountLimit(int mutationRetryCountLimit) {
+		this.mutationRetryCountLimit = mutationRetryCountLimit;
+		return this;
+	}
+	/**
 	 * creates random candidate
 	 * @return
 	 */
@@ -232,11 +282,27 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 */
 	public  double getSolutionCost(String solution) {
 		double cost = 0;
-		String[] components = getSolutionComponenets(solution);
-		for (String comp : components) {
-			cost += getSolutionComonentCost(comp);
+		if (invalidSolutions.contains(solution)) {
+			cost = 1000;
+			if (debugOn) {
+				System.out.println("returning cost for invalid solution");
+			}
+		} else {
+			String[] components = getSolutionComponenets(solution);
+			for (String comp : components) {
+				double compCost = getSolutionComonentCost(comp);
+				if (debugOn) {
+					System.out.println("component: " + comp + " compCost:" + compCost);
+				}
+				cost += compCost;
+			}
+			if (debugOn) {
+				System.out.println("total cost: " + cost + " num components: " + numComponents);
+			}
+			cost /= numComponents;
 		}
-		return cost / getNumComponents();
+		
+		return cost;
 	}
 	
 	
@@ -247,9 +313,17 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public double getSolutionComonentCost(String comp) {
 		Double cost = compCosts.get(comp);
 		if (null == cost) {
+			if (debugOn) {
+				System.out.println("missing component cost in cache: " + comp);
+			}
 			cost = calculateCost(comp);
 			compCosts.put(comp, cost);
+		} else {
+			if (debugOn) {
+				//System.out.println("found component cost in cache: " + comp + " cost: " + cost);
+			}
 		}
+		
 		return cost;
 	}
 	

@@ -18,7 +18,7 @@
 		{
 			"id" : "E8760NLR",
 			"name" : "boston 100",
-			"gps" : [42.73458 -71.26674],
+			"gps" : [42.73458, -71.26674],
 			"hotelCost" : 130,
 			"perDiemCost" : 90
 		},
@@ -196,7 +196,7 @@
 			"location" : "F954XN67",
 			"skills" : ["103", "108"],
 			"startDate" : "08-09-2017",
-			"endDate" : "08-09-2017"
+			"endDate" : "08-11-2017"
 		},
 		{
 			"id" : "G9DW6I5U0162",
@@ -283,6 +283,12 @@
 			"skills" : ["102", "104", "105", "107", "108", "101"]
 		},
 		{
+			"id" : "KSA5FY237W",
+			"name" : "",
+			"location" : "Y5D9L1FA",
+			"skills" : ["102", "104",  "108", "101"]
+		},
+		{
 			"id" : "3NDZVY6684",
 			"name" : "",
 			"location" : "0PH6IQ56",
@@ -293,10 +299,16 @@
 			"name" : "",
 			"location" : "4QCF75Z3",
 			"skills" : ["101", "103", "108", "106"]
+		},
+		{
+			"id" : "VGRTL83D13",
+			"name" : "",
+			"location" : "397ISDLP",
+			"skills" : ["101", "108", "106"]
 		}
 	],
 	
-	"maxPerDiemCost" : 100,
+	"maxPerDiemRate" : 100,
 	"airFareEstimator" : [-0.000037, 0.308824, 69.485294],
 	"airTravelDistThreshold" : 100,
 	"perMileDriveCost" : 0.56,
