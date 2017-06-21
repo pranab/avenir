@@ -25,6 +25,12 @@ import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
 
+/**
+ * Performs optimization with simulated annealing. Does parallel meta optimization
+ * with multiple starting solution. Can do local optimization optionally
+ * @param args
+ * @return
+ */
 object SimulatedAnnealing extends JobConfiguration {
    /**
     * @param args
@@ -66,8 +72,9 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
 	   val mutationRetryCountLimit = getIntParamOrElse(appConfig, "mutation.retry.count.limit",  100)
+	   val locallyOptimize = getBooleanParamOrElse(appConfig, "locally.optimize", true)
+	   val maxNumLocalIterations = getMandatoryIntParam(appConfig, "max.num.local iterations", "missing number of local iterations")
 	   val numPartitions = getIntParamOrElse(appConfig, "num.partitions",  2)
-	       
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
@@ -75,7 +82,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
-	   //all optimizers
+	   //starting solutions are either auto generated user provided through an input file
 	   val optStartSolutions = inputPath match {
 	     case Some(path:String) => {
 	       //initial candidate solutions provided
@@ -88,6 +95,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	     }
 	   }
 	   
+	   //global optimization
 	   val bestSolutions = optStartSolutions.mapPartitions(p => {
 	     //whole partition
 	     val domanCallback = brDomainCallback.value.createClone
@@ -167,13 +175,54 @@ object SimulatedAnnealing extends JobConfiguration {
 	     res.iterator
 	   }) 
 
+	   
+	   //optional local optimization 
+	   val bestSolutionsFinal = locallyOptimize match {
+	     case true => {
+	       val localOpt = bestSolutions.mapPartitions(p => {
+	    	   val domanCallback = brDomainCallback.value.createClone
+	           var res = List[(String, Double)]()
+	           while (p.hasNext) {
+	        	   val rec =  p.next
+	        	   val current = rec._1
+	        	   val curCost = rec._2
+	        	   domanCallback.withInitialSolution(current)
+	        	   domanCallback.withNeighborhoodReference(false)
+	        	   var next = ""
+	        	   var nextCost = 0.0
+	        	   var best = current
+	        	   var bestCost = curCost
+	        	   for (i <- 1 to maxNumLocalIterations) {
+	        		   //iteration for an optimizer
+	        		   next = domanCallback.createNeighborhoodSolution()
+	        		   nextCost = domanCallback.getSolutionCost(next)
+	        		   if (nextCost < bestCost) {
+	        			   bestCost = nextCost
+	        			   best = next
+	        		   }
+	        	   }
+	        	   res ::= (best, bestCost)
+	           }
+	    	   res.iterator
+	       })
+	       localOpt
+	     }
+	     
+	     case false => {
+	       bestSolutions
+	     }
+	   
+	   }
+	   
+	   //console output
 	   if (debugOn) {
-	     val colBestSolutions = bestSolutions.collect
+	     val colBestSolutions = bestSolutionsFinal.collect
 	     colBestSolutions.foreach(r => println(r))
 	   }	   
 
+	   //file output
 	   if (saveOutput) {
-	     bestSolutions.saveAsTextFile(outputPath)
+	     bestSolutionsFinal.saveAsTextFile(outputPath)
 	   }
 	   
    }
