@@ -56,14 +56,14 @@ public class DecisionTreeModel extends ProbabilisticPredictiveModel {
 	protected Pair<String, Double> predictClassProb(String[] items) {
 		predicateValues.clear();
 		DecisionPath decPathMatched = null;
+		
+		//all decision paths
 		for (DecisionPath decPath : decPathList.getDecisionPaths()) {
+			//all predicates in a decision path, except the root predicate
 			boolean eval = true;
-			for (DecisionPathPredicate predicate :  decPath.getPredicates()) {
-				//skip root predicate
-				if (predicate.getPredicateStr().equals(DecisionTreeBuilder.ROOT_PATH)) {
-					continue;
-				}
-				
+			List<DecisionPathPredicate> predicates = decPath.getPredicates();
+			for (int i = 1; i < predicates.size(); ++i) {
+				DecisionPathPredicate predicate = predicates.get(i);
 				Boolean predEval = predicateValues.get(predicate);
 				if (null != predEval) {
 					eval = eval && predEval;
