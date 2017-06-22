@@ -39,7 +39,7 @@ public abstract class ProbabilisticPredictiveModel extends PredictiveModel {
 	 */
 	@Override
 	public String predict(String[] items) {
-		predictClassProb(items);
+		predClassProb = predictClassProb(items);
 		
 		double probThreshold = 0.5;
 		if (costBasedPredictionEnabled) {
