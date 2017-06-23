@@ -44,10 +44,12 @@ public abstract class ProbabilisticPredictiveModel extends PredictiveModel {
 		double probThreshold = 0.5;
 		if (costBasedPredictionEnabled) {
 			probThreshold = falsePosCost / (falsePosCost + falseNegCost);
-		} 
-		double posClassProb = predClassProb.getLeft().equals(posClass) ? predClassProb.getRight() :
-			1.0 - predClassProb.getRight();
-		predClass = posClassProb > probThreshold ? posClass : negClass;
+			double posClassProb = predClassProb.getLeft().equals(posClass) ? predClassProb.getRight() :
+				1.0 - predClassProb.getRight();
+			predClass = posClassProb > probThreshold ? posClass : negClass;
+		} else {
+			predClass = predClassProb.getLeft();
+		}
 		
 		if (errorCountingEnabled) {
 			countError();
