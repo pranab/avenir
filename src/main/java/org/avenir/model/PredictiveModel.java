@@ -86,7 +86,7 @@ public abstract class PredictiveModel {
 	 * @param posClass
 	 * @param negClass
 	 */
-	private void withClassValues(String posClass, String negClass) {
+	public void withClassValues(String posClass, String negClass) {
 		if (null == this.posClass) {
 			this.posClass = posClass;
 			this.negClass = negClass;
