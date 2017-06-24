@@ -283,7 +283,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public  double getSolutionCost(String solution) {
 		double cost = 0;
 		if (invalidSolutions.contains(solution)) {
-			cost = 1000;
+			cost = 200;
 			if (debugOn) {
 				System.out.println("returning cost for invalid solution");
 			}
