@@ -1,0 +1,22 @@
+Build all necessary jars
+========================
+chombo
+mvn install
+sbt publishLocal
+
+chombo/spark
+sbt package
+sbt publishLocal
+
+avenir
+mvn install
+sbt publishLocal
+
+avenir/spark
+sbt package
+
+Build uber jar
+==============
+ant -f avenir_spark.xml
+
+uber jar file name is uber-avenir-spark-1.0.jar

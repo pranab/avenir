@@ -5,6 +5,7 @@
 		<zipgroupfileset dir="/Users/pranab/Projects/avenir/spark/target/scala-2.10" includes="avenir-spark_2.10-1.0.jar" /> 
 		<zipgroupfileset dir="/Users/pranab/Projects/chombo/spark/target/scala-2.10" includes="chombo-spark_2.10-1.0.jar" /> 
 		<zipgroupfileset dir="/Users/pranab/Projects/chombo/target" includes="chombo-1.0.jar" /> 
+		<zipgroupfileset dir="/Users/pranab/Projects/avenir/target" includes="avenir-1.0.jar" /> 
 	</jar>
 </target>
 </project>
