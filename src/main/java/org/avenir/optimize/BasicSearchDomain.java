@@ -116,6 +116,11 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected abstract void addComponent(String[] componenets, int index);
 	
 	/**
+	 * @return
+	 */
+	protected abstract double getInvalidSolutionCost();
+	
+	/**
 	 * creates initial set of candidates
 	 * @return
 	 */
@@ -283,7 +288,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public  double getSolutionCost(String solution) {
 		double cost = 0;
 		if (invalidSolutions.contains(solution)) {
-			cost = 200;
+			cost = getInvalidSolutionCost();
 			if (debugOn) {
 				System.out.println("returning cost for invalid solution");
 			}

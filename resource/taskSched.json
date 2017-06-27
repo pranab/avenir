@@ -316,6 +316,7 @@
 	"costScale" : 100,
 	"maxHotelRate" : 180,
 	"dateFormat" : "MM-dd-yyyy",
-	"minDaysGap" : 2
+	"minDaysGap" : 2,
+	"inavlidSolutionCost" : 150,
 	
 }
