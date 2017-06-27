@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.chombo.util.BasicUtils;
+import org.chombo.util.Pair;
 
 /**
  * Interface between optimization algorithm and business domain logic
@@ -336,4 +337,25 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return numComponents;
 	}
 	
+	/**
+	 * @param firstSoln
+	 * @param secondSoln
+	 * @return
+	 */
+	public Pair<String, String> crossOver(String firstSoln, String secondSoln) {
+		int crossOverPt = BasicUtils.sampleUniform(1, numComponents);
+		
+		//cross over segments
+		String[] firstSolncomp = getSolutionComponenets(firstSoln);
+		String[] secondSolncomp = getSolutionComponenets(secondSoln);
+		String[] temp = new String[numComponents];
+		BasicUtils.arrayCopy(secondSolncomp, crossOverPt, numComponents, temp, 0);
+		BasicUtils.arrayCopy(firstSolncomp, crossOverPt, numComponents, secondSolncomp, crossOverPt);
+		BasicUtils.arrayCopy(temp, 0, numComponents - crossOverPt, firstSolncomp, crossOverPt);
+		
+		Pair<String, String> crossedOver = new Pair<String, String>(
+			aggregateSolutionComponenets(firstSolncomp), 
+			aggregateSolutionComponenets(secondSolncomp));
+		return crossedOver;
+	}
 }
