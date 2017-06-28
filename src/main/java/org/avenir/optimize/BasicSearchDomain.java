@@ -168,7 +168,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 		int tryCount = 0;
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
-			int compIndex = BasicUtils.sampleUniform(numComponents);
+			int compIndex = BasicUtils.sampleUniform(numComponents-1);
 			String curComp = components[compIndex];
 			System.out.println("component to replace: " + compIndex);
 			replaceSolutionComponent(components, compIndex);
@@ -176,7 +176,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 			tryCount = 0;
 			while (!valid && tryCount < mutationRetryCountLimit) {
 				components[compIndex] = curComp;
-				compIndex = BasicUtils.sampleUniform(numComponents);
+				compIndex = BasicUtils.sampleUniform(numComponents-1);
 				System.out.println("found invalid choosing another component to replace: " + compIndex +
 						" tryCount: " + tryCount);
 				curComp = components[compIndex];
@@ -358,7 +358,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 		
 		//retry loop
 		for (int tryCount = 0; !valid && tryCount < maxCrossOverRetryCount; ++tryCount) {
-			int crossOverPt = BasicUtils.sampleUniform(1, numComponents);
+			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
 			if (crossOverPoints.contains(crossOverPt)) {
 				continue;
 			} else {

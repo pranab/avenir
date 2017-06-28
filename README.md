@@ -1,5 +1,5 @@
 ## Introduction
-Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
+Set of predictive and exploratory machine learning tools. Runs on Hadoop, Spark and Storm
 
 ## Philosophy
 * Simple to use
@@ -15,6 +15,7 @@ Set of predictive and exploratory data mining tools. Runs on Hadoop and Storm
 * Decision tree and Random Forest
 * Association Mining
 * Reinforcement learning
+* Stochastic Optimization
 
 
 ## Blogs
