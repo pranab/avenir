@@ -289,4 +289,9 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		}
 		return thisEmployeeID;
 	}
+
+	@Override
+	protected double getInvalidSolutionCost() {
+		return taskSchedule.getInavlidSolutionCost();
+	}
 }

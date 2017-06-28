@@ -1,0 +1,31 @@
+This tutorial is for optimizing project assignment using simulated annealing stochastic
+optimization algorithm running on Spark. Please modify the configuration and script files 
+based on your needs and environment
+
+Build
+=====
+Please refer to spark_dependency.txt
+
+Input data
+==========
+If you use auto generated starting solutions you don't have to do anything. If you are manually
+providing the starting solution, then create the data in a file and modify opt.sh to provide the
+file name as command line argument as below
+
+$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
+	--conf spark.ui.killEnabled=true --master $MASTER $JAR_NAME  $INPUT $OUTPUT opt.conf
+	
+
+Run Spark job
+=============
+Make sure the configuration file opt.conf and the project assignment configuration file taskSched.json
+are in the current path and then run
+
+./opt.sh simulatedAnnealing
+
+if debug.on is set, output will shown on the console. If you want in a file please set the configuration 
+parameter save.output to true
+
+Configuration
+=============
+it's in opt.conf. Please edit as necessary

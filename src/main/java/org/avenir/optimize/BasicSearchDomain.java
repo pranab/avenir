@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.chombo.util.BasicUtils;
+import org.chombo.util.Pair;
 
 /**
  * Interface between optimization algorithm and business domain logic
@@ -40,6 +41,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected int numComponents;
 	protected int mutationRetryCountLimit;
 	protected Set<String> invalidSolutions;
+	protected int maxCrossOverRetryCount;
 	protected boolean debugOn;
 	
 	/**
@@ -114,6 +116,11 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param index
 	 */
 	protected abstract void addComponent(String[] componenets, int index);
+	
+	/**
+	 * @return
+	 */
+	protected abstract double getInvalidSolutionCost();
 	
 	/**
 	 * creates initial set of candidates
@@ -283,7 +290,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	public  double getSolutionCost(String solution) {
 		double cost = 0;
 		if (invalidSolutions.contains(solution)) {
-			cost = 1000;
+			cost = getInvalidSolutionCost();
 			if (debugOn) {
 				System.out.println("returning cost for invalid solution");
 			}
@@ -331,4 +338,57 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return numComponents;
 	}
 	
+	/**
+	 * @param firstSoln
+	 * @param secondSoln
+	 * @return
+	 */
+	public Pair<String, String> crossOver(String firstSoln, String secondSoln) {
+		boolean valid = false;
+		int maxCrossOverRetryCount = 10;
+		Pair<String, String> crossedOver = null;
+		String[] firstSolncomp = getSolutionComponenets(firstSoln);
+		String[] secondSolncomp = getSolutionComponenets(secondSoln);
+		String[] thisFirstSolncomp = new String[numComponents];
+		String[] thisSecondSolncomp = new String[numComponents];
+		String[] temp = new String[numComponents];
+		boolean[] validationStatus = new boolean[2];
+		String[] solutions = new String[2];
+		Set<Integer> crossOverPoints = new HashSet<Integer>();
+		
+		//retry loop
+		for (int tryCount = 0; !valid && tryCount < maxCrossOverRetryCount; ++tryCount) {
+			int crossOverPt = BasicUtils.sampleUniform(1, numComponents);
+			if (crossOverPoints.contains(crossOverPt)) {
+				continue;
+			} else {
+				crossOverPoints.add(crossOverPt);
+			}
+			
+			BasicUtils.arrayCopy(firstSolncomp, 0, numComponents, thisFirstSolncomp, 0);
+			BasicUtils.arrayCopy(secondSolncomp, 0, numComponents, thisSecondSolncomp, 0);
+			
+			//cross over segments
+			BasicUtils.arrayCopy(thisSecondSolncomp, crossOverPt, numComponents, temp, 0);
+			BasicUtils.arrayCopy(thisFirstSolncomp, crossOverPt, numComponents, thisSecondSolncomp, crossOverPt);
+			BasicUtils.arrayCopy(temp, 0, numComponents - crossOverPt, thisFirstSolncomp, crossOverPt);
+			
+			validationStatus[0] = isValid(thisFirstSolncomp);
+			validationStatus[1] = isValid(thisSecondSolncomp);
+			valid = validationStatus[0] && validationStatus[1];
+		}
+		
+		solutions[0] = aggregateSolutionComponenets(thisFirstSolncomp);
+		solutions[1] = aggregateSolutionComponenets(thisSecondSolncomp);
+		
+		//cache invalid solutions
+		for (int i = 0; i < 2; ++i) {
+			if (!validationStatus[i]) {
+				invalidSolutions.add(solutions[i]);
+			}
+		}	
+		crossedOver = new Pair<String, String>(solutions[0], solutions[1]);
+		return crossedOver;
+		
+	}
 }

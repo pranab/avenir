@@ -68,6 +68,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val coolingRate = getMandatoryDoubleParam(appConfig, "cooling.rate.value","missing cooling rate")
 	   val coolingRateGeometric = getBooleanParamOrElse(appConfig, "cooling.rate.geometric", true)
 	   val tempUpdateInterval = getMandatoryIntParam(appConfig, "temp.update.interval","missing temperature update interval")
+	   val worseSolnAccepProb = getDoubleParamOrElse(appConfig, "worse.soln.accept.probability", 0.80)
 	   val domainCallbackClass = getMandatoryStringParam(appConfig, "domain.callback.class.name", "missing domain callback class")
 	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
@@ -78,9 +79,14 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
+	   //callback domain class
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
 	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
+	   
+	   //accululators
+	   val costIncreaseAcum = sparkCntxt.accumulator[Double](0.0, "costIncrease")
+	   val costIncreaseCountAcum = sparkCntxt.accumulator[Long](0, "costIncreaseCount")
 	   
 	   //starting solutions are either auto generated user provided through an input file
 	   val optStartSolutions = inputPath match {
@@ -141,6 +147,9 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 curCost = nextCost
 	        	 domanCallback.withCurrentSolution(current)
 	         } else {
+	            costIncreaseAcum +=  nextCost - curCost
+	            costIncreaseCountAcum += 1
+	            
 	        	if (Math.exp((curCost - nextCost) / temp) > Math.random()) {
 	        		//set current to a worse one probabilistically with higher probability at higher temp
 	        		if (debugOn) {
@@ -218,6 +227,15 @@ object SimulatedAnnealing extends JobConfiguration {
 	   if (debugOn) {
 	     val colBestSolutions = bestSolutionsFinal.collect
 	     colBestSolutions.foreach(r => println(r))
+	     
+	     //average cost increase
+	     val avCostIncreae = costIncreaseAcum.value / costIncreaseCountAcum.value
+	     println("number of cost increases:" + costIncreaseCountAcum.value + 
+	         "  average cost increase:" + BasicUtils.formatDouble(avCostIncreae, 3))
+	     
+	     //estimated initial temp
+	     val estInitialTemp = -avCostIncreae / Math.log(worseSolnAccepProb)
+	     println("esimated initial temperature:" + BasicUtils.formatDouble(estInitialTemp, 3))
 	   }	   
 
 	   //file output

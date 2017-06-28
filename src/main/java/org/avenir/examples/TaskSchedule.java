@@ -39,6 +39,7 @@ public class TaskSchedule implements Serializable {
 	private String dateFormat;
 	private int minDaysGap;
 	private int numComponents;
+	private double inavlidSolutionCost;
 	
 	
 	public List<Location> getLocations() {
@@ -113,6 +114,12 @@ public class TaskSchedule implements Serializable {
 	}
 	public void setMinDaysGap(int minDaysGap) {
 		this.minDaysGap = minDaysGap;
+	}
+	public double getInavlidSolutionCost() {
+		return inavlidSolutionCost;
+	}
+	public void setInavlidSolutionCost(double inavlidSolutionCost) {
+		this.inavlidSolutionCost = inavlidSolutionCost;
 	}
 	/**
 	 * @param taskID
