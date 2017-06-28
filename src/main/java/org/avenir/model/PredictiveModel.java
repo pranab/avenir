@@ -124,6 +124,13 @@ public abstract class PredictiveModel {
 	/**
 	 * @return
 	 */
+	public boolean isErrorCountingEnabled() {
+		return errorCountingEnabled;
+	}
+
+	/**
+	 * @return
+	 */
 	public double getError() {
 		double error = 0;
 		if (errorCountingEnabled) {
