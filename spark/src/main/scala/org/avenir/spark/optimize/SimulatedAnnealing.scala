@@ -86,7 +86,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	   
 	   //accululators
 	   val costIncreaseAcum = sparkCntxt.accumulator[Double](0.0, "costIncrease")
-	   val costIncreaseCountAcum = sparkCntxt.accumulator[Long](0, "costIncreaseCount")
+	   val betterSolnCount = sparkCntxt.accumulator[Long](0, "betterSolnCount")
+	   val bestSolnCount = sparkCntxt.accumulator[Long](0, "bestSolnCount")
+	   val worseSolnCount = sparkCntxt.accumulator[Long](0, "worseSolnCount")
+	   val worseSolnAcceptCount = sparkCntxt.accumulator[Long](0, "worseSolnAcceptCount")
+	   
 	   
 	   //starting solutions are either auto generated user provided through an input file
 	   val optStartSolutions = inputPath match {
@@ -133,8 +137,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	     " current solution: " + current + " cost: " + curCost)
 	         }
 	         if (nextCost < curCost) {
+	        	 betterSolnCount += 1
+	        	 
 	        	 //check with best so far
 	        	 if (nextCost < bestCost) {
+	        		 bestSolnCount += 1
 	        		 bestCost = nextCost
 	        		 best = next
 	        		 if (debugOn) {
@@ -148,10 +155,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 domanCallback.withCurrentSolution(current)
 	         } else {
 	            costIncreaseAcum +=  nextCost - curCost
-	            costIncreaseCountAcum += 1
+	            worseSolnCount += 1
 	            
 	        	if (Math.exp((curCost - nextCost) / temp) > Math.random()) {
 	        		//set current to a worse one probabilistically with higher probability at higher temp
+	        		worseSolnAcceptCount += 1        		
 	        		if (debugOn) {
 	        		  println("accepted higher cost solution")
 	        		}
@@ -228,10 +236,13 @@ object SimulatedAnnealing extends JobConfiguration {
 	     val colBestSolutions = bestSolutionsFinal.collect
 	     colBestSolutions.foreach(r => println(r))
 	     
+	     //other counters
+	     println("better solution count:" + betterSolnCount.value + " best solution count" + bestSolnCount.value)
+	     println("worse solution count:" + worseSolnCount.value + " worse solution acceptance count" + worseSolnAcceptCount.value)
+	     
 	     //average cost increase
-	     val avCostIncreae = costIncreaseAcum.value / costIncreaseCountAcum.value
-	     println("number of cost increases:" + costIncreaseCountAcum.value + 
-	         "  average cost increase:" + BasicUtils.formatDouble(avCostIncreae, 3))
+	     val avCostIncreae = costIncreaseAcum.value / worseSolnCount.value
+	     println("average cost increase:" + BasicUtils.formatDouble(avCostIncreae, 3))
 	     
 	     //estimated initial temp
 	     val estInitialTemp = -avCostIncreae / Math.log(worseSolnAccepProb)

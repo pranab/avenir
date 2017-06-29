@@ -50,9 +50,10 @@ public class SolutionPopulation {
 	 * @param topCount
 	 */
 	public void retainTop(int topCount) {
-		if (topCount < population.size()) {
-			population.subList(0, topCount).clear();
-		} else if (topCount > population.size()) {
+		int size = population.size();
+		if (topCount < size) {
+			population.subList(topCount, size).clear();
+		} else if (topCount > size) {
 			throw new IllegalStateException("top count greater than list size");
 		}
 	}

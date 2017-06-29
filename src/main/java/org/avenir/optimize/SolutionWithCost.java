@@ -25,7 +25,6 @@ import org.chombo.util.Pair;
  *
  */
 public class SolutionWithCost extends Pair<String, Double> implements Comparable<SolutionWithCost> {
-	
 
 	/**
 	 * @param solution
