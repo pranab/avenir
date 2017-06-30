@@ -180,8 +180,8 @@ public class ModelPredictor extends Configured implements Tool {
 	        PredictiveModel predModel = null != model ? model : ensembleModel;
 			if (predModel.isErrorCountingEnabled()) {
 				stBld.delete(0, stBld.length());
-				stBld.append("total error: ").append(BasicUtils.formatDouble(predModel.getError())).append("\\n").
-					append("false positive error: ").append(BasicUtils.formatDouble(predModel.getFalsePosError())).append("\\n").
+				stBld.append("total error: ").append(BasicUtils.formatDouble(predModel.getError())).append("\n").
+					append("false positive error: ").append(BasicUtils.formatDouble(predModel.getFalsePosError())).append("\n").
 					append("false negative error: ").append(BasicUtils.formatDouble(predModel.getFalseNegError()));
 		       	Configuration config = context.getConfiguration();
 	            Utility.writeToFile(config, "map.error.rate.file.path", stBld.toString());

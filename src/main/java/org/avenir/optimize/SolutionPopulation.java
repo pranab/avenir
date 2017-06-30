@@ -32,6 +32,13 @@ public class SolutionPopulation {
 	private List<SolutionWithCost> population = new ArrayList<SolutionWithCost>();
 	
 	/**
+	 * 
+	 */
+	public void initialize() {
+		population.clear();
+	}
+	
+	/**
 	 * @param solution
 	 * @param cost
 	 */
@@ -39,6 +46,21 @@ public class SolutionPopulation {
 		population.add(new SolutionWithCost(solution, cost));
 	}
 	
+	/**
+	 * @param solution
+	 */
+	public void add(SolutionWithCost solution) {
+		population.add(solution);
+	}
+	
+	/**
+	 * @param index
+	 * @return
+	 */
+	public SolutionWithCost getSolution(int index) {
+		return population.get(index);
+	}
+
 	/**
 	 * 
 	 */
@@ -71,5 +93,15 @@ public class SolutionPopulation {
 	 */
 	public SolutionWithCost getBest() {
 		return population.get(0);
+	}
+	
+	/**
+	 * @return
+	 */
+	public SolutionWithCost binaryTournament() {
+		List<SolutionWithCost> solnPair = BasicUtils.selectRandomFromList(population, 2);
+		SolutionWithCost soln  =  solnPair.get(0).getCost() < solnPair.get(1).getCost() ? 
+				solnPair.get(0) : solnPair.get(1);
+		return soln;
 	}
 }
