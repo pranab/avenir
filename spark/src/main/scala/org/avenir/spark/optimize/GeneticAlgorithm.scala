@@ -25,6 +25,7 @@ import scala.collection.JavaConverters._
 import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
 import org.avenir.optimize.SolutionPopulation
+import org.avenir.optimize.SolutionWithCost
 
 object GeneticAlgorithm extends JobConfiguration {
    /**
@@ -45,6 +46,9 @@ object GeneticAlgorithm extends JobConfiguration {
 	   val numOptimizers = getMandatoryIntParam(appConfig, "num.optimizers", "missing number of optimizers")
 	   val crossOverProb = getDoubleParamOrElse(appConfig, "cross.over.probability", 0.98)
 	   val mutationProb = getMandatoryDoubleParam(appConfig, "mutation.probability","missing mutation.probability")
+	   val mutationRetryCountLimit = getMandatoryIntParam(appConfig, "mutation.retry.count.limit",  "missing mutation retry count limit")
+	   val crossOverRetryCountLimit = getMandatoryIntParam(appConfig, "cross.over.retry.count.limit",  "missing cross over retry count limit")
+
 	   val domainCallbackClass = getMandatoryStringParam(appConfig, "domain.callback.class.name", "missing domain callback class")
 	   val domainCallbackConfigFile = getMandatoryStringParam(appConfig, "domain.callback.config.file", 
 	       "missing domain callback config file name")
@@ -53,8 +57,10 @@ object GeneticAlgorithm extends JobConfiguration {
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   //callback domain class
-	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
-	   //domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
+	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().
+	       asInstanceOf[BasicSearchDomain]
+	   domainCallback.intitPopulationStrategy(domainCallbackConfigFile, crossOverRetryCountLimit, 
+	       mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   val optList = (for (i <- 1 to numOptimizers) yield i).toList
@@ -62,26 +68,30 @@ object GeneticAlgorithm extends JobConfiguration {
 	   
 	   val bestSolutions = optimizers.mapPartitions(p => {
 	     //whole partition
-	     val domanCallback = brDomainCallback.value.createClone
-	     val population = new SolutionPopulation()
+	     val domanCallback = brDomainCallback.value.createPopulationStrategyClone
+	     var population = new SolutionPopulation()
 	     val selPopulation = new SolutionPopulation()
-	     val childPopulation = new SolutionPopulation()
-	     var res = List[(String, Double)]()
+	     var childPopulation = new SolutionPopulation()
+	     var res = List[SolutionWithCost]()
 	     var count = 0
+	     
+	     //all items in partition
 	     while (p.hasNext) {
 	       if (debugOn) {
 	    	   println("next partition")
 	       }
+	       var current = p.next
 	       population.initialize()
 	       selPopulation.initialize()
 	       childPopulation.initialize()
 	       
 	       //initial population
 	       for (i <- 1 to populationSize) {
-	    	   var soln = domanCallback.createSolution()
-	    	   var cost = domanCallback.getSolutionCost(soln)
+	    	   val soln = domanCallback.createSolution()
+	    	   val cost = domanCallback.getSolutionCost(soln)
 	    	   population.add(soln,cost)
 	       }
+	       var best:SolutionWithCost = null
 	       
 	       //all generations
 	       for (i <- 1 to numGenerations) {
@@ -96,34 +106,72 @@ object GeneticAlgorithm extends JobConfiguration {
 	    	       case 1 => (selPopulation.getSolution(i), selPopulation.getSolution(i-1))
 	    	     }
 	    	     
-	    	     //cross over
-	    	     var child =  (Math.random() < crossOverProb) match {
-	    	       case true => domanCallback.crossOverForOne(parents._1.getSolution(), parents._2.getSolution()) 
-	    	       case false => parents._1.getSolution()
-	    	     }
-	    	     
-	    	     //mutate
-	    	     child = (Math.random() < mutationProb) match {
-	    	       case true => domanCallback.mutate(child)
-	    	       case false => child
-	    	     }
-	    	     
+	    	     //create child
+	    	     val child = reproduce(parents, domanCallback,crossOverProb, mutationProb)
 	    	     val childCost = domanCallback.getSolutionCost(child)
 	    	     childPopulation.add(child,childCost)
 	    	   }
+	    	   
+	    	   var cildBest = childPopulation.findBest()
+	    	   best = i match {
+	    	     case 1 => cildBest
+	    	     case _ => if (cildBest.getCost() < best.getCost()) cildBest else best
+	    	   }
+	    	   population = childPopulation
+	    	   childPopulation = new SolutionPopulation()
 	       }
-	       
+	       res ::= best
 	     }
-	     
-	     
 	     res.iterator
 	   })
+	   
+	   //console output
+	   if (debugOn) {
+	     val colBestSolutions = bestSolutions.collect
+	     colBestSolutions.foreach(r => println(r))
+	   }	  
+	   
+	   //file output
+	   if (saveOutput) {
+	     bestSolutions.saveAsTextFile(outputPath)
+	}
+	   
+	   
    }
    
+   /**
+   * @param population
+   * @param selPopulation
+   * @param populationSize
+   */
    def selectPopulation(population:SolutionPopulation, selPopulation:SolutionPopulation, populationSize:Int)  {
+	   selPopulation.initialize()
 	   for (i <- 1 to populationSize) {
-	     var sel = population.binaryTournament()
+	     val sel = population.binaryTournament()
 	     selPopulation.add(sel)
 	   }	
+   }
+   
+   /**
+   * @param parents
+   * @param domanCallback
+   * @param crossOverProb
+   * @param mutationProb
+   * @return
+   */
+   def reproduce(parents: (SolutionWithCost, SolutionWithCost), domanCallback: BasicSearchDomain,
+       crossOverProb:Double, mutationProb:Double) : String = {
+	 //cross over
+     var child =  (Math.random() < crossOverProb) match {
+       case true => domanCallback.crossOverForOne(parents._1.getSolution(), parents._2.getSolution()) 
+       case false => parents._1.getSolution()
+     }
+     
+     //mutate
+     child = (Math.random() < mutationProb) match {
+       case true => domanCallback.mutate(child)
+       case false => child
+     }
+     child
    }
 }

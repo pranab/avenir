@@ -92,9 +92,24 @@ public class SolutionPopulation {
 	 * @return
 	 */
 	public SolutionWithCost getBest() {
+		//assuming already sorted
 		return population.get(0);
 	}
 	
+	/**
+	 * @return
+	 */
+	public SolutionWithCost findBest() {
+		//unsorted
+		SolutionWithCost bestMemeber = null;
+		for (SolutionWithCost member : population) {
+			if (null == bestMemeber || member.getCost() < bestMemeber.getCost()) {
+				bestMemeber = member;
+			} 
+		}
+		return bestMemeber;
+	}
+
 	/**
 	 * @return
 	 */

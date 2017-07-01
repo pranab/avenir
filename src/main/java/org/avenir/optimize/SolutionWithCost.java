@@ -18,6 +18,7 @@
 
 package org.avenir.optimize;
 
+import org.chombo.util.BasicUtils;
 import org.chombo.util.Pair;
 
 /**
@@ -63,5 +64,12 @@ public class SolutionWithCost extends Pair<String, Double> implements Comparable
 	public boolean equals(Object other) {
 		SolutionWithCost that = (SolutionWithCost)other;
 		return left.equals(that.left);
+	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		return left + "," + BasicUtils.formatDouble(right);
 	}
 }

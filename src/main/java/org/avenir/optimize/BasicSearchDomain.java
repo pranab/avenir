@@ -41,7 +41,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected int numComponents;
 	protected int mutationRetryCountLimit;
 	protected Set<String> invalidSolutions;
-	protected int maxCrossOverRetryCount;
+	protected int crossOverRetryCountLimit;
 	protected boolean debugOn;
 	
 	/**
@@ -60,14 +60,30 @@ public abstract class  BasicSearchDomain implements Serializable {
 	
 	/**
 	 * @param configFile
-	 * @throws IOException 
+	 * @param maxStepSize
+	 * @param mutationRetryCountLimit
+	 * @param debugOn
 	 */
-	public abstract void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, boolean debugOn) ;
+	public abstract void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, 
+			boolean debugOn) ;
 	
+	/**
+	 * @param configFile
+	 * @param crossOverRetryCountLimit
+	 * @param mutationRetryCountLimit
+	 * @param debugOn
+	 */
+	public abstract void intitPopulationStrategy(String configFile, int crossOverRetryCountLimit,  
+			int mutationRetryCountLimit, boolean debugOn);
 	/**
 	 * @return
 	 */
 	public abstract  BasicSearchDomain createClone();
+	
+	/**
+	 * @return
+	 */
+	public abstract BasicSearchDomain createPopulationStrategyClone();
 	
 	/**
 	 * @param solution
@@ -322,7 +338,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 		Set<Integer> crossOverPoints = new HashSet<Integer>();
 		
 		//retry loop
-		for (int tryCount = 0; !valid && tryCount < maxCrossOverRetryCount; ++tryCount) {
+		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
 			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
 			if (crossOverPoints.contains(crossOverPt)) {
 				continue;
@@ -370,7 +386,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 		boolean valid = false;
 		
 		//retry loop
-		for (int tryCount = 0; !valid && tryCount < maxCrossOverRetryCount; ++tryCount) {
+		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
 			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
 			if (crossOverPoints.contains(crossOverPt)) {
 				continue;
