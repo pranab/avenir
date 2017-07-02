@@ -81,7 +81,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   
 	   //callback domain class
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().asInstanceOf[BasicSearchDomain]
-	   domainCallback.intialize(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
+	   domainCallback.initTrajectoryStrategy(domainCallbackConfigFile, maxStepSize, mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   //accululators
@@ -108,7 +108,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   //global optimization
 	   val bestSolutions = optStartSolutions.mapPartitions(p => {
 	     //whole partition
-	     val domanCallback = brDomainCallback.value.createClone
+	     val domanCallback = brDomainCallback.value.createTrajectoryStrategyClone()
 	     var res = List[(String, Double)]()
 	     var count = 0
 	     while (p.hasNext) {
@@ -197,7 +197,7 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val bestSolutionsFinal = locallyOptimize match {
 	     case true => {
 	       val localOpt = bestSolutions.mapPartitions(p => {
-	    	   val domanCallback = brDomainCallback.value.createClone
+	    	   val domanCallback = brDomainCallback.value.createTrajectoryStrategyClone
 	           var res = List[(String, Double)]()
 	           while (p.hasNext) {
 	        	   val rec =  p.next

@@ -44,7 +44,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	}
 
 	@Override
-	public void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, 
+	public void initTrajectoryStrategy(String configFile, int maxStepSize, int mutationRetryCountLimit, 
 		boolean debugOn)  {
 		try {
 			InputStream fs = new FileInputStream(configFile);
@@ -100,7 +100,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	 * @see org.avenir.optimize.BasicSearchDomain#createClone()
 	 */
 	@Override
-	public BasicSearchDomain createClone() {
+	public BasicSearchDomain createTrajectoryStrategyClone() {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
 		searchDomain.numComponents = this.numComponents;

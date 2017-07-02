@@ -64,7 +64,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param mutationRetryCountLimit
 	 * @param debugOn
 	 */
-	public abstract void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, 
+	public abstract void initTrajectoryStrategy(String configFile, int maxStepSize, int mutationRetryCountLimit, 
 			boolean debugOn) ;
 	
 	/**
@@ -78,7 +78,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	/**
 	 * @return
 	 */
-	public abstract  BasicSearchDomain createClone();
+	public abstract  BasicSearchDomain createTrajectoryStrategyClone();
 	
 	/**
 	 * @return
