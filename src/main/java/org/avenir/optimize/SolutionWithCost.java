@@ -18,6 +18,8 @@
 
 package org.avenir.optimize;
 
+import java.io.Serializable;
+
 import org.chombo.util.BasicUtils;
 import org.chombo.util.Pair;
 
@@ -25,7 +27,7 @@ import org.chombo.util.Pair;
  * @author pranab
  *
  */
-public class SolutionWithCost extends Pair<String, Double> implements Comparable<SolutionWithCost> {
+public class SolutionWithCost extends Pair<String, Double> implements Comparable<SolutionWithCost>, Serializable {
 
 	/**
 	 * @param solution

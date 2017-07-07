@@ -18,6 +18,7 @@
 
 package org.avenir.optimize;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.chombo.util.BasicUtils;
  * @author pranab
  *
  */
-public class SolutionPopulation {
+public class SolutionPopulation implements Serializable {
 	private List<SolutionWithCost> population = new ArrayList<SolutionWithCost>();
 	
 	/**
