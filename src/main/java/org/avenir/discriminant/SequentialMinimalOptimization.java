@@ -430,6 +430,7 @@ public class SequentialMinimalOptimization {
 			}
 			++i;
 		}
+		prediction -= threshold;
 		return prediction;
 	}
 	
@@ -534,9 +535,24 @@ public class SequentialMinimalOptimization {
 	/**
 	 * @return
 	 */
-	public List<Integer> getSupVecIndexes() {
+	public List<Integer> getNonBoundSupVecIndexes() {
 		return supVecs;
 	}
 	
+	/**
+	 * @return
+	 */
+	public List<Integer> getSupVecIndexes() {
+		List<Integer> supVecIndexes = new ArrayList<Integer>();
+		int i = 0;
+		for (double[] vec : data) {
+			double alpha = vec[lagrangianOrd];
+			if (alpha > 0) {
+				supVecIndexes.add(i);
+			}
+			++i;
+		}
+		return supVecIndexes;
+	}
 	
 }
