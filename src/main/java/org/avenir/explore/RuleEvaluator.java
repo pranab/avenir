@@ -102,7 +102,7 @@ public class RuleEvaluator extends Configured implements Tool {
 
         	String condDelim = config.get("rue.cond.delim");
         	if (null != condDelim) {
-        		AttributeFilter.setCondSeparator(condDelim);
+        		AttributeFilter.setConjunctSeparator(condDelim);
         	}
         	String[] ruleNames = Utility.assertStringArrayConfigParam(config, "rue.rule.names", Utility.configDelim, 
         			"missing rule list");
