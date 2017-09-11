@@ -22,9 +22,9 @@ case "$1" in
 	;;
 
 "copyInput")
-	hadoop fs -rm $HDFS_BASE_DIR/stat/input/*
-	hadoop fs -put $2 $HDFS_BASE_DIR/stat/input
-	hadoop fs -ls $HDFS_BASE_DIR/stat/input
+	hadoop fs -rm $HDFS_BASE_DIR/norm/input/*
+	hadoop fs -put $2 $HDFS_BASE_DIR/norm/input
+	hadoop fs -ls $HDFS_BASE_DIR/norm/input
 	;;
 
 "copySchema")
