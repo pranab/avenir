@@ -22,6 +22,7 @@ second_freq_norm_distr = GaussianRejectSampler(4400,100)
 
 count = 0
 for i in range(num_recs):
+	rid = genID(12)
 	age = age_distr.sample()
 	time_sice_last_maint = time_sice_last_maint_distr.sample()
 	num_breakdowns = 0
@@ -73,7 +74,7 @@ for i in range(num_recs):
 	else:
 		status = -1
 		
-	print "%.3f,%.3f,%d,%.3f,%.3f,%.3f,%.3f,%d" %(age,time_sice_last_maint,num_breakdowns,first_freq,first_freq_amp,second_freq,second_freq_amp,status)	
+	print "%s,%.3f,%.3f,%d,%.3f,%.3f,%.3f,%.3f,%d" %(rid,age,time_sice_last_maint,num_breakdowns,first_freq,first_freq_amp,second_freq,second_freq_amp,status)	
 	
-print "positive class count %d" %(count)
+#print "positive class count %d" %(count)
 

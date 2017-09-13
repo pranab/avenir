@@ -28,7 +28,7 @@ case "$1" in
 	;;
 
 "copySchema")
-	hadoop fs -rm $HDFS_META_DIR/*
+	hadoop fs -rm $HDFS_META_DIR/$2
 	hadoop fs -put $2 $HDFS_META_DIR
 	hadoop fs -ls $HDFS_META_DIR
 	;;
