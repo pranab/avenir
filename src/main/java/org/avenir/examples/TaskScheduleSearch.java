@@ -44,7 +44,8 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	}
 
 	@Override
-	public void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, boolean debugOn)  {
+	public void initTrajectoryStrategy(String configFile, int maxStepSize, int mutationRetryCountLimit, 
+		boolean debugOn)  {
 		try {
 			InputStream fs = new FileInputStream(configFile);
 			if (null != fs) {
@@ -68,8 +69,38 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		this.mutationRetryCountLimit = mutationRetryCountLimit;
 	}
 
+	/* (non-Javadoc)
+	 * @see org.avenir.optimize.BasicSearchDomain#intitPopulationStrategy(java.lang.String, int, int, boolean)
+	 */
 	@Override
-	public BasicSearchDomain createClone() {
+	public void intitPopulationStrategy(String configFile, int crossOverRetryCountLimit,  
+		int mutationRetryCountLimit, boolean debugOn)  {
+		try {
+			InputStream fs = new FileInputStream(configFile);
+			if (null != fs) {
+				ObjectMapper mapper = new ObjectMapper();
+				taskSchedule = mapper.readValue(fs, TaskSchedule.class);
+			}	
+		} catch (IOException ex) {
+			throw new IllegalStateException("failed to initialize search object " + ex.getMessage());
+		}
+		taskSchedule.initialize();
+		this.debugOn = debugOn;
+		numComponents = taskSchedule.findNumComponents();
+		if (debugOn) {
+			System.out.println("numComponents :" + numComponents);
+		}
+		dateFormatter = new SimpleDateFormat(taskSchedule.getDateFormat());
+		compCosts.clear();
+		this.crossOverRetryCountLimit = crossOverRetryCountLimit;
+		this.mutationRetryCountLimit = mutationRetryCountLimit;
+	}
+
+	/* (non-Javadoc)
+	 * @see org.avenir.optimize.BasicSearchDomain#createClone()
+	 */
+	@Override
+	public BasicSearchDomain createTrajectoryStrategyClone() {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
 		searchDomain.numComponents = this.numComponents;
@@ -78,6 +109,22 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		searchDomain.withMaxStepSize(this.getMaxStepSize());
 		searchDomain.withConstantStepSize();
 		searchDomain.mutationRetryCountLimit = this.mutationRetryCountLimit;
+		searchDomain.debugOn = this.debugOn;
+		return searchDomain;
+	}
+
+	/* (non-Javadoc)
+	 * @see org.avenir.optimize.BasicSearchDomain#createPopulationStrategyClone()
+	 */
+	@Override
+	public BasicSearchDomain createPopulationStrategyClone() {
+		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
+		searchDomain.taskSchedule = this.taskSchedule;
+		searchDomain.numComponents = this.numComponents;
+		searchDomain.dateFormatter = new SimpleDateFormat(taskSchedule.getDateFormat());
+		searchDomain.compCosts.clear();
+		searchDomain.mutationRetryCountLimit = this.mutationRetryCountLimit;
+		searchDomain.crossOverRetryCountLimit = this.crossOverRetryCountLimit;
 		searchDomain.debugOn = this.debugOn;
 		return searchDomain;
 	}

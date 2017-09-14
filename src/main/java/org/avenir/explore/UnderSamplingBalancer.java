@@ -34,11 +34,13 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.chombo.util.Utility;
 
 /**
  * Does under sampling of majority class and makes class distribution balanced. Caches initial
- * set of records so we have a distribution to bootstrap from.
+ * set of records so we have a distribution to bootstrap from. Keeps track of counts for each class 
+ * Dynamically under samples majority class
  * @author pranab
  *
  */
@@ -60,7 +62,7 @@ public class UnderSamplingBalancer extends Configured implements Tool {
 
         job.setOutputKeyClass(NullWritable.class);
         job.setOutputValueClass(Text.class);
-        job.setNumReduceTasks(job.getConfiguration().getInt("num.reducer", 0));
+        job.setNumReduceTasks(0);
 
         int status =  job.waitForCompletion(true) ? 0 : 1;
         return status;
@@ -162,6 +164,15 @@ public class UnderSamplingBalancer extends Configured implements Tool {
     	   }
 	    	
 	    }
+	}
+	
+	/**
+	 * @param args
+	 * @throws Exception
+	 */
+	public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new UnderSamplingBalancer(), args);
+        System.exit(exitCode);
 	}
 	
 }

@@ -1,0 +1,35 @@
+{
+	"attrAggregators" :
+	[
+		{
+			"ordinals" : [1,2,3,4,5,6,7],
+			"algorithm" : "euclidean",
+			"weight" : 1.0
+		}
+	],
+	
+	"attrDistances" :
+	[
+		{
+			"ordinal" : 1
+		},
+		{
+			"ordinal" : 2
+		},
+		{
+			"ordinal" : 3
+		},
+		{
+			"ordinal" : 4
+		},
+		{
+			"ordinal" : 5
+		},
+		{
+			"ordinal" : 6
+		},
+		{
+			"ordinal" : 7
+		}
+	]
+}

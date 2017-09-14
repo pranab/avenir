@@ -62,7 +62,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class DecisionTreeBuilder   extends Configured implements Tool {
     public static final String ROOT_PATH = "$root";
     private static final String CHILD_PATH = "$child";
-    public static final String PRED_DELIM = ";";
+    //public static final String PRED_DELIM = ";";
     public static final String SPLIT_DELIM = ":";
     private static final Logger LOG = Logger.getLogger(DecisionTreeBuilder.class);
 
@@ -424,6 +424,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	outputSplitProb = conf.getBoolean("dtb.output.split.prob", false);
         	classAttrOrdinal = schema.findClassAttrField().getOrdinal();
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
+            SplitManager.setPredDelim(decPathDelim);
             
             //split selection strategy
             spltSelStrategy = conf.get("dtb.split.select.strategy", SPLIT_SEL_BEST);
@@ -660,7 +661,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	 */
 	   	private  String stripSplitIds(String decPath) {
 	   		String filtDecPath = null;
-	   		String[] predicates = decPath.split(PRED_DELIM);
+	   		String[] predicates = decPath.split(decPathDelim);
 	   		String[] filtPredicates = new String[predicates.length];
 	   		for (int i = 0; i < predicates.length; ++i )  {
 	   			if (predicates[i].equals(ROOT_PATH)) {
@@ -669,7 +670,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   				filtPredicates[i] = BasicUtils.splitOnFirstOccurence(predicates[i], SPLIT_DELIM , true)[1];
 	   			}
 	   		}
-	   		filtDecPath = BasicUtils.join(filtPredicates, PRED_DELIM);
+	   		filtDecPath = BasicUtils.join(filtPredicates, decPathDelim);
 	   		return filtDecPath;
 	   	}
 	   	

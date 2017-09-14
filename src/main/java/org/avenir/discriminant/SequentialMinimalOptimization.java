@@ -42,6 +42,7 @@ public class SequentialMinimalOptimization {
 	private Map<Integer, Double> errors = new HashMap<Integer, Double>();
 	private Map<int[], Double> kernelValues = new HashMap<int[], Double>();
 	private String kernelType;
+	private double[] weights;
 	public static final String KERNEL_LINER = "linear";
 	public static final String KERNEL_POLY = "polynomial";
 	public static final String KERNEL_RADIAL = "radial";
@@ -51,7 +52,7 @@ public class SequentialMinimalOptimization {
 	 * @param classAttrOrd
 	 */
 	public SequentialMinimalOptimization(double penaltyFactor, int classAttrOrd, double tolerance, 
-			double eps, String kernelType) {
+			double eps, String kernelType, int dimension) {
 		super();
 		this.penaltyFactor = penaltyFactor;
 		this.classAttrOrd = classAttrOrd;
@@ -65,14 +66,17 @@ public class SequentialMinimalOptimization {
 			throw new IllegalStateException("invalid kernel type");
 		}
 		this.kernelType = kernelType;
+		weights = new double[dimension];
+		initialize();
 	}
+	
 	
 	/**
 	 * @param data
 	 */
 	public void process(List<double[]> data) {
 		this.data = data;
-		init();
+		initialize();
 		
 		int numChanged = 0;
 		boolean examineAll = true;
@@ -123,7 +127,9 @@ public class SequentialMinimalOptimization {
 			//choose optimum partner 
 			if (!supVecs.isEmpty()) {
 				index1st = choosePartner(index2nd, err2nd);
-				status = step(index1st, index2nd);
+				if (index1st >= 0) {
+					status = step(index1st, index2nd);
+				}
 			}
 			
 			//all sv starting at random
@@ -131,17 +137,10 @@ public class SequentialMinimalOptimization {
 				int pos = (int)(Math.random() * supVecs.size());
 				
 				//from pos to end
-				for (int i = pos; i < supVecs.size() && !status; ++i) {
+				for (int i = pos, k = 0; k < supVecs.size() && !status; ++k) {
 					index1st = supVecs.get(i);
 					status = step(index1st, index2nd);
-				}
-				
-				if (!status) {
-					//from beginning to pos
-					for (int i = 0; i < pos && !status; ++i) {
-						index1st = supVecs.get(i);
-						status = step(index1st, index2nd);
-					}
+					i = (i + 1) % supVecs.size();
 				}
 			}
 			
@@ -150,15 +149,10 @@ public class SequentialMinimalOptimization {
 				int pos = (int)(Math.random() * data.size());
 
 				//from pos to end
-				for (index1st = pos; index1st < data.size() && !status; ++index1st) {
+				int k = 0;
+				for (index1st = pos; k < data.size() && !status; ++k) {
 					status = step(index1st, index2nd);
-				}
-				
-				if (!status) {
-					//from beginning to pos
-					for (index1st = 0; index1st < pos && !status; ++index1st) {
-						status = step(index1st, index2nd);
-					}
+					index1st = (index1st + 1) % data.size();
 				}
 			}
 		}
@@ -238,6 +232,8 @@ public class SequentialMinimalOptimization {
 			}
 			if (Math.abs(alpha2ndNew - alpha2nd) > eps* (alpha2ndNew + alpha2nd + eps)) {
 				double alpha1stNew =  alpha1st + s * (alpha2nd - alpha2ndNew);
+				
+				//bound check and adjustment
 				if (alpha1stNew < 0) {
 					alpha2ndNew += s * alpha1stNew;
 					alpha1stNew = 0;
@@ -264,14 +260,15 @@ public class SequentialMinimalOptimization {
 				
 				//update weight vector for linear
 				if (kernelType.equals(KERNEL_LINER)) {
-					
+					updateWeightVector(index1st, target1st, alpha1stNew, 
+						alpha1st, index2nd, target2nd, alpha2ndNew, alpha2nd);					
 				}
 				
 				//update lagrangian
 				data.get(index1st)[lagrangianOrd] = alpha1stNew;
 				data.get(index2nd)[lagrangianOrd] = alpha2ndNew;
-				updateSupVecs();
-				double thresholdDiff = threshold - thresholdNew;
+				updateNonBoundSupVecs();
+				double thresholdDiff = thresholdNew - threshold;
 				threshold = thresholdNew;
 				
 				//update error cache for non bound lagrangian
@@ -287,7 +284,7 @@ public class SequentialMinimalOptimization {
 	/**
 	 * 
 	 */
-	private void init() {
+	private void initialize() {
 		for (double[] row : data) {
 			row[lagrangianOrd] = 0;
 		}
@@ -295,6 +292,9 @@ public class SequentialMinimalOptimization {
 		kernelValues.clear();
 		supVecs.clear();
 		threshold = 0;
+		for (int i = 0; i < weights.length; ++i) {
+			weights[i] = 0;
+		}		
 	}
 
 	/**
@@ -365,26 +365,47 @@ public class SequentialMinimalOptimization {
 	 */
 	private void updateErrorCache(int index1st, double target1st, double alpha1st, double alpha1stNew, 
 			int index2nd, double target2nd, double alpha2nd, double alpha2ndNew, double thresholdDiff) {
-		double t1 = alpha1stNew - alpha1st;
-		double t2 = alpha2ndNew - alpha2nd;
+		double t1 = target1st * (alpha1stNew - alpha1st);
+		double t2 = target2nd * (alpha2ndNew - alpha2nd);
 		for (int i : supVecs) {
 			if (i == index1st || i == index2nd) {
 				errors.put(i, 0.0);
 			} else {
 				double error = errors.get(i);
 				double errorNew = error + 
-						target1st * t1 * getKernelValue(index1st,  i) +
-						target2nd * t2 * getKernelValue(index2nd,  i) +
+						t1 * getKernelValue(index1st,  i) +
+						t2 * getKernelValue(index2nd,  i) -
 						thresholdDiff;
 				errors.put(i, errorNew);
 			}
 		}
 	}
-	
+
+	/**
+	 * @param index1st
+	 * @param target1st
+	 * @param alpha1stNew
+	 * @param alpha1st
+	 * @param index2nd
+	 * @param target2nd
+	 * @param alpha2ndNew
+	 * @param alpha2nd
+	 */
+	private void updateWeightVector(int index1st, double target1st, double alpha1stNew, 
+			double alpha1st, int index2nd, double target2nd, double alpha2ndNew,double alpha2nd){
+		double t1 = target1st * (alpha1stNew - alpha1st);
+		double t2 = target2nd * (alpha2ndNew - alpha2nd);
+		double[] dataVec1st = data.get(index1st);
+		double[] dataVec2nd = data.get(index2nd);
+		for (int i = 0; i < weights.length; ++i) {
+			weights[i] += t1 * dataVec1st[i] + t2 * dataVec2nd[i];
+		}		
+	}
+
 	/**
 	 * 
 	 */
-	private void updateSupVecs() {
+	private void updateNonBoundSupVecs() {
 		supVecs.clear();
 		for (int i = 0; i < data.size() ; ++i) {
 			double alpha = data.get(i)[lagrangianOrd];
@@ -400,13 +421,16 @@ public class SequentialMinimalOptimization {
 	 */
 	private double evaluate(int index) {
 		double prediction = 0;
-		if (!supVecs.isEmpty()) {
-			for (int i : supVecs) {
-				double[] supVec = data.get(i);
-				prediction += supVec[lagrangianOrd] * supVec[classAttrOrd] * getKernelValue(index, i);
+		int i = 0;
+		for (double[] vec : data) {
+			double alpha = vec[lagrangianOrd];
+			double target = vec[classAttrOrd];
+			if (alpha > 0) {
+				prediction += alpha * target * getKernelValue(index, i);
 			}
-			prediction -= threshold;
+			++i;
 		}
+		prediction -= threshold;
 		return prediction;
 	}
 	
@@ -487,11 +511,13 @@ public class SequentialMinimalOptimization {
 	private double getKernelValue(int index1st,  int index2nd) {
 		Double kernelVal = null;
 		int[] indexes = new int[2];
+		
+		//indexes in sort order for key
 		indexes[0] = index1st < index2nd ? index1st : index2nd;
 		indexes[1] = index1st >= index2nd ? index1st : index2nd;
 		kernelVal = kernelValues.get(indexes);
 		if (null == kernel) {
-			kernelVal = kernel.compute(data.get(index1st), data.get(index1st));
+			kernelVal = kernel.compute(data.get(index1st), data.get(index2nd));
 			kernelValues.put(indexes, kernelVal);
 		}
 		return kernelVal;
@@ -509,9 +535,24 @@ public class SequentialMinimalOptimization {
 	/**
 	 * @return
 	 */
-	public List<Integer> getSupVecIndexes() {
+	public List<Integer> getNonBoundSupVecIndexes() {
 		return supVecs;
 	}
 	
+	/**
+	 * @return
+	 */
+	public List<Integer> getSupVecIndexes() {
+		List<Integer> supVecIndexes = new ArrayList<Integer>();
+		int i = 0;
+		for (double[] vec : data) {
+			double alpha = vec[lagrangianOrd];
+			if (alpha > 0) {
+				supVecIndexes.add(i);
+			}
+			++i;
+		}
+		return supVecIndexes;
+	}
 	
 }

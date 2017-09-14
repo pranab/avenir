@@ -76,7 +76,7 @@ class NonParamRejectSampler:
 			x = random.randint(self.xmin, self.xmax)
 			y = random.randint(self.ymin, self.ymax)
 			bin = (x - self.xmin) / self.binWidth
-			f = values[bin]
+			f = self.values[bin]
 			if (y < f):
 				done = True
 				samp = x

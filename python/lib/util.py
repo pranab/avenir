@@ -48,5 +48,11 @@ def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	b = t - a * (x1 + x2)
 	c = y1 - a * x1 * x1 - b * x1
 	return (a, b, c)
-	
+
+def range_limit(val, min, max):
+	if (val < min):
+		val = min
+	elif (val > max):
+		val = max
+	return val	
 	

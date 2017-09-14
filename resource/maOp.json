@@ -1,0 +1,46 @@
+{
+	"attributes" :
+	[
+		{
+			"name" : "id",
+			"ordinal" : 0,
+			"id" : true,
+			"dataType" : "string"
+		},
+		{
+			"name" : "age",
+			"ordinal" : 1,
+			"dataType" : "double"
+		},
+		{
+			"name" : "time_sice_last_maint",
+			"ordinal" : 2,
+			"dataType" : "double"
+		},
+		{
+			"name" : "num_breakdowns",
+			"ordinal" : 3,
+			"dataType" : "double"
+		},
+		{
+			"name" : "first_freq",
+			"ordinal" : 4,
+			"dataType" : "double"
+		},
+		{
+			"name" : "first_freq_amp",
+			"ordinal" : 5,
+			"dataType" : "double"
+		},
+		{
+			"name" : "second_freq",
+			"ordinal" : 6,
+			"dataType" : "double"
+		},
+		{
+			"name" : "second_freq_amp",
+			"ordinal" : 7,
+			"dataType" : "double"
+		}
+	]
+}

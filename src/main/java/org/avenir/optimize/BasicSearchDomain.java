@@ -41,7 +41,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected int numComponents;
 	protected int mutationRetryCountLimit;
 	protected Set<String> invalidSolutions;
-	protected int maxCrossOverRetryCount;
+	protected int crossOverRetryCountLimit;
 	protected boolean debugOn;
 	
 	/**
@@ -60,14 +60,30 @@ public abstract class  BasicSearchDomain implements Serializable {
 	
 	/**
 	 * @param configFile
-	 * @throws IOException 
+	 * @param maxStepSize
+	 * @param mutationRetryCountLimit
+	 * @param debugOn
 	 */
-	public abstract void intialize(String configFile, int maxStepSize, int mutationRetryCountLimit, boolean debugOn) ;
+	public abstract void initTrajectoryStrategy(String configFile, int maxStepSize, int mutationRetryCountLimit, 
+			boolean debugOn) ;
+	
+	/**
+	 * @param configFile
+	 * @param crossOverRetryCountLimit
+	 * @param mutationRetryCountLimit
+	 * @param debugOn
+	 */
+	public abstract void intitPopulationStrategy(String configFile, int crossOverRetryCountLimit,  
+			int mutationRetryCountLimit, boolean debugOn);
+	/**
+	 * @return
+	 */
+	public abstract  BasicSearchDomain createTrajectoryStrategyClone();
 	
 	/**
 	 * @return
 	 */
-	public abstract  BasicSearchDomain createClone();
+	public abstract BasicSearchDomain createPopulationStrategyClone();
 	
 	/**
 	 * @param solution
@@ -160,42 +176,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 		if (debugOn) {
 			System.out.println("currentSolution before creating new:" + currentSolution);
 		}
-		boolean valid = true;
-		String[] components = refCurrent ? getSolutionComponenets(currentSolution) :
-			getSolutionComponenets(initialSolution);
-		int step = stepSize.getStepSize();
-		//System.out.println("step: " + step);
-		int tryCount = 0;
-		for (int i = 1; i <= step; ++i) {
-			//component to mutate
-			int compIndex = BasicUtils.sampleUniform(numComponents);
-			String curComp = components[compIndex];
-			System.out.println("component to replace: " + compIndex);
-			replaceSolutionComponent(components, compIndex);
-			valid = isValid(components);
-			tryCount = 0;
-			while (!valid && tryCount < mutationRetryCountLimit) {
-				components[compIndex] = curComp;
-				compIndex = BasicUtils.sampleUniform(numComponents);
-				System.out.println("found invalid choosing another component to replace: " + compIndex +
-						" tryCount: " + tryCount);
-				curComp = components[compIndex];
-				replaceSolutionComponent(components, compIndex);
-				valid = isValid(components);
-				++tryCount;
-			}
-		}
-		String newSoln =  aggregateSolutionComponenets(components);
-		if (!valid && tryCount == mutationRetryCountLimit) {
-			if (debugOn) {
-				System.out.println("max retry limit reached creating new solution");
-			}
-			invalidSolutions.add(newSoln);
-		}
-		if (debugOn) {
-			System.out.println("created newSoln: " + newSoln);
-		}
-		return newSoln;
+		String solution =  refCurrent ? currentSolution :initialSolution;
+		return mutate(solution);
 	}
 	
 	/**
@@ -343,9 +325,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param secondSoln
 	 * @return
 	 */
-	public Pair<String, String> crossOver(String firstSoln, String secondSoln) {
+	public Pair<String, String> crossOverForPair(String firstSoln, String secondSoln) {
 		boolean valid = false;
-		int maxCrossOverRetryCount = 10;
 		Pair<String, String> crossedOver = null;
 		String[] firstSolncomp = getSolutionComponenets(firstSoln);
 		String[] secondSolncomp = getSolutionComponenets(secondSoln);
@@ -357,8 +338,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 		Set<Integer> crossOverPoints = new HashSet<Integer>();
 		
 		//retry loop
-		for (int tryCount = 0; !valid && tryCount < maxCrossOverRetryCount; ++tryCount) {
-			int crossOverPt = BasicUtils.sampleUniform(1, numComponents);
+		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
+			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
 			if (crossOverPoints.contains(crossOverPt)) {
 				continue;
 			} else {
@@ -390,5 +371,79 @@ public abstract class  BasicSearchDomain implements Serializable {
 		crossedOver = new Pair<String, String>(solutions[0], solutions[1]);
 		return crossedOver;
 		
+	}
+	
+	/**
+	 * @param firstSoln
+	 * @param secondSoln
+	 * @return
+	 */
+	public String crossOverForOne(String firstSoln, String secondSoln) {
+		String[] firstSolncomp = getSolutionComponenets(firstSoln);
+		String[] secondSolncomp = getSolutionComponenets(secondSoln);
+		String[] childSolncomp = new String[numComponents];
+		Set<Integer> crossOverPoints = new HashSet<Integer>();
+		boolean valid = false;
+		
+		//retry loop
+		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
+			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
+			if (crossOverPoints.contains(crossOverPt)) {
+				continue;
+			} else {
+				crossOverPoints.add(crossOverPt);
+			}
+			BasicUtils.arrayCopy(firstSolncomp, 0, crossOverPt, childSolncomp, 0);
+			BasicUtils.arrayCopy(secondSolncomp, crossOverPt, numComponents, childSolncomp, crossOverPt);
+			valid = isValid(childSolncomp);
+		}
+		String childSoln = aggregateSolutionComponenets(childSolncomp);
+		if (!valid) {
+			invalidSolutions.add(childSoln);
+		}
+		return childSoln;
+	}	
+	
+	/**
+	 * @param solution
+	 * @return
+	 */
+	public String mutate(String solution) {
+		String[] components = getSolutionComponenets(solution);
+		boolean valid = false;
+		
+		int step = stepSize.getStepSize();
+		//System.out.println("step: " + step);
+		int tryCount = 0;
+		for (int i = 1; i <= step; ++i) {
+			//component to mutate
+			int compIndex = BasicUtils.sampleUniform(numComponents-1);
+			String curComp = components[compIndex];
+			System.out.println("component to replace: " + compIndex);
+			replaceSolutionComponent(components, compIndex);
+			valid = isValid(components);
+			tryCount = 0;
+			while (!valid && tryCount < mutationRetryCountLimit) {
+				components[compIndex] = curComp;
+				compIndex = BasicUtils.sampleUniform(numComponents-1);
+				System.out.println("found invalid choosing another component to replace: " + compIndex +
+						" tryCount: " + tryCount);
+				curComp = components[compIndex];
+				replaceSolutionComponent(components, compIndex);
+				valid = isValid(components);
+				++tryCount;
+			}
+		}
+		String newSoln =  aggregateSolutionComponenets(components);
+		if (!valid && tryCount == mutationRetryCountLimit) {
+			if (debugOn) {
+				System.out.println("max retry limit reached creating new solution");
+			}
+			invalidSolutions.add(newSoln);
+		}
+		if (debugOn) {
+			System.out.println("created newSoln: " + newSoln);
+		}
+		return newSoln;
 	}
 }

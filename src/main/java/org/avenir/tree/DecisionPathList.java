@@ -257,7 +257,7 @@ public class DecisionPathList {
 			for (DecisionPathPredicate predicate : predicates) {
 				strPredicates.add(predicate.toString());
 			}
-			return BasicUtils.join(strPredicates, DecisionTreeBuilder.PRED_DELIM);
+			return BasicUtils.join(strPredicates, SplitManager.getPredDelim());
 		}
 		
 		/**

@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;
@@ -99,16 +100,30 @@ public class TopMatchesByClass extends Configured implements Tool {
         private int classAttrOrd;
         private String srcClassAttr;
         private String trgClassAttr;
+        private String filterClassVal;
+        private boolean doEmit;
+        private boolean idInInput;
+        private boolean includeRecInOutput;
+        private String srcRec;
+        private String trgRec;
+        private int idOrd;
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-			Configuration conf = context.getConfiguration();
-           	fieldDelim = conf.get("field.delim", ",");
-            fieldDelimRegex = conf.get("field.delim.regex", ",");
-        	classAttrOrd = Utility.assertIntConfigParam(conf, "tmc.class.attr.ord", 
+			Configuration config = context.getConfiguration();
+           	fieldDelim = config.get("field.delim", ",");
+            fieldDelimRegex = config.get("field.delim.regex", ",");
+        	classAttrOrd = Utility.assertIntConfigParam(config, "tmc.class.attr.ord", 
         			"missing class attribute ordinal");
+        	filterClassVal = config.get("tmc.filer.class.value");
+        	idInInput = config.getBoolean("tmc.id.in.input", true);
+        	if (!idInInput) {
+        		//ID needs to extracted from record
+        		idOrd = Utility.assertIntConfigParam(config, "", "missing ID field ordinal");
+        	}
+        	includeRecInOutput = config.getBoolean("tmc.include.rec.in.output", true);
         }    
 
         /* (non-Javadoc)
@@ -119,26 +134,64 @@ public class TopMatchesByClass extends Configured implements Tool {
             throws IOException, InterruptedException {
             String[] items  =  value.toString().split(fieldDelimRegex);
             
-            srcEntityId = items[0];
-            trgEntityId = items[1];
+            //record length
+           	if (recLength == -1) {
+           		//Optional 2 Ids, two record and rank
+        		int addFieldCount = idInInput ? 3 : 1;
+        		recLength = (items.length - addFieldCount) / 2;
+           	}      
+           	
+        	//record boundaries
+        	srcRecBeg = idInInput? 2 : 0;
+        	srcRecEnd = srcRecBeg + recLength;
+        	trgRecBeg = srcRecEnd;
+        	trgRecEnd = trgRecBeg + recLength;
+         	
+            if (idInInput) {
+            	//ID in the beginning
+            	srcEntityId = items[0];
+            	trgEntityId = items[1];
+            } else {
+            	//ID embedded in record
+            	srcEntityId = items[idOrd];
+            	trgEntityId = items[idOrd + recLength];
+            }
             rank = Integer.parseInt(items[items.length - 1]);
             
             outKey.initialize();
             outVal.initialize();
             
-        	//include source and taraget record
-        	if (recLength == -1) {
-        		recLength = (items.length - 3) / 2;
-        		srcRecBeg = 2;
-        		srcRecEnd =  trgRecBeg = 2 + recLength;
-        		trgRecEnd = trgRecBeg + recLength;
-        	}
         	srcClassAttr = items[srcRecBeg + classAttrOrd];
         	trgClassAttr = items[trgRecBeg + classAttrOrd];
         	
-        	outKey.add(srcEntityId, srcClassAttr, trgClassAttr, rank);
-        	outVal.add(trgEntityId, rank);            	
- 			context.write(outKey, outVal);
+        	//extract records
+			if (includeRecInOutput) {
+            	srcRec = BasicUtils.join(items, srcRecBeg, srcRecEnd, fieldDelim);
+            	trgRec = BasicUtils.join(items, trgRecBeg, trgRecEnd, fieldDelim);
+			}
+        	
+        	doEmit = false;
+        	//only for same classes
+        	if (srcClassAttr.equals(trgClassAttr)) {
+        		if (null != filterClassVal) {
+        			//specific class
+        			doEmit = srcClassAttr.equals(filterClassVal);
+        		} else {
+        			//any class
+        			doEmit = true;
+        		}
+        	}
+        	
+        	if (doEmit) {
+				if (includeRecInOutput) {
+	        		outKey.add(srcEntityId, srcClassAttr, srcRec, rank);
+	        		outVal.add(trgEntityId, trgRec, rank);            	
+				} else {
+	        		outKey.add(srcEntityId, srcClassAttr, rank);
+	        		outVal.add(trgEntityId, rank);            	
+				}
+        		context.write(outKey, outVal);
+        	} 
         }
 	}
 
@@ -181,7 +234,7 @@ public class TopMatchesByClass extends Configured implements Tool {
 	        		}
 				} else {
 					//distance based neighbor
-					distance = value.getInt(1);
+					distance = value.getInt(value.getSize() - 1);
 					if (distance  <=  topMatchDistance ) {
 						context.write(key, value);
 					} else {
@@ -202,30 +255,35 @@ public class TopMatchesByClass extends Configured implements Tool {
     	private int topMatchCount;
     	private int topMatchDistance;
 		private String srcEntityId;
+		private String srcRec;
 		private int count;
 		private int distance;
 		private Text outVal = new Text();
         private String fieldDelim;
         private boolean compactOutput;
-        private List<String> targetEntityList = new ArrayList<String>();
+        private List<String> targetList = new ArrayList<String>();
     	private String srcEntityClassAttr;
-       	private String trgEntityClassAttr;
-		private StringBuilder stBld = new  StringBuilder();
+ 		private StringBuilder stBld = new  StringBuilder();
+        private boolean includeRecInOutput;
+        private boolean includeClassInOutput;
            	
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Reducer#setup(org.apache.hadoop.mapreduce.Reducer.Context)
          */
         protected void setup(Context context) throws IOException, InterruptedException {
-			Configuration conf = context.getConfiguration();
-           	fieldDelim = conf.get("field.delim", ",");
-        	nearestByCount = conf.getBoolean("tmc.nearest.by.count", true);
-        	nearestByDistance = conf.getBoolean("tmc.nearest.by.distance", false);
+			Configuration config = context.getConfiguration();
+           	fieldDelim = config.get("field.delim", ",");
+        	nearestByCount = config.getBoolean("tmc.nearest.by.count", true);
+        	nearestByDistance = config.getBoolean("tmc.nearest.by.distance", false);
         	if (nearestByCount) {
-        		topMatchCount = conf.getInt("tmc.top.match.count", 10);
+        		topMatchCount = Utility.assertIntConfigParam(config, "tmc.top.match.count", "missing top match max count");
         	} else {
-        		topMatchDistance = conf.getInt("tmc.top.match.distance", 200);
+        		topMatchDistance = Utility.assertIntConfigParam(config, "tmc.top.match.distance", "missing top match max distance");
         	}
-        	compactOutput =  conf.getBoolean("tmc.compact.output", false);     
+        	
+        	includeRecInOutput = config.getBoolean("tmc.include.rec.in.output", true);
+        	compactOutput =  config.getBoolean("tmc.compact.output", false);     
+        	includeClassInOutput = config.getBoolean("tmc.include.class.in.output", true);
         }
     	
     	/* (non-Javadoc)
@@ -235,11 +293,11 @@ public class TopMatchesByClass extends Configured implements Tool {
         	throws IOException, InterruptedException {
     		srcEntityId  = key.getString(0);
     		srcEntityClassAttr = key.getString(1);
-    		trgEntityClassAttr = key.getString(2);
+    		srcRec = includeRecInOutput ? key.getString(2) : null;
     		
     		count = 0;
     		boolean doEmitNeighbor = false;
-    		targetEntityList.clear();
+    		targetList.clear();
         	for (Tuple value : values){
         		doEmitNeighbor = false;
         		
@@ -254,7 +312,7 @@ public class TopMatchesByClass extends Configured implements Tool {
 				//distance based neighbors
 				if (nearestByDistance) {
 					//distance based neighbor
-					distance = value.getInt(1);
+					distance = value.getInt(value.getSize() - 1);
 					if (distance  <=  topMatchDistance ) {
 						if (!nearestByCount) {
 							doEmitNeighbor = true;
@@ -263,36 +321,56 @@ public class TopMatchesByClass extends Configured implements Tool {
 						doEmitNeighbor = false;
 					}
 				}
-				
+
+				//collect neighbors
 				if (doEmitNeighbor) {
-					//along with neighbors
-					if (compactOutput) {
-						//contains id,record,rank - strip out entity ID and rank
-						targetEntityList.add(value.getString(0));
+					if (includeRecInOutput) {
+						//record
+						targetList.add(value.getString(1));
 					} else {
-						stBld.delete(0, stBld.length());
-						stBld.append(srcEntityId).append(fieldDelim).append(srcEntityClassAttr).
-							append(fieldDelim).append(trgEntityClassAttr).append(fieldDelim).append(value.getString(0));
-						outVal.set(stBld.toString());
-						context.write(NullWritable.get(), outVal);
+						//entity Id
+						targetList.add(value.getString(0));
 					}
-				} 
+				}
         	}
         	
-        	//emit in compact format
+        	//emit in compact or expanded format
+    		int numNeighbor = targetList.size();
         	if (compactOutput) {
-        		int numNeighbor = targetEntityList.size();
+        		//one record for source and all neighbors
         		if (numNeighbor > 0) {
  					stBld.delete(0, stBld.length());
-					stBld.append(srcEntityId).append(fieldDelim).append(srcEntityClassAttr).
-						append(fieldDelim).append(trgEntityClassAttr);
-					for (String targetEntity : targetEntityList) {
-						stBld.append(fieldDelim).append(targetEntity);
+ 					if (includeRecInOutput) {
+ 						stBld.append(srcRec);						
+ 					} else {
+ 						stBld.append(srcEntityId);
+ 					}
+ 					if (includeClassInOutput) {
+ 						stBld.append(fieldDelim).append(srcEntityClassAttr);
+ 					}
+					for (String target : targetList) {
+						stBld.append(fieldDelim).append(target);
 					}
 					outVal.set(stBld.toString());
 					context.write(NullWritable.get(), outVal);
         		}
-        		
+        	} else {
+        		//one record for each source and neighbor pair
+				for (String target : targetList) {
+					stBld.delete(0, stBld.length());
+ 					if (includeRecInOutput) {
+ 						stBld.append(srcRec);						
+ 					} else {
+ 						stBld.append(srcEntityId);
+ 					}
+ 					if (includeClassInOutput) {
+ 						stBld.append(fieldDelim).append(srcEntityClassAttr);
+ 					}
+					stBld.append(fieldDelim).append(target);
+					
+					outVal.set(stBld.toString());
+					context.write(NullWritable.get(), outVal);
+				}
         	}
     	}
     }

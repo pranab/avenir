@@ -47,7 +47,7 @@ public class SplitManager {
 	private static final String OPERATOR_IN = "in";
 	private boolean treeAvailable;
 	private Set<Integer> usedAttributes = new HashSet<Integer>();
-	private String predDelim;
+	private static String predDelim;
 	private List<Integer> allAttributes;
 	private List<Integer> randomAllAttributes;
 	private Map<String, List<Integer>> remainingAttributes = new HashMap<String, List<Integer>>();
@@ -66,7 +66,7 @@ public class SplitManager {
 	public SplitManager(FeatureSchema schema,  String predDelim){
 		super();
 		this.schema = schema;
-		this.predDelim = predDelim;
+		SplitManager.predDelim = predDelim;
 	}
 	
 	/**
@@ -133,6 +133,14 @@ public class SplitManager {
 	
 	public void setDebugOn(boolean debugOn) {
 		this.debugOn = debugOn;
+	}
+
+	public static String getPredDelim() {
+		return predDelim;
+	}
+
+	public static void setPredDelim(String predDelim) {
+		SplitManager.predDelim = predDelim;
 	}
 
 	/**
