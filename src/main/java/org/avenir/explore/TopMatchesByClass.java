@@ -106,6 +106,7 @@ public class TopMatchesByClass extends Configured implements Tool {
         private boolean includeRecInOutput;
         private String srcRec;
         private String trgRec;
+        private int idOrd;
 
         /* (non-Javadoc)
          * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -118,6 +119,10 @@ public class TopMatchesByClass extends Configured implements Tool {
         			"missing class attribute ordinal");
         	filterClassVal = config.get("tmc.filer.class.value");
         	idInInput = config.getBoolean("tmc.id.in.input", true);
+        	if (!idInInput) {
+        		//ID needs to extracted from record
+        		idOrd = Utility.assertIntConfigParam(config, "", "missing ID field ordinal");
+        	}
         	includeRecInOutput = config.getBoolean("tmc.include.rec.in.output", true);
         }    
 
@@ -129,24 +134,33 @@ public class TopMatchesByClass extends Configured implements Tool {
             throws IOException, InterruptedException {
             String[] items  =  value.toString().split(fieldDelimRegex);
             
-            srcEntityId = items[0];
-            trgEntityId = items[1];
+            //record length
+           	if (recLength == -1) {
+           		//Optional 2 Ids, two record and rank
+        		int addFieldCount = idInInput ? 3 : 1;
+        		recLength = (items.length - addFieldCount) / 2;
+           	}      
+           	
+        	//record boundaries
+        	srcRecBeg = idInInput? 2 : 0;
+        	srcRecEnd = srcRecBeg + recLength;
+        	trgRecBeg = srcRecEnd;
+        	trgRecEnd = trgRecBeg + recLength;
+         	
+            if (idInInput) {
+            	//ID in the beginning
+            	srcEntityId = items[0];
+            	trgEntityId = items[1];
+            } else {
+            	//ID embedded in record
+            	srcEntityId = items[idOrd];
+            	trgEntityId = items[idOrd + recLength];
+            }
             rank = Integer.parseInt(items[items.length - 1]);
             
             outKey.initialize();
             outVal.initialize();
             
-        	//include source and target record. Two Ids, two record and rank
-        	if (recLength == -1) {
-        		int addFieldCount = idInInput ? 3 : 1;
-        		recLength = (items.length - addFieldCount) / 2;
-        		
-        		srcRecBeg = idInInput? 2 : 0;
-        		srcRecEnd = srcRecBeg + recLength;
-        		
-        		trgRecBeg = srcRecEnd;
-        		trgRecEnd = trgRecBeg + recLength;
-        	}
         	srcClassAttr = items[srcRecBeg + classAttrOrd];
         	trgClassAttr = items[trgRecBeg + classAttrOrd];
         	
@@ -220,7 +234,7 @@ public class TopMatchesByClass extends Configured implements Tool {
 	        		}
 				} else {
 					//distance based neighbor
-					distance = value.getInt(1);
+					distance = value.getInt(value.getSize() - 1);
 					if (distance  <=  topMatchDistance ) {
 						context.write(key, value);
 					} else {
@@ -298,7 +312,7 @@ public class TopMatchesByClass extends Configured implements Tool {
 				//distance based neighbors
 				if (nearestByDistance) {
 					//distance based neighbor
-					distance = value.getInt(1);
+					distance = value.getInt(value.getSize() - 1);
 					if (distance  <=  topMatchDistance ) {
 						if (!nearestByCount) {
 							doEmitNeighbor = true;
