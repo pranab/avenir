@@ -53,6 +53,18 @@ public class DecisionPathList {
 	}
 	
 	/**
+	 * @param totalPopulation
+	 * @return
+	 */
+	public DecisionPathList withTotalPopulation(int totalPopulation) {
+		for (DecisionPath decPath : decisionPaths) {
+			decPath.withTotalPopulation(totalPopulation);
+		}
+		return this;
+	}
+	
+	
+	/**
 	 * @param predcateStrings
 	 * @return
 	 */
@@ -112,8 +124,9 @@ public class DecisionPathList {
 		private double infoContent;
 		private boolean stopped;
 		private Map<String, Double> classValPr;
-		private String outputClassVal;
+		private String outputClassVal = "";
 		private double confidence;
+		private double support;
 		
 		public DecisionPath() {
 		}
@@ -145,6 +158,15 @@ public class DecisionPathList {
 			this.infoContent = infoContent;
 			this.stopped = false;
 			this.classValPr = classValPr;
+		}
+		
+		/**
+		 * @param totalPopulation
+		 * @return
+		 */
+		public DecisionPath withTotalPopulation(int totalPopulation) {
+			support = (double)population / totalPopulation;
+			return this;
 		}
 		
 		/**
@@ -301,6 +323,20 @@ public class DecisionPathList {
 		 */
 		public void setConfidence(double confidence) {
 			this.confidence = confidence;
+		}
+
+		/**
+		 * @return
+		 */
+		public double getSupport() {
+			return support;
+		}
+
+		/**
+		 * @param support
+		 */
+		public void setSupport(double support) {
+			this.support = support;
 		}
 
 		/**
