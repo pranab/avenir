@@ -112,6 +112,8 @@ public class DecisionPathList {
 		private double infoContent;
 		private boolean stopped;
 		private Map<String, Double> classValPr;
+		private String outputClassVal;
+		private double confidence;
 		
 		public DecisionPath() {
 		}
@@ -130,6 +132,8 @@ public class DecisionPathList {
 			this.infoContent = infoContent;
 			this.stopped = stopped;
 			this.classValPr = classValPr;
+			
+			findMajorityClass();
 		}
 		
 		/**
@@ -141,6 +145,28 @@ public class DecisionPathList {
 			this.infoContent = infoContent;
 			this.stopped = false;
 			this.classValPr = classValPr;
+		}
+		
+		/**
+		 * 
+		 */
+		private void findMajorityClass() {
+			double majClassProbab = -1.0;
+			for (String classVal : classValPr.keySet()) {
+				if (classValPr.get(classVal) > majClassProbab) {
+					majClassProbab = classValPr.get(classVal);
+					outputClassVal = classVal;
+				}
+			}
+			
+			double minClassProbab = 1.0 - majClassProbab;
+			final double maxConfidence = 100;
+			if (minClassProbab > 0) {
+				confidence = majClassProbab / minClassProbab;
+				confidence = confidence > maxConfidence ?  maxConfidence : confidence;
+			} else {
+				confidence = maxConfidence;
+			}
 		}
 
 		/**
@@ -247,6 +273,34 @@ public class DecisionPathList {
 		 */
 		public void setClassValPr(Map<String, Double> classValPr) {
 			this.classValPr = classValPr;
+		}
+
+		/**
+		 * @return
+		 */
+		public String getOutputClassVal() {
+			return outputClassVal;
+		}
+
+		/**
+		 * @param outputClassVal
+		 */
+		public void setOutputClassVal(String outputClassVal) {
+			this.outputClassVal = outputClassVal;
+		}
+
+		/**
+		 * @return
+		 */
+		public double getConfidence() {
+			return confidence;
+		}
+
+		/**
+		 * @param confidence
+		 */
+		public void setConfidence(double confidence) {
+			this.confidence = confidence;
 		}
 
 		/**
@@ -366,7 +420,7 @@ public class DecisionPathList {
 	   		if (predicatesStr.equals(DecisionTreeBuilder.ROOT_PATH)) {
 	   			predicates.add(DecisionPathPredicate.createRootPredicate(predicatesStr));
 	   		} else {
-		   		String[] predicateItems = predicatesStr.split(";");
+		   		String[] predicateItems = predicatesStr.split(SplitManager.getPredDelim());
 		   		for (String predicateItem : predicateItems) {
 		   			if(predicateItem.equals(DecisionTreeBuilder.ROOT_PATH)) {
 		   				predicates.add(DecisionPathPredicate.createRootPredicate(predicateItem));

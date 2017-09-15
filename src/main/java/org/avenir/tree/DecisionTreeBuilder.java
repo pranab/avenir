@@ -712,7 +712,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         protected void reduce(Tuple  key, Iterable<Text> values, Context context)
         		throws IOException, InterruptedException {
         	int keySize = key.getSize();
-        	key.setDelim(";");
+        	key.setDelim(decPathDelim);
         	decPath = key.toString();
         	
         	if (keySize > 1) {
