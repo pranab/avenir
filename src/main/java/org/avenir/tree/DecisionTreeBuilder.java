@@ -395,6 +395,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         private boolean decTreeAvailable;
         private String spltSelStrategy;
         private int topSplitCount;
+        private int totalPopulation;
         private boolean debugOn;
         private static String  SPLIT_SEL_BEST = "best";
         private static String  SPLIT_SEL_RANDOM_TOP = "randomAmongTop";
@@ -425,6 +426,7 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
         	classAttrOrdinal = schema.findClassAttrField().getOrdinal();
             decPathDelim = conf.get("dtb.dec.path.delim", ";");
             SplitManager.setPredDelim(decPathDelim);
+            totalPopulation = conf.getInt("dtb.total.population", -1);
             
             //split selection strategy
             spltSelStrategy = conf.get("dtb.split.select.strategy", SPLIT_SEL_BEST);
@@ -700,6 +702,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
 	   	 */
 	   	private void writeDecisioList(DecisionPathList newDecPathList, String outFilePathParam, Configuration conf ) 
 	   			throws IOException {
+	   		//total population for support calculation
+	   		if (totalPopulation > 0) {
+	   			newDecPathList.withTotalPopulation(totalPopulation);
+	   		}
+	   		
+	   		//save it
 	   		FSDataOutputStream ouStrm = FileSystem.get(conf).create(new Path(conf.get(outFilePathParam)));	
 	   		ObjectMapper mapper = new ObjectMapper();
 	   		mapper.writeValue(ouStrm, newDecPathList);
