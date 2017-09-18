@@ -1,0 +1,65 @@
+This tutorial is for oversampling by SMOTE algorithm. Machine failure data is used
+as the use case. Please make necessary changes in scripts and configurations depending
+on your environment.
+
+Build
+=====
+in chombo
+mvn clean install
+
+in avenir
+mvn clean install
+
+Dependent script
+================
+Checkout the project avenir. Take the script util.py and sampler.py from the project and place it
+in ../lib directory with respect the directory containing cust_conversion.py
+
+Generate input
+==============
+./ovsa.sh genInput <num_records> <data_file_name>
+where
+num_records = number of records to generate
+data_file_name = input data file name
+
+Copy input data file to HDFS
+============================
+./ovsa.sh copyInput <data_file_name>
+
+Copy all schema files to HDFS
+=============================
+./ovsa.sh copySchema maOp.json
+./ovsa.sh copySchema maOpDist.json
+./ovsa.sh copySchema maOpFeature.json
+
+
+Run normalizer MR
+=================
+./ovsa.sh normalize
+
+Run filter MR
+=============
+./ovsa.sh filtMaj
+
+Run distance calculation MR
+===========================
+./ovsa.sh distance
+
+Run nearest neighbor MR
+=======================
+./ovsa.sh topMatches
+
+Run over sampling MR
+====================
+./ovsa.sh ovSamp
+
+Configuration
+=============
+it's in ovsa,properties. Please make changes as necessary
+
+
+
+
+
+
+
