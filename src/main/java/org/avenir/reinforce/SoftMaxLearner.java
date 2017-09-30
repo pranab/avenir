@@ -78,7 +78,7 @@ public class SoftMaxLearner extends ReinforcementLearner {
 				//all exp distributions 
 				double sum = 0;
 	            for (Action thisAction : actions) {
-	            	double thisReward = rewardStats.get(thisAction.getId()).getAvgValue();
+	            	double thisReward = rewardStats.get(thisAction.getId()).getMean();
 	            	double distr = Math.exp(thisReward / tempConstant);
 	            	expDistr.put(thisAction.getId(), distr);
 	            	sum += distr;

@@ -87,7 +87,7 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	    		//select best
 	    		int bestReward = 0;
 	            for (Action thisAction : actions) {
-	            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getAvgValue());
+	            	int thisReward = (int)(rewardStats.get(thisAction.getId()).getMean());
 	            	if (thisReward >  bestReward) {
 	            		bestReward = thisReward;
 	            		action = thisAction;

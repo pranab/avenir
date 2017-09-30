@@ -41,6 +41,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2016/10/27/supplier-fulfillment-forecasting-with-continuous-time-markov-chain-using-spark/
 * https://pkghosh.wordpress.com/2017/04/30/predicting-call-hangup-in-customer-service-calls-with-decision-tree-and-random-forest/
 * https://pkghosh.wordpress.com/2017/06/26/project-assignment-optimization-with-simulated-annealing-on-spark/
+* https://pkghosh.wordpress.com/2017/09/18/handling-rare-events-and-class-imbalance-in-predictive-modeling-for-machine-failure/
 
 
 

@@ -94,7 +94,7 @@ public class RewardComparisonLearner extends ReinforcementLearner {
 		findAction(actionId).reward(reward);
 		
 		//update action preference
-		double meanReward = rewardStats.get(actionId).getAvgValue();
+		double meanReward = rewardStats.get(actionId).getMean();
 		double actionPref = actionPrefs.get(actionId) + preferenceChangeRate * (meanReward - refReward);
 		actionPrefs.put(actionId, actionPref);
 		
