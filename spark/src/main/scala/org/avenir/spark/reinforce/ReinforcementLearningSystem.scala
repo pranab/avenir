@@ -47,6 +47,12 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   val rewardAvgFieldOrdinal = getMandatoryIntParam(appConfig, "reward.avg.field.ordinal")
 	   val rewardStdDevFieldOrdinal = getMandatoryIntParam(appConfig, "reward.stdDev.field.ordinal")
 	   val actions = BasicUtils.fromListToStringArray(getMandatoryStringListParam(appConfig, "action.list"))
+	   val batchSize = getMandatoryIntParam(appConfig, "batch.size")
+	   
+	   
+	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
+	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
+
 	   
 	   //algorithm and algorithm specific configuration
 	   val learnAlgo = getMandatoryStringParam(appConfig, "learning.algorithm")
@@ -85,9 +91,27 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	     learnerOne
 	   }
 	   
-	  val groupedLearners =  pairedData.combineByKey(createLearner, addToLeaner, mergeLearners)
+	   //build group wise learners
+	   val groupedLearners =  pairedData.combineByKey(createLearner, addToLeaner, mergeLearners)
 	   
-	  //generate actions
+	   //generate actions
+	   val groupActions = groupedLearners.flatMapValues(learner => {
+	     val batch = for (i <- 1 to batchSize) yield i
+	     val actions = batch.map(b => {learner.nextAction().getId()})
+	     actions
+	   })
+	    
+	   if (debugOn) {
+		   val actionArray = groupActions.collect
+	       actionArray.foreach(a => {
+	         println("group:" + a._1)
+	         println("action:" + a._2)
+	       })
+	   }
+	  
+	   if (saveOutput) {
+	     groupActions.saveAsTextFile(outputPath)
+	   }
    }
    
    /**
@@ -98,12 +122,12 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   val configParams = new java.util.HashMap[String, Object]()
 	   learnAlgo match {
 	       case "randomGreedy" => {
-	         configParams.put("current.round.num", new Integer(appAlgoConfig.getInt("current.round.num")))
+	         configParams.put("current.decision.round", new Integer(appAlgoConfig.getInt("current.decision.round")))
 	         configParams.put("random.selection.prob", new java.lang.Double(appAlgoConfig.getDouble("random.selection.prob")))
 	         configParams.put("prob.reduction.algorithm", appAlgoConfig.getString("prob.reduction.algorithm"))
 	         configParams.put("prob.reduction.constant", new java.lang.Double(appAlgoConfig.getDouble("prob.reduction.constant")))
 	         configParams.put("auer.greedy.constant", new Integer(appAlgoConfig.getInt("auer.greedy.constant")))
-	         configParams.put("global.batch.size", new Integer(appAlgoConfig.getInt("global.batch.size")))
+	         configParams.put("decision.batch.size", new Integer(appAlgoConfig.getInt("decision.batch.size")))
 	       }
 	       case _ => throw new IllegalStateException("invalid RL algorithm")
 	   }

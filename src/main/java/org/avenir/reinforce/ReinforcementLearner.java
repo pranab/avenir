@@ -35,8 +35,9 @@ import org.chombo.util.ConfigUtility;
 public abstract class ReinforcementLearner implements Serializable {
 	protected List<Action> actions = new ArrayList<Action>();
 	protected int batchSize = 1;
+	protected int roundNum;
 	protected Action[] selActions;
-	protected long totalTrialCount;
+	protected int totalTrialCount;
 	protected int minTrial;
 	protected Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	protected boolean rewarded;
@@ -80,10 +81,14 @@ public abstract class ReinforcementLearner implements Serializable {
 	/**
 	 * @param config
 	 */
-	public  void initialize(Map<String, Object> config) {
+	public void initialize(Map<String, Object> config) {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
-		batchSize = ConfigUtility.getInt(config, "batch.size",  1);
+		batchSize = ConfigUtility.getInt(config, "decision.batch.size",  1);
 		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
+		roundNum = ConfigUtility.getInt(config, "current.round.num",  1);
+			
+		//all trials whether reward received or nor
+		totalTrialCount = (roundNum - 1) * batchSize;
 		initSelectedActions();
 	}
 	
