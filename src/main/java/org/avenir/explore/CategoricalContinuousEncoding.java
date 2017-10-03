@@ -46,7 +46,7 @@ import org.chombo.util.Utility;
  */
 public class CategoricalContinuousEncoding extends Configured implements Tool {
 	private static String ANY_VALUE = "*";
-	private static String SUPERVISED_RATIO = "spervisedRatio";
+	private static String SUPERVISED_RATIO = "supervisedRatio";
 	private static String WEIGHT_OF_EVIDENCE = "weightOfEvidence";
 	
 
@@ -106,12 +106,9 @@ public class CategoricalContinuousEncoding extends Configured implements Tool {
         	
         	attrOrdinals = Utility.assertIntArrayConfigParam(config, "coe.cat.attribute.ordinals", Utility.DEF_FIELD_DELIM, 
         			"missing categorical attribute ordinals");
-        	encodingStrategy = Utility.assertStringConfigParam(config, "coe.encoding.strategy", 
-        			"missing encoding strategy");
-        	classAttrOrd = Utility.assertIntConfigParam(config, "coe.class.attr.ord ", 
-        			"missing class atrribute ordinal");
-        	posClassAttrValue = Utility.assertStringConfigParam(config, "coe.pos.class.attr.value", 
-        			"missing positive class attribute value");
+        	encodingStrategy = Utility.assertStringConfigParam(config, "coe.encoding.strategy", "missing encoding strategy");
+        	classAttrOrd = Utility.assertIntConfigParam(config, "coe.class.attr.ordinal", "missing class atrribute ordinal");
+        	posClassAttrValue = Utility.assertStringConfigParam(config, "coe.pos.class.attr.value", "missing positive class attribute value");
         	isWeightOfEvidence = encodingStrategy.equals(WEIGHT_OF_EVIDENCE);
         }	
 	    
@@ -120,7 +117,7 @@ public class CategoricalContinuousEncoding extends Configured implements Tool {
 	    		throws IOException, InterruptedException {
         	items  = value.toString().split(fieldDelimRegex, -1);
         	classAttrValue = items[classAttrOrd];
-        	boolean isPositive = items[classAttrOrd].equals(posClassAttrValue);
+        	boolean isPositive = classAttrValue.equals(posClassAttrValue);
         	
         	//all attributes
         	for (int ord : attrOrdinals) {
@@ -197,8 +194,7 @@ public class CategoricalContinuousEncoding extends Configured implements Tool {
         	String encodingStrategy = Utility.assertStringConfigParam(config, "coe.encoding.strategy", 
         			"missing encoding strategy");
         	isWeightOfEvidence = encodingStrategy.equals(WEIGHT_OF_EVIDENCE);
-        	scale = Utility.assertIntConfigParam(config, "coe.output.scale", 
-        			"missing class atrribute ordinal");
+        	scale = Utility.assertIntConfigParam(config, "coe.output.scale", "missing output scale");
         }
         
         /* (non-Javadoc)
@@ -220,7 +216,8 @@ public class CategoricalContinuousEncoding extends Configured implements Tool {
 				ClassAttributeCounter counter = classAttrCounter.get(key);
 				if (isWeightOfEvidence) {
 					double woe = ((double)counter.getPosCount()) / allCounter.getPosCount();
-					woe /= ((double)counter.getNegCount()) / allCounter.getNegCount();
+					int negCount = counter.getNegCount() == 0 ?  1 :   counter.getNegCount();
+					woe /= ((double)negCount) / allCounter.getNegCount();
 					woe = Math.log(woe);
 					value = (int)(woe * scale);
 				} else {
