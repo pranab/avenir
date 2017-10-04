@@ -1,0 +1,36 @@
+{
+		"attributes" :
+		[
+			{
+				"name" : "orderID",
+				"ordinal" : 0,
+				"dataType" : "string",
+				"targetFieldOrdinals" : [0]
+			},
+			{
+				"name" : "prodID",
+				"ordinal" : 1,
+				"dataType" : "string",
+				"transformers" : ["keyValueTrans"],
+				"targetFieldOrdinals" : [1]
+			},
+			{
+				"name" : "quantity",
+				"ordinal" : 2,
+				"dataType" : "int",
+				"targetFieldOrdinals" : [2]
+			},
+			{
+				"name" : "month",
+				"ordinal" : 3,
+				"dataType" : "string",
+				"targetFieldOrdinals" : [3]
+			},
+			{
+				"name" : "status",
+				"ordinal" : 4,
+				"dataType" : "string",
+				"targetFieldOrdinals" : [4]
+			}
+		]
+}

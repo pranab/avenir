@@ -21,7 +21,7 @@ for i in range(num_prods):
 	products.append(prod)
 	if randint(0, 100) < 30:
 		high_lead_time_products.add(prod)
-		print "high lead time %s" %(prod)
+		#print "high lead time %s" %(prod)
 	
 order_id = genID(12)
 month = selectRandomFromList(months)
