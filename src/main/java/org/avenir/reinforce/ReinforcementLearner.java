@@ -17,12 +17,12 @@
 
 package org.avenir.reinforce;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.chombo.stats.AverageValue;
 import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 
@@ -32,15 +32,17 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public abstract class ReinforcementLearner {
+public abstract class ReinforcementLearner implements Serializable {
 	protected List<Action> actions = new ArrayList<Action>();
 	protected int batchSize = 1;
+	protected int roundNum;
 	protected Action[] selActions;
-	protected long totalTrialCount;
+	protected int totalTrialCount;
 	protected int minTrial;
-	protected Map<String, AverageValue> rewardStats = new HashMap<String, AverageValue>();
+	protected Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
 	protected boolean rewarded;
 	protected int rewardScale;
+	protected boolean batchLearning;
 
 
 	/**
@@ -64,6 +66,14 @@ public abstract class ReinforcementLearner {
 		return this;
 	}
 	
+	/**
+	 * @return
+	 */
+	public ReinforcementLearner withBatchLearning() {
+		batchLearning = true;
+		return this;
+	}
+	
 	protected void initSelectedActions() {
 		selActions = new Action[batchSize];
 	}
@@ -71,11 +81,29 @@ public abstract class ReinforcementLearner {
 	/**
 	 * @param config
 	 */
-	public  void initialize(Map<String, Object> config) {
+	public void initialize(Map<String, Object> config) {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
-		batchSize = ConfigUtility.getInt(config, "batch.size",  1);
+		batchSize = ConfigUtility.getInt(config, "decision.batch.size",  1);
 		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
+		roundNum = ConfigUtility.getInt(config, "current.round.num",  1);
+			
+		//all trials whether reward received or nor
+		totalTrialCount = (roundNum - 1) * batchSize;
 		initSelectedActions();
+	}
+	
+	/**
+	 * @param that
+	 */
+	public void merge(ReinforcementLearner that) {
+		for (String actionId : that.rewardStats.keySet()) {
+			rewardStats.put(actionId, that.rewardStats.get(actionId));
+		}
+		
+		for (Action thisAction : actions) {
+			int trialCount = rewardStats.get(thisAction.getId()).getCount();
+			thisAction.setTrialCount(trialCount);
+		}
 	}
 	
 	/**
@@ -93,10 +121,26 @@ public abstract class ReinforcementLearner {
 	public abstract Action nextAction();
 
 	/**
+	 * online incremental learning
 	 * @param action
 	 * @param reward
 	 */
 	public abstract void setReward(String action, int reward);
+	
+	/**
+	 * batch learning
+	 * @param actionId
+	 * @param rewardAv
+	 * @param rewardStdDev
+	 * @param count
+	 */
+	public void setReward(String actionId, double rewardAv, double rewardStdDev, int count) {
+		rewardStats.get(actionId).setStats(count, rewardAv, rewardStdDev);
+		
+		//set trial count in action
+		Action action = findAction(actionId);
+		action.setTrialCount(count);
+	}
 	
 	/**
 	 * @return
@@ -158,10 +202,22 @@ public abstract class ReinforcementLearner {
 		String actionId = null;
 		double maxReward = -1.0;
 		for (String thisActionId : rewardStats.keySet()) {
-			if (rewardStats.get(thisActionId).getAvgValue() > maxReward) {
+			if (rewardStats.get(thisActionId).getMean() > maxReward) {
 				actionId = thisActionId;
 			}
 		}
 		return findAction(actionId);
+	}
+	
+	/**
+	 * @return
+	 */
+	public boolean isBatchLearning() {
+		return batchLearning;
+	}
+	
+	public int getTrialCount() {
+		
+		return 0;
 	}
 }

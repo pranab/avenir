@@ -48,10 +48,25 @@ case "$1" in
 	hadoop fs -ls $HDFS_BASE_DIR/norm/output
 	;;
 	
+"filtMaj")	
+	CLASS_NAME=org.chombo.mr.Projection
+	echo "running mr $CLASS_NAME"
+	IN_PATH=$HDFS_BASE_DIR/norm/output
+	OUT_PATH=$HDFS_BASE_DIR/filt/output
+	echo "input $IN_PATH output $OUT_PATH"
+	hadoop fs -rmr $OUT_PATH
+	echo "removed output dir $OUT_PATH"
+
+	hadoop jar $CHOMBO_JAR_NAME  $CLASS_NAME -Dconf.path=$PROP_FILE  $IN_PATH  $OUT_PATH	
+	hadoop fs -rmr $HDFS_BASE_DIR/filt/output/_logs
+	hadoop fs -rmr $HDFS_BASE_DIR/filt/output/_SUCCESS
+	hadoop fs -ls $HDFS_BASE_DIR/filt/output
+	;;
+
 "distance")	
 	CLASS_NAME=org.chombo.mr.RecordSimilarity
 	echo "running mr $CLASS_NAME"
-	IN_PATH=$HDFS_BASE_DIR/norm/output
+	IN_PATH=$HDFS_BASE_DIR/filt/output
 	OUT_PATH=$HDFS_BASE_DIR/dist/output
 	echo "input $IN_PATH output $OUT_PATH"
 	hadoop fs -rmr $OUT_PATH

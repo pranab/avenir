@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.chombo.mr.FeatureField;
+import org.chombo.stats.ExponentialDistrRejectionSampler;
 import org.chombo.util.BasicUtils;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
@@ -84,6 +85,11 @@ public class ClassBasedOverSampler extends Configured implements Tool {
 		private int overSamplingMultiplier;
 		private FeatureSchema schema;
 		private int outputPrecision;
+		private String neighborSamplingDistr;
+		private ExponentialDistrRejectionSampler expSampler;
+		private final String UNIFORM_DISTR = "uniform";
+		private final String EXP_DISTR = "exponential";
+		
 		
 	    /* (non-Javadoc)
 	     * @see org.apache.hadoop.mapreduce.Mapper#setup(org.apache.hadoop.mapreduce.Mapper.Context)
@@ -100,6 +106,13 @@ public class ClassBasedOverSampler extends Configured implements Tool {
 	    	//over sampling multiplier
 	    	overSamplingMultiplier = Utility.assertIntConfigParam(config, "cbos.over.sampling.multiplier", 
 	    			"missing over sampling multiplier");
+	    	
+	    	//neighbor sampling distribution
+	    	neighborSamplingDistr = config.get("cbos.neighbor.sampling.distr", UNIFORM_DISTR);
+	    	if (neighborSamplingDistr.equals(EXP_DISTR)) {
+	    		double mean = Utility.assertDoubleConfigParam(config, "cbos.exp.distr.mean", "missing exponential distribution mean");
+	    		expSampler = new  ExponentialDistrRejectionSampler(mean);
+	    	}
 	    	
         	//schema
             schema = Utility.getFeatureSchema(config, "cbos.feature.schema.file.path");
@@ -128,8 +141,19 @@ public class ClassBasedOverSampler extends Configured implements Tool {
 	    	}
 	    	
 	    	//over sample
+    		String[] neighborRec = null;
 	    	for (int i = 0 ; i < overSamplingMultiplier; ++i) {
-	    		String[] neighborRec = BasicUtils.selectRandom(neighborRecs);
+	    		if (neighborSamplingDistr.equals(UNIFORM_DISTR)) {
+	    			neighborRec = BasicUtils.selectRandom(neighborRecs);
+	    		} else  if (neighborSamplingDistr.equals(EXP_DISTR)) {
+	    			int neighborSize =  neighborRecs.size() ;
+	    			expSampler.setRange(1, neighborSize);
+	    			int index = (int)(Math.round(expSampler.sample())) - 1 ;
+	    			index = BasicUtils.between(index, 0, neighborSize -1); 
+	    			neighborRec = neighborRecs.get(index);
+	    		} else {
+	    			throw new IllegalStateException("invalid neighbor sampling distribution");
+	    		}
 	    		String[] newRec = generateSample(srcRec, neighborRec);
 	    		outVal.set(BasicUtils.join(newRec, fieldDelim));
 				context.write(NullWritable.get(), outVal);
@@ -146,16 +170,19 @@ public class ClassBasedOverSampler extends Configured implements Tool {
 	    	for (int i = 0; i < recLen; ++i) {
 	    		FeatureField field = schema.findFieldByOrdinal(i);
 	    		if (field.isId()) {
-	    			//copy Id
-	    			newRec[i] = srcRec[i];
+	    			//generate Id
+	    			String scrambled = BasicUtils.scramble(srcRec[i] + neighborRec[i] , 6);
+	    			newRec[i] = scrambled.substring(0, srcRec[i].length());
 	    		} else if (field.isFeature()) {
 	    			//feature value
 	    			if (field.isInteger()) {
+	    				//interpolate
 	    				int srVal = Integer.parseInt(srcRec[i]);
 	    				int neVal = Integer.parseInt(neighborRec[i]);
 	    				int newVal = srVal + (int)((neVal - srVal) * Math.random());
 	    				newRec[i] = "" + newVal;
 	    			} else if (field.isDouble()) {
+	    				//interpolate
 	    				double srVal = Double.parseDouble(srcRec[i]);
 	    				double neVal = Double.parseDouble(neighborRec[i]);
 	    				double newVal = srVal + (neVal - srVal) * Math.random();

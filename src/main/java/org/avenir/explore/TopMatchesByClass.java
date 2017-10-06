@@ -158,9 +158,6 @@ public class TopMatchesByClass extends Configured implements Tool {
             }
             rank = Integer.parseInt(items[items.length - 1]);
             
-            outKey.initialize();
-            outVal.initialize();
-            
         	srcClassAttr = items[srcRecBeg + classAttrOrd];
         	trgClassAttr = items[trgRecBeg + classAttrOrd];
         	
@@ -183,15 +180,42 @@ public class TopMatchesByClass extends Configured implements Tool {
         	}
         	
         	if (doEmit) {
-				if (includeRecInOutput) {
-	        		outKey.add(srcEntityId, srcClassAttr, srcRec, rank);
-	        		outVal.add(trgEntityId, trgRec, rank);            	
-				} else {
-	        		outKey.add(srcEntityId, srcClassAttr, rank);
-	        		outVal.add(trgEntityId, rank);            	
-				}
+        		//first then second
+				keyValInit();
+        		outKey.add(srcEntityId, srcClassAttr);
+        		if (includeRecInOutput) {
+        			outKey.add( srcRec);
+        		}
+        		outKey.add( rank);
+        		outVal.add(trgEntityId);         
+           		if (includeRecInOutput) {
+           			outVal.add(trgRec);
+        		}
+        		outVal.add( rank);         
+        		context.write(outKey, outVal);
+        		
+        		//second then first
+				keyValInit();
+        		outKey.add(trgEntityId, srcClassAttr);
+        		if (includeRecInOutput) {
+        			outKey.add( trgRec);
+        		}
+        		outKey.add( rank);
+        		outVal.add(srcEntityId);         
+           		if (includeRecInOutput) {
+           			outVal.add(srcRec);
+        		}
+        		outVal.add( rank);         
         		context.write(outKey, outVal);
         	} 
+        }
+        
+        /**
+         * 
+         */
+        private void keyValInit() {
+            outKey.initialize();
+            outVal.initialize();
         }
 	}
 

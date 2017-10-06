@@ -71,7 +71,7 @@ public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
 				
 				//start epoch with another action
 		        for (Action thisAction : actions) {
-		        	double thisReward = (rewardStats.get(thisAction.getId()).getAvgValue());
+		        	double thisReward = (rewardStats.get(thisAction.getId()).getMean());
 		        	int epochCount = numEpochs.get(thisAction.getId());
 		        	double tao = epochCount == 0 ? 1.0 : Math.pow((1.0 + alpha), epochCount);
 		        	double a = (1 + alpha) * Math.log(Math.E * totalTrialCount / tao) / (2 * tao);

@@ -18,6 +18,7 @@
 
 package org.avenir.reinforce;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -25,7 +26,7 @@ import java.util.Map;
  * @author pranab
  *
  */
-public class ReinforcementLearnerFactory {
+public class ReinforcementLearnerFactory implements Serializable {
 	/**
 	 * @param learnerID
 	 * @param actions
