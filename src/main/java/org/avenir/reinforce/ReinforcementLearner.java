@@ -165,6 +165,21 @@ public abstract class ReinforcementLearner implements Serializable {
 	}
 	
 	/**
+	 * @param id
+	 * @return
+	 */
+	public int findActionIndex(String id) {
+		int i = 0;
+		for (Action thisAction : actions) {
+			if (thisAction.getId().equals(id)) {
+				break;
+			}
+			++i;
+		}
+		return i;
+	}
+
+	/**
 	 * @return
 	 */
 	public Action findActionWithMinTrial() {
