@@ -33,8 +33,8 @@ public class ReinforcementLearnerFactory implements Serializable {
 	 * @param config
 	 * @return
 	 */
-	public static ReinforcementLearner create(String learnerType, String[] actions, Map<String, Object> config) {
-		ReinforcementLearner learner = null;
+	public static MultiArmBanditLearner create(String learnerType, String[] actions, Map<String, Object> config) {
+		MultiArmBanditLearner learner = null;
 		if (learnerType.equals("intervalEstimator")) {
 			learner = new IntervalEstimatorLearner();
 		} else if (learnerType.equals("sampsonSampler")) {

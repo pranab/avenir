@@ -29,7 +29,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class ExponentialWeightLearner extends ReinforcementLearner {
+public class ExponentialWeightLearner extends MultiArmBanditLearner {
 	private Map<String, Double> weightDistr = new HashMap<String, Double>();
 	private CategoricalSampler sampler = new CategoricalSampler();
 	private double distrConstant;
@@ -81,6 +81,20 @@ public class ExponentialWeightLearner extends ReinforcementLearner {
 		weight *= Math.exp(distrConstant * (scaledReward / sampler.get(actionId)) / actions.size());
 		weightDistr.put(actionId, weight);
 		rewarded = true;
+	}
+
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

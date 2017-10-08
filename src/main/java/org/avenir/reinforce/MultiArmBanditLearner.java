@@ -32,7 +32,8 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public abstract class ReinforcementLearner implements Serializable {
+public abstract class MultiArmBanditLearner implements Serializable {
+	protected String id;
 	protected List<Action> actions = new ArrayList<Action>();
 	protected int batchSize = 1;
 	protected int roundNum;
@@ -49,7 +50,7 @@ public abstract class ReinforcementLearner implements Serializable {
 	 * sets actions
 	 * @param actions
 	 */
-	public ReinforcementLearner withActions(String[] actionIds){
+	public MultiArmBanditLearner withActions(String[] actionIds){
 		for (String actionId : actionIds) {
 			actions.add(new Action(actionId));
 		}
@@ -61,7 +62,7 @@ public abstract class ReinforcementLearner implements Serializable {
 	 * @param batchSize
 	 * @return
 	 */
-	public ReinforcementLearner withBatchSize(int batchSize) {
+	public MultiArmBanditLearner withBatchSize(int batchSize) {
 		this.batchSize = batchSize;
 		return this;
 	}
@@ -69,7 +70,7 @@ public abstract class ReinforcementLearner implements Serializable {
 	/**
 	 * @return
 	 */
-	public ReinforcementLearner withBatchLearning() {
+	public MultiArmBanditLearner withBatchLearning() {
 		batchLearning = true;
 		return this;
 	}
@@ -95,7 +96,7 @@ public abstract class ReinforcementLearner implements Serializable {
 	/**
 	 * @param that
 	 */
-	public void merge(ReinforcementLearner that) {
+	public void merge(MultiArmBanditLearner that) {
 		for (String actionId : that.rewardStats.keySet()) {
 			rewardStats.put(actionId, that.rewardStats.get(actionId));
 		}
@@ -107,7 +108,13 @@ public abstract class ReinforcementLearner implements Serializable {
 	}
 	
 	/**
-	 * Selects the next action 
+	 * build model based current state
+	 * @param model
+	 */
+	public abstract void buildModel(String model);
+	
+	/**
+	 * decides the next action list
 	 * @param roundNum
 	 * @return actionID
 	 */
@@ -118,6 +125,10 @@ public abstract class ReinforcementLearner implements Serializable {
 		return selActions;
 	}
 	
+	/**
+	 * decides next action
+	 * @return
+	 */
 	public abstract Action nextAction();
 
 	/**
@@ -145,9 +156,7 @@ public abstract class ReinforcementLearner implements Serializable {
 	/**
 	 * @return
 	 */
-	public  String getStat() {
-		return "";
-	}
+	public abstract String[] getModel();
 	
 	/**
 	 * @param id

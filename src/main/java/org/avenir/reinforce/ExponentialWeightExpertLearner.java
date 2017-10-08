@@ -1,4 +1,3 @@
-
 /*
  * avenir: Predictive analytic based on Hadoop Map Reduce
  * Author: Pranab Ghosh
@@ -19,7 +18,6 @@
 
 package org.avenir.reinforce;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.stats.CategoricalSampler;
@@ -30,7 +28,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class ExponentialWeightExpertLearner extends ReinforcementLearner {
+public class ExponentialWeightExpertLearner extends MultiArmBanditLearner {
 	private double[] expertWeights;
 	private CategoricalSampler sampler = new CategoricalSampler();
 	private double distrConstant;
@@ -100,7 +98,7 @@ public class ExponentialWeightExpertLearner extends ReinforcementLearner {
         		sum += expertWeights[i] * experts[i][j] / sumWt;
         	}
         	
-        	double prob = (1.0 - distrConstant) * sum + distrConstant / actions.size();
+        	double prob = (1.0 - distrConstant) * sum + distrConstant / numActions;
         	sampler.add(thisAction.getId(), prob);
         	++j;
         }
@@ -121,6 +119,20 @@ public class ExponentialWeightExpertLearner extends ReinforcementLearner {
     		expertWeights[i] = weight;		
     	}
 		rewarded = true;
+	}
+
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 

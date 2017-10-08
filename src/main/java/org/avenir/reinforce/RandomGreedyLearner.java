@@ -28,7 +28,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class RandomGreedyLearner extends ReinforcementLearner {
+public class RandomGreedyLearner extends MultiArmBanditLearner {
 	private double  randomSelectionProb;
 	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
@@ -103,6 +103,18 @@ public class RandomGreedyLearner extends ReinforcementLearner {
 	public void setReward(String actionId, int reward) {
 		rewardStats.get(actionId).add(reward);
 		findAction(actionId).reward(reward);
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

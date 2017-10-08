@@ -45,7 +45,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	public static final String ROUND_NUM = "roundNUm";
 	public static final String REWARD = "reward";
 	private List<MessageHolder> messages = new ArrayList<MessageHolder>();
-	private ReinforcementLearner  learner = null;
+	private MultiArmBanditLearner  learner = null;
 	private Jedis jedis;
 	private String actionQueue;
 	private ActionWriter  actionWriter;

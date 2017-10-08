@@ -80,6 +80,7 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   
 	   //create learner
 	   val createLearner = (line:String) => {
+	     val id = line.split(fieldDelimIn, -1)(groupFieldOrdinal)
 	     val learner = ReinforcementLearnerFactory.create(learnAlgo, actions, configParams)
 	     addToLeaner(learner, line)
 	   }
