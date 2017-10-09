@@ -44,7 +44,7 @@ public class ReinforcementLearnerGroup {
 	 * @param learnerId
 	 */
 	public void addLearner(String learnerId) {
-		MultiArmBanditLearner learner = ReinforcementLearnerFactory.create(learnerType, actions, config);
+		MultiArmBanditLearner learner = MultiArmBanditLearnerFactory.create(learnerType, actions, config);
 		learners.put(learnerId, learner);
 	}
 	

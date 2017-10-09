@@ -75,7 +75,7 @@ public class ActionPursuitLearner extends MultiArmBanditLearner {
 	}
 	
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		rewardStats.get(actionId).add(reward);
 		rewarded = true;
 		findAction(actionId).reward(reward);

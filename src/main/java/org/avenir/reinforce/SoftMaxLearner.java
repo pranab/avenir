@@ -114,7 +114,7 @@ public class SoftMaxLearner extends MultiArmBanditLearner {
 	}
 	
 	@Override
-	public void setReward(String action, int reward) {
+	public void setReward(String action, double reward) {
 		rewardStats.get(action).add(reward);
 		findAction(action).reward(reward);
 		rewarded = true;

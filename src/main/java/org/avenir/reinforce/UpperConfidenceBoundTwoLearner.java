@@ -96,7 +96,7 @@ public class UpperConfidenceBoundTwoLearner extends MultiArmBanditLearner {
 	}
 
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		double dReward = (double)reward / rewardScale;
 		rewardStats.get(actionId).add(dReward);
 		findAction(actionId).reward(reward);

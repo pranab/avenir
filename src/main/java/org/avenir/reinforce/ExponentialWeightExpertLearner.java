@@ -105,7 +105,7 @@ public class ExponentialWeightExpertLearner extends MultiArmBanditLearner {
 	}
 	
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		findAction(actionId).reward(reward);
 		
 		//update weights for experts

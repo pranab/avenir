@@ -74,7 +74,7 @@ public class ExponentialWeightLearner extends MultiArmBanditLearner {
 	}
 	
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		findAction(actionId).reward(reward);
 		double weight = weightDistr.get(actionId);
 		double scaledReward = (double)reward / rewardScale; 

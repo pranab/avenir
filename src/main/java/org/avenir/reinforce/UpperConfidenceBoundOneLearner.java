@@ -35,9 +35,6 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
 		rewardScale = ConfigUtility.getInt(config, "reward.scale",  100);
-        for (Action action : actions) {
-        	rewardStats.put(action.getId(), new SimpleStat());
-        }
 	}
 
 	/**
@@ -67,7 +64,7 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 	}
 
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		double dReward = (double)reward / rewardScale;
 		rewardStats.get(actionId).add(dReward);
 		findAction(actionId).reward(reward);

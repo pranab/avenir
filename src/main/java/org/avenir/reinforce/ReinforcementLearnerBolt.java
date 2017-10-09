@@ -68,7 +68,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 		String learnerType = ConfigUtility.getString(stormConf, "reinforcement.learner.type");
 		String[] actions = ConfigUtility.getString(stormConf, "reinforcement.learrner.actions").split(",");
 		Map<String, Object> typedConf = ConfigUtility.toTypedMap(stormConf);
-		learner =  ReinforcementLearnerFactory.create(learnerType, actions, typedConf);
+		learner =  MultiArmBanditLearnerFactory.create(learnerType, actions, typedConf);
 		
 		//action output queue		
 		if (ConfigUtility.getString(stormConf, "reinforcement.learrner.action.writer").equals("redis")) {
@@ -109,7 +109,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 			if (debugOn) {
 				if (messageCounter % messageCountInterval == 0)
 					LOG.info("processed event message - message counter:" + messageCounter );
-					LOG.info("learner stat:" + learner.getStat());
+					LOG.info("learner stat:" + learner.getModel());
 			}
 		} else {
 			//reward feedback

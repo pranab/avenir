@@ -154,7 +154,7 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 	}
 	
 	@Override
-	public void setReward(String action, int reward) {
+	public void setReward(String action, double reward) {
 		HistogramStat stat = rewardDistr.get(action);
 		if (null == stat) {
 			throw new IllegalArgumentException("invalid action:" + action);

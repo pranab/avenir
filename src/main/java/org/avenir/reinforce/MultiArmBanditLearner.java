@@ -44,6 +44,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	protected boolean rewarded;
 	protected int rewardScale;
 	protected boolean batchLearning;
+	protected String delim = ",";
 
 
 	/**
@@ -72,6 +73,15 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	 */
 	public MultiArmBanditLearner withBatchLearning() {
 		batchLearning = true;
+		return this;
+	}
+	
+	/**
+	 * @param delim
+	 * @return
+	 */
+	public MultiArmBanditLearner withDelim(String delim) {
+		this.delim = delim;
 		return this;
 	}
 	
@@ -136,7 +146,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	 * @param action
 	 * @param reward
 	 */
-	public abstract void setReward(String action, int reward);
+	public abstract void setReward(String action, double reward);
 	
 	/**
 	 * batch learning

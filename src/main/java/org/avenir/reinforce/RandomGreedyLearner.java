@@ -17,8 +17,10 @@
 
 package org.avenir.reinforce;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.chombo.stats.MeanStat;
 import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Utility;
@@ -33,6 +35,8 @@ public class RandomGreedyLearner extends MultiArmBanditLearner {
 	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
 	private double minProb;
+	private Map<String, MeanStat> meanRewardStats = new HashMap<String, MeanStat>();
+
 	private static final String PROB_RED_NONE = "none";
 	private static final String PROB_RED_LINEAR = "linear";
 	private static final String PROB_RED_LOG_LINEAR = "logLinear";
@@ -44,10 +48,6 @@ public class RandomGreedyLearner extends MultiArmBanditLearner {
 	    probRedAlgorithm = ConfigUtility.getString(config,"prob.reduction.algorithm", PROB_RED_LINEAR );
         probReductionConstant = ConfigUtility.getDouble(config, "prob.reduction.constant",  1.0);
         minProb = ConfigUtility.getDouble(config, "min.prob",  -1.0);
-        
-        for (Action action : actions) {
-        	rewardStats.put(action.getId(), new SimpleStat());
-        }
  	}
 
 	/**
@@ -100,21 +100,29 @@ public class RandomGreedyLearner extends MultiArmBanditLearner {
 	}
 
 	@Override
-	public void setReward(String actionId, int reward) {
-		rewardStats.get(actionId).add(reward);
+	public void setReward(String actionId, double reward) {
+		meanRewardStats.get(actionId).add(reward);
 		findAction(actionId).reward(reward);
 	}
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		String[] items = model.split(delim, -1);
+		String actionId = items[0];
+		int count = Integer.parseInt(items[1]);
+		double sum = Double.parseDouble(items[2]);
+		double mean = Double.parseDouble(items[3]);
+		meanRewardStats.put(actionId, new MeanStat(count,sum,mean));
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size()];
+		int i = 0;
+		for (String actionId : meanRewardStats.keySet()) {
+			model[i++] = meanRewardStats.get(actionId).toString();
+		}
+		return model;
 	}
 
 }

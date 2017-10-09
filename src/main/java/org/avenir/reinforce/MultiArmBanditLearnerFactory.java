@@ -26,7 +26,7 @@ import java.util.Map;
  * @author pranab
  *
  */
-public class ReinforcementLearnerFactory implements Serializable {
+public class MultiArmBanditLearnerFactory implements Serializable {
 	/**
 	 * @param learnerID
 	 * @param actions

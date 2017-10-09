@@ -40,13 +40,13 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	 * @param reward
 	 */
 	@Override
-	public void setReward(String actionID, int reward) {
+	public void setReward(String actionID, double reward) {
 		List<Integer> rewards = rewardDistr.get(actionID);
 		if (null == rewards) {
 			rewards = new ArrayList<Integer>();
 			rewardDistr.put(actionID, rewards);
 		}
-		rewards.add(reward);
+		rewards.add((int)reward);
 		findAction(actionID).reward(reward);
 	}
 	
