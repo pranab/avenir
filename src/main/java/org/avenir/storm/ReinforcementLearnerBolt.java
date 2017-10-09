@@ -15,7 +15,7 @@
  * permissions and limitations under the License.
  */
 
-package org.avenir.reinforce;
+package org.avenir.storm;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,13 +23,17 @@ import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.reinforce.Action;
+import org.avenir.reinforce.ActionWriter;
+import org.avenir.reinforce.MultiArmBanditLearner;
+import org.avenir.reinforce.MultiArmBanditLearnerFactory;
+import org.avenir.reinforce.RewardReader;
 import org.chombo.storm.GenericBolt;
 import org.chombo.storm.MessageHolder;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Pair;
 
 import redis.clients.jedis.Jedis;
-
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
