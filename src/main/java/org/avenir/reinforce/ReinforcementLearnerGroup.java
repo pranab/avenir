@@ -28,7 +28,7 @@ import org.chombo.util.ConfigUtility;
  *
  */
 public class ReinforcementLearnerGroup {
-	private Map<String, ReinforcementLearner> learners = new HashMap<String, ReinforcementLearner>();
+	private Map<String, MultiArmBanditLearner> learners = new HashMap<String, MultiArmBanditLearner>();
 	private Map<String, Object> config;
 	private String learnerType;
 	private String[] actions;
@@ -44,7 +44,7 @@ public class ReinforcementLearnerGroup {
 	 * @param learnerId
 	 */
 	public void addLearner(String learnerId) {
-		ReinforcementLearner learner = ReinforcementLearnerFactory.create(learnerType, actions, config);
+		MultiArmBanditLearner learner = MultiArmBanditLearnerFactory.create(learnerType, actions, config);
 		learners.put(learnerId, learner);
 	}
 	
@@ -52,7 +52,7 @@ public class ReinforcementLearnerGroup {
 	 * @param learnerId
 	 * @return
 	 */
-	public ReinforcementLearner getLearner(String learnerId) {
+	public MultiArmBanditLearner getLearner(String learnerId) {
 		return learners.get(learnerId);
 	}	
 	

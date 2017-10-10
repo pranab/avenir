@@ -28,7 +28,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
+public class UpperConfidenceBoundTwoLearner extends MultiArmBanditLearner {
 	private Map<String, Integer> numEpochs = new HashMap<String, Integer>();
 	private int rewardScale;
 	private double alpha;
@@ -96,10 +96,22 @@ public class UpperConfidenceBoundTwoLearner extends ReinforcementLearner {
 	}
 
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		double dReward = (double)reward / rewardScale;
 		rewardStats.get(actionId).add(dReward);
 		findAction(actionId).reward(reward);
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -29,7 +29,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class SoftMaxLearner extends ReinforcementLearner {
+public class SoftMaxLearner extends MultiArmBanditLearner {
 	private Map<String, Double> expDistr = new HashMap<String, Double>();
 	private double tempConstant;
 	private double minTempConstant;
@@ -114,10 +114,22 @@ public class SoftMaxLearner extends ReinforcementLearner {
 	}
 	
 	@Override
-	public void setReward(String action, int reward) {
+	public void setReward(String action, double reward) {
 		rewardStats.get(action).add(reward);
 		findAction(action).reward(reward);
 		rewarded = true;
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

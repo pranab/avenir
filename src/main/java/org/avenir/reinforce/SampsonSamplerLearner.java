@@ -30,7 +30,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class SampsonSamplerLearner extends ReinforcementLearner {
+public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	protected  Map<String, List<Integer>> rewardDistr = new HashMap<String, List<Integer>>();
 	private int minSampleSize;
 	private int maxReward;
@@ -40,13 +40,13 @@ public class SampsonSamplerLearner extends ReinforcementLearner {
 	 * @param reward
 	 */
 	@Override
-	public void setReward(String actionID, int reward) {
+	public void setReward(String actionID, double reward) {
 		List<Integer> rewards = rewardDistr.get(actionID);
 		if (null == rewards) {
 			rewards = new ArrayList<Integer>();
 			rewardDistr.put(actionID, rewards);
 		}
-		rewards.add(reward);
+		rewards.add((int)reward);
 		findAction(actionID).reward(reward);
 	}
 	
@@ -95,6 +95,18 @@ public class SampsonSamplerLearner extends ReinforcementLearner {
 		super.initialize(config);
 		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
 		maxReward = ConfigUtility.getInt(config, "max.reward");
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

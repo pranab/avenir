@@ -29,7 +29,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class RewardComparisonLearner extends ReinforcementLearner {
+public class RewardComparisonLearner extends MultiArmBanditLearner {
 	private double preferenceChangeRate;
 	private double refRewardChangeRate;
 	private double intialRefReward;
@@ -88,7 +88,7 @@ public class RewardComparisonLearner extends ReinforcementLearner {
 	}
 	
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		rewardStats.get(actionId).add(reward);
 		rewarded = true;
 		findAction(actionId).reward(reward);
@@ -100,6 +100,18 @@ public class RewardComparisonLearner extends ReinforcementLearner {
 		
 		//update reference reward
 		refReward += refRewardChangeRate * (meanReward - refReward);
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

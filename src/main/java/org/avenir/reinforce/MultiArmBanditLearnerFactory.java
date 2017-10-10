@@ -26,15 +26,15 @@ import java.util.Map;
  * @author pranab
  *
  */
-public class ReinforcementLearnerFactory implements Serializable {
+public class MultiArmBanditLearnerFactory implements Serializable {
 	/**
 	 * @param learnerID
 	 * @param actions
 	 * @param config
 	 * @return
 	 */
-	public static ReinforcementLearner create(String learnerType, String[] actions, Map<String, Object> config) {
-		ReinforcementLearner learner = null;
+	public static MultiArmBanditLearner create(String learnerType, String[] actions, Map<String, Object> config) {
+		MultiArmBanditLearner learner = null;
 		if (learnerType.equals("intervalEstimator")) {
 			learner = new IntervalEstimatorLearner();
 		} else if (learnerType.equals("sampsonSampler")) {

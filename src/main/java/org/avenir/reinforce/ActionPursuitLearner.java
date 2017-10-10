@@ -29,7 +29,7 @@ import org.chombo.util.ConfigUtility;
  * @author pranab
  *
  */
-public class ActionPursuitLearner extends ReinforcementLearner {
+public class ActionPursuitLearner extends MultiArmBanditLearner {
 	private double learningRate;
 	private CategoricalSampler sampler = new CategoricalSampler();
 	
@@ -75,10 +75,24 @@ public class ActionPursuitLearner extends ReinforcementLearner {
 	}
 	
 	@Override
-	public void setReward(String actionId, int reward) {
+	public void setReward(String actionId, double reward) {
 		rewardStats.get(actionId).add(reward);
 		rewarded = true;
 		findAction(actionId).reward(reward);
+	}
+
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -21,8 +21,8 @@ import org.chombo.spark.common.JobConfiguration
 import org.apache.spark.SparkContext
 import com.typesafe.config.Config
 import org.chombo.util.BasicUtils
-import org.avenir.reinforce.ReinforcementLearnerFactory
-import org.avenir.reinforce.ReinforcementLearner
+import org.avenir.reinforce.MultiArmBanditLearnerFactory
+import org.avenir.reinforce.MultiArmBanditLearner
 
 object ReinforcementLearningSystem extends JobConfiguration {
    /**
@@ -68,7 +68,7 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   })
 
 	   //add record to learner
-	   val addToLeaner = (learner:ReinforcementLearner, line:String) => {
+	   val addToLeaner = (learner:MultiArmBanditLearner, line:String) => {
 	     val items = line.split(fieldDelimIn, -1)
 	     val action = items(actionFieldOrdinal)
 	     val trialCount = Integer.parseInt(items(countFieldOrdinal))
@@ -80,13 +80,14 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   
 	   //create learner
 	   val createLearner = (line:String) => {
-	     val learner = ReinforcementLearnerFactory.create(learnAlgo, actions, configParams)
+	     val id = line.split(fieldDelimIn, -1)(groupFieldOrdinal)
+	     val learner = MultiArmBanditLearnerFactory.create(learnAlgo, actions, configParams)
 	     addToLeaner(learner, line)
 	   }
 	   
 	   
 	   //merge learners
-	   val mergeLearners = (learnerOne : ReinforcementLearner, learnerTwo:ReinforcementLearner) => {
+	   val mergeLearners = (learnerOne : MultiArmBanditLearner, learnerTwo:MultiArmBanditLearner) => {
 	     learnerOne.merge(learnerTwo)
 	     learnerOne
 	   }

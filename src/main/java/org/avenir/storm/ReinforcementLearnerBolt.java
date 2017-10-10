@@ -15,7 +15,7 @@
  * permissions and limitations under the License.
  */
 
-package org.avenir.reinforce;
+package org.avenir.storm;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,13 +23,17 @@ import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.avenir.reinforce.Action;
+import org.avenir.reinforce.ActionWriter;
+import org.avenir.reinforce.MultiArmBanditLearner;
+import org.avenir.reinforce.MultiArmBanditLearnerFactory;
+import org.avenir.reinforce.RewardReader;
 import org.chombo.storm.GenericBolt;
 import org.chombo.storm.MessageHolder;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Pair;
 
 import redis.clients.jedis.Jedis;
-
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
@@ -45,7 +49,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 	public static final String ROUND_NUM = "roundNUm";
 	public static final String REWARD = "reward";
 	private List<MessageHolder> messages = new ArrayList<MessageHolder>();
-	private ReinforcementLearner  learner = null;
+	private MultiArmBanditLearner  learner = null;
 	private Jedis jedis;
 	private String actionQueue;
 	private ActionWriter  actionWriter;
@@ -68,7 +72,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 		String learnerType = ConfigUtility.getString(stormConf, "reinforcement.learner.type");
 		String[] actions = ConfigUtility.getString(stormConf, "reinforcement.learrner.actions").split(",");
 		Map<String, Object> typedConf = ConfigUtility.toTypedMap(stormConf);
-		learner =  ReinforcementLearnerFactory.create(learnerType, actions, typedConf);
+		learner =  MultiArmBanditLearnerFactory.create(learnerType, actions, typedConf);
 		
 		//action output queue		
 		if (ConfigUtility.getString(stormConf, "reinforcement.learrner.action.writer").equals("redis")) {
@@ -109,7 +113,7 @@ public class ReinforcementLearnerBolt extends GenericBolt {
 			if (debugOn) {
 				if (messageCounter % messageCountInterval == 0)
 					LOG.info("processed event message - message counter:" + messageCounter );
-					LOG.info("learner stat:" + learner.getStat());
+					LOG.info("learner stat:" + learner.getModel());
 			}
 		} else {
 			//reward feedback

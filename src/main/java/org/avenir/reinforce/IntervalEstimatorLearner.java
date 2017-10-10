@@ -32,7 +32,7 @@ import org.chombo.util.Utility;
  * @author pranab
  *
  */
-public class IntervalEstimatorLearner extends ReinforcementLearner{
+public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 	private int binWidth;
 	private int confidenceLimit;
 	private int minConfidenceLimit;
@@ -154,7 +154,7 @@ public class IntervalEstimatorLearner extends ReinforcementLearner{
 	}
 	
 	@Override
-	public void setReward(String action, int reward) {
+	public void setReward(String action, double reward) {
 		HistogramStat stat = rewardDistr.get(action);
 		if (null == stat) {
 			throw new IllegalArgumentException("invalid action:" + action);
@@ -168,5 +168,17 @@ public class IntervalEstimatorLearner extends ReinforcementLearner{
 
 	public String getStat() {
 		return "randomSelectCount:" + randomSelectCount + " intvEstSelectCount:" + intvEstSelectCount; 
+	}
+
+	@Override
+	public void buildModel(String model) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String[] getModel() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

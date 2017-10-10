@@ -1,0 +1,46 @@
+This tutorial is for encoding high cardinality categorical attributes to numerical value. 
+Supply chain delivery  data is used as the use case. Please make necessary changes in scripts 
+and configurations depending on your environment.
+
+Build
+=====
+in chombo
+mvn clean install
+
+in avenir
+mvn clean install
+
+Dependent script
+================
+Checkout the project avenir. Take the script util.py and sampler.py from the project and place it
+in ../lib directory with respect the directory containing cust_conversion.py
+
+Generate input
+==============
+./hica.sh genInput <num_records> <data_file_name>
+
+where
+num_records = number of records to generate
+data_file_name = input data file name
+
+Copy input data file to HDFS
+============================
+./hica.sh copyInput <data_file_name>
+
+Copy all schema and configuration files to HDFS
+===============================================
+./hica.sh copySchema delivery.json
+./hica.sh copySchema deliveryTransformer.conf
+
+Run encoder MR
+==============
+./hica.sh hiCard
+
+Run transformer MR
+==================
+./hica.sh transform
+
+Configuration
+=============
+it's in hica.properties. Please make changes as necessary
+

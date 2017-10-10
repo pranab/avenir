@@ -27,7 +27,7 @@ import java.io.Serializable;
 public class Action implements Serializable {
 	private String id;
 	private long trialCount;
-	private long totalReward;
+	private double totalReward;
 	
 	/**
 	 * @param id
@@ -66,7 +66,7 @@ public class Action implements Serializable {
 	/**
 	 * @param reward
 	 */
-	public void reward(long reward) {
+	public void reward(double reward) {
 		totalReward += reward;
 	}
 	
@@ -83,14 +83,14 @@ public class Action implements Serializable {
 	/**
 	 * @return
 	 */
-	public long getTotalReward() {
+	public double getTotalReward() {
 		return totalReward;
 	}
 	
 	/**
 	 * @return
 	 */
-	public long getAverageReward() {
+	public double getAverageReward() {
 		return trialCount > 0 ? totalReward / trialCount : 0;
 	}
 }
