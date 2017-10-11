@@ -41,15 +41,10 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   
-	   val groupFieldOrdinal = getMandatoryIntParam(appConfig, "group.field.ordinal")
-	   val actionFieldOrdinal = getMandatoryIntParam(appConfig, "action.field.ordinal")
-	   val countFieldOrdinal = getMandatoryIntParam(appConfig, "count.field.ordinal")
-	   val rewardAvgFieldOrdinal = getMandatoryIntParam(appConfig, "reward.avg.field.ordinal")
-	   val rewardStdDevFieldOrdinal = getMandatoryIntParam(appConfig, "reward.stdDev.field.ordinal")
 	   val actions = BasicUtils.fromListToStringArray(getMandatoryStringListParam(appConfig, "action.list"))
 	   val batchSize = getMandatoryIntParam(appConfig, "batch.size")
-	   
-	   
+	   val rewardFeedbackFilePath = getOptionalStringParam(appConfig, "reward.feedback.file.path")
+	   val modelStateOutputFilePath = getMandatoryStringParam(appConfig, "model.state.output.file.path")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -59,45 +54,65 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   val appAlgoConfig = appConfig.getConfig(learnAlgo)
 	   val configParams = getConfig(learnAlgo, appAlgoConfig)
 	   
+	   //model state file
 	   val data = sparkCntxt.textFile(inputPath)
 	   
 	   //key by group
-	   val pairedData = data.map(line => {
-	     val group = line.split(fieldDelimIn, -1)(groupFieldOrdinal)
-	     (group, line)
+	   val keyedData = data.map(line => {
+	     val items = BasicUtils.splitOnFirstOccurence(line, fieldDelimIn, true)
+	     (items(0), items(1))
 	   })
-
-	   //add record to learner
-	   val addToLeaner = (learner:MultiArmBanditLearner, line:String) => {
-	     val items = line.split(fieldDelimIn, -1)
-	     val action = items(actionFieldOrdinal)
-	     val trialCount = Integer.parseInt(items(countFieldOrdinal))
-	     val rewardAvg  = java.lang.Double.parseDouble(items(rewardAvgFieldOrdinal))
-	     val rewardStdDev = java.lang.Double.parseDouble(items(rewardStdDevFieldOrdinal))
-	     learner.setReward(action, rewardAvg, rewardStdDev, trialCount)
+	   
+	   //add state record to learner
+	   val addToLeaner = (learner:MultiArmBanditLearner, state:String) => {
+	     learner.buildModel(state)
 	     learner
 	   }
 	   
 	   //create learner
-	   val createLearner = (line:String) => {
-	     val id = line.split(fieldDelimIn, -1)(groupFieldOrdinal)
+	   val createLearner = (state:String) => {
 	     val learner = MultiArmBanditLearnerFactory.create(learnAlgo, actions, configParams)
-	     addToLeaner(learner, line)
+	     addToLeaner(learner, state)
 	   }
-	   
 	   
 	   //merge learners
 	   val mergeLearners = (learnerOne : MultiArmBanditLearner, learnerTwo:MultiArmBanditLearner) => {
 	     learnerOne.merge(learnerTwo)
 	     learnerOne
 	   }
-	   
-	   //build group wise learners
-	   val groupedLearners =  pairedData.combineByKey(createLearner, addToLeaner, mergeLearners)
+
+	   //build group wise learners from state
+	   var groupWiseLearners =  keyedData.combineByKey(createLearner, addToLeaner, mergeLearners)
+
+	   //optionally add reward to learners
+	   groupWiseLearners = rewardFeedbackFilePath match {
+	     case Some(path:String) => {
+	       val rewardData = sparkCntxt.textFile(path)
+	       val keyedReward = rewardData.map(line => {
+	         val items = BasicUtils.splitOnFirstOccurence(line, fieldDelimIn, true)
+	        (items(0), items(1))
+	       })
+	       
+	       //update learner with reward
+	       val coGroupedLearnerRewards = groupWiseLearners.cogroup(keyedReward)
+	       val updatedLearners = coGroupedLearnerRewards.mapValues(v => {
+	         val learner = v._1.head
+	         val reawrds = v._2
+	         reawrds.foreach(reward => {
+	           val items = reward.split(fieldDelimIn)
+	           learner.setReward(items(0), items(1).toDouble)
+	         })
+	         learner
+	       })
+	       updatedLearners
+	     } 
+	     
+	     case None => groupWiseLearners
+	   }
 	   
 	   //generate actions
-	   val groupActions = groupedLearners.flatMapValues(learner => {
-	     val batch = for (i <- 1 to batchSize) yield i
+	   val batch = for (i <- 1 to batchSize) yield i
+	   val groupActions = groupWiseLearners.flatMapValues(learner => {
 	     val actions = batch.map(b => {learner.nextAction().getId()})
 	     actions
 	   })
@@ -110,8 +125,24 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	       })
 	   }
 	  
+	   //save recommended actions
 	   if (saveOutput) {
 	     groupActions.saveAsTextFile(outputPath)
+	   }
+	   
+	   //save state
+	   rewardFeedbackFilePath match {
+	     case Some(path:String) => {
+	       //only if model state was updated
+	       val modelState = groupWiseLearners.flatMapValues(v => {
+	         val state = v.getModel()
+	         state
+	       }).map(kv => {
+	         kv._1 + kv._2
+	       })
+	       modelState.saveAsTextFile(modelStateOutputFilePath)
+	     }
+	     case None =>
 	   }
    }
    
