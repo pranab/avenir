@@ -92,6 +92,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 
 	/**
+	 * Initialize with parameters
 	 * @param config
 	 */
 	public void initialize(Map<String, Object> config) {
@@ -106,6 +107,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 	
 	/**
+	 * merge two learners
 	 * @param that
 	 */
 	public void merge(MultiArmBanditLearner that) {
@@ -144,7 +146,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	public abstract Action nextAction();
 
 	/**
-	 * online incremental learning
+	 * set reward and update model
 	 * @param action
 	 * @param reward
 	 */
@@ -166,11 +168,13 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 	
 	/**
+	 * get serialized model
 	 * @return
 	 */
 	public abstract String[] getModel();
 	
 	/**
+	 * find action, given ID
 	 * @param id
 	 * @return
 	 */
@@ -186,6 +190,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 	
 	/**
+	 * find index of action
 	 * @param id
 	 * @return
 	 */
@@ -201,6 +206,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 
 	/**
+	 * find action with trials less than threshold
 	 * @return
 	 */
 	public Action findActionWithMinTrial() {
@@ -232,6 +238,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 	
 	/**
+	 * finds action based on max average reward
 	 * @return
 	 */
 	public Action findBestAction() {

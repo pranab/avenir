@@ -46,9 +46,8 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		binWidth = ConfigUtility.getInt(config, "bin.width");
 	}
 	
-	/**
-	 * @param actionID
-	 * @param reward
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.MultiArmBanditLearner#setReward(java.lang.String, double)
 	 */
 	@Override
 	public void setReward(String actionID, double reward) {
@@ -63,9 +62,8 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		findAction(actionID).reward(reward);
 	}
 	
-	/**
-	 * Select action
-	 * @return
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.MultiArmBanditLearner#nextAction()
 	 */
 	@Override
 	public Action  nextAction() {
@@ -103,6 +101,9 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		return reward;
 	}
 
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.MultiArmBanditLearner#buildModel(java.lang.String)
+	 */
 	@Override
 	public void buildModel(String model) {
 		Record record = new Record(model, delim);
@@ -125,6 +126,9 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		trialCounts.put(actionId, count);
 	}
 
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.MultiArmBanditLearner#getModel()
+	 */
 	@Override
 	public String[] getModel() {
 		String[] model = new String[actions.size()];
