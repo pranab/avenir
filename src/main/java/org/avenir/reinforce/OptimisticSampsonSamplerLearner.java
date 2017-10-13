@@ -34,6 +34,7 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	 * @param actionID
 	 */
 	public void computeRewardMean(String actionID) {
+		/*
 		List<Integer> rewards = rewardDistr.get(actionID);
 		if (null != rewards) {
 			int sum = 0;
@@ -44,6 +45,7 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 			}
 			meanRewards.put(actionID, sum/count);
 		}
+		*/
 	}
 	
 	public int enforce(String actionID, int reward) {
