@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.chombo.stats.MeanStat;
 import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 
@@ -41,6 +42,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	protected int totalTrialCount;
 	protected int minTrial;
 	protected Map<String, SimpleStat> rewardStats = new HashMap<String, SimpleStat>();
+	protected Map<String, MeanStat> meanRewardStats = new HashMap<String, MeanStat>();
 	protected boolean rewarded;
 	protected int rewardScale;
 	protected boolean batchLearning;

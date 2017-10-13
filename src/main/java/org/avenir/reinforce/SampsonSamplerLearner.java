@@ -17,13 +17,13 @@
 
 package org.avenir.reinforce;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import org.chombo.stats.NonParametricDistrRejectionSampler;
 import org.chombo.util.ConfigUtility;
-import org.chombo.util.Utility;
+import org.chombo.util.IntRange;
+import org.chombo.util.Record;
 
 /**
  * Sampson sampler probabilistic matching reinforcement learning
@@ -31,9 +31,20 @@ import org.chombo.util.Utility;
  *
  */
 public class SampsonSamplerLearner extends MultiArmBanditLearner {
-	protected  Map<String, List<Integer>> rewardDistr = new HashMap<String, List<Integer>>();
+	protected Map<String, NonParametricDistrRejectionSampler<IntRange>> nonParamDistr = 
+			new HashMap<String, NonParametricDistrRejectionSampler<IntRange>>();
+	protected Map<String, Integer> trialCounts = new HashMap<String, Integer>();
 	private int minSampleSize;
 	private int maxReward;
+	private int binWidth;
+	
+	@Override
+	public void initialize(Map<String, Object> config) {
+		super.initialize(config);
+		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
+		maxReward = ConfigUtility.getInt(config, "max.reward");
+		binWidth = ConfigUtility.getInt(config, "bin.width");
+	}
 	
 	/**
 	 * @param actionID
@@ -41,12 +52,14 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	 */
 	@Override
 	public void setReward(String actionID, double reward) {
-		List<Integer> rewards = rewardDistr.get(actionID);
-		if (null == rewards) {
-			rewards = new ArrayList<Integer>();
-			rewardDistr.put(actionID, rewards);
-		}
-		rewards.add((int)reward);
+		NonParametricDistrRejectionSampler<IntRange> distr = nonParamDistr.get(actionID);
+		int binIndex = (int)(reward / binWidth);
+		int binBeg = binIndex * binWidth;
+		int binEnd = binBeg + binWidth - 1;
+		IntRange range = new IntRange(binBeg, binEnd);
+		distr.add(range);
+		trialCounts.put(actionID, trialCounts.get(actionID) + 1);
+		
 		findAction(actionID).reward(reward);
 	}
 	
@@ -61,13 +74,13 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		int reward = 0;
 		++totalTrialCount;
 		
-		for (String actionID : rewardDistr.keySet()) {
-			List<Integer> rewards = rewardDistr.get(actionID);
-			if (rewards.size() > minSampleSize) {
-				reward = Utility.selectRandom(rewards);
+		for (String actionID : trialCounts.keySet()) {
+			if (trialCounts.get(actionID) > minSampleSize) {
+				IntRange range = nonParamDistr.get(actionID).sample();
+				reward = (range.getLeft() + range.getRight()) / 2;
 				reward = enforce(actionID, reward);
 			} else {
-				reward = (int) (Math.random() * maxReward);
+				reward = (int)(Math.random() * maxReward);
 			}
 			
 			if (reward > maxRewardCurrent) {
@@ -91,22 +104,46 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	}
 
 	@Override
-	public void initialize(Map<String, Object> config) {
-		super.initialize(config);
-		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
-		maxReward = ConfigUtility.getInt(config, "max.reward");
-	}
-
-	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
+		Record record = new Record(model, delim);
+		String actionId = record.getString();
+		int numBins = record.getInt();
 		
+		//populate distribution
+		NonParametricDistrRejectionSampler<IntRange> distr = new NonParametricDistrRejectionSampler<IntRange>();
+		int count = 0;
+		for (int i = 0; i < numBins; ++i) {
+			int binIndex = record.getInt();
+			int binBeg = binIndex * binWidth;
+			int binEnd = binBeg + binWidth - 1;
+			IntRange range = new IntRange(binBeg, binEnd);
+			int value = record.getInt();
+			distr.add(range, value);
+			count += value;
+		}
+		nonParamDistr.put(actionId, distr);
+		trialCounts.put(actionId, count);
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size()];
+		int i = 0;
+		for (String actionID : nonParamDistr.keySet()) {
+			Map<IntRange, Double> distr = nonParamDistr.get(actionID).getDistr();
+			int numBins = distr.size();
+			Record record = new Record(2 + 2 * numBins);
+			record.setString(actionID);
+			record.setInt(numBins);
+			for (IntRange value : distr.keySet()) {
+				int binIndex = value.getLeft() / binWidth;
+				int distrCount = (int)Math.round(distr.get(value));
+				record.setInt(binIndex);
+				record.setInt(distrCount);
+			}
+			model[i++] = record.withDelim(delim).toString();
+		}
+		return model;
 	}
 
 }

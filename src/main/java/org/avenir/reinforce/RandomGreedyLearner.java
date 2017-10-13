@@ -17,11 +17,9 @@
 
 package org.avenir.reinforce;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.stats.MeanStat;
-import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 import org.chombo.util.Utility;
 
@@ -35,7 +33,6 @@ public class RandomGreedyLearner extends MultiArmBanditLearner {
 	private String  probRedAlgorithm;
 	private  double	probReductionConstant;
 	private double minProb;
-	private Map<String, MeanStat> meanRewardStats = new HashMap<String, MeanStat>();
 
 	private static final String PROB_RED_NONE = "none";
 	private static final String PROB_RED_LINEAR = "linear";
@@ -120,7 +117,7 @@ public class RandomGreedyLearner extends MultiArmBanditLearner {
 		String[] model = new String[actions.size()];
 		int i = 0;
 		for (String actionId : meanRewardStats.keySet()) {
-			model[i++] = meanRewardStats.get(actionId).toString();
+			model[i++] = actionId + meanRewardStats.get(actionId).toString();
 		}
 		return model;
 	}
