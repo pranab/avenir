@@ -19,8 +19,11 @@
 package org.avenir.reinforce;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
+import org.chombo.stats.HistogramUtility;
+import org.chombo.stats.NonParametricDistrRejectionSampler;
+import org.chombo.util.IntRange;
 
 /**
  * Optimistic sampson sampler
@@ -31,23 +34,45 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	private Map<String, Integer> meanRewards = new HashMap<String, Integer>();
 	
 	/**
+	 * 
+	 */
+	private void computeRewardMean() {
+		for (String actionID : nonParamDistr.keySet()) {
+			computeRewardMean(actionID);
+		}
+	}
+
+	/**
 	 * @param actionID
 	 */
-	public void computeRewardMean(String actionID) {
-		/*
-		List<Integer> rewards = rewardDistr.get(actionID);
-		if (null != rewards) {
-			int sum = 0;
-			int count = 0;
-			for (int reward : rewards) {
-				sum += reward;
-				++count;
-			}
-			meanRewards.put(actionID, sum/count);
-		}
-		*/
+	private void computeRewardMean(String actionID) {
+		NonParametricDistrRejectionSampler<IntRange> distr = nonParamDistr.get(actionID);
+		int mean = HistogramUtility.findMean(distr);
+		meanRewards.put(actionID, mean);
 	}
+
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.SampsonSamplerLearner#buildModel(java.lang.String)
+	 */
+	@Override
+	public void buildModel(String model) {
+		super.buildModel(model);
+		computeRewardMean();
+	}	
 	
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.SampsonSamplerLearner#setReward(java.lang.String, double)
+	 */
+	@Override
+	public void setReward(String actionID, double reward) {
+		super.setReward(actionID, reward);
+		computeRewardMean(actionID);
+	}	
+	
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.SampsonSamplerLearner#enforce(java.lang.String, int)
+	 */
+	@Override
 	public int enforce(String actionID, int reward) {
 		int meanReward = meanRewards.get(actionID);
 		return reward > meanReward ? reward : meanReward;
