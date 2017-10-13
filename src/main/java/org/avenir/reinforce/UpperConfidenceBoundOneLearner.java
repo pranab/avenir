@@ -20,6 +20,7 @@ package org.avenir.reinforce;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.chombo.stats.MeanStat;
 import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 
@@ -51,7 +52,7 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 		
 		if (null == action) {
 	        for (Action thisAction : actions) {
-	        	double thisReward = (rewardStats.get(thisAction.getId()).getMean());
+	        	double thisReward = (meanRewardStats.get(thisAction.getId()).getMean());
 	        	double thisScore = thisReward + Math.sqrt(2.0 * Math.log(totalTrialCount) / thisAction.getTrialCount());
 	        	if (thisScore >  score) {
 	        		score = thisScore;
@@ -65,21 +66,29 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 
 	@Override
 	public void setReward(String actionId, double reward) {
-		double dReward = (double)reward / rewardScale;
-		rewardStats.get(actionId).add(dReward);
+		double scaledReward = reward / rewardScale;
+		meanRewardStats.get(actionId).add(scaledReward);
 		findAction(actionId).reward(reward);
 	}
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		String[] items = model.split(delim, -1);
+		String actionId = items[0];
+		int count = Integer.parseInt(items[1]);
+		double sum = Double.parseDouble(items[2]);
+		double mean = Double.parseDouble(items[3]);
+		meanRewardStats.put(actionId, new MeanStat(count,sum,mean));
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size()];
+		int i = 0;
+		for (String actionId : meanRewardStats.keySet()) {
+			model[i++] = meanRewardStats.get(actionId).toString();
+		}
+		return model;
 	}
 
 }

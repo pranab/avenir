@@ -22,11 +22,24 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * Factory to create reinforcement learner
+ * Factory to create multi arm bandit learner
  * @author pranab
  *
  */
 public class MultiArmBanditLearnerFactory implements Serializable {
+	public static final String INTERVAL_ESTIMATOR = "intervalEstimator";
+	public static final String SAMPSON_SAMPLER = "sampsonSampler";
+	public static final String OPTIMISTIC_SAMPSON_SAMPLER = "optimisticSampsonSampler";
+	public static final String RANDOM_GREEDY = "randomGreedy";
+	public static final String UPPER_CONFIDENCE_BOUND_ONE = "upperConfidenceBoundOne";
+	public static final String UPPER_CONFIDENCE_BOUND_TWO = "upperConfidenceBoundTwo";
+	public static final String SOFT_MAX = "softMax";
+	public static final String ACTION_PURSUIT = "actionPursuit";
+	public static final String REAWRD_COMPARISON = "rewardComparison";
+	public static final String EXPONENTIAL_WEIGHT = "exponentialWeight";
+	public static final String EXPONENTIAL_WEIGHT_EXPERT = "exponentialWeightExpert";
+	
+	
 	/**
 	 * @param learnerID
 	 * @param actions
@@ -35,28 +48,30 @@ public class MultiArmBanditLearnerFactory implements Serializable {
 	 */
 	public static MultiArmBanditLearner create(String learnerType, String[] actions, Map<String, Object> config) {
 		MultiArmBanditLearner learner = null;
-		if (learnerType.equals("intervalEstimator")) {
+		if (learnerType.equals(INTERVAL_ESTIMATOR)) {
 			learner = new IntervalEstimatorLearner();
-		} else if (learnerType.equals("sampsonSampler")) {
+		} else if (learnerType.equals(SAMPSON_SAMPLER)) {
 			learner = new SampsonSamplerLearner();
-		} else if (learnerType.equals("optimisticSampsonSampler")) {
+		} else if (learnerType.equals(OPTIMISTIC_SAMPSON_SAMPLER)) {
 			learner = new OptimisticSampsonSamplerLearner();
-		} else if (learnerType.equals("randomGreedy")) {
+		} else if (learnerType.equals(RANDOM_GREEDY)) {
 			learner = new RandomGreedyLearner();
-		} else if (learnerType.equals("upperConfidenceBoundOne")) {
+		} else if (learnerType.equals(UPPER_CONFIDENCE_BOUND_ONE)) {
 			learner = new UpperConfidenceBoundOneLearner();
-		} else if (learnerType.equals("upperConfidenceBoundTwo")) {
+		} else if (learnerType.equals(UPPER_CONFIDENCE_BOUND_TWO)) {
 			learner = new UpperConfidenceBoundTwoLearner();
-		} else if (learnerType.equals("softMax")) {
+		} else if (learnerType.equals(SOFT_MAX)) {
 			learner = new SoftMaxLearner();
-		} else if (learnerType.equals("actionPursuit")) {
+		} else if (learnerType.equals(ACTION_PURSUIT)) {
 			learner = new ActionPursuitLearner();
-		} else if (learnerType.equals("rewardComparison")) {
+		} else if (learnerType.equals(REAWRD_COMPARISON)) {
 			learner = new RewardComparisonLearner();
-		} else if (learnerType.equals("exponentialWeight")) {
+		} else if (learnerType.equals(EXPONENTIAL_WEIGHT)) {
 			learner = new ExponentialWeightLearner();
+		} else if (learnerType.equals(EXPONENTIAL_WEIGHT_EXPERT)) {
+			learner = new ExponentialWeightExpertLearner();
 		} else {
-			throw new IllegalArgumentException("invalid learner type:" + learnerType);
+			throw new IllegalArgumentException("invalid MAB learner type:" + learnerType);
 		}
 		
 		learner.withActions(actions).initialize(config);

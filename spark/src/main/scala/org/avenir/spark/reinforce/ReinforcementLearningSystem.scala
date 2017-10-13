@@ -42,7 +42,7 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   
 	   val actions = BasicUtils.fromListToStringArray(getMandatoryStringListParam(appConfig, "action.list"))
-	   val batchSize = getMandatoryIntParam(appConfig, "batch.size")
+	   val batchSize = getMandatoryIntParam(appConfig, "decision.batch.size")
 	   val rewardFeedbackFilePath = getOptionalStringParam(appConfig, "reward.feedback.file.path")
 	   val modelStateOutputFilePath = getMandatoryStringParam(appConfig, "model.state.output.file.path")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
@@ -153,13 +153,15 @@ object ReinforcementLearningSystem extends JobConfiguration {
    def getConfig(learnAlgo : String, appAlgoConfig : Config) : java.util.Map[String, Object] = {
 	   val configParams = new java.util.HashMap[String, Object]()
 	   learnAlgo match {
-	       case "randomGreedy" => {
+	       case MultiArmBanditLearnerFactory.RANDOM_GREEDY => {
 	         configParams.put("current.decision.round", new Integer(appAlgoConfig.getInt("current.decision.round")))
 	         configParams.put("random.selection.prob", new java.lang.Double(appAlgoConfig.getDouble("random.selection.prob")))
 	         configParams.put("prob.reduction.algorithm", appAlgoConfig.getString("prob.reduction.algorithm"))
 	         configParams.put("prob.reduction.constant", new java.lang.Double(appAlgoConfig.getDouble("prob.reduction.constant")))
 	         configParams.put("auer.greedy.constant", new Integer(appAlgoConfig.getInt("auer.greedy.constant")))
 	         configParams.put("decision.batch.size", new Integer(appAlgoConfig.getInt("decision.batch.size")))
+	       }
+	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_ONE => {
 	       }
 	       case _ => throw new IllegalStateException("invalid RL algorithm")
 	   }
