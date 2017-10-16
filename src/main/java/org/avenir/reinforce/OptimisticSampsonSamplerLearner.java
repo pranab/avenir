@@ -32,6 +32,7 @@ import org.chombo.util.IntRange;
  */
 public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	private Map<String, Integer> meanRewards = new HashMap<String, Integer>();
+	private boolean meanRewardCalculated;
 	
 	/**
 	 * 
@@ -40,6 +41,7 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 		for (String actionID : nonParamDistr.keySet()) {
 			computeRewardMean(actionID);
 		}
+		meanRewardCalculated = true;
 	}
 
 	/**
@@ -66,8 +68,19 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	@Override
 	public void setReward(String actionID, double reward) {
 		super.setReward(actionID, reward);
-		computeRewardMean(actionID);
+		meanRewardCalculated = false;
 	}	
+	
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.SampsonSamplerLearner#nextAction()
+	 */
+	@Override
+	public Action nextAction() {
+		if (!meanRewardCalculated) {
+			computeRewardMean();
+		}
+		return super.nextAction();
+	}
 	
 	/* (non-Javadoc)
 	 * @see org.avenir.reinforce.SampsonSamplerLearner#enforce(java.lang.String, int)
