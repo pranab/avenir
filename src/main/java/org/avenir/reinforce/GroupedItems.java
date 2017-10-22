@@ -106,6 +106,8 @@ public class GroupedItems {
 			DynamicBean groupItem = iter.next();
 			thisCount = groupItem.getInt(ITEM_COUNT);
 			thisUseCount = groupItem.getInt(ITEM_USE_COUNT);
+			
+			//only items with 0 usage count from past and present
 			if (thisCount == ZERO_COUNT && thisUseCount == ZERO_COUNT) {
 				if (collectedItems.size() < batchSize) {
 					collectedItems.add(groupItem);
