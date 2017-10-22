@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.DynamicBean;
 import org.chombo.util.Utility;
 
@@ -131,7 +132,8 @@ public class AuerDeterministic  extends Configured implements Tool {
          * @see org.apache.hadoop.mapreduce.Mapper#cleanup(org.apache.hadoop.mapreduce.Mapper.Context)
          */
         protected void cleanup(Context context)  throws IOException, InterruptedException {
-			select( context);
+        	super.cleanup(context);
+			select(context);
         }
         
         @Override
@@ -169,11 +171,12 @@ public class AuerDeterministic  extends Configured implements Tool {
         }
         
         /**
-         * 
+         * create item under a group
          */
         private void collectGroupItems() {
-        	groupedItems.createtem(items[IT_ORD], Integer.parseInt(items[countOrdinal]), 
-        			Integer.parseInt(items[rewardOrdinal]));
+        	int count = Integer.parseInt(items[countOrdinal]);
+        	int reward = BasicUtils.roundToInt(Double.parseDouble(items[rewardOrdinal]));
+        	groupedItems.createtem(items[IT_ORD], count, reward);
         }
         
         /**
