@@ -33,9 +33,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.chombo.mr.FeatureField;
 import org.chombo.stats.ExponentialDistrRejectionSampler;
 import org.chombo.util.BasicUtils;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
 

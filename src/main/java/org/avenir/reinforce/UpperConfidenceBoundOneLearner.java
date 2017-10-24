@@ -35,7 +35,6 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 	@Override
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
-		rewardScale = ConfigUtility.getInt(config, "reward.scale",  100);
 	}
 
 	/**

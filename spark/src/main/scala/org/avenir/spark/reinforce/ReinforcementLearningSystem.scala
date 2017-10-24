@@ -52,9 +52,9 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	   //algorithm and algorithm specific configuration
 	   val learnAlgo = getMandatoryStringParam(appConfig, "learning.algorithm")
 	   val appAlgoConfig = appConfig.getConfig(learnAlgo)
-	   val configParams = getConfig(learnAlgo, appAlgoConfig)
+	   val configParams = getConfig(learnAlgo, appConfig, appAlgoConfig)
 	   
-	   //model state file
+	   //model state file as input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
 	   //key by group
@@ -150,20 +150,31 @@ object ReinforcementLearningSystem extends JobConfiguration {
    * @param args
    * @return
    */
-   def getConfig(learnAlgo : String, appAlgoConfig : Config) : java.util.Map[String, Object] = {
+   def getConfig(learnAlgo : String, appConfig : Config,  appAlgoConfig : Config) : java.util.Map[String, Object] = {
 	   val configParams = new java.util.HashMap[String, Object]()
+	   
+	   //common configurations
+	   configParams.put("current.decision.round", new Integer(appConfig.getInt("current.decision.round")))
+	   configParams.put("decision.batch.size", new Integer(appConfig.getInt("decision.batch.size")))
+	   configParams.put("reward.scale", new Integer(appConfig.getInt("reward.scale")))
+	   configParams.put("min.trial", new Integer(appConfig.getInt("min.trial")))
+	   
+	   //algorithm specific configurations
 	   learnAlgo match {
 	       case MultiArmBanditLearnerFactory.RANDOM_GREEDY => {
-	         configParams.put("current.decision.round", new Integer(appAlgoConfig.getInt("current.decision.round")))
 	         configParams.put("random.selection.prob", new java.lang.Double(appAlgoConfig.getDouble("random.selection.prob")))
 	         configParams.put("prob.reduction.algorithm", appAlgoConfig.getString("prob.reduction.algorithm"))
 	         configParams.put("prob.reduction.constant", new java.lang.Double(appAlgoConfig.getDouble("prob.reduction.constant")))
 	         configParams.put("auer.greedy.constant", new Integer(appAlgoConfig.getInt("auer.greedy.constant")))
-	         configParams.put("decision.batch.size", new Integer(appAlgoConfig.getInt("decision.batch.size")))
 	       }
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_ONE => {
 	       }
-	       case _ => throw new IllegalStateException("invalid RL algorithm")
+	       case MultiArmBanditLearnerFactory.SAMPSON_SAMPLER => {
+	         configParams.put("min.sample.size", new java.lang.Double(appAlgoConfig.getDouble("min.sample.size")))
+	         configParams.put("max.reward", new java.lang.Double(appAlgoConfig.getDouble("max.reward")))
+	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
+	       }
+	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }
 	     
 	   configParams

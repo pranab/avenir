@@ -99,7 +99,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
 		batchSize = ConfigUtility.getInt(config, "decision.batch.size",  1);
 		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
-		roundNum = ConfigUtility.getInt(config, "current.round.num",  1);
+		roundNum = ConfigUtility.getInt(config, "current.decision.round",  1);
 			
 		//all trials whether reward received or nor
 		totalTrialCount = (roundNum - 1) * batchSize;

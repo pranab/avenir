@@ -47,7 +47,7 @@ import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
 import org.avenir.util.AttributeSplitStat;
 import org.avenir.util.InfoContentStat;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Tuple;
 import org.chombo.util.Utility;

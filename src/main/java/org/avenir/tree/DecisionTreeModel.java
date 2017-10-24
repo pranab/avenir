@@ -25,7 +25,7 @@ import java.util.Map;
 import org.avenir.model.ProbabilisticPredictiveModel;
 import org.avenir.tree.DecisionPathList.DecisionPath;
 import org.avenir.tree.DecisionPathList.DecisionPathPredicate;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Pair;
 import org.codehaus.jackson.map.ObjectMapper;
