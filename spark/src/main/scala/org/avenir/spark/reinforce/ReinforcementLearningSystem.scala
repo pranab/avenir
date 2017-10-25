@@ -169,6 +169,9 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	       }
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_ONE => {
 	       }
+	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_TWO => {
+	         configParams.put("alpha", new java.lang.Double(appAlgoConfig.getDouble("alpha")))
+	       }
 	       case MultiArmBanditLearnerFactory.SAMPSON_SAMPLER => {
 	         configParams.put("min.sample.size", new java.lang.Double(appAlgoConfig.getDouble("min.sample.size")))
 	         configParams.put("max.reward", new java.lang.Double(appAlgoConfig.getDouble("max.reward")))

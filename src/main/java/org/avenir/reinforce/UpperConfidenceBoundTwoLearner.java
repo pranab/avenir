@@ -20,6 +20,7 @@ package org.avenir.reinforce;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.chombo.stats.MeanStat;
 import org.chombo.stats.SimpleStat;
 import org.chombo.util.ConfigUtility;
 
@@ -39,10 +40,9 @@ public class UpperConfidenceBoundTwoLearner extends MultiArmBanditLearner {
 	@Override
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
-		rewardScale = ConfigUtility.getInt(config, "reward.scale",  100);
-		alpha = ConfigUtility.getDouble(config, "ucb2.alpha", 0.1);
+		alpha = ConfigUtility.getDouble(config, "alpha", 0.1);
+		populateMeanRewardStats();
         for (Action action : actions) {
-        	rewardStats.put(action.getId(), new SimpleStat());
         	numEpochs.put(action.getId(), 0);
         }
 	}
@@ -65,13 +65,14 @@ public class UpperConfidenceBoundTwoLearner extends MultiArmBanditLearner {
 				action = currentAction;
 				++epochTrialCount;
 			} else {
+				//epoch ended
 				if (null != currentAction) {
 					numEpochs.put(currentAction.getId(), numEpochs.get(currentAction.getId()) + 1);
 				}
 				
 				//start epoch with another action
 		        for (Action thisAction : actions) {
-		        	double thisReward = (rewardStats.get(thisAction.getId()).getMean());
+		        	double thisReward = (meanRewardStats.get(thisAction.getId()).getMean());
 		        	int epochCount = numEpochs.get(thisAction.getId());
 		        	double tao = epochCount == 0 ? 1.0 : Math.pow((1.0 + alpha), epochCount);
 		        	double a = (1 + alpha) * Math.log(Math.E * totalTrialCount / tao) / (2 * tao);
@@ -97,21 +98,19 @@ public class UpperConfidenceBoundTwoLearner extends MultiArmBanditLearner {
 
 	@Override
 	public void setReward(String actionId, double reward) {
-		double dReward = (double)reward / rewardScale;
-		rewardStats.get(actionId).add(dReward);
-		findAction(actionId).reward(reward);
+		double scaledReward = reward / rewardScale;
+		meanRewardStats.get(actionId).add(scaledReward);
+		findAction(actionId).reward(scaledReward);
 	}
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		buildMeanRewardStatModel(model);
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		return getMeanRewardStatModel();
 	}
 
 }
