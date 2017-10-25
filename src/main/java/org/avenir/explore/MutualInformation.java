@@ -222,9 +222,14 @@ public class MutualInformation extends Configured implements Tool {
     	private void setDistrValue(FeatureField field) {
     		if  (field.isCategorical()) {
     			featureAttrBin= featureAttrVal;
-    		} else {
+    		} else if (field.isInteger()){
     			bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
     			featureAttrBin = "" + bin;
+    		} else if (field.isDouble()){
+    			bin = (int)(Double.parseDouble(featureAttrVal) / field.getBucketWidth());
+    			featureAttrBin = "" + bin;
+    		} else {
+    			throw new IllegalStateException("invalid data type");
     		}
     	}
         
