@@ -99,7 +99,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 		minTrial = ConfigUtility.getInt(config, "min.trial",  -1);
 		batchSize = ConfigUtility.getInt(config, "decision.batch.size",  1);
 		rewardScale = ConfigUtility.getInt(config, "reward.scale",  1);
-		roundNum = ConfigUtility.getInt(config, "current.round.num",  1);
+		roundNum = ConfigUtility.getInt(config, "current.decision.round",  1);
 			
 		//all trials whether reward received or nor
 		totalTrialCount = (roundNum - 1) * batchSize;
@@ -120,6 +120,16 @@ public abstract class MultiArmBanditLearner implements Serializable {
 			thisAction.setTrialCount(trialCount);
 		}
 	}
+	
+	/**
+	 * 
+	 */
+	protected void populateMeanRewardStats() {
+        for (Action action : actions) {
+        	meanRewardStats.put(action.getId(), new MeanStat());
+        }
+	}
+
 	
 	/**
 	 * build model based current state
@@ -260,7 +270,31 @@ public abstract class MultiArmBanditLearner implements Serializable {
 	}
 	
 	public int getTrialCount() {
-		
 		return 0;
 	}
+	
+	/**
+	 * @param model
+	 */
+	protected void buildMeanRewardStatModel(String model) {
+		String[] items = model.split(delim, -1);
+		String actionId = items[0];
+		int count = Integer.parseInt(items[1]);
+		double sum = Double.parseDouble(items[2]);
+		double mean = Double.parseDouble(items[3]);
+		meanRewardStats.put(actionId, new MeanStat(count,sum,mean));
+	}
+	
+	/**
+	 * @return
+	 */
+	protected String[] getMeanRewardStatModel() {
+		String[] model = new String[actions.size()];
+		int i = 0;
+		for (String actionId : meanRewardStats.keySet()) {
+			model[i++] = meanRewardStats.get(actionId).toString();
+		}
+		return model;
+	}
+
 }

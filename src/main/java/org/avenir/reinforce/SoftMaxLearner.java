@@ -44,10 +44,7 @@ public class SoftMaxLearner extends MultiArmBanditLearner {
 		tempConstant  = ConfigUtility.getDouble(config, "temp.constant", 100.0);
 		minTempConstant  = ConfigUtility.getDouble(config, "min.temp.constant", -1.0);
 	    tempRedAlgorithm = ConfigUtility.getString(config,"temp.reduction.algorithm", TEMP_RED_LINEAR );
-        
-        for (Action action : actions) {
-        	rewardStats.put(action.getId(), new SimpleStat());
-        }
+		populateMeanRewardStats();
  	}
 
 	@Override
@@ -78,7 +75,7 @@ public class SoftMaxLearner extends MultiArmBanditLearner {
 				//all exp distributions 
 				double sum = 0;
 	            for (Action thisAction : actions) {
-	            	double thisReward = rewardStats.get(thisAction.getId()).getMean();
+	            	double thisReward = meanRewardStats.get(thisAction.getId()).getMean();
 	            	double distr = Math.exp(thisReward / tempConstant);
 	            	expDistr.put(thisAction.getId(), distr);
 	            	sum += distr;
@@ -115,21 +112,19 @@ public class SoftMaxLearner extends MultiArmBanditLearner {
 	
 	@Override
 	public void setReward(String action, double reward) {
-		rewardStats.get(action).add(reward);
+		meanRewardStats.get(action).add(reward);
 		findAction(action).reward(reward);
 		rewarded = true;
 	}
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		buildMeanRewardStatModel(model);
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		return getMeanRewardStatModel();
 	}
 
 }

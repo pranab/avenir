@@ -44,7 +44,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Utility;
 import org.codehaus.jackson.map.ObjectMapper;

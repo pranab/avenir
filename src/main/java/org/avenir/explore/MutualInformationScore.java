@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.Pair;
 import org.chombo.util.Triplet;
 

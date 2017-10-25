@@ -40,7 +40,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.util.AttributeSplitHandler;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Utility;

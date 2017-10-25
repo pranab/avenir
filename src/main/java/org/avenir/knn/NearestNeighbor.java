@@ -43,7 +43,7 @@ import org.avenir.knn.Neighborhood.PredictionMode;
 import org.avenir.knn.Neighborhood.RegressionMethod;
 import org.avenir.util.ConfusionMatrix;
 import org.avenir.util.CostBasedArbitrator;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.SecondarySort;
 import org.chombo.util.Tuple;

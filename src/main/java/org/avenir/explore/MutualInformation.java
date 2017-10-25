@@ -44,7 +44,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.avenir.explore.MutualInformationScore.FeatureMutualInfo;
-import org.chombo.mr.FeatureField;
+import org.chombo.util.FeatureField;
 import org.chombo.util.FeatureSchema;
 import org.chombo.util.Pair;
 import org.chombo.util.TextTuple;
@@ -222,9 +222,14 @@ public class MutualInformation extends Configured implements Tool {
     	private void setDistrValue(FeatureField field) {
     		if  (field.isCategorical()) {
     			featureAttrBin= featureAttrVal;
-    		} else {
+    		} else if (field.isInteger()){
     			bin = Integer.parseInt(featureAttrVal) / field.getBucketWidth();
     			featureAttrBin = "" + bin;
+    		} else if (field.isDouble()){
+    			bin = (int)(Double.parseDouble(featureAttrVal) / field.getBucketWidth());
+    			featureAttrBin = "" + bin;
+    		} else {
+    			throw new IllegalStateException("invalid data type");
     		}
     	}
         

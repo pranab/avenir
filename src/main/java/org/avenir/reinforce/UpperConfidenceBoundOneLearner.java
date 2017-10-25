@@ -35,7 +35,7 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 	@Override
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
-		rewardScale = ConfigUtility.getInt(config, "reward.scale",  100);
+		populateMeanRewardStats();
 	}
 
 	/**
@@ -68,27 +68,16 @@ public class UpperConfidenceBoundOneLearner extends MultiArmBanditLearner {
 	public void setReward(String actionId, double reward) {
 		double scaledReward = reward / rewardScale;
 		meanRewardStats.get(actionId).add(scaledReward);
-		findAction(actionId).reward(reward);
+		findAction(actionId).reward(scaledReward);
 	}
 
 	@Override
 	public void buildModel(String model) {
-		String[] items = model.split(delim, -1);
-		String actionId = items[0];
-		int count = Integer.parseInt(items[1]);
-		double sum = Double.parseDouble(items[2]);
-		double mean = Double.parseDouble(items[3]);
-		meanRewardStats.put(actionId, new MeanStat(count,sum,mean));
+		buildMeanRewardStatModel(model);
 	}
 
 	@Override
 	public String[] getModel() {
-		String[] model = new String[actions.size()];
-		int i = 0;
-		for (String actionId : meanRewardStats.keySet()) {
-			model[i++] = meanRewardStats.get(actionId).toString();
-		}
-		return model;
+		return getMeanRewardStatModel();
 	}
-
 }
