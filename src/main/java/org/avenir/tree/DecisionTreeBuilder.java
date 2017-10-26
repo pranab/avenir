@@ -290,61 +290,65 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
               getSplitAttributes();
                 
               //all attributes
-          	 int splitId = 0;
+          	  int splitId = 0;
               for (int attr :  splitAttrs) {
-                	FeatureField field = schema. findFieldByOrdinal(attr);
-                	Object attrValue = null;
-                	//all splits
-                	List<List<AttributePredicate>> allSplitPredicates = null;
-                	if (field.isInteger()) {
-                		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
-                		Integer iValue = Integer.parseInt(items[attr + 1]);
-                		attrValue = iValue;
-                	} else if (field.isDouble()) {
-                		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
-                		Double dValue = Double.parseDouble(items[attr + 1]);
-                		attrValue = dValue;
-                	} else if (field.isCategorical()) {
-                		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
-                		attrValue = items[attr + 1];
+        	  	if (attr > items.length-2) {
+        	  		throw new IllegalStateException("attrbite index out of bound attr:" + attr + " rec length:" + (items.length-1));
+        	  	}
+        	  	
+            	FeatureField field = schema. findFieldByOrdinal(attr);
+            	Object attrValue = null;
+            	//all splits, first field is the decision path, so all fields shifted by 1
+            	List<List<AttributePredicate>> allSplitPredicates = null;
+            	if (field.isInteger()) {
+            		allSplitPredicates = splitManager.createIntAttrSplitPredicates(attr);
+            		Integer iValue = Integer.parseInt(items[attr + 1]);
+            		attrValue = iValue;
+            	} else if (field.isDouble()) {
+            		allSplitPredicates = splitManager.createDoubleAttrSplitPredicates(attr);
+            		Double dValue = Double.parseDouble(items[attr + 1]);
+            		attrValue = dValue;
+            	} else if (field.isCategorical()) {
+            		allSplitPredicates = splitManager.createCategoricalAttrSplitPredicates(attr);
+            		attrValue = items[attr + 1];
+            	}
+                
+            	//evaluate split predicates
+                for (List<AttributePredicate> predicates : allSplitPredicates) {
+                	//unique split id for each partion in a split
+                	++splitId;
+                	
+                	//predicates for a split
+                	boolean predicateMatched = false;
+                	for (AttributePredicate predicate : predicates) {
+                		if (predicate.evaluate(attrValue)) {
+                			//data belongs to this split segment
+                			predicateMatched = true;
+                			outKey.initialize();
+                			if (null == currenttDecPath) {
+                				outKey.add(predicate.toString());
+                    			outVal.set(record);
+                			} else {
+                				//existing predicates
+                				String[] curDecPathItems = items[0].split(decPathDelim);
+                				for (String curDecPathItem : curDecPathItems) {
+                    				outKey.add(curDecPathItem);
+                				}
+                				
+                				//new predicate
+                 				outKey.add("" + splitId + SPLIT_DELIM +   predicate.toString());
+                 				int pos = record.indexOf(fieldDelimRegex);
+                 				
+                 				//exclude predicate
+                    			outVal.set(record.substring(pos + fieldDelimRegex.length()));
+                			}               		
+            				context.write(outKey, outVal);
+                		}	
                 	}
-                    
-                	//evaluate split predicates
-                    for (List<AttributePredicate> predicates : allSplitPredicates) {
-                    	//unique split id for each partion in a split
-                    	++splitId;
-                    	
-                    	//predicates for a split
-                    	boolean predicateMatched = false;
-                    	for (AttributePredicate predicate : predicates) {
-                    		if (predicate.evaluate(attrValue)) {
-                    			//data belongs to this split segment
-                    			predicateMatched = true;
-                    			outKey.initialize();
-                    			if (null == currenttDecPath) {
-                    				outKey.add(predicate.toString());
-                        			outVal.set(record);
-                    			} else {
-                    				//existing predicates
-                    				String[] curDecPathItems = items[0].split(decPathDelim);
-                    				for (String curDecPathItem : curDecPathItems) {
-                        				outKey.add(curDecPathItem);
-                    				}
-                    				
-                    				//new predicate
-                     				outKey.add("" + splitId + SPLIT_DELIM +   predicate.toString());
-                     				int pos = record.indexOf(fieldDelimRegex);
-                     				
-                     				//exclude predicate
-                        			outVal.set(record.substring(pos + fieldDelimRegex.length()));
-                    			}               		
-                				context.write(outKey, outVal);
-                    		}	
-                    	}
-                    	if (!predicateMatched) {
-                    		throw new IllegalStateException("no matching predicate for attribute: " + attr);
-                    	}
-                    }
+                	if (!predicateMatched) {
+                		throw new IllegalStateException("no matching predicate for attribute: " + attr);
+                	}
+                }
               }
       	}
        
