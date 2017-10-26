@@ -184,6 +184,12 @@ public class DecisionTreeBuilder   extends Configured implements Tool {
             	int samplingBufferSize = conf.getInt("dtb.sub.sampling.buffer.size",  10000);
             	samplingBuffer = new String[samplingBufferSize];
             }
+            
+            //validate field ordinals
+            int recLen = conf.getInt("dtb.rec.len", -1);
+            if (recLen > 0) {
+            	schema.validateFieldOrdinals(recLen);
+            }
         }
         
 		@Override
