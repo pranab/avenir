@@ -177,6 +177,8 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	         configParams.put("max.reward", new java.lang.Double(appAlgoConfig.getDouble("max.reward")))
 	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
 	       }
+	       case MultiArmBanditLearnerFactory.OPTIMISTIC_SAMPSON_SAMPLER => {
+	       }
 	       case MultiArmBanditLearnerFactory.SOFT_MAX => {
 	         configParams.put("temp.constant", new java.lang.Double(appAlgoConfig.getDouble("temp.constant")))
 	         configParams.put("min.temp.constant", new java.lang.Double(appAlgoConfig.getDouble("min.temp.constant")))
