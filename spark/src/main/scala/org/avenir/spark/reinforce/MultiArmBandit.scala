@@ -24,13 +24,13 @@ import org.chombo.util.BasicUtils
 import org.avenir.reinforce.MultiArmBanditLearnerFactory
 import org.avenir.reinforce.MultiArmBanditLearner
 
-object ReinforcementLearningSystem extends JobConfiguration {
+object MultiArmBandit extends JobConfiguration {
    /**
     * @param args
     * @return
     */
    def main(args: Array[String]) {
-	   val appName = "reinforcementLearningSystem"
+	   val appName = "multiArmBandit"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
