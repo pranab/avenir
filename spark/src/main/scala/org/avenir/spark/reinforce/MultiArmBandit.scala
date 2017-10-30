@@ -184,6 +184,9 @@ object MultiArmBandit extends JobConfiguration {
 	         configParams.put("min.temp.constant", new java.lang.Double(appAlgoConfig.getDouble("min.temp.constant")))
 	         configParams.put("temp.reduction.algorithm", appAlgoConfig.getString("temp.reduction.algorithm"))
 	       }
+	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT => {
+	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
+	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }
 	     

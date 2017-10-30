@@ -92,7 +92,9 @@ public class ExponentialWeightLearner extends MultiArmBanditLearner {
 	public void buildModel(String model) {
 		String[] items = model.split(delim, -1);
 		String actionId = items[0];
-		double pr = Double.parseDouble(items[1]);
+		double weight = Double.parseDouble(items[1]);
+		weightDistr.put(actionId, weight);
+		double pr = Double.parseDouble(items[2]);
 		sampler.add(actionId, pr);
 	}
 
@@ -101,10 +103,11 @@ public class ExponentialWeightLearner extends MultiArmBanditLearner {
 	public String[] getModel() {
 		String[] model = new String[actions.size()];
 		int i = 0;
-		//each action and it's distribution
+		//each actioonID , weight and distribution
 		for (Action action : actions) {
 			String actionID = action.getId();
-			model[i++] = actionID + delim + BasicUtils.formatDouble(sampler.get(actionID), 6);
+			model[i++] = actionID + delim + BasicUtils.formatDouble(weightDistr.get(actionID), 6) +  delim + 
+					BasicUtils.formatDouble(sampler.get(actionID), 6);
 		}
 		return model;
 	}
