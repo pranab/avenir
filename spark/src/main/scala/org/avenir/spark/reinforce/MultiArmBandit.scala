@@ -187,6 +187,12 @@ object MultiArmBandit extends JobConfiguration {
 	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT => {
 	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
 	       }
+	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT_EXPERT => {
+	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
+	         configParams.put("num.experts", new Integer(appAlgoConfig.getInt("num.experts")))
+	         configParams.put("experts",BasicUtils.intArrayFromString(appAlgoConfig.getString("experts"), 
+	             BasicUtils.configDelim))
+	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }
 	     
