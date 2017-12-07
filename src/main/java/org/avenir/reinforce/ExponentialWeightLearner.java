@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.chombo.stats.CategoricalSampler;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.ConfigUtility;
 
 
@@ -84,17 +85,31 @@ public class ExponentialWeightLearner extends MultiArmBanditLearner {
 	}
 
 
+	/* (non-Javadoc)
+	 * @see org.avenir.reinforce.MultiArmBanditLearner#buildModel(java.lang.String)
+	 */
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		String[] items = model.split(delim, -1);
+		String actionId = items[0];
+		double weight = Double.parseDouble(items[1]);
+		weightDistr.put(actionId, weight);
+		double pr = Double.parseDouble(items[2]);
+		sampler.add(actionId, pr);
 	}
 
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size()];
+		int i = 0;
+		//each actioonID , weight and distribution
+		for (Action action : actions) {
+			String actionID = action.getId();
+			model[i++] = actionID + delim + BasicUtils.formatDouble(weightDistr.get(actionID), 6) +  delim + 
+					BasicUtils.formatDouble(sampler.get(actionID), 6);
+		}
+		return model;
 	}
 
 }

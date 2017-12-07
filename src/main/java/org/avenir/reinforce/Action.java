@@ -68,6 +68,7 @@ public class Action implements Serializable {
 	 */
 	public void reward(double reward) {
 		totalReward += reward;
+		++trialCount;
 	}
 	
 	/**
@@ -85,6 +86,13 @@ public class Action implements Serializable {
 	 */
 	public double getTotalReward() {
 		return totalReward;
+	}
+	
+	/**
+	 * @param totalReward
+	 */
+	public void setTotalReward(double totalReward) {
+		this.totalReward = totalReward;
 	}
 	
 	/**

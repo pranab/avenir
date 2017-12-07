@@ -282,7 +282,14 @@ public abstract class MultiArmBanditLearner implements Serializable {
 		int count = Integer.parseInt(items[1]);
 		double sum = Double.parseDouble(items[2]);
 		double mean = Double.parseDouble(items[3]);
+		
+		//update stats
 		meanRewardStats.put(actionId, new MeanStat(count,sum,mean));
+		
+		//update action state
+		Action action = findAction(actionId);
+		action.setTrialCount(count);
+		action.setTotalReward(sum);
 	}
 	
 	/**

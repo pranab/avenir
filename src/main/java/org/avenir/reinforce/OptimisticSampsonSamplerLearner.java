@@ -59,7 +59,7 @@ public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
 	@Override
 	public void buildModel(String model) {
 		super.buildModel(model);
-		computeRewardMean();
+		meanRewardCalculated = false;
 	}	
 	
 	/* (non-Javadoc)

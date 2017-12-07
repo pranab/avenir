@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.DynamicBean;
 import org.chombo.util.Utility;
 
@@ -99,6 +100,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
 		private boolean selectionUnique;
 		private int minReward;
 		private boolean outputDecisionCount;
+		private static final int GR_ORD = 0;
+		private static final int IT_ORD = 1;
 		
 		
 		/* (non-Javadoc)
@@ -149,7 +152,7 @@ public class GreedyRandomBandit   extends Configured implements Tool {
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException {
             items  =  value.toString().split(fieldDelimRegex);
-            groupID = items[0];
+            groupID = items[GR_ORD];
     		if (null == curGroupID || !groupID.equals(curGroupID)) {
     			//new group
     			if (null == curGroupID) {
@@ -183,7 +186,8 @@ public class GreedyRandomBandit   extends Configured implements Tool {
          * 
          */
         private void collectGroupItems() {
-        	groupedItems.createtem(items[1], Integer.parseInt(items[countOrdinal]), Integer.parseInt(items[rewardOrdinal]));
+        	int reward = BasicUtils.roundToInt(Double.parseDouble(items[rewardOrdinal]));
+        	groupedItems.createtem(items[IT_ORD], Integer.parseInt(items[countOrdinal]), reward);
         }
         
         /**

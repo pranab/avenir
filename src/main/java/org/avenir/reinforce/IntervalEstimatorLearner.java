@@ -172,13 +172,21 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		String[] items = model.split(delim, -1);
+		String actionId = items[0];
+		HistogramStat stat = rewardDistr.get(actionId);
+		stat.initializeBins(items, 1);
 	}
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size()];
+		int i = 0;
+		for (String actionId : rewardDistr.keySet()) {
+			HistogramStat stat = rewardDistr.get(actionId);
+			stat.withSerializeBins(true);
+			model[i++] = stat.toString();
+		}
+		return model;
 	}
 }

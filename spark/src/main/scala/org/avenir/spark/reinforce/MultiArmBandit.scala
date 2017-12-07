@@ -24,13 +24,13 @@ import org.chombo.util.BasicUtils
 import org.avenir.reinforce.MultiArmBanditLearnerFactory
 import org.avenir.reinforce.MultiArmBanditLearner
 
-object ReinforcementLearningSystem extends JobConfiguration {
+object MultiArmBandit extends JobConfiguration {
    /**
     * @param args
     * @return
     */
    def main(args: Array[String]) {
-	   val appName = "reinforcementLearningSystem"
+	   val appName = "multiArmBandit"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -177,10 +177,21 @@ object ReinforcementLearningSystem extends JobConfiguration {
 	         configParams.put("max.reward", new java.lang.Double(appAlgoConfig.getDouble("max.reward")))
 	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
 	       }
+	       case MultiArmBanditLearnerFactory.OPTIMISTIC_SAMPSON_SAMPLER => {
+	       }
 	       case MultiArmBanditLearnerFactory.SOFT_MAX => {
 	         configParams.put("temp.constant", new java.lang.Double(appAlgoConfig.getDouble("temp.constant")))
 	         configParams.put("min.temp.constant", new java.lang.Double(appAlgoConfig.getDouble("min.temp.constant")))
 	         configParams.put("temp.reduction.algorithm", appAlgoConfig.getString("temp.reduction.algorithm"))
+	       }
+	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT => {
+	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
+	       }
+	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT_EXPERT => {
+	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
+	         configParams.put("num.experts", new Integer(appAlgoConfig.getInt("num.experts")))
+	         configParams.put("experts",BasicUtils.intArrayFromString(appAlgoConfig.getString("experts"), 
+	             BasicUtils.configDelim))
 	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }

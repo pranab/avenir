@@ -21,6 +21,7 @@ package org.avenir.reinforce;
 import java.util.Map;
 
 import org.chombo.stats.CategoricalSampler;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.ConfigUtility;
 
 /**
@@ -40,20 +41,32 @@ public class ExponentialWeightExpertLearner extends MultiArmBanditLearner {
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
 		distrConstant  = ConfigUtility.getDouble(config, "distr.constant", 0.1);
+		int numExperts  = ConfigUtility.getInt(config, "num.experts");
  		numActions = actions.size();
         
-        //expert actions distributions
-        Map<String,double[]> experts = (Map<String,double[]>)config.get("experts");
-        numExperts = experts.size();
-        this.experts = new double[numExperts][numActions];
-        int i = 0;
-        for (String id : experts.keySet()) {
-        	this.experts[i++] = experts.get(id);
+        //flattened expert preference matrix
+        double[] experts = (double[])config.get("experts");
+        if (experts.length != numExperts * numActions) {
+        	throw new IllegalStateException("invalid expert prefrence matrix size");
         }
         
-        //weights
+        //build preference matrix
+        this.experts = new double[numExperts][numActions];
+        int r = 0;
+        int c = 0;
+        for (double exp : experts) {
+        	this.experts[r][c++] = exp;
+        	
+        	//next row
+        	if (c % numActions == 0) {
+        		++r;
+        		c = 0;
+        	}
+        }
+        
+        //initial expert weights
         expertWeights = new double[numExperts];
-        for (i = 0; i < numExperts; ++i) {
+        for (int i = 0; i < numExperts; ++i) {
         	expertWeights[i] = 1;
         }
         
@@ -124,15 +137,35 @@ public class ExponentialWeightExpertLearner extends MultiArmBanditLearner {
 
 	@Override
 	public void buildModel(String model) {
-		// TODO Auto-generated method stub
-		
+		String[] items = model.split(delim, -1);
+		if (items[0].equals("action")) {
+			String actionId = items[1];
+			double pr = Double.parseDouble(items[2]);
+			sampler.add(actionId, pr);
+		} else {
+			int expertIndex = Integer.parseInt(items[1]);
+			double weight = Double.parseDouble(items[2]);
+			expertWeights[expertIndex] = weight;
+		}
 	}
 
 
 	@Override
 	public String[] getModel() {
-		// TODO Auto-generated method stub
-		return null;
+		String[] model = new String[actions.size() + expertWeights.length];
+		int i = 0;
+		
+		//each actioonID and distribution
+		for (Action action : actions) {
+			String actionID = action.getId();
+			model[i++] = "action" + delim + actionID + delim + BasicUtils.formatDouble(sampler.get(actionID), 6);
+		}
+		
+		//weight index and distribution
+		for (int j = 0; j < expertWeights.length; ++j) {
+			model[i++] = "weight" + delim + i + delim + BasicUtils.formatDouble(expertWeights[j], 6);
+		}
+		return model;
 	}
 
 
