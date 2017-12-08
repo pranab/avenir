@@ -193,6 +193,16 @@ object MultiArmBandit extends JobConfiguration {
 	         configParams.put("experts",BasicUtils.intArrayFromString(appAlgoConfig.getString("experts"), 
 	             BasicUtils.configDelim))
 	       }
+	       case MultiArmBanditLearnerFactory.INTERVAL_ESTIMATOR => {
+	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
+	         configParams.put("confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("confidence.limit")))
+	         configParams.put("min.confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("min.confidence.limit")))
+	         configParams.put("confidence.limit.reduction.step", new java.lang.Double(
+	             appAlgoConfig.getDouble("confidence.limit.reduction.step")))
+	         configParams.put("confidence.limit.reduction.round.interval", new java.lang.Double(
+	             appAlgoConfig.getDouble("confidence.limit.reduction.round.interval")))
+	         configParams.put("min.reward.distr.sample", new Integer(appAlgoConfig.getInt("min.reward.distr.sample")))
+	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }
 	     

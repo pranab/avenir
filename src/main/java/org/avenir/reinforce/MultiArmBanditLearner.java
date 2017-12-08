@@ -299,7 +299,7 @@ public abstract class MultiArmBanditLearner implements Serializable {
 		String[] model = new String[actions.size()];
 		int i = 0;
 		for (String actionId : meanRewardStats.keySet()) {
-			model[i++] = meanRewardStats.get(actionId).toString();
+			model[i++] = actionId + delim + meanRewardStats.get(actionId).toString();
 		}
 		return model;
 	}
