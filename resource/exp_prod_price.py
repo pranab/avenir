@@ -10,13 +10,35 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from sampler import *
 
-class DiscountOffer:
-	def __init__(self, leadTime, discountRate, invetoryMean, invetoryStdDev, demandMean, demandStdDev):
-		self.leadTime = leadTime
-		self.discountRate = discountRate
-		self.invDistr = GaussianRejectSampler(invetoryMean,invetoryStdDev)
-		self.demanDistr = GaussianRejectSampler(demandMean,demandStdDev)
+class PerishableProduct:
+	def __init__(self, pid, cost, price):
+		self.pid = pid
+		self.cost = cost
+		self.price = price
+		self.profit = price - cost
+		self.invDistr = {}
+		self.demDistr = {}
 	
+	def setInvStat(self,leadTime,invMean,invStdDev):
+		iDistr = self.invDistr.get(leadTime, GaussianRejectSampler(invMean,invStdDev))
+		self.invDistr[leadTime] = iDistr
+		
+	def setDemStat(self, leadTime, discount, demMean, demStdDev):
+		dDistrMap = self.demDistr.get(leadTime, {})	
+		self.demDistr[leadTime] = dDistrMap
+		dDistr = dDistrMap.get(discount, GaussianRejectSampler(demMean,demStdDev))
+		dDistrMap[discount] = dDistr
+	
+	def sampleInv(self, leadTime):
+		iDistr = self.invDistr[leadTime]
+		return int(iDistr.sample())
+	
+	def sampleDem(self, leadTime, discount):
+		dDistr = self.demDistr[leadTime][discount]
+		return int(dDistr.sample())
+
+
+class DiscountOffer:
 	@classmethod
 	def initCls(cls, numProds, leadTimes, discounts):
 		cls.numProds = numProds
@@ -69,24 +91,63 @@ class DiscountOffer:
 			print "%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f" %(pid, ld.strip(), cost, price, iStat[0], iStat[1], dStat[0], dStat[1])				
 			
 		fp.close()
-						
-	def sampleInv():
-		return self.invDistr.sample()
+				
+	@staticmethod
+	def sampleReward(modelFilePath, decFilePath):
+		#load sampling model for each product
+		fp = open(modelFilePath, "r")
+		lastPid = ""
+		prodMap = {}
+		
+		for line in fp:
+			items = line.split(",")
+			pid = items[0]
+			ld = items[1]
+			discnt = ld.split(":")
+			leadTime = int(discnt[0])
+			discount = int(discnt[1])
+			cost = float(items[2])
+			price = float(items[3])
+			invMean = float(items[4])
+			invStdDev = float(items[5])
+			demMean = float(items[6])
+			demStdDev = float(items[7])
+			if (not pid == lastPid):
+				prod = PerishableProduct(pid, cost, price)
+				prodMap[pid] = prod
+				lastPid = pid
+			
+			prod.setInvStat(leadTime,invMean,invStdDev) 
+			prod.setDemStat(leadTime, discount, demMean, demStdDev)
+		fp.close()
 
-	def sampleDemand():
-		return self.demandDistr.sample()
-
-class PerishableProduct:
-	def __init__(self):
-		self.cost = float(randint(10, 50))
-		self.price = self.cost * (1.03 + 0.1 * random())
-		self.offers = []
-	
-	def addDiscountOffer(self, offer):
-		self.offers.append(offer)	
-
-
-	
+		#profit or loss for each product lead time discount decision
+		fp = open(decFilePath, "r")
+		lastPid = ""
+		
+		for line in fp:
+			items = line.split(",")
+			pid = items[0]
+			ld = items[1].strip()
+			discnt = ld.split(":")
+			leadTime = int(discnt[0])
+			discount = int(discnt[1])
+			
+			prod = prodMap[pid]
+			inv = prod.sampleInv(leadTime)	
+			dem = prod.sampleDem(leadTime, discount)
+			if (dem > inv):
+				#everything sold
+				profit = inv  * prod.profit
+			else:
+				#partial inventory sold
+				profit = dem * prod.profit
+				loss = (inv - dem) * prod.cost
+				profit = profit - loss
+			
+			print "%s,%s,%.2f" %(pid, ld, profit)
+		fp.close()
+			
 		
 ##################################
 op = sys.argv[1]
@@ -95,9 +156,13 @@ leadTimes = array('i', [3,5])
 discounts = array('i', [5,10])
 
 DiscountOffer.initCls(numProds, leadTimes, discounts)
-if (op == "discounts"):
+if (op == "createDiscounts"):
 	DiscountOffer.createDiscounts()		
-elif (op == "sampModel"):
+elif (op == "createSampModel"):
 	prodFilePath = sys.argv[3]
 	DiscountOffer.createDistrModel(prodFilePath)
+elif (op == "sampleReward"):
+	modelFilePath = sys.argv[3]
+	decFilePath = sys.argv[4]
+	DiscountOffer.sampleReward(modelFilePath, decFilePath)
 	
