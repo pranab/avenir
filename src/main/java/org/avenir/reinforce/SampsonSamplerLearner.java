@@ -46,6 +46,21 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		binWidth = ConfigUtility.getInt(config, "bin.width");
 	}
 	
+	@Override
+	public void merge(MultiArmBanditLearner that) {
+		SampsonSamplerLearner thatLearner = (SampsonSamplerLearner)that;
+		for (Action action : actions) {
+			String actionId = action.getId();
+			NonParametricDistrRejectionSampler<IntRange> thisDistr = nonParamDistr.get(actionId);
+			NonParametricDistrRejectionSampler<IntRange> thatDistr = thatLearner.nonParamDistr.get(actionId);
+			thisDistr.merge(thatDistr);
+			
+			int count = trialCounts.get(actionId);
+			int thatCount = thatLearner.trialCounts.get(actionId);
+			trialCounts.put(actionId, count + thatCount);
+		}
+	}
+	
 	/* (non-Javadoc)
 	 * @see org.avenir.reinforce.MultiArmBanditLearner#setReward(java.lang.String, double)
 	 */
@@ -107,6 +122,17 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	@Override
 	public void buildModel(String model) {
 		Record record = new Record(model, delim);
+		if (record.getSize() > 1) {
+			buildExistingModel(record);
+		} else {
+			buildInitialModel(record);
+		}
+	}
+	
+	/**
+	 * @param record
+	 */
+	private void buildExistingModel(Record record) {
 		String actionId = record.getString();
 		int numBins = record.getInt();
 		
@@ -122,6 +148,30 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 			distr.add(range, value);
 			count += value;
 		}
+		
+		nonParamDistr.put(actionId, distr);
+		trialCounts.put(actionId, count);
+	}
+
+	/**
+	 * @param record
+	 */
+	private void buildInitialModel(Record record) {
+		String actionId = record.getString();
+		int numBins = maxReward / binWidth + 1;
+		
+		//populate distribution
+		NonParametricDistrRejectionSampler<IntRange> distr = new NonParametricDistrRejectionSampler<IntRange>();
+		int count = 0;
+		for (int i = 0; i < numBins; ++i) {
+			int binIndex = i;
+			int binBeg = binIndex * binWidth;
+			int binEnd = binBeg + binWidth - 1;
+			IntRange range = new IntRange(binBeg, binEnd);
+			int value = 1;
+			distr.add(range, value);
+			count += value;
+		}		
 		nonParamDistr.put(actionId, distr);
 		trialCounts.put(actionId, count);
 	}
