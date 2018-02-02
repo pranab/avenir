@@ -53,11 +53,18 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 			String actionId = action.getId();
 			NonParametricDistrRejectionSampler<IntRange> thisDistr = nonParamDistr.get(actionId);
 			NonParametricDistrRejectionSampler<IntRange> thatDistr = thatLearner.nonParamDistr.get(actionId);
-			thisDistr.merge(thatDistr);
+			if (null != thatDistr) {
+				if (null == thisDistr) {
+					thisDistr = new NonParametricDistrRejectionSampler<IntRange>();
+					nonParamDistr.put(actionId, thisDistr);
+				}
+				thisDistr.merge(thatDistr);
+			}
 			
-			int count = trialCounts.get(actionId);
-			int thatCount = thatLearner.trialCounts.get(actionId);
-			trialCounts.put(actionId, count + thatCount);
+			Integer count = trialCounts.get(actionId);
+			Integer thatCount = thatLearner.trialCounts.get(actionId);
+			int aggrCount = (null == count ? 0 : count) + (null == thatCount ? 0 : thatCount);
+			trialCounts.put(actionId, aggrCount);
 		}
 	}
 	
