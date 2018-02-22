@@ -182,12 +182,12 @@ object MultiArmBandit extends JobConfiguration {
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_TWO => {
 	         configParams.put("alpha", new java.lang.Double(appAlgoConfig.getDouble("alpha")))
 	       }
-	       case MultiArmBanditLearnerFactory.SAMPSON_SAMPLER => {
+	       case MultiArmBanditLearnerFactory.THOMPSON_SAMPLER => {
 	         configParams.put("min.sample.size", new java.lang.Integer(getIntParamOrElse(appAlgoConfig, "min.sample.size", 8)))
 	         configParams.put("max.reward", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "max.reward")))
 	         configParams.put("bin.width", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "bin.width")))
 	       }
-	       case MultiArmBanditLearnerFactory.OPTIMISTIC_SAMPSON_SAMPLER => {
+	       case MultiArmBanditLearnerFactory.OPTIMISTIC_THOMPSON_SAMPLER => {
 	       }
 	       case MultiArmBanditLearnerFactory.SOFT_MAX => {
 	         configParams.put("temp.constant", new java.lang.Double(appAlgoConfig.getDouble("temp.constant")))

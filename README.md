@@ -43,6 +43,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2017/06/26/project-assignment-optimization-with-simulated-annealing-on-spark/
 * https://pkghosh.wordpress.com/2017/09/18/handling-rare-events-and-class-imbalance-in-predictive-modeling-for-machine-failure/
 * https://pkghosh.wordpress.com/2017/10/09/combating-high-cardinality-features-in-supervised-machine-learning/
+* https://pkghosh.wordpress.com/2018/02/21/optimizing-discount-price-for-perishable-products-with-thompson-sampling-using-spark/
 
 
 ## Getting started

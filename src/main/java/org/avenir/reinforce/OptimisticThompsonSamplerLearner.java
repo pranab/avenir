@@ -30,7 +30,7 @@ import org.chombo.util.IntRange;
  * @author pranab
  *
  */
-public class OptimisticSampsonSamplerLearner extends SampsonSamplerLearner {
+public class OptimisticThompsonSamplerLearner extends ThompsonSamplerLearner {
 	private Map<String, Integer> meanRewards = new HashMap<String, Integer>();
 	private boolean meanRewardCalculated;
 	

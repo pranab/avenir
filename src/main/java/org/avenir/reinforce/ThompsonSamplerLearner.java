@@ -30,7 +30,7 @@ import org.chombo.util.Record;
  * @author pranab
  *
  */
-public class SampsonSamplerLearner extends MultiArmBanditLearner {
+public class ThompsonSamplerLearner extends MultiArmBanditLearner {
 	protected Map<String, NonParametricDistrRejectionSampler<IntRange>> nonParamDistr = 
 			new HashMap<String, NonParametricDistrRejectionSampler<IntRange>>();
 	protected Map<String, Integer> trialCounts = new HashMap<String, Integer>();
@@ -48,7 +48,7 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	
 	@Override
 	public void merge(MultiArmBanditLearner that) {
-		SampsonSamplerLearner thatLearner = (SampsonSamplerLearner)that;
+		ThompsonSamplerLearner thatLearner = (ThompsonSamplerLearner)that;
 		for (Action action : actions) {
 			String actionId = action.getId();
 			NonParametricDistrRejectionSampler<IntRange> thisDistr = nonParamDistr.get(actionId);
