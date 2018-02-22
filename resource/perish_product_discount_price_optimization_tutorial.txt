@@ -1,0 +1,40 @@
+This tutorial is discount price optimization for perishable products using sampson sampling
+MAB algorithm. 
+
+Path etc shown here corresposnds to my environment. Please Change them  as needed 
+for your environment
+
+Build
+=====
+Follow instructions in spark_dependency.txt
+
+Create discounts for products
+=============================
+./samp.sh createDiscounts <num_products>  discount.txt
+num_products = number of products
+
+Create inventory and demand distribution model
+==============================================
+./samp.sh createSampModel <num_products> discount.txt model.txt
+
+Start Spark cluster
+===================
+
+First iteration
+===============
+Set current.decision.round = 1
+Copy discount.txt and initial model : cp discount.txt ./input/samp/model.txt
+Since there is no reward data available change the parameter name reward.feedback.file.path to xreward.feedback.file.path
+Run spark job :   ./samp.sh sampSampling
+
+Further iteration
+=================
+Set current.decision.round = 3 (e.g)
+Copy updated model to input directory : ./samp.sh copyUpdatedModel
+Generate reward for current decisions : ./samp.sh sampleReward <num_products> model.txt
+Restore parameter reward.feedback.file.path
+Run spark job :   ./samp.sh sampSampling
+
+Configuration
+=============
+It's in samp.conf file

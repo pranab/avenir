@@ -45,6 +45,7 @@ object MultiArmBandit extends JobConfiguration {
 	   val batchSize = getMandatoryIntParam(appConfig, "decision.batch.size")
 	   val rewardFeedbackFilePath = getOptionalStringParam(appConfig, "reward.feedback.file.path")
 	   val modelStateOutputFilePath = getMandatoryStringParam(appConfig, "model.state.output.file.path")
+	   val curDecRound = getMandatoryIntParam(appConfig, "current.decision.round")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -127,23 +128,28 @@ object MultiArmBandit extends JobConfiguration {
 	  
 	   //save recommended actions
 	   if (saveOutput) {
-	     groupActions.saveAsTextFile(outputPath)
+		   //save decisions as the primary output
+		   groupActions.saveAsTextFile(outputPath)
+	     
+		   //model needs updating if updated with new reward or this is the first round
+		   val saveModel = rewardFeedbackFilePath match {
+		     case Some(path:String) => true	     
+		     case None => curDecRound == 1
+		   }
+		   
+		   //save model as the secondary output
+		   if (saveModel) {
+			   //save state
+			   val modelState = groupWiseLearners.flatMapValues(v => {
+			         val state = v.getModel()
+			         state
+			       }).map(kv => {
+			         kv._1 + fieldDelimOut + kv._2
+			       })
+			    modelState.saveAsTextFile(modelStateOutputFilePath)
+		   }
 	   }
-	   
-	   //save state
-	   rewardFeedbackFilePath match {
-	     case Some(path:String) => {
-	       //only if model state was updated
-	       val modelState = groupWiseLearners.flatMapValues(v => {
-	         val state = v.getModel()
-	         state
-	       }).map(kv => {
-	         kv._1 + kv._2
-	       })
-	       modelState.saveAsTextFile(modelStateOutputFilePath)
-	     }
-	     case None =>
-	   }
+
    }
    
    /**

@@ -144,12 +144,12 @@ class DiscountOffer:
 				profit = dem * prod.profit
 				loss = (inv - dem) * prod.cost
 				profit = profit - loss
-			
+			profit = profit + 8000
 			print "%s,%s,%.2f" %(pid, ld, profit)
 		fp.close()
 			
 		
-##################################
+##########################################################################################
 op = sys.argv[1]
 numProds = int(sys.argv[2])
 leadTimes = array('i', [3,5])
