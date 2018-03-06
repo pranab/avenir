@@ -2,12 +2,14 @@
 
 import sys
 from random import randint
+import random
 import time
 import uuid
 from datetime import datetime
 
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
 	"N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"]
+numTokens = tokens[:10]
 
 def genID(len):
 	id = ""
@@ -15,6 +17,11 @@ def genID(len):
 		id = id + selectRandomFromList(tokens)
 	return id
 		
+def genNumID(len):
+	id = ""
+	for i in range(len):
+		id = id + selectRandomFromList(numTokens)
+	return id
 		
 def selectRandomFromList(list):
 	return list[randint(0, len(list)-1)]
@@ -56,3 +63,16 @@ def range_limit(val, min, max):
 		val = max
 	return val	
 	
+def stripFileLines(filePath, offset):
+	fp = open(filePath, "r")
+	for line in fp:
+		stripped = line[offset:len(line) - 1 - offset]
+		print stripped
+	fp.close()
+
+def genLatLong(lat1, long1, lat2, long2):
+ 	lat = lat1 + (lat2 - lat1) * random.random()
+	long = long1 + (long2 - long1) * random.random()
+	return (lat, long)
+	
+
