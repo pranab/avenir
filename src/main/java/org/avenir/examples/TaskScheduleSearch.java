@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.avenir.optimize.BasicSearchDomain;
+import org.avenir.optimize.PopulationSearchDomain;
 import org.chombo.util.BasicUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -33,12 +34,9 @@ import org.codehaus.jackson.map.ObjectMapper;
  * @author pranab
  *
  */
-public class TaskScheduleSearch extends BasicSearchDomain {
+public class TaskScheduleSearch extends PopulationSearchDomain {
 	private TaskSchedule taskSchedule;
 	private SimpleDateFormat dateFormatter;
-	
-	private static final String compDelim = ";";
-	private static final String compItemDelim = ":";
 	
 	public TaskScheduleSearch() {
 	}
@@ -129,17 +127,6 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		return searchDomain;
 	}
 
-	@Override
-	public String[] getSolutionComponenets(String solution) {
-		return solution.split(compDelim);
-	}
-
-	@Override
-	public String aggregateSolutionComponenets(String[] components) {
-		return BasicUtils.join(components, compDelim);
-	}
-
-	
 	/**
 	 * @param components
 	 * @param endIndex
