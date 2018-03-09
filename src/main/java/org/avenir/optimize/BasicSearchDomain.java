@@ -19,8 +19,10 @@ package org.avenir.optimize;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,22 +71,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 			boolean debugOn) ;
 	
 	/**
-	 * @param configFile
-	 * @param crossOverRetryCountLimit
-	 * @param mutationRetryCountLimit
-	 * @param debugOn
-	 */
-	//public abstract void intitPopulationStrategy(String configFile, int crossOverRetryCountLimit,  
-	//		int mutationRetryCountLimit, boolean debugOn);
-	/**
 	 * @return
 	 */
 	public abstract  BasicSearchDomain createTrajectoryStrategyClone();
-	
-	/**
-	 * @return
-	 */
-	//public abstract BasicSearchDomain createPopulationStrategyClone();
 	
 
 	/**
@@ -167,7 +156,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 			System.out.println("currentSolution before creating new:" + currentSolution);
 		}
 		String solution =  refCurrent ? currentSolution :initialSolution;
-		return mutate(solution);
+		return mutateSolution(solution);
 	}
 	
 	/**
@@ -238,6 +227,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	public  String createSolution() {
+		prepareCreateSolution();
 		String[] components = new String[numComponents];
 		for (int i = 0; i < numComponents; ++i) {
 			addComponent(components, i);
@@ -246,6 +236,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 			}
 		}
 		return this.aggregateSolutionComponenets(components);
+	}
+	
+	public void prepareCreateSolution() {
 	}
 	
 	/**
@@ -307,8 +300,30 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return cost;
 	}
 	
+	/**
+	 * @return
+	 */
 	public  int getNumComponents(){
 		return numComponents;
+	}
+	
+	/**
+	 * 
+	 */
+	public void prepareMutateSolution() {
+	}
+	
+	/**
+	 * @param solution
+	 * @param numSolutions
+	 * @return
+	 */
+	public List<String> mutateSolution(String solution, int numSolutions) {
+		List<String> solutions = new ArrayList<String>();
+		for (int i = 0; i < numSolutions; ++i) {
+			solutions.add(mutateSolution(solution));
+		}
+		return solutions;
 	}
 		
 	/**
@@ -316,7 +331,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @return
 	 */
 	
-	public String mutate(String solution) {
+	public String mutateSolution(String solution) {
 		String[] components = getSolutionComponenets(solution);
 		boolean valid = false;
 		
@@ -355,13 +370,36 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return newSoln;
 	}
 	
+	/**
+	 * @param solution
+	 * @return
+	 */
 	public String[] getSolutionComponenets(String solution) {
 		return solution.split(compDelim);
 	}
 
+	/**
+	 * @param components
+	 * @return
+	 */
 	public String aggregateSolutionComponenets(String[] components) {
 		return BasicUtils.join(components, compDelim);
 	}
 	
+	/**
+	 * @param component
+	 * @return
+	 */
+	public String[] getSolutionComponentItems(String component) {
+		return component.split(compItemDelim);
+	}
 	
+	
+	/**
+	 * @param items
+	 * @return
+	 */
+	public String aggregateSolutionComponenetItems(String[] items) {
+		return BasicUtils.join(items, compItemDelim);
+	}
 }

@@ -28,6 +28,8 @@ import org.chombo.util.Pair;
  *
  */
 public class SolutionWithCost extends Pair<String, Double> implements Comparable<SolutionWithCost>, Serializable {
+	private Mutation mutation;
+	private int iterationNum;
 
 	/**
 	 * @param solution
@@ -38,6 +40,55 @@ public class SolutionWithCost extends Pair<String, Double> implements Comparable
 		right = cost;
 	}
 	
+	/**
+	 * @param solution
+	 * @param cost
+	 * @param mutation
+	 */
+	public SolutionWithCost(String solution, double cost, Mutation mutation) {
+		this(solution, cost);
+		this.mutation = mutation;
+	}
+
+	/**
+	 * @param solution
+	 * @param cost
+	 * @param mutation
+	 * @param iterationNum
+	 */
+	public SolutionWithCost(String solution, double cost, Mutation mutation, int iterationNum) {
+		this(solution, cost, mutation);
+		this.iterationNum = iterationNum;
+	}
+
+	/**
+	 * @return
+	 */
+	public Mutation getMutation() {
+		return mutation;
+	}
+
+	/**
+	 * @param mutation
+	 */
+	public void setMutation(Mutation mutation) {
+		this.mutation = mutation;
+	}
+	
+	/**
+	 * @return
+	 */
+	public int getIterationNum() {
+		return iterationNum;
+	}
+	
+	/**
+	 * @param iterationNum
+	 */
+	public void setIterationNum(int iterationNum) {
+		this.iterationNum = iterationNum;
+	}
+
 	/**
 	 * @return
 	 */

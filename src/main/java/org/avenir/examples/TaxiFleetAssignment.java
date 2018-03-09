@@ -20,9 +20,14 @@ package org.avenir.examples;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.avenir.optimize.BasicSearchDomain;
+import org.avenir.optimize.Mutation;
+import org.avenir.optimize.SolutionWithCost;
 import org.avenir.optimize.TabuSearchDomain;
 import org.chombo.util.BasicUtils;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -35,6 +40,13 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 	private TaxiFleet taxiFleet;
 	private int numTaxis;
 	private int numPassengers;
+	private List<Taxi> candidateTaxis;
+	private List<Passenger> candidatePassengers;
+	private List<String> idleTaxis = new ArrayList<String>();
+	private Set<String> taxiIds = new HashSet<String>();
+	private static final int PASSENGER_SWAP = 0;
+	private static final int EXCESS_PASSENGER_SWAP = 1;
+	private static final int EXCESS_TAXI_SWAP = 2;
 	
 	@Override
 	public void initTrajectoryStrategy(String configFile, int maxStepSize,
@@ -64,6 +76,11 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public  double getSolutionCost(String solution) {
+		return 0;
+	}
 
 	@Override
 	protected void replaceSolutionComponent(String[] comonents, int index) {
@@ -91,19 +108,112 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 
 	@Override
 	protected void addComponent(String[] componenets, int index) {
-		List<Taxi> candidateTaxis = taxiFleet.getTaxis();
-		List<Passenger> candidatePassengers = taxiFleet.getPassengers();
-		if (numTaxis < numPassengers) {
-			candidatePassengers = BasicUtils.selectRandomFromList(candidatePassengers, numTaxis);
-		} else if (numTaxis > numPassengers) {
-			candidateTaxis = BasicUtils.selectRandomFromList(candidateTaxis, numPassengers);
-		}
-		
-		for (Taxi taxi : candidateTaxis) {
-			
-		}
+		String taxiId  = candidateTaxis.get(index).getId();
+		String passengerId = candidatePassengers.get(index).getId();
+		String component = taxiId + compItemDelim + passengerId;
+		componenets[index] = component;
 	}
 
+	@Override
+	public void prepareCreateSolution() {
+		candidateTaxis = taxiFleet.getTaxis();
+		candidatePassengers = taxiFleet.getPassengers();
+		if (numTaxis < numPassengers) {
+			//get shorter passenger list
+			candidatePassengers = BasicUtils.selectRandomFromList(candidatePassengers, numTaxis);
+		} else if (numTaxis > numPassengers) {
+			//get shorter taxi fleet
+			candidateTaxis = BasicUtils.selectRandomFromList(candidateTaxis, numPassengers);
+		} else {
+			//scramble taxi list
+			candidateTaxis = new ArrayList<Taxi>();
+			candidateTaxis.addAll(taxiFleet.getTaxis());
+			BasicUtils.scramble(candidateTaxis, candidateTaxis.size(), 4);
+		}
+	}
+	public void prepareMutateSolution() {
+		super.prepareMutateSolution();
+		idleTaxis.clear();
+		taxiIds.clear();
+	}
+
+	@Override
+	public String mutateSolution(String solution) {
+		String[] components = getSolutionComponenets(solution);
+		int numTaxis = taxiFleet.getTaxis().size();
+		int numPassengers = taxiFleet.getPassengers().size();
+		SolutionWithCost solutionDetails = null;
+		Mutation mutation = null;
+		String newSoln = null;
+		if (numTaxis == numPassengers || Math.random() < 0.5) {
+			//swap passengers between to 2 taxis
+			int firstIndex = BasicUtils.sampleUniform(numComponents);
+			int secondIndex = BasicUtils.sampleUniform(numComponents);
+			while(secondIndex == firstIndex) {
+				secondIndex = BasicUtils.sampleUniform(numComponents);
+			}
+			String firstComp = components[firstIndex];
+			String secondComp = components[secondIndex];
+			String[] firstCompItems = getSolutionComponentItems(firstComp);
+			String[] secondCompItems = getSolutionComponentItems(secondComp);
+			
+			String[] mutationComponents = new String[2];
+			if (firstCompItems[0].compareTo(secondCompItems[0]) < 0) {
+				mutationComponents[0] = firstComp;
+				mutationComponents[1] = secondComp;
+			} else {
+				mutationComponents[0] = secondComp;
+				mutationComponents[1] = firstComp;
+			}
+			String mutComps = aggregateSolutionComponenets(mutationComponents);
+			mutation = new Mutation(PASSENGER_SWAP, mutComps);
+			
+			//swap passengers
+			String temp = secondCompItems[1];
+			secondCompItems[1] = firstCompItems[1];
+			firstCompItems[1] = temp;
+			components[firstIndex] = aggregateSolutionComponenetItems(firstCompItems);
+			components[secondIndex] = aggregateSolutionComponenetItems(secondCompItems);
+			newSoln = aggregateSolutionComponenets(components);
+			double cost = getSolutionCost(newSoln);
+			solutionDetails = new SolutionWithCost(newSoln, cost, mutation);
+		} else {
+			if (numTaxis > numPassengers) {
+				//excess taxi 
+				if (taxiIds.isEmpty()) {
+					for (String component : components) {
+						String[] compItems = getSolutionComponentItems(component);
+						taxiIds.add(compItems[0]);
+					}
+				
+					for (Taxi taxi : taxiFleet.getTaxis()) {
+						if (!taxiIds.contains(taxi.getId())) {
+							idleTaxis.add(taxi.getId());
+						}
+					}
+				}
+				int selIndex = BasicUtils.sampleUniform(numComponents);
+				String selComp = components[selIndex];
+				String[] selCompItems = getSolutionComponentItems(selComp);
+				
+				String selTaxiId = BasicUtils.selectRandom(idleTaxis);
+				selCompItems[0] = selTaxiId;
+				
+				String mutComp = aggregateSolutionComponenetItems(selCompItems);
+				components[selIndex] = mutComp;
+				mutation = new Mutation(EXCESS_TAXI_SWAP, mutComp);
+				
+				newSoln = aggregateSolutionComponenets(components);
+				double cost = getSolutionCost(newSoln);
+				solutionDetails = new SolutionWithCost(newSoln, cost, mutation);
+			} else if (numTaxis < numPassengers){
+				//excess passengers
+				
+			}
+		}
+		solutions.add(solutionDetails);
+		return newSoln;
+	}
 
 	@Override
 	protected double getInvalidSolutionCost() {

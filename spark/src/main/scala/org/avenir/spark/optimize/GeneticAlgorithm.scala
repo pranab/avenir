@@ -26,6 +26,7 @@ import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
 import org.avenir.optimize.SolutionPopulation
 import org.avenir.optimize.SolutionWithCost
+import org.avenir.optimize.PopulationSearchDomain
 
 object GeneticAlgorithm extends JobConfiguration {
    /**
@@ -58,7 +59,7 @@ object GeneticAlgorithm extends JobConfiguration {
 	   
 	   //callback domain class
 	   val domainCallback = Class.forName(domainCallbackClass).getConstructor().newInstance().
-	       asInstanceOf[BasicSearchDomain]
+	       asInstanceOf[PopulationSearchDomain]
 	   domainCallback.intitPopulationStrategy(domainCallbackConfigFile, crossOverRetryCountLimit, 
 	       mutationRetryCountLimit, debugOn)
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
@@ -159,7 +160,7 @@ object GeneticAlgorithm extends JobConfiguration {
    * @param mutationProb
    * @return
    */
-   def reproduce(parents: (SolutionWithCost, SolutionWithCost), domanCallback: BasicSearchDomain,
+   def reproduce(parents: (SolutionWithCost, SolutionWithCost), domanCallback: PopulationSearchDomain,
        crossOverProb:Double, mutationProb:Double) : String = {
 	 //cross over
      var child =  (Math.random() < crossOverProb) match {
@@ -169,7 +170,7 @@ object GeneticAlgorithm extends JobConfiguration {
      
      //mutate
      child = (Math.random() < mutationProb) match {
-       case true => domanCallback.mutate(child)
+       case true => domanCallback.mutateSolution(child)
        case false => child
      }
      child

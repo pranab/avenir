@@ -42,7 +42,7 @@ public abstract class PopulationSearchDomain extends BasicSearchDomain{
 	/**
 	 * @return
 	 */
-	public abstract BasicSearchDomain createPopulationStrategyClone();
+	public abstract PopulationSearchDomain createPopulationStrategyClone();
 
 
 	/**
