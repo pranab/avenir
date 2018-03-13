@@ -82,6 +82,28 @@ class NonParamRejectSampler:
 				samp = x
 		return samp
 
+# non parametric sampling for categorical attributes using given distribution based 
+# on rejection sampling	
+class CategoricalRejectSampler:
+	def __init__(self,  *values):
+		self.distr = values
+		max = 0
+		for t in self.distr:
+			if t[1] > max:
+				max = t[1]
+		self.max = max
+		
+	def sample(self):
+		done = False
+		samp = ""
+		while not done:
+			t = self.distr[randint(0, len(self.distr)-1)]	
+			d = random.randint(0, self.max)	
+			if (d <= t[1]):
+				done = True
+				samp = t[0]
+		return samp
+		
 # metropolitan sampler		
 class MetropolitanSampler:
 	def __init__(self, propStdDev, min, binWidth, values):

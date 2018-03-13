@@ -74,5 +74,36 @@ def genLatLong(lat1, long1, lat2, long2):
  	lat = lat1 + (lat2 - lat1) * random.random()
 	long = long1 + (long2 - long1) * random.random()
 	return (lat, long)
-	
 
+def minLimit(val, limit):
+	if (val < limit):
+		val = limit
+	return val;
+	
+def maxLimit(val, limit):
+	if (val > limit):
+		val = limit
+	return val;
+
+# step function
+class StepFunction:
+	def __init__(self,  *values):
+		self.points = values
+	
+	def find(self, x):
+		found = False
+		y = 0
+		for p in self.points:
+			if (x >= p[0] and x < p[1]):
+				y = p[2]
+				found = True
+				break
+		
+		if not found:
+			l = len(self.points)
+			if (x < self.points[0][0]):
+				y = self.points[0][2]
+			elif (x > self.points[l-1][1]):
+				y = self.points[l-1][2]
+		return y
+		
