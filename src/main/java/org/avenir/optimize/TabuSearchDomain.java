@@ -18,17 +18,20 @@
 package org.avenir.optimize;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author pranab
  *
  */
 public abstract  class TabuSearchDomain extends BasicSearchDomain {
-	private List<Mutation> tabuList = new ArrayList<Mutation>();
-	private int tabuTenure;
+	protected List<Mutation> tabuList = new ArrayList<Mutation>();
+	protected int tabuTenure;
 	protected List<SolutionWithCost> solutions = new ArrayList<SolutionWithCost>();
 	protected List<SolutionWithCost> bestSolutions = new ArrayList<SolutionWithCost>();
+	protected Set<SolutionWithCost> tabuViolated = new HashSet<SolutionWithCost>();
 	
 	public int getTabuTenure() {
 		return tabuTenure;
@@ -65,5 +68,6 @@ public abstract  class TabuSearchDomain extends BasicSearchDomain {
 	@Override
 	public void prepareMutateSolution() {
 		solutions.clear();
+		tabuViolated.clear();
 	}
 }

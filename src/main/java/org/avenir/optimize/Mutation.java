@@ -56,5 +56,34 @@ public class Mutation implements Serializable {
 	public void setIterationNum(int iterationNum) {
 		this.iterationNum = iterationNum;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((mutation == null) ? 0 : mutation.hashCode());
+		result = prime * result + type;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Mutation other = (Mutation) obj;
+		if (mutation == null) {
+			if (other.mutation != null)
+				return false;
+		} else if (!mutation.equals(other.mutation))
+			return false;
+		if (type != other.type)
+			return false;
+		return true;
+	}
 	
 }

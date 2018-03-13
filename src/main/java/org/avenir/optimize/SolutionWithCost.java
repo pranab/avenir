@@ -125,4 +125,5 @@ public class SolutionWithCost extends Pair<String, Double> implements Comparable
 	public String toString() {
 		return left + "," + BasicUtils.formatDouble(right);
 	}
+	
 }

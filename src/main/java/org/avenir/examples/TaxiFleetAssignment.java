@@ -44,6 +44,8 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 	private List<Passenger> candidatePassengers;
 	private List<String> idleTaxis = new ArrayList<String>();
 	private Set<String> taxiIds = new HashSet<String>();
+	private List<String> idlePassengers = new ArrayList<String>();
+	private Set<String> passengerIds = new HashSet<String>();
 	private static final int PASSENGER_SWAP = 0;
 	private static final int EXCESS_PASSENGER_SWAP = 1;
 	private static final int EXCESS_TAXI_SWAP = 2;
@@ -135,6 +137,8 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 		super.prepareMutateSolution();
 		idleTaxis.clear();
 		taxiIds.clear();
+		idlePassengers.clear();
+		passengerIds.clear();
 	}
 
 	@Override
@@ -143,8 +147,10 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 		int numTaxis = taxiFleet.getTaxis().size();
 		int numPassengers = taxiFleet.getPassengers().size();
 		SolutionWithCost solutionDetails = null;
+		Mutation postMutation = null;
 		Mutation mutation = null;
 		String newSoln = null;
+		
 		if (numTaxis == numPassengers || Math.random() < 0.5) {
 			//swap passengers between to 2 taxis
 			int firstIndex = BasicUtils.sampleUniform(numComponents);
@@ -158,12 +164,14 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 			String[] secondCompItems = getSolutionComponentItems(secondComp);
 			
 			String[] mutationComponents = new String[2];
+			boolean reversed = false;
 			if (firstCompItems[0].compareTo(secondCompItems[0]) < 0) {
 				mutationComponents[0] = firstComp;
 				mutationComponents[1] = secondComp;
 			} else {
 				mutationComponents[0] = secondComp;
 				mutationComponents[1] = firstComp;
+				reversed = true;
 			}
 			String mutComps = aggregateSolutionComponenets(mutationComponents);
 			mutation = new Mutation(PASSENGER_SWAP, mutComps);
@@ -172,11 +180,28 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 			String temp = secondCompItems[1];
 			secondCompItems[1] = firstCompItems[1];
 			firstCompItems[1] = temp;
-			components[firstIndex] = aggregateSolutionComponenetItems(firstCompItems);
-			components[secondIndex] = aggregateSolutionComponenetItems(secondCompItems);
+			firstComp = aggregateSolutionComponenetItems(firstCompItems);
+			components[firstIndex] = firstComp;
+			secondComp = aggregateSolutionComponenetItems(secondCompItems);
+			components[secondIndex] = secondComp;
 			newSoln = aggregateSolutionComponenets(components);
 			double cost = getSolutionCost(newSoln);
 			solutionDetails = new SolutionWithCost(newSoln, cost, mutation);
+			
+			//check tabu list
+			if (!reversed) {
+				mutationComponents[0] = firstComp;
+				mutationComponents[1] = secondComp;
+			} else {
+				mutationComponents[0] = secondComp;
+				mutationComponents[1] = firstComp;
+			}
+			mutComps = aggregateSolutionComponenets(mutationComponents);
+			postMutation = new Mutation(PASSENGER_SWAP, mutComps);
+			if (tabuList.contains(postMutation)) {
+				
+			}
+			
 		} else {
 			if (numTaxis > numPassengers) {
 				//excess taxi 
@@ -208,7 +233,32 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 				solutionDetails = new SolutionWithCost(newSoln, cost, mutation);
 			} else if (numTaxis < numPassengers){
 				//excess passengers
+				if (passengerIds.isEmpty()) {
+					for (String component : components) {
+						String[] compItems = getSolutionComponentItems(component);
+						passengerIds.add(compItems[1]);
+					}
 				
+					for (Passenger passenger : taxiFleet.getPassengers()) {
+						if (!passengerIds.contains(passenger.getId())) {
+							idlePassengers.add(passenger.getId());
+						}
+					}
+				}
+				int selIndex = BasicUtils.sampleUniform(numComponents);
+				String selComp = components[selIndex];
+				String[] selCompItems = getSolutionComponentItems(selComp);
+				
+				String selPassengerId = BasicUtils.selectRandom(idlePassengers);
+				selCompItems[1] = selPassengerId;
+				
+				String mutComp = aggregateSolutionComponenetItems(selCompItems);
+				components[selIndex] = mutComp;
+				mutation = new Mutation(EXCESS_PASSENGER_SWAP, mutComp);
+				
+				newSoln = aggregateSolutionComponenets(components);
+				double cost = getSolutionCost(newSoln);
+				solutionDetails = new SolutionWithCost(newSoln, cost, mutation);
 			}
 		}
 		solutions.add(solutionDetails);
