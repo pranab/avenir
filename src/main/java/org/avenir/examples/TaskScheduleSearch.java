@@ -115,7 +115,7 @@ public class TaskScheduleSearch extends PopulationSearchDomain {
 	 * @see org.avenir.optimize.BasicSearchDomain#createPopulationStrategyClone()
 	 */
 	@Override
-	public BasicSearchDomain createPopulationStrategyClone() {
+	public PopulationSearchDomain createPopulationStrategyClone() {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
 		searchDomain.numComponents = this.numComponents;
