@@ -106,4 +106,39 @@ class StepFunction:
 			elif (x > self.points[l-1][1]):
 				y = self.points[l-1][2]
 		return y
+
+# dummy variable generator for categorical variables
+class DummyVarGenerator:
+	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim):
+		self.rowSize = rowSize
+		self.catValues = catValues
+		numCatVar = len(catValues)
+		colCount = 0
+		for v in self.catValues.values():
+			colCount += len(v)
+		self.newRowSize = rowSize - numCatVar + colCount
+		#print "new row size %d" %(self.newRowSize)
+		self.trueVal = trueVal
+		self.falseVal = falseVal
+		self.delim = delim
+	
+	def processRow(self, row):	
+		rowArr = row.split(self.delim)
+		assert len(rowArr) == self.rowSize, "row does not have expected number of columns" + str(len(rowArr))
+		newRowArr = []
+		for i in range(len(rowArr)):
+			curVal = rowArr[i]
+			if (i in self.catValues):
+				values = self.catValues[i]
+				for val in values:
+					if val == curVal:
+						newVal = self.trueVal
+					else:
+						newVal = self.falseVal
+					newRowArr.append(newVal)
+			else:
+				newRowArr.append(curVal)
+		assert len(newRowArr) == self.newRowSize, "invalid new row size " + str(len(newRowArr))
+		return self.delim.join(newRowArr)
+		
 		

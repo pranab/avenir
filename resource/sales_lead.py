@@ -37,6 +37,7 @@ class SalesLead:
 	def generate(self):
 		convCount = 0
 		for i in range(self.numLeads):
+			id = genID(10)
 			source = self.sourceDistr.sample()
 			contactType = self.contactTypeDistr.sample()
 			companySize = self.companySizeDistr.sample()
@@ -67,16 +68,37 @@ class SalesLead:
 			score +=  self.expRevScore.find(expRev)
 			score +=  self.proposalSentScore[proposalSent]
 			if (score > 116):
-				converted = "T"
+				converted = "1"
 				convCount += 1
 			else:
-				converted = "F"
+				converted = "0"
 				
-			print "%s,%s,%s,%d,%d,%d,%d,%d,%d,%s,%d,%s" %(source, contactType, companySize, numDays, numMeetings, numEmails, numWebSiteVisits, numDemos, expRev, proposalSent, score, converted)
+			print "%s,%s,%s,%s,%d,%d,%d,%d,%d,%d,%s,%s" %(id,source, contactType, companySize, numDays, numMeetings, numEmails, numWebSiteVisits, numDemos, expRev, proposalSent, converted)
 		#print "num converted %d" %(convCount)
+		
+	def generateDummyVars(self, file):
+		catVars = {}
+		catVars[1] = ("tradeShow", "webDownload", "referral", "advertisement")
+		catVars[2] = ("canReccommend", "canDecide")
+		catVars[3] = ("small", "medium", "large")
+		catVars[10] = ("Y", "N")
+		dummyVarGen = DummyVarGenerator(12, catVars, "1", "0", ",")
+		fp = open(file, "r")
+		for row in fp:
+			newRow = dummyVarGen.processRow(row)
+			print newRow.strip()
+		fp.close()
+			
+			
 ##########################################################################################
-numLeads = int(sys.argv[1])
+op = sys.argv[1]
+numLeads = int(sys.argv[2])
 lead = SalesLead(numLeads)
-lead.generate()
+
+if op == "generate":
+	lead.generate()
+elif op == "genDummyVar":
+	file = sys.argv[3]
+	lead.generateDummyVars(file)
 			
 			
