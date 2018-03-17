@@ -53,6 +53,7 @@ object BinaryDummyVariableGenerator extends JobConfiguration {
 	     catValues += (colIndex -> values)
 	     valCount += values.length
 	   })
+	   val caseInsensitive = getBooleanParamOrElse(appConfig, "case.insensitive", false)
 	   val rowSize = getMandatoryIntParam(appConfig, "row.size")
 	   val newRowSize = rowSize - catFieldOrdinals.length + valCount
 	   val trueVal = getMandatoryStringParam(appConfig, "true.value")
@@ -71,12 +72,15 @@ object BinaryDummyVariableGenerator extends JobConfiguration {
 			   val optValues = catValues.get(t._2)
 			   optValues match {
 			     case Some(values : Array[String]) => {
+			       //map to binary
 			       for (value <- values) {
-			         val binValue = if (value.equals(t._1)) trueVal else falseVal
+			         val colValue = if (caseInsensitive) t._1.toLowerCase() else t._1
+			         val binValue = if (value.equals(colValue)) trueVal else falseVal
 			         newRec += binValue
 			       }
 			     }
 			     case None => {
+			       //as is
 			       newRec += t._1
 			     }
 			   }
