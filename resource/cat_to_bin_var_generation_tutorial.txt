@@ -1,0 +1,39 @@
+This tutorial for generating dummy binary variables from categorical variables, which 
+may be a required step  step before applying using certain machine learning algorithms
+
+
+Dependent script
+================
+Checkout the project avenir. Take the script util.py and sampler.py from the project and placeit
+in ../lib directory with respect the directory containing store_order.py
+
+Build and Deployment
+====================
+Please refer to spark_dependency.txt
+
+Generate input data
+===================
+./dvg.sh genInput <num_leads> <output_file>
+
+where
+num_leads = number of sales leads. should be few thousands so that each categorical variable
+value appears in the data set at least once
+output_file = output file name
+
+Copy the output file to spark input directory as specified in dvg.sh
+
+Run unique value finder Spark job
+=================================
+./dvg.sh uniqueValues
+
+Run binary variable generator Spark job
+=======================================
+./dvg.sh binValGen
+
+Script
+======
+The script dvg.sh should be changed as necessary depending on your environment
+
+Configuration
+=============
+Configuration parameters are dvg.conf. Make changes as necessary
