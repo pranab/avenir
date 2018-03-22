@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 import sys
 from random import randint
@@ -11,21 +11,25 @@ tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H
 	"N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"]
 numTokens = tokens[:10]
 
+#generates ID
 def genID(len):
 	id = ""
 	for i in range(len):
 		id = id + selectRandomFromList(tokens)
 	return id
-		
+
+#generates ID consisting of digits only		
 def genNumID(len):
 	id = ""
 	for i in range(len):
 		id = id + selectRandomFromList(numTokens)
 	return id
-		
+
+#select an element randomly from a list		
 def selectRandomFromList(list):
 	return list[randint(0, len(list)-1)]
-	
+
+#generates random sublist from a list	
 def selectRandomSubListFromList(list, num):
 	sel = selectRandomFromList(list)
 	selSet = {sel}
@@ -36,7 +40,8 @@ def selectRandomSubListFromList(list, num):
 			selSet.add(sel)
 			selList.append(sel)		
 	return selList
-	
+
+#generates IP address	
 def genIpAddress():
 	i1 = randint(0,256)
 	i2 = randint(0,256)
@@ -44,10 +49,12 @@ def genIpAddress():
 	i4 = randint(0,256)
 	ip = "%d.%d.%d.%d" %(i1,i2,i3,i4)
 	return ip
-	
+
+#current time in ms	
 def curTimeMs():
 	return int((datetime.utcnow() - datetime(1970,1,1)).total_seconds() * 1000)
-	
+
+#second deg polynomial 	
 def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	t = (y1 - y2) / (x1 - x2)
 	a = t - (y2 - y3) / (x2 - x3)
@@ -56,13 +63,15 @@ def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	c = y1 - a * x1 * x1 - b * x1
 	return (a, b, c)
 
+#range limit
 def range_limit(val, min, max):
 	if (val < min):
 		val = min
 	elif (val > max):
 		val = max
 	return val	
-	
+
+#strips number of chars from both ends	
 def stripFileLines(filePath, offset):
 	fp = open(filePath, "r")
 	for line in fp:
@@ -70,21 +79,64 @@ def stripFileLines(filePath, offset):
 		print stripped
 	fp.close()
 
+# generate lat log within limits
 def genLatLong(lat1, long1, lat2, long2):
  	lat = lat1 + (lat2 - lat1) * random.random()
 	long = long1 + (long2 - long1) * random.random()
 	return (lat, long)
 
+#min limit
 def minLimit(val, limit):
 	if (val < limit):
 		val = limit
 	return val;
 	
+# max limit
 def maxLimit(val, limit):
 	if (val > limit):
 		val = limit
 	return val;
 
+# return typed value given string
+def typedValue(val):
+	tVal = None
+	if type(val) == str:
+		lVal = val.lower()
+		
+		#int
+		done = True
+		try:
+			tVal = int(val)
+		except ValueError:
+			done = False
+		
+		#float
+		if not done:	
+			done = True
+			try:
+				tVal = float(val)
+			except ValueError:
+				done = False
+				
+		#boolean
+		if not done:
+			done = True
+			if lVal == "true":
+				tVal = True
+			elif lVal == "false":
+				tVal = False
+			else:
+				done = False
+		#None		
+		if not done:
+			if lVal == "none":
+				tVal = None
+			else:
+				tVal = val
+	else:
+		tVal = val		
+	return tVal
+	
 # step function
 class StepFunction:
 	def __init__(self,  *values):
@@ -106,6 +158,8 @@ class StepFunction:
 			elif (x > self.points[l-1][1]):
 				y = self.points[l-1][2]
 		return y
+		
+	
 
 # dummy variable generator for categorical variables
 class DummyVarGenerator:
