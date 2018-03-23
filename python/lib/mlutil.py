@@ -10,22 +10,24 @@ import jprops
 
 #configuration management
 class Configuration:
-	def __init__(self, configFile, defValues):
+	def __init__(self, configFile, defValues, verbose=False):
 		configs = {}
 		with open(configFile) as fp:
   			for key, value in jprops.iter_properties(fp):
 				configs[key] = value
 		self.configs = configs
 		self.defValues = defValues
+		self.verbose = verbose
 
 	def getStringConfig(self, name):
-		#print "%s %s" %(name,self.configs[name])
 		if self.isNone(name):
 			val = (None, False)
 		elif self.isDefault(name):
 			val = (self.handleDefault(name), True)
 		else:
 			val = (self.configs[name], False)
+		if self.verbose:
+			print "%s %s %s" %(name, self.configs[name], val[0])
 		return val
 
 	def getIntConfig(self, name):
@@ -36,6 +38,8 @@ class Configuration:
 			val = (self.handleDefault(name), True)
 		else:
 			val = (int(self.configs[name]), False)
+		if self.verbose:
+			print "%s %s %d" %(name, self.configs[name], val[0])
 		return val
 		
 	def getFloatConfig(self, name):
@@ -46,6 +50,8 @@ class Configuration:
 			val = (self.handleDefault(name), True)
 		else:
 			val = (float(self.configs[name]), False)
+		if self.verbose:
+			print "%s %s %.3f" %(name, self.configs[name], val[0])
 		return val
 
 	def getBooleanConfig(self, name):
@@ -56,6 +62,8 @@ class Configuration:
 		else:
 			bVal = self.configs[name].lower() == "true"
 			val = (bVal, False)
+		if self.verbose:
+			print "%s %s %s" %(name, self.configs[name], val[0])
 		return val
 		
 	def handleDefault(self, name):
@@ -102,3 +110,12 @@ class Configuration:
 				raise ValueError("at least one of the two parameters should be set " + firstName + "  " + secondName)
 		return (first, second)
 	
+#loads delim separated file and extracts columns
+def loadDataFile(file, delim, cols, colIndices):
+	data = np.loadtxt(file, delimiter=delim, usecols=cols)
+	extrData = data[:,colIndices]
+	return (data, extrData)
+
+#extracts columns
+def extrColumns(arr, columns):
+	return arr[:, columns]

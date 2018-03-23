@@ -90,12 +90,42 @@ def minLimit(val, limit):
 	if (val < limit):
 		val = limit
 	return val;
-	
+
 # max limit
 def maxLimit(val, limit):
 	if (val > limit):
 		val = limit
 	return val;
+
+# breaks a line into fields and keeps only specified fileds and returns new line
+def extractFields(line, delim, keepIndices):
+	items = line.split(delim)
+	newLine = []
+	for i in keepIndices:
+		newLine.append(line[i])
+	return delim.join(newLine)
+
+def remFields(line, delim, remIndices):
+	items = line.split(delim)
+	newLine = []
+	for i in range(len(items)):
+		if not arrayContains(remIndices, i):
+			newLine.append(line[i])
+	return delim.join(newLine)
+
+# checks if array contains an item 	
+def arrayContains(arr, item):
+	contains = True
+	try:
+		arr.index(item)
+	except ValueError:
+		contains = False
+	return contains
+
+# int array from delim separated string
+def strToIntArray(line, delim):	
+	arr = line.split(",")
+	return [int(a) for a in arr]
 
 # return typed value given string
 def typedValue(val):
