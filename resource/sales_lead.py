@@ -67,7 +67,7 @@ class SalesLead:
 			score +=  self.numDemosScore.find(numDemos)
 			score +=  self.expRevScore.find(expRev)
 			score +=  self.proposalSentScore[proposalSent]
-			if (score > 116):
+			if (score > 116 and randint(0, 100) > 5):
 				converted = "1"
 				convCount += 1
 			else:
@@ -100,5 +100,4 @@ if op == "generate":
 elif op == "genDummyVar":
 	file = sys.argv[3]
 	lead.generateDummyVars(file)
-			
 			

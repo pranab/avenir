@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 
-
+# gradient boosting classification
 class GradientBoostedTrees:
 	def __init__(self, configFile):
 		defValues = {}
@@ -43,7 +43,7 @@ class GradientBoostedTrees:
 		defValues["train.presort"] = ("auto", None)
 		defValues["train.criterion"] = ("friedman_mse", None)
 		
-		self.config = Configuration(configFile, defValues, True)
+		self.config = Configuration(configFile, defValues)
 		
 	# get config object
 	def getConfig(self):
@@ -51,6 +51,38 @@ class GradientBoostedTrees:
 	
 	# train model	
 	def train(self):
+		#build model
+		self.buildModel()
+		
+		# training data
+		(featData, clsData) = self.prepTrainingData()
+		
+		#train
+		print "...training model"
+		self.gbcClassifier.fit(featData, clsData) 
+		score = self.gbcClassifier.score(featData, clsData)  
+		print "accuracy with traing data %.3f" %(score)
+
+	#train with k fold validation
+	def trainAndValidate(self):
+		#build model
+		self.buildModel()
+
+		# training data
+		(featData, clsData) = self.prepTrainingData()
+		
+		#parameter
+		validation = self.config.getStringConfig("train.validation")[0]
+		numFolds = self.config.getIntConfig("train.num.folds")[0]
+		
+		#train with validation
+		print "...training and cross validating model"
+		scores = sk.cross_validation.cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds)
+		avScore = np.mean(scores)
+		print "average accuracy with k fold cross validation %.3f" %(avScore)
+	 
+	#loads and prepares training data
+	def prepTrainingData(self):
 		# parameters
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
@@ -59,10 +91,21 @@ class GradientBoostedTrees:
 		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
 		if not featFieldIndices is None:
 			featFieldIndices = strToIntArray(featFieldIndices, ",")
-		featFieldIndices = [int(a) for a in featFieldIndices]
 		classFieldIndex = self.config.getIntConfig("train.data.class.field")[0]
-		validation = self.config.getStringConfig("train.validation")[0]
-		numFolds = self.config.getIntConfig("train.num.folds")[0]
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		clsData = extrColumns(data, classFieldIndex)
+		clsData = [int(a) for a in clsData]
+		#print featData.shape
+		#print clsData.shape
+		
+		return (featData, clsData)
+	
+	# builds model object
+	def buildModel(self):
+		print "...building model"
+		# parameters
 		minSamplesSplit = self.config.getStringConfig("train.min.samples.split")[0]
 		minSamplesSplit = typedValue(minSamplesSplit)
 		minSamplesLeaf = self.config.getStringConfig("train.min.samples.leaf")[0]
@@ -86,29 +129,19 @@ class GradientBoostedTrees:
 		splitCriterion = self.config.getStringConfig("train.criterion")[0]	
 	
 		#classifier
-		gbcClassifier = GradientBoostingClassifier(loss=lossFun, learning_rate=learningRate, n_estimators=numEstimators, 
+		self.gbcClassifier = GradientBoostingClassifier(loss=lossFun, learning_rate=learningRate, n_estimators=numEstimators, 
 		subsample=subsampleFraction, min_samples_split=minSamplesSplit, 
 		min_samples_leaf=minSamplesLeaf, min_weight_fraction_leaf=0.0, max_depth=maxDepth,  
 		init=None, random_state=randomState, max_features=maxFeatures, verbose=verboseOutput, 
 		max_leaf_nodes=maxLeafNodes, warm_start=warmStart, presort=presortChoice)
-
-		#training data
-		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
-		clsData = extrColumns(data, classFieldIndex)
-		clsData = [int(a) for a in clsData]
-		print featData.shape
-		#print clsData.shape
-		
-		#train
-		gbcClassifier.fit(featData, clsData) 
-		score = gbcClassifier.score(featData, clsData)  
-		print "score %.3f" %(score)
 
 ###########################################################################################
 gbt = GradientBoostedTrees(sys.argv[1])
 mode = gbt.getConfig().getStringConfig("common.mode")[0]
 if mode == "train":
 	gbt.train()
+elif mode == "validate":
+	gbt.trainAndValidate()
 
 	
 	
