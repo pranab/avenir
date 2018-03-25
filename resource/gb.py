@@ -22,9 +22,9 @@ class GradientBoostedTrees:
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
-		defValues["train.data.file"] = (None, None)
-		defValues["train.data.fields"] = (None, "missing data field ordinals")
-		defValues["train.data.feature.fields"] = (None, "missing data feature field ordinals")
+		defValues["train.data.file"] = (None, "missing training data file")
+		defValues["train.data.fields"] = (None, "missing training data field ordinals")
+		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.class.field"] = (None, "missing class field ordinal")
 		defValues["train.validation"] = ("kfold", None)
 		defValues["train.num.folds"] = (5, None)
@@ -42,6 +42,9 @@ class GradientBoostedTrees:
 		defValues["train.warm.start"] = (False, None)
 		defValues["train.presort"] = ("auto", None)
 		defValues["train.criterion"] = ("friedman_mse", None)
+		defValues["predict.data.file"] = (None, None)
+		defValues["predict.data.fields"] = (None, "missing data field ordinals")
+		defValues["predict.data.feature.fields"] = (None, "missing data feature field ordinals")
 		
 		self.config = Configuration(configFile, defValues)
 		
@@ -61,7 +64,7 @@ class GradientBoostedTrees:
 		print "...training model"
 		self.gbcClassifier.fit(featData, clsData) 
 		score = self.gbcClassifier.score(featData, clsData)  
-		print "accuracy with traing data %.3f" %(score)
+		print "accuracy with training data %.3f" %(score)
 
 	#train with k fold validation
 	def trainAndValidate(self):
@@ -81,6 +84,19 @@ class GradientBoostedTrees:
 		avScore = np.mean(scores)
 		print "average accuracy with k fold cross validation %.3f" %(avScore)
 	 
+	#predict
+	def predict(self):
+		# train
+		self.train()
+		
+		# prepare test data
+		featData = self.prepPredictData()
+		
+		#predict
+		print "...predicting"
+		clsData = self.gbcClassifier.predict(featData) 
+		print clsData
+	
 	#loads and prepares training data
 	def prepTrainingData(self):
 		# parameters
@@ -101,6 +117,24 @@ class GradientBoostedTrees:
 		#print clsData.shape
 		
 		return (featData, clsData)
+
+	#loads and prepares training data
+	def prepPredictData(self):
+		# parameters
+		dataFile = self.config.getStringConfig("predict.data.file")[0]
+		if dataFile is None:
+			raise ValueError("missing prediction data file")
+		fieldIndices = self.config.getStringConfig("predict.data.fields")[0]
+		if not fieldIndices is None:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		featFieldIndices = self.config.getStringConfig("predict.data.feature.fields")[0]
+		if not featFieldIndices is None:
+			featFieldIndices = strToIntArray(featFieldIndices, ",")
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		
+		return featData
 	
 	# builds model object
 	def buildModel(self):
@@ -142,6 +176,8 @@ if mode == "train":
 	gbt.train()
 elif mode == "validate":
 	gbt.trainAndValidate()
+elif mode == "predict":
+	gbt.predict()
 
 	
 	
