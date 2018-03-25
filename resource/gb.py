@@ -22,6 +22,8 @@ class GradientBoostedTrees:
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
+		defValues["common.model.directory"] = ("model", None)
+		defValues["common.model.file"] = (None, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
@@ -42,9 +44,12 @@ class GradientBoostedTrees:
 		defValues["train.warm.start"] = (False, None)
 		defValues["train.presort"] = ("auto", None)
 		defValues["train.criterion"] = ("friedman_mse", None)
+		defValues["train.success.criterion"] = ("error", None)
+		defValues["train.model.save"] = (False, None)
 		defValues["predict.data.file"] = (None, None)
 		defValues["predict.data.fields"] = (None, "missing data field ordinals")
 		defValues["predict.data.feature.fields"] = (None, "missing data feature field ordinals")
+		defValues["predict.use.saved.model"] = (False, None)
 		
 		self.config = Configuration(configFile, defValues)
 		
@@ -60,11 +65,26 @@ class GradientBoostedTrees:
 		# training data
 		(featData, clsData) = self.prepTrainingData()
 		
+		# parameters
+		modelSave = self.config.getBooleanConfig("train.model.save")[0]
+		
 		#train
 		print "...training model"
 		self.gbcClassifier.fit(featData, clsData) 
 		score = self.gbcClassifier.score(featData, clsData)  
-		print "accuracy with training data %.3f" %(score)
+		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		if successCriterion == "acuuracy":
+			print "accuracy with training data %.3f" %(score)
+		elif successCriterion == "error":
+			error = 1.0 - score
+			print "error with training data %.3f" %(error)
+		else:
+			raise ValueError("invalid success criterion")
+			
+		if modelSave:
+			print "...saving model"
+			modelFilePath = self.getModelFilePath()
+			joblib.dump(self.gbcClassifier, modelFilePath) 
 
 	#train with k fold validation
 	def trainAndValidate(self):
@@ -82,12 +102,28 @@ class GradientBoostedTrees:
 		print "...training and cross validating model"
 		scores = sk.cross_validation.cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds)
 		avScore = np.mean(scores)
-		print "average accuracy with k fold cross validation %.3f" %(avScore)
+		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		if successCriterion == "acuuracy":
+			print "average accuracy with k fold cross validation %.3f" %(avScore)
+		elif successCriterion == "error":
+			avError = 1.0 - avScore
+			print "average error with k fold cross validation %.3f" %(avError)
+		else:
+			raise ValueError("invalid success criterion")
+
 	 
 	#predict
 	def predict(self):
-		# train
-		self.train()
+		# create model
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			# load saved model
+			print "...loading model"
+			modelFilePath = self.getModelFilePath()
+			self.gbcClassifier = joblib.load(modelFilePath)
+		else:
+			# train model
+			self.train()
 		
 		# prepare test data
 		featData = self.prepPredictData()
@@ -135,6 +171,15 @@ class GradientBoostedTrees:
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		
 		return featData
+	
+	# get model file path
+	def getModelFilePath(self):
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		if modelFile is None:
+			raise ValueError("missing model file name")
+		modelFilePath = modelDirectory + "/" + modelFile
+		return modelFilePath
 	
 	# builds model object
 	def buildModel(self):
