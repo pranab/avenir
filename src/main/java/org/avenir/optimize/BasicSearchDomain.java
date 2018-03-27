@@ -214,6 +214,22 @@ public abstract class  BasicSearchDomain implements Serializable {
 	}
 	
 	/**
+	 * @return
+	 */
+	public BasicSearchDomain withNeighborhoodReferenceCurrent() {
+		this.refCurrent = true;
+		return this;
+	}
+	
+	/**
+	 * @return
+	 */
+	public BasicSearchDomain withNeighborhoodReferenceInitial() {
+		this.refCurrent = false;
+		return this;
+	}
+
+	/**
 	 * @param mutationRetryCountLimit
 	 * @return
 	 */

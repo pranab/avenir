@@ -19,7 +19,10 @@ package org.avenir.spark.optimize
 
 import org.chombo.spark.common.JobConfiguration
 import org.apache.spark.SparkContext
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
 import scala.collection.JavaConverters._
+import com.typesafe.config.Config
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
@@ -35,7 +38,7 @@ object RandomSearch extends JobConfiguration {
     * @param args
     * @return
     */
-   def main(args: Array[String]) {
+    def main(args: Array[String]) {
 	   val appName = "randomSearch"
 	   var inputPath: Option[String] = None 
 	   var outputPath : String = ""
@@ -67,12 +70,12 @@ object RandomSearch extends JobConfiguration {
 	       "missing domain callback config file name")
 	   val numPartitions = getIntParamOrElse(appConfig, "num.partitions",  2)
 	   val locallyOptimize = getBooleanParamOrElse(appConfig, "locally.optimize", true)
-	   val maxNumLocalIterations = getMandatoryIntParam(appConfig, "max.num.local iterations", "missing number of local iterations")
-	   val localSolnOutputFile = if (locallyOptimize) {
-	     getMandatoryStringParam(appConfig, "local.soln.file.name", "missing local solution output file name")
-	   } else {
-	     ""
-	   }
+	   val localSearchStrategy = getConditionalMandatoryStringParam(locallyOptimize, appConfig, "local.search.strategy", 
+	       "missing local search strategy")
+	   val maxNumLocalIterations = getConditionalMandatoryIntParam(locallyOptimize, appConfig, "max.num.local iterations", 
+	       "missing number of local iterations")
+	   val localSolnOutputFile = getConditionalMandatoryStringParam(locallyOptimize, appConfig, "local.soln.file.name", 
+	       "missing local solution output file name")
 	   val maxStepSize = getMandatoryIntParam(appConfig, "max.step.size", "missing max step size")
 	   val mutationRetryCountLimit = 1
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
@@ -127,28 +130,10 @@ object RandomSearch extends JobConfiguration {
 	   val globalBestSolution = colSortedSoutions(0)
 	   if (locallyOptimize) {
 	     val domanCallbackClone = domainCallback.createTrajectoryStrategyClone()
-	     domanCallbackClone.withInitialSolution(globalBestSolution._1)
-	     domanCallbackClone.withNeighborhoodReference(false)
-
-	     //candidate local solutions
-	     val localCandidateSolutions = (for (i <- 1 to maxNumLocalIterations) yield 
-	       domanCallbackClone.createNeighborhoodSolution()).toList
-	     val optStartSolutions = sparkCntxt.parallelize(localCandidateSolutions, numPartitions)
-	     
-	     //find costs
-	     val localSolutions = optStartSolutions.mapPartitions(p => {
-	    	 //whole partition
-	    	 val domanCallback = brDomainCallback.value.createTrajectoryStrategyClone()
-	     
-	    	 val solnCosts = p.map(soln => {
-	    		 val cost = domanCallback.getSolutionCost(soln)
-	    		 (soln, cost)
-	    	 })
-	         solnCosts
-	     })
 
 	     //ascending sort by cost
-	     val sortedLocalSoutions = localSolutions.sortBy(s => s._2, true)
+	     val sortedLocalSoutions = localFocussedSearch(globalBestSolution._1, domanCallbackClone, 
+	         maxNumLocalIterations,numPartitions, brDomainCallback,  sparkCntxt)
 	     val colSortedSoutions = sortedLocalSoutions.collect
 	     
 	     //if locally best solution is better than global best
@@ -162,10 +147,48 @@ object RandomSearch extends JobConfiguration {
 	       if (saveOutput) {
 	    	   sortedGlobalSoutions.saveAsTextFile(localSolnOutputFile)
 	       }
-	       
 	     }
-	     
 	   } 
 	  
-   }
+    }
+   
+    /**
+	 * @param initialSolution
+	 * @param domanCallback
+	 * @param maxNumLocalIterations
+	 * @param numPartitions
+	 * @param brDomainCallback
+	 * @param sparkCntxt
+	 * @return
+    */
+    def localFocussedSearch(initialSolution:String, domanCallback : BasicSearchDomain, maxNumLocalIterations : Int,
+       numPartitions:Int, brDomainCallback:Broadcast[BasicSearchDomain],  sparkCntxt:SparkContext) : 
+       RDD[(String, Double)] = {
+	     domanCallback.withInitialSolution(initialSolution)
+	     domanCallback.withNeighborhoodReference(false)
+
+	     //candidate local solutions
+	     val localCandidateSolutions = (for (i <- 1 to maxNumLocalIterations) yield 
+	       domanCallback.createNeighborhoodSolution()).toList
+	     val optStartSolutions = sparkCntxt.parallelize(localCandidateSolutions, numPartitions)
+     
+	     //find costs
+	     val localSolutions = optStartSolutions.mapPartitions(p => {
+	    	 //whole partition
+	    	 val domanCallback = brDomainCallback.value.createTrajectoryStrategyClone()
+	     
+	    	 val solnCosts = p.map(soln => {
+	    		 val cost = domanCallback.getSolutionCost(soln)
+	    		 (soln, cost)
+	    	 })
+	         solnCosts
+	     })
+	     
+	     //ascending sort by cost
+	     val sortedLocalSoutions = localSolutions.sortBy(s => s._2, true)
+	     return sortedLocalSoutions
+    }
+    
+    
+   
 }
