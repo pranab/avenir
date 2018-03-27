@@ -24,14 +24,27 @@ import org.chombo.util.Pair;
  *
  */
 public class OptUtility {
-
+	/**
+	 * @param intialSolution
+	 * @param cost
+	 * @param domain
+	 * @param numIteration
+	 * @return
+	 */
+	public static Pair<String, Double> localTrajectorySearch(String intialSolution, BasicSearchDomain domain, 
+			int numIteration) {
+		double cost = domain.getSolutionCost(intialSolution);
+		return localTrajectorySearch(intialSolution, cost, domain, numIteration);
+	}
+	
 	/**
 	 * @param intialSolution
 	 * @param domain
 	 * @param numIteration
 	 * @return
 	 */
-	public static Pair<String, Double> localTrajectorySearch(String intialSolution, BasicSearchDomain domain, int numIteration) {
+	public static Pair<String, Double> localTrajectorySearch(String intialSolution, double cost, 
+			BasicSearchDomain domain, int numIteration) {
 		domain.withNeighborhoodReferenceCurrent();
 		domain.withCurrentSolution(intialSolution);
 		String curSolution = intialSolution;
