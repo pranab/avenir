@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.chombo.stats.RandomSampler;
+import org.chombo.stats.RandomStringSampler;
 import org.chombo.util.DynamicBean;
 import org.chombo.util.Utility;
 
@@ -86,7 +86,7 @@ public class SoftMaxBandit    extends Configured implements Tool {
 		private int rewardOrdinal;
 		private Map<String, Integer> groupBatchCount = new HashMap<String, Integer>();
 		private GroupedItems groupedItems = new GroupedItems();
-		private RandomSampler sampler = new RandomSampler();
+		private RandomStringSampler sampler = new RandomStringSampler();
 		private static final int DISTR_SCALE = 1000;
 		
 		
