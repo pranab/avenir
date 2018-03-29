@@ -15,7 +15,9 @@
  * permissions and limitations under the License.
  */
 
-package org.avenir.optimize;
+package org.avenir.examples;
+
+import org.avenir.optimize.BasicSearchDomain;
 
 /**
  * @author pranab

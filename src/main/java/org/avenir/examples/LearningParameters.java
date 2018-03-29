@@ -15,7 +15,8 @@
  * permissions and limitations under the License.
  */
 
-package org.avenir.optimize;
+
+package org.avenir.examples;
 
 import java.util.List;
 
@@ -23,42 +24,15 @@ import java.util.List;
  * @author pranab
  *
  */
-public class LearningParameter {
-	private String name;
-	private String type;
-	private List<String> values;
-	private String distribution;
-	
-	public String getName() {
-		return name;
+public class LearningParameters {
+	private List<LearningParameter> parameters;
+
+	public List<LearningParameter> getParameters() {
+		return parameters;
 	}
-	
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public String getType() {
-		return type;
-	}
-	
-	public void setType(String type) {
-		this.type = type;
-	}
-	
-	public List<String> getValues() {
-		return values;
-	}
-	
-	public void setValues(List<String> values) {
-		this.values = values;
-	}
-	
-	public String getDistribution() {
-		return distribution;
-	}
-	
-	public void setDistribution(String distribution) {
-		this.distribution = distribution;
+
+	public void setParameters(List<LearningParameter> parameters) {
+		this.parameters = parameters;
 	}
 	
 }
