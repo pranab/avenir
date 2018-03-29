@@ -12,6 +12,8 @@ import jprops
 from sklearn.ensemble import GradientBoostingClassifier 
 from sklearn.externals import joblib
 from sklearn.ensemble import BaggingClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -46,10 +48,17 @@ class GradientBoostedTrees:
 		defValues["train.criterion"] = ("friedman_mse", None)
 		defValues["train.success.criterion"] = ("error", None)
 		defValues["train.model.save"] = (False, None)
+		defValues["train.score.method"] = ("accuracy", None)
 		defValues["predict.data.file"] = (None, None)
 		defValues["predict.data.fields"] = (None, "missing data field ordinals")
 		defValues["predict.data.feature.fields"] = (None, "missing data feature field ordinals")
 		defValues["predict.use.saved.model"] = (False, None)
+		defValues["validate.data.file"] = (None, "missing validation data file")
+		defValues["validate.data.fields"] = (None, "missing validation data field ordinals")
+		defValues["validate.data.feature.fields"] = (None, "missing validation data feature field ordinals")
+		defValues["validate.data.class.field"] = (None, "missing class field ordinal")
+		defValues["validate.use.saved.model"] = (False, None)
+		defValues["validate.score.method"] = ("accuracy", None)
 		
 		self.config = Configuration(configFile, defValues)
 		
@@ -73,7 +82,7 @@ class GradientBoostedTrees:
 		self.gbcClassifier.fit(featData, clsData) 
 		score = self.gbcClassifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
-		if successCriterion == "acuuracy":
+		if successCriterion == "accuracy":
 			print "accuracy with training data %.3f" %(score)
 		elif successCriterion == "error":
 			error = 1.0 - score
@@ -97,19 +106,46 @@ class GradientBoostedTrees:
 		#parameter
 		validation = self.config.getStringConfig("train.validation")[0]
 		numFolds = self.config.getIntConfig("train.num.folds")[0]
+		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		scoreMethod = self.config.getStringConfig("train.score.method")[0]
 		
 		#train with validation
-		print "...training and cross validating model"
-		scores = sk.cross_validation.cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds)
+		print "...training and kfold cross validating model"
+		scores = sk.cross_validation.cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
-		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
-		if successCriterion == "acuuracy":
-			print "average accuracy with k fold cross validation %.3f" %(avScore)
-		elif successCriterion == "error":
-			avError = 1.0 - avScore
-			print "average error with k fold cross validation %.3f" %(avError)
+		self.reportResult(avScore, successCriterion, scoreMethod)
+
+	#predict
+	def validate(self):
+		# create model
+		useSavedModel = self.config.getBooleanConfig("validate.use.saved.model")[0]
+		if useSavedModel:
+			# load saved model
+			print "...loading model"
+			modelFilePath = self.getModelFilePath()
+			self.gbcClassifier = joblib.load(modelFilePath)
 		else:
-			raise ValueError("invalid success criterion")
+			# train model
+			self.train()
+		
+		# prepare test data
+		(featData, clsDataActual) = self.prepValidationData()
+		
+		#predict
+		print "...predicting"
+		clsDataPred = self.gbcClassifier.predict(featData) 
+		
+		print "...validating"
+		#print clsData
+		scoreMethod = self.config.getStringConfig("validate.score.method")[0]
+		if scoreMethod == "accuracy":
+			accuracy = accuracy_score(clsDataActual, clsDataPred) 
+			print "accuracy:"
+			print accuracy
+		elif scoreMethod == "confusionMatrix":
+			confMatrx = confusion_matrix(clsDataActual, clsDataPred)
+			print "confusion matrix:"
+			print confMatrx
 
 	 
 	#predict
@@ -149,9 +185,24 @@ class GradientBoostedTrees:
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = [int(a) for a in clsData]
-		#print featData.shape
-		#print clsData.shape
-		
+		return (featData, clsData)
+
+	#loads and prepares training data
+	def prepValidationData(self):
+		# parameters
+		dataFile = self.config.getStringConfig("validate.data.file")[0]
+		fieldIndices = self.config.getStringConfig("validate.data.fields")[0]
+		if not fieldIndices is None:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		featFieldIndices = self.config.getStringConfig("validate.data.feature.fields")[0]
+		if not featFieldIndices is None:
+			featFieldIndices = strToIntArray(featFieldIndices, ",")
+		classFieldIndex = self.config.getIntConfig("validate.data.class.field")[0]
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		clsData = extrColumns(data, classFieldIndex)
+		clsData = [int(a) for a in clsData]
 		return (featData, clsData)
 
 	#loads and prepares training data
@@ -180,6 +231,20 @@ class GradientBoostedTrees:
 			raise ValueError("missing model file name")
 		modelFilePath = modelDirectory + "/" + modelFile
 		return modelFilePath
+	
+	# report result
+	def reportResult(self, score, successCriterion, scoreMethod):
+		if successCriterion == "accuracy":
+			print "average " + scoreMethod + " with k fold cross validation %.3f" %(score)
+		elif successCriterion == "error":
+			if scoreMethod == "accuracy":
+				avError = 1.0 - score
+				print "average error with k fold cross validation %.3f" %(avError)
+			else:
+				print "error can be calculated only with accuracy scoring method"
+		else:
+			raise ValueError("invalid success criterion")
+	
 	
 	# builds model object
 	def buildModel(self):
@@ -219,10 +284,12 @@ gbt = GradientBoostedTrees(sys.argv[1])
 mode = gbt.getConfig().getStringConfig("common.mode")[0]
 if mode == "train":
 	gbt.train()
-elif mode == "validate":
+elif mode == "trainValidate":
 	gbt.trainAndValidate()
 elif mode == "predict":
 	gbt.predict()
+elif mode == "validate":
+	gbt.validate()
 
 	
 	
