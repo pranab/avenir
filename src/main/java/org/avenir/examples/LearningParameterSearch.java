@@ -17,19 +17,80 @@
 
 package org.avenir.examples;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.avenir.optimize.BasicSearchDomain;
+import org.chombo.stats.UniformFloatSampler;
+import org.chombo.stats.UniformIntSampler;
+import org.chombo.stats.UniformSampler;
+import org.chombo.stats.UniformStringSampler;
+import org.chombo.util.BaseAttribute;
+import org.chombo.util.BasicUtils;
+import org.chombo.util.TypedObject;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * @author pranab
  *
  */
 public class LearningParameterSearch extends BasicSearchDomain {
-
+	private LearningParameters parameterSpace;
+	private List<UniformSampler> paramSamplers;
+	private Pattern outputPattern;
+	
 	@Override
 	public void initTrajectoryStrategy(String configFile, int maxStepSize,
 			int mutationRetryCountLimit, boolean debugOn) {
-		// TODO Auto-generated method stub
-
+		try {
+			InputStream fs = new FileInputStream(configFile);
+			if (null != fs) {
+				ObjectMapper mapper = new ObjectMapper();
+				parameterSpace = mapper.readValue(fs, LearningParameters.class);
+			}	
+		} catch (IOException ex) {
+			throw new IllegalStateException("failed to initialize search object " + ex.getMessage());
+		}
+		numComponents = parameterSpace.getParameters().size();
+		withMaxStepSize(maxStepSize);
+		withConstantStepSize();
+		this.mutationRetryCountLimit = mutationRetryCountLimit;
+		compItemDelim = "=";
+		
+		//create samplers
+		for(LearningParameter learnParam : parameterSpace.getParameters()) {
+			String type = learnParam.getType();
+			
+			if (type.equals(BaseAttribute.DATA_TYPE_STRING)) {
+				paramSamplers.add(new UniformStringSampler(learnParam.getValues()));
+			} else if (type.equals(BaseAttribute.DATA_TYPE_INT)) {
+				if (learnParam.getValues().size() == 2) {
+					int min =  Integer.parseInt(learnParam.getValues().get(0));
+					int max =  Integer.parseInt(learnParam.getValues().get(1));
+					paramSamplers.add(new UniformIntSampler(min, max));
+				} else {
+					throw new IllegalStateException("int parameter does not have right number of values");
+				}
+			} else if (type.equals(BaseAttribute.DATA_TYPE_FLOAT)) {
+				if (learnParam.getValues().size() == 2) {
+					float min =  Float.parseFloat(learnParam.getValues().get(0));
+					float max =  Float.parseFloat(learnParam.getValues().get(1));
+					paramSamplers.add(new UniformFloatSampler(min, max));
+				} else {
+					throw new IllegalStateException("float parameter does not have right number of values");
+				}
+			} else {
+				throw new IllegalStateException("invalid parameter type");
+			}
+		}
+		
+		//output pattern
+		outputPattern = Pattern.compile(parameterSpace.getOutputPattern());
 	}
 
 	@Override
@@ -39,15 +100,36 @@ public class LearningParameterSearch extends BasicSearchDomain {
 	}
 
 	@Override
-	protected void replaceSolutionComponent(String[] comonents, int index) {
-		// TODO Auto-generated method stub
-
+	protected void replaceSolutionComponent(String[] components, int index) {
+		String curComp = components[index];
+		addSolutionComponent(components, index);
+		while(curComp.equals(components[index])) {
+			addSolutionComponent(components, index);
+		}
 	}
 
 	@Override
 	public  double getSolutionCost(String solution) {
 		double cost = 0;
-		//TODO
+		
+		List<String> commands = new ArrayList<String>();
+		commands.addAll(parameterSpace.getCommands());
+		for (String comp : getSolutionComponenets(solution)) {
+			commands.add(comp);
+		}
+		
+		//execute ML application
+		String result = BasicUtils.execShellCommand(commands, parameterSpace.getExecDir());
+		
+		//extract performance metric
+    	Matcher matcher = outputPattern.matcher(result);
+    	if (matcher.matches()) {
+    		String metric = matcher.group(1);
+    		cost = Double.parseDouble(metric);
+    	} else {
+    		throw new IllegalStateException("failed to extract metric from output");
+    	}
+    	
 		return cost;
 	}
 	
@@ -59,20 +141,20 @@ public class LearningParameterSearch extends BasicSearchDomain {
 
 	@Override
 	public boolean isValid(String[] components) {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
 	public boolean isValid(String[] componentsex, int index) {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
-	protected void addComponent(String[] componenets, int index) {
-		// TODO Auto-generated method stub
-
+	protected void addSolutionComponent(String[] components, int index) {
+		UniformSampler sampler = paramSamplers.get(index);
+		TypedObject sampled = sampler.sample();
+		String comp = parameterSpace.getParameters().get(index).getName() + compItemDelim + sampled.getValue();
+		components[index] = comp;
 	}
 
 	@Override

@@ -109,7 +109,7 @@ public class TaxiFleetAssignment extends TabuSearchDomain {
 	}
 
 	@Override
-	protected void addComponent(String[] componenets, int index) {
+	protected void addSolutionComponent(String[] componenets, int index) {
 		String taxiId  = candidateTaxis.get(index).getId();
 		String passengerId = candidatePassengers.get(index).getId();
 		String component = taxiId + compItemDelim + passengerId;

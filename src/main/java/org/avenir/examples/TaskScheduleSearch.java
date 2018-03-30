@@ -305,7 +305,7 @@ public class TaskScheduleSearch extends PopulationSearchDomain {
 	}
 
 	@Override
-	protected void addComponent(String[] componenets, int index) {
+	protected void addSolutionComponent(String[] componenets, int index) {
 		String taskID = taskSchedule.getTasks().get(index).getId();
 		String employeeID = BasicUtils.selectRandom(taskSchedule.getEmployees()).getId();
 		String comp = taskID + compItemDelim + employeeID;

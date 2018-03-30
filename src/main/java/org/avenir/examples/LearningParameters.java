@@ -26,6 +26,10 @@ import java.util.List;
  */
 public class LearningParameters {
 	private List<LearningParameter> parameters;
+	private int floatPrecision;
+	private List<String> commands; 
+	private String execDir;
+	private String outputPattern;
 
 	public List<LearningParameter> getParameters() {
 		return parameters;
@@ -33,6 +37,38 @@ public class LearningParameters {
 
 	public void setParameters(List<LearningParameter> parameters) {
 		this.parameters = parameters;
+	}
+	
+	public int getFloatPrecision() {
+		return floatPrecision;
+	}
+
+	public void setFloatPrecision(int floatPrecision) {
+		this.floatPrecision = floatPrecision;
+	}
+
+	public List<String> getCommands() {
+		return commands;
+	}
+
+	public void setCommand(List<String> commands) {
+		this.commands = commands;
+	}
+
+	public String getExecDir() {
+		return execDir;
+	}
+
+	public void setExecDir(String execDir) {
+		this.execDir = execDir;
+	}
+
+	public String getOutputPattern() {
+		return outputPattern;
+	}
+
+	public void setOutputPattern(String outputPattern) {
+		this.outputPattern = outputPattern;
 	}
 	
 }

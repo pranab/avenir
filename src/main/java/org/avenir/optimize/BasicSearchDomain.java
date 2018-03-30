@@ -44,8 +44,8 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected int mutationRetryCountLimit;
 	protected Set<String> invalidSolutions;
 	protected boolean debugOn;
-	protected static final String compDelim = ";";
-	protected static final String compItemDelim = ":";
+	protected static String compDelim = ";";
+	protected static String compItemDelim = ":";
 	
 	/**
 	 * 
@@ -110,7 +110,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param componenets
 	 * @param index
 	 */
-	protected abstract void addComponent(String[] componenets, int index);
+	protected abstract void addSolutionComponent(String[] componenets, int index);
 	
 	/**
 	 * @return
@@ -246,9 +246,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 		prepareCreateSolution();
 		String[] components = new String[numComponents];
 		for (int i = 0; i < numComponents; ++i) {
-			addComponent(components, i);
+			addSolutionComponent(components, i);
 			while (!isValid(components,i)) {
-				addComponent(components, i);
+				addSolutionComponent(components, i);
 			}
 		}
 		return this.aggregateSolutionComponenets(components);
@@ -269,7 +269,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param candidate
 	 * @return
 	 */
-	public  double getSolutionCost(String solution) {
+	public double getSolutionCost(String solution) {
 		double cost = 0;
 		if (invalidSolutions.contains(solution)) {
 			cost = getInvalidSolutionCost();
@@ -352,14 +352,21 @@ public abstract class  BasicSearchDomain implements Serializable {
 		boolean valid = false;
 		
 		int step = stepSize.getStepSize();
+		if (step > numComponents) {
+			throw new IllegalStateException("mutation step size should not be greater than number of solution components");
+		}
+		
 		//System.out.println("step: " + step);
 		int tryCount = 0;
+		Set<Integer> selectedComps = new HashSet<Integer>();
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
-			int compIndex = BasicUtils.sampleUniform(numComponents-1);
+			int compIndex = selectComponentToMutate(selectedComps);
 			String curComp = components[compIndex];
 			System.out.println("component to replace: " + compIndex);
 			replaceSolutionComponent(components, compIndex);
+			
+			//check validity
 			valid = isValid(components);
 			tryCount = 0;
 			while (!valid && tryCount < mutationRetryCountLimit) {
@@ -384,6 +391,19 @@ public abstract class  BasicSearchDomain implements Serializable {
 			System.out.println("created newSoln: " + newSoln);
 		}
 		return newSoln;
+	}
+	
+	/**
+	 * @param selectedComps
+	 * @return
+	 */
+	private int selectComponentToMutate(Set<Integer> selectedComps) {
+		int comp = BasicUtils.sampleUniform(numComponents-1);
+		while(selectedComps.contains(comp)) {
+			comp = BasicUtils.sampleUniform(numComponents-1);
+		}
+		selectedComps.add(comp);
+		return comp;
 	}
 	
 	/**
