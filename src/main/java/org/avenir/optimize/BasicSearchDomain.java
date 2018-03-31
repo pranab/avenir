@@ -19,8 +19,10 @@ package org.avenir.optimize;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,8 +43,9 @@ public abstract class  BasicSearchDomain implements Serializable {
 	protected int numComponents;
 	protected int mutationRetryCountLimit;
 	protected Set<String> invalidSolutions;
-	protected int crossOverRetryCountLimit;
 	protected boolean debugOn;
+	protected static String compDelim = ";";
+	protected static String compItemDelim = ":";
 	
 	/**
 	 * 
@@ -68,34 +71,10 @@ public abstract class  BasicSearchDomain implements Serializable {
 			boolean debugOn) ;
 	
 	/**
-	 * @param configFile
-	 * @param crossOverRetryCountLimit
-	 * @param mutationRetryCountLimit
-	 * @param debugOn
-	 */
-	public abstract void intitPopulationStrategy(String configFile, int crossOverRetryCountLimit,  
-			int mutationRetryCountLimit, boolean debugOn);
-	/**
 	 * @return
 	 */
 	public abstract  BasicSearchDomain createTrajectoryStrategyClone();
 	
-	/**
-	 * @return
-	 */
-	public abstract BasicSearchDomain createPopulationStrategyClone();
-	
-	/**
-	 * @param solution
-	 * @return
-	 */
-	public abstract String[] getSolutionComponenets(String solution);
-	
-	/**
-	 * @param components
-	 * @return
-	 */
-	public abstract String aggregateSolutionComponenets(String[] components);
 
 	/**
 	 * replaces solution component at specified position 
@@ -131,7 +110,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param componenets
 	 * @param index
 	 */
-	protected abstract void addComponent(String[] componenets, int index);
+	protected abstract void addSolutionComponent(String[] componenets, int index);
 	
 	/**
 	 * @return
@@ -177,7 +156,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 			System.out.println("currentSolution before creating new:" + currentSolution);
 		}
 		String solution =  refCurrent ? currentSolution :initialSolution;
-		return mutate(solution);
+		return mutateSolution(solution);
 	}
 	
 	/**
@@ -235,6 +214,22 @@ public abstract class  BasicSearchDomain implements Serializable {
 	}
 	
 	/**
+	 * @return
+	 */
+	public BasicSearchDomain withNeighborhoodReferenceCurrent() {
+		this.refCurrent = true;
+		return this;
+	}
+	
+	/**
+	 * @return
+	 */
+	public BasicSearchDomain withNeighborhoodReferenceInitial() {
+		this.refCurrent = false;
+		return this;
+	}
+
+	/**
 	 * @param mutationRetryCountLimit
 	 * @return
 	 */
@@ -242,19 +237,24 @@ public abstract class  BasicSearchDomain implements Serializable {
 		this.mutationRetryCountLimit = mutationRetryCountLimit;
 		return this;
 	}
+	
 	/**
 	 * creates random candidate
 	 * @return
 	 */
 	public  String createSolution() {
+		prepareCreateSolution();
 		String[] components = new String[numComponents];
 		for (int i = 0; i < numComponents; ++i) {
-			addComponent(components, i);
+			addSolutionComponent(components, i);
 			while (!isValid(components,i)) {
-				addComponent(components, i);
+				addSolutionComponent(components, i);
 			}
 		}
 		return this.aggregateSolutionComponenets(components);
+	}
+	
+	public void prepareCreateSolution() {
 	}
 	
 	/**
@@ -269,7 +269,7 @@ public abstract class  BasicSearchDomain implements Serializable {
 	 * @param candidate
 	 * @return
 	 */
-	public  double getSolutionCost(String solution) {
+	public double getSolutionCost(String solution) {
 		double cost = 0;
 		if (invalidSolutions.contains(solution)) {
 			cost = getInvalidSolutionCost();
@@ -316,111 +316,57 @@ public abstract class  BasicSearchDomain implements Serializable {
 		return cost;
 	}
 	
+	/**
+	 * @return
+	 */
 	public  int getNumComponents(){
 		return numComponents;
 	}
 	
 	/**
-	 * @param firstSoln
-	 * @param secondSoln
-	 * @return
+	 * 
 	 */
-	public Pair<String, String> crossOverForPair(String firstSoln, String secondSoln) {
-		boolean valid = false;
-		Pair<String, String> crossedOver = null;
-		String[] firstSolncomp = getSolutionComponenets(firstSoln);
-		String[] secondSolncomp = getSolutionComponenets(secondSoln);
-		String[] thisFirstSolncomp = new String[numComponents];
-		String[] thisSecondSolncomp = new String[numComponents];
-		String[] temp = new String[numComponents];
-		boolean[] validationStatus = new boolean[2];
-		String[] solutions = new String[2];
-		Set<Integer> crossOverPoints = new HashSet<Integer>();
-		
-		//retry loop
-		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
-			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
-			if (crossOverPoints.contains(crossOverPt)) {
-				continue;
-			} else {
-				crossOverPoints.add(crossOverPt);
-			}
-			
-			BasicUtils.arrayCopy(firstSolncomp, 0, numComponents, thisFirstSolncomp, 0);
-			BasicUtils.arrayCopy(secondSolncomp, 0, numComponents, thisSecondSolncomp, 0);
-			
-			//cross over segments
-			BasicUtils.arrayCopy(thisSecondSolncomp, crossOverPt, numComponents, temp, 0);
-			BasicUtils.arrayCopy(thisFirstSolncomp, crossOverPt, numComponents, thisSecondSolncomp, crossOverPt);
-			BasicUtils.arrayCopy(temp, 0, numComponents - crossOverPt, thisFirstSolncomp, crossOverPt);
-			
-			validationStatus[0] = isValid(thisFirstSolncomp);
-			validationStatus[1] = isValid(thisSecondSolncomp);
-			valid = validationStatus[0] && validationStatus[1];
-		}
-		
-		solutions[0] = aggregateSolutionComponenets(thisFirstSolncomp);
-		solutions[1] = aggregateSolutionComponenets(thisSecondSolncomp);
-		
-		//cache invalid solutions
-		for (int i = 0; i < 2; ++i) {
-			if (!validationStatus[i]) {
-				invalidSolutions.add(solutions[i]);
-			}
-		}	
-		crossedOver = new Pair<String, String>(solutions[0], solutions[1]);
-		return crossedOver;
-		
+	public void prepareMutateSolution() {
 	}
 	
 	/**
-	 * @param firstSoln
-	 * @param secondSoln
+	 * @param solution
+	 * @param numSolutions
 	 * @return
 	 */
-	public String crossOverForOne(String firstSoln, String secondSoln) {
-		String[] firstSolncomp = getSolutionComponenets(firstSoln);
-		String[] secondSolncomp = getSolutionComponenets(secondSoln);
-		String[] childSolncomp = new String[numComponents];
-		Set<Integer> crossOverPoints = new HashSet<Integer>();
-		boolean valid = false;
+	public List<String> mutateSolution(String solution, int numSolutions) {
+		List<String> solutions = new ArrayList<String>();
+		for (int i = 0; i < numSolutions; ++i) {
+			solutions.add(mutateSolution(solution));
+		}
+		return solutions;
+	}
 		
-		//retry loop
-		for (int tryCount = 0; !valid && tryCount < crossOverRetryCountLimit; ++tryCount) {
-			int crossOverPt = BasicUtils.sampleUniform(1, numComponents-1);
-			if (crossOverPoints.contains(crossOverPt)) {
-				continue;
-			} else {
-				crossOverPoints.add(crossOverPt);
-			}
-			BasicUtils.arrayCopy(firstSolncomp, 0, crossOverPt, childSolncomp, 0);
-			BasicUtils.arrayCopy(secondSolncomp, crossOverPt, numComponents, childSolncomp, crossOverPt);
-			valid = isValid(childSolncomp);
-		}
-		String childSoln = aggregateSolutionComponenets(childSolncomp);
-		if (!valid) {
-			invalidSolutions.add(childSoln);
-		}
-		return childSoln;
-	}	
-	
 	/**
 	 * @param solution
 	 * @return
 	 */
-	public String mutate(String solution) {
+	
+	public String mutateSolution(String solution) {
 		String[] components = getSolutionComponenets(solution);
 		boolean valid = false;
 		
 		int step = stepSize.getStepSize();
+		if (step > numComponents) {
+			throw new IllegalStateException("mutation step size should not be greater than number of solution components");
+		}
+		
 		//System.out.println("step: " + step);
 		int tryCount = 0;
+		Set<Integer> selectedComps = new HashSet<Integer>();
 		for (int i = 1; i <= step; ++i) {
 			//component to mutate
-			int compIndex = BasicUtils.sampleUniform(numComponents-1);
+			int compIndex = selectComponentToMutate(selectedComps);
 			String curComp = components[compIndex];
 			System.out.println("component to replace: " + compIndex);
 			replaceSolutionComponent(components, compIndex);
+			
+			//check validity
 			valid = isValid(components);
 			tryCount = 0;
 			while (!valid && tryCount < mutationRetryCountLimit) {
@@ -445,5 +391,51 @@ public abstract class  BasicSearchDomain implements Serializable {
 			System.out.println("created newSoln: " + newSoln);
 		}
 		return newSoln;
+	}
+	
+	/**
+	 * @param selectedComps
+	 * @return
+	 */
+	private int selectComponentToMutate(Set<Integer> selectedComps) {
+		int comp = BasicUtils.sampleUniform(numComponents-1);
+		while(selectedComps.contains(comp)) {
+			comp = BasicUtils.sampleUniform(numComponents-1);
+		}
+		selectedComps.add(comp);
+		return comp;
+	}
+	
+	/**
+	 * @param solution
+	 * @return
+	 */
+	public String[] getSolutionComponenets(String solution) {
+		return solution.split(compDelim);
+	}
+
+	/**
+	 * @param components
+	 * @return
+	 */
+	public String aggregateSolutionComponenets(String[] components) {
+		return BasicUtils.join(components, compDelim);
+	}
+	
+	/**
+	 * @param component
+	 * @return
+	 */
+	public String[] getSolutionComponentItems(String component) {
+		return component.split(compItemDelim);
+	}
+	
+	
+	/**
+	 * @param items
+	 * @return
+	 */
+	public String aggregateSolutionComponenetItems(String[] items) {
+		return BasicUtils.join(items, compItemDelim);
 	}
 }

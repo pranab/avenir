@@ -30,7 +30,7 @@ import org.chombo.util.Record;
  * @author pranab
  *
  */
-public class SampsonSamplerLearner extends MultiArmBanditLearner {
+public class ThompsonSamplerLearner extends MultiArmBanditLearner {
 	protected Map<String, NonParametricDistrRejectionSampler<IntRange>> nonParamDistr = 
 			new HashMap<String, NonParametricDistrRejectionSampler<IntRange>>();
 	protected Map<String, Integer> trialCounts = new HashMap<String, Integer>();
@@ -44,6 +44,28 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 		minSampleSize = ConfigUtility.getInt(config, "min.sample.size");
 		maxReward = ConfigUtility.getInt(config, "max.reward");
 		binWidth = ConfigUtility.getInt(config, "bin.width");
+	}
+	
+	@Override
+	public void merge(MultiArmBanditLearner that) {
+		ThompsonSamplerLearner thatLearner = (ThompsonSamplerLearner)that;
+		for (Action action : actions) {
+			String actionId = action.getId();
+			NonParametricDistrRejectionSampler<IntRange> thisDistr = nonParamDistr.get(actionId);
+			NonParametricDistrRejectionSampler<IntRange> thatDistr = thatLearner.nonParamDistr.get(actionId);
+			if (null != thatDistr) {
+				if (null == thisDistr) {
+					thisDistr = new NonParametricDistrRejectionSampler<IntRange>();
+					nonParamDistr.put(actionId, thisDistr);
+				}
+				thisDistr.merge(thatDistr);
+			}
+			
+			Integer count = trialCounts.get(actionId);
+			Integer thatCount = thatLearner.trialCounts.get(actionId);
+			int aggrCount = (null == count ? 0 : count) + (null == thatCount ? 0 : thatCount);
+			trialCounts.put(actionId, aggrCount);
+		}
 	}
 	
 	/* (non-Javadoc)
@@ -107,6 +129,17 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 	@Override
 	public void buildModel(String model) {
 		Record record = new Record(model, delim);
+		if (record.getSize() > 1) {
+			buildExistingModel(record);
+		} else {
+			buildInitialModel(record);
+		}
+	}
+	
+	/**
+	 * @param record
+	 */
+	private void buildExistingModel(Record record) {
 		String actionId = record.getString();
 		int numBins = record.getInt();
 		
@@ -122,6 +155,30 @@ public class SampsonSamplerLearner extends MultiArmBanditLearner {
 			distr.add(range, value);
 			count += value;
 		}
+		
+		nonParamDistr.put(actionId, distr);
+		trialCounts.put(actionId, count);
+	}
+
+	/**
+	 * @param record
+	 */
+	private void buildInitialModel(Record record) {
+		String actionId = record.getString();
+		int numBins = maxReward / binWidth + 1;
+		
+		//populate distribution
+		NonParametricDistrRejectionSampler<IntRange> distr = new NonParametricDistrRejectionSampler<IntRange>();
+		int count = 0;
+		for (int i = 0; i < numBins; ++i) {
+			int binIndex = i;
+			int binBeg = binIndex * binWidth;
+			int binEnd = binBeg + binWidth - 1;
+			IntRange range = new IntRange(binBeg, binEnd);
+			int value = 1;
+			distr.add(range, value);
+			count += value;
+		}		
 		nonParamDistr.put(actionId, distr);
 		trialCounts.put(actionId, count);
 	}

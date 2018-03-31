@@ -33,12 +33,12 @@ import org.chombo.util.Utility;
  *
  */
 public class IntervalEstimatorLearner extends MultiArmBanditLearner{
-	private int binWidth;
-	private int confidenceLimit;
-	private int minConfidenceLimit;
-	private int curConfidenceLimit;
-	private int confidenceLimitReductionStep;
-	private int confidenceLimitReductionRoundInterval;
+	private double binWidth;
+	private double confidenceLimit;
+	private double minConfidenceLimit;
+	private double curConfidenceLimit;
+	private double confidenceLimitReductionStep;
+	private double confidenceLimitReductionRoundInterval;
 	private int minDistrSample;
 	private Map<String, HistogramStat> rewardDistr = new HashMap<String, HistogramStat>(); 
 	private long lastRoundNum = 1;
@@ -52,12 +52,12 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 	@Override
 	public void initialize(Map<String, Object> config) {
 		super.initialize(config);
-		binWidth = ConfigUtility.getInt(config, "bin.width");
-		confidenceLimit = ConfigUtility.getInt(config, "confidence.limit");
-		minConfidenceLimit = ConfigUtility.getInt(config, "min.confidence.limit");
+		binWidth = ConfigUtility.getDouble(config, "bin.width");
+		confidenceLimit = ConfigUtility.getDouble(config, "confidence.limit");
+		minConfidenceLimit = ConfigUtility.getDouble(config, "min.confidence.limit");
 		curConfidenceLimit = confidenceLimit;
-		confidenceLimitReductionStep = ConfigUtility.getInt(config, "confidence.limit.reduction.step");
-		confidenceLimitReductionRoundInterval = ConfigUtility.getInt(config, "confidence.limit.reduction.round.interval");
+		confidenceLimitReductionStep = ConfigUtility.getDouble(config, "confidence.limit.reduction.step");
+		confidenceLimitReductionRoundInterval = ConfigUtility.getDouble(config, "confidence.limit.reduction.round.interval");
 		minDistrSample = ConfigUtility.getInt(config, "min.reward.distr.sample");
 		
 		for (Action action : actions) {
@@ -111,11 +111,11 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 			adjustConfLimit();
 			
 			//select as per interval estimate, choosing distr with max upper conf bound
-			int maxUpperConfBound = 0;
+			double maxUpperConfBound = 0;
 			String selActionId = null;
 			for (String action : rewardDistr.keySet()) {
 				HistogramStat stat = rewardDistr.get(action);
-				int[] confBounds = stat.getConfidenceBounds(curConfidenceLimit);
+				double[] confBounds = stat.getConfidenceBounds(curConfidenceLimit);
 				if (debugOn) {
 					LOG.info("curConfidenceLimit:" + curConfidenceLimit + " action:" + action + " conf bounds:" + confBounds[0] + "  " + confBounds[1]);
 				}
@@ -176,6 +176,11 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 		String actionId = items[0];
 		HistogramStat stat = rewardDistr.get(actionId);
 		stat.initializeBins(items, 1);
+		
+		//update action state
+		Action action = findAction(actionId);
+		action.setTrialCount(stat.getCount());
+		action.setTotalReward(stat.getSum());
 	}
 
 	@Override
@@ -185,7 +190,7 @@ public class IntervalEstimatorLearner extends MultiArmBanditLearner{
 		for (String actionId : rewardDistr.keySet()) {
 			HistogramStat stat = rewardDistr.get(actionId);
 			stat.withSerializeBins(true);
-			model[i++] = stat.toString();
+			model[i++] = actionId + delim + stat.toString();
 		}
 		return model;
 	}

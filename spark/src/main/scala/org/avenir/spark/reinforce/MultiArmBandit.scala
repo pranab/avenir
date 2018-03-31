@@ -45,6 +45,7 @@ object MultiArmBandit extends JobConfiguration {
 	   val batchSize = getMandatoryIntParam(appConfig, "decision.batch.size")
 	   val rewardFeedbackFilePath = getOptionalStringParam(appConfig, "reward.feedback.file.path")
 	   val modelStateOutputFilePath = getMandatoryStringParam(appConfig, "model.state.output.file.path")
+	   val curDecRound = getMandatoryIntParam(appConfig, "current.decision.round")
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -127,23 +128,28 @@ object MultiArmBandit extends JobConfiguration {
 	  
 	   //save recommended actions
 	   if (saveOutput) {
-	     groupActions.saveAsTextFile(outputPath)
+		   //save decisions as the primary output
+		   groupActions.saveAsTextFile(outputPath)
+	     
+		   //model needs updating if updated with new reward or this is the first round
+		   val saveModel = rewardFeedbackFilePath match {
+		     case Some(path:String) => true	     
+		     case None => curDecRound == 1
+		   }
+		   
+		   //save model as the secondary output
+		   if (saveModel) {
+			   //save state
+			   val modelState = groupWiseLearners.flatMapValues(v => {
+			         val state = v.getModel()
+			         state
+			       }).map(kv => {
+			         kv._1 + fieldDelimOut + kv._2
+			       })
+			    modelState.saveAsTextFile(modelStateOutputFilePath)
+		   }
 	   }
-	   
-	   //save state
-	   rewardFeedbackFilePath match {
-	     case Some(path:String) => {
-	       //only if model state was updated
-	       val modelState = groupWiseLearners.flatMapValues(v => {
-	         val state = v.getModel()
-	         state
-	       }).map(kv => {
-	         kv._1 + kv._2
-	       })
-	       modelState.saveAsTextFile(modelStateOutputFilePath)
-	     }
-	     case None =>
-	   }
+
    }
    
    /**
@@ -154,10 +160,14 @@ object MultiArmBandit extends JobConfiguration {
 	   val configParams = new java.util.HashMap[String, Object]()
 	   
 	   //common configurations
-	   configParams.put("current.decision.round", new Integer(appConfig.getInt("current.decision.round")))
-	   configParams.put("decision.batch.size", new Integer(appConfig.getInt("decision.batch.size")))
-	   configParams.put("reward.scale", new Integer(appConfig.getInt("reward.scale")))
-	   configParams.put("min.trial", new Integer(appConfig.getInt("min.trial")))
+	   val batchSize = getMandatoryIntParam(appConfig, "decision.batch.size")
+	   val curDecRound = getMandatoryIntParam(appConfig, "current.decision.round")
+	   val rewardScale = getIntParamOrElse(appConfig, "reward.scale", 1)
+	   val minTrial = getIntParamOrElse(appConfig, "min.trial", 1)
+	   configParams.put("current.decision.round", new Integer(curDecRound))
+	   configParams.put("decision.batch.size", new Integer(batchSize))
+	   configParams.put("reward.scale", new Integer(rewardScale))
+	   configParams.put("min.trial", new Integer(minTrial))
 	   
 	   //algorithm specific configurations
 	   learnAlgo match {
@@ -172,12 +182,12 @@ object MultiArmBandit extends JobConfiguration {
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_TWO => {
 	         configParams.put("alpha", new java.lang.Double(appAlgoConfig.getDouble("alpha")))
 	       }
-	       case MultiArmBanditLearnerFactory.SAMPSON_SAMPLER => {
-	         configParams.put("min.sample.size", new java.lang.Double(appAlgoConfig.getDouble("min.sample.size")))
-	         configParams.put("max.reward", new java.lang.Double(appAlgoConfig.getDouble("max.reward")))
-	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
+	       case MultiArmBanditLearnerFactory.THOMPSON_SAMPLER => {
+	         configParams.put("min.sample.size", new java.lang.Integer(getIntParamOrElse(appAlgoConfig, "min.sample.size", 8)))
+	         configParams.put("max.reward", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "max.reward")))
+	         configParams.put("bin.width", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "bin.width")))
 	       }
-	       case MultiArmBanditLearnerFactory.OPTIMISTIC_SAMPSON_SAMPLER => {
+	       case MultiArmBanditLearnerFactory.OPTIMISTIC_THOMPSON_SAMPLER => {
 	       }
 	       case MultiArmBanditLearnerFactory.SOFT_MAX => {
 	         configParams.put("temp.constant", new java.lang.Double(appAlgoConfig.getDouble("temp.constant")))
@@ -192,6 +202,16 @@ object MultiArmBandit extends JobConfiguration {
 	         configParams.put("num.experts", new Integer(appAlgoConfig.getInt("num.experts")))
 	         configParams.put("experts",BasicUtils.intArrayFromString(appAlgoConfig.getString("experts"), 
 	             BasicUtils.configDelim))
+	       }
+	       case MultiArmBanditLearnerFactory.INTERVAL_ESTIMATOR => {
+	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
+	         configParams.put("confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("confidence.limit")))
+	         configParams.put("min.confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("min.confidence.limit")))
+	         configParams.put("confidence.limit.reduction.step", new java.lang.Double(
+	             appAlgoConfig.getDouble("confidence.limit.reduction.step")))
+	         configParams.put("confidence.limit.reduction.round.interval", new java.lang.Double(
+	             appAlgoConfig.getDouble("confidence.limit.reduction.round.interval")))
+	         configParams.put("min.reward.distr.sample", new Integer(appAlgoConfig.getInt("min.reward.distr.sample")))
 	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }

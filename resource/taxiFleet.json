@@ -1,0 +1,281 @@
+{
+	"taxis" :
+	[
+		{
+			"id" : "I3W85W2680",
+			"currentLocation" : [37.63876, -122.19060],
+			"destLocation" : [37.56829, -122.36244],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "U9F0022QBQ",
+			"currentLocation" : [37.52173, -122.37858],
+			"destLocation" : [37.72099, -122.44132],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "85OB1GGDPY",
+			"currentLocation" : [37.71797, -122.17988],
+			"destLocation" : [37.63921, -122.15688],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "A70B83I4QG",
+			"currentLocation" : [37.57667, -122.24662],
+			"destLocation" : [7.74583, -122.20389],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "1MUQ46761L",
+			"currentLocation" : [37.55872, -122.27025],
+			"destLocation" : [37.53619, -122.21289],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "F8SKIQF81X",
+			"currentLocation" : [37.52482, -122.20667],
+			"destLocation" : [37.59583, -122.41973],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "AU8Q3A3HW3",
+			"currentLocation" : [37.68905, -122.37949],
+			"destLocation" : [37.64810, -122.35032],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "31JP20F8S6",
+			"currentLocation" : [37.53934, -122.15393],
+			"destLocation" : [37.67538, -122.26167],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "0DZ69F8C8K",
+			"currentLocation" : [37.69846, -122.35169],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "UXE06M8GO8",
+			"currentLocation" : [37.60653, -122.31862],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "WRY74L7NH8",
+			"currentLocation" : [37.54117, -122.38122],
+			"destLocation" : [37.60472, -122.27992],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "42ABARDVF8",
+			"currentLocation" : [37.56884, -122.43783],
+			"destLocation" : [37.75425, -122.32342],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "E55J9H826Q",
+			"currentLocation" : [37.56479, -122.28069],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "0JEWPA4DB6",
+			"currentLocation" : [37.68790, -122.22407],
+			"destLocation" : [37.59674, -122.14638],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "VGQ4FJEVH0",
+			"currentLocation" : [37.58245, -122.28105],
+			"destLocation" : [37.71645, -122.29274],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "VGQ4FJEVH0",
+			"currentLocation" : [37.60790, -122.29531],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "ZE502KVM55",
+			"currentLocation" : [37.58770, -122.16117],
+			"destLocation" : [37.58756, -122.13348],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "5X3N8WO6L2",
+			"currentLocation" : [37.53819, -122.19801],
+			"destLocation" : [42.93708, -75.61070],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "ME9414R3A3",
+			"currentLocation" : [37.57562, -122.40475],
+			"destLocation" : [37.72510, -122.38223],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "2HVISHM4YY",
+			"currentLocation" : [37.79652, -122.11250],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "K5SZID1VXV",
+			"currentLocation" : [37.58161, -122.15612],
+			"destLocation" : [37.56801, -122.43421],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "V04STQ7Y33",
+			"currentLocation" : [37.65904, -122.11753],
+			"destLocation" : [37.53001, -122.16153],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "MC6D2681NS",
+			"currentLocation" : [37.62709, -122.30466],
+			"destLocation" : [42.93708, -75.61070],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "LVDG6JBT03",
+			"currentLocation" : [37.59818, -122.32364],
+			"destLocation" : [37.60955, -122.44807],
+			"earningToday" : 435.67
+		},
+		{
+			"id" : "2HVISHM4YY",
+			"currentLocation" : [37.53279, -122.49050],
+			"destLocation" : [37.79034, -122.34722],
+			"earningToday" : 435.67
+		}
+	],
+	
+	"passengers" :
+	[
+		{
+			"id" : "GSTV4USOJ8UK",
+			"currentLocation" : [37.70356, -122.30682],
+			"destLocation" : [37.69933, -122.44570],
+			"frequentUser" : false
+		},
+		{
+			"id" : "PGTB4WC5X9S5",
+			"currentLocation" : [37.66152, -122.12525],
+			"destLocation" : [37.67528, -122.13833],
+			"frequentUser" : false
+		},
+		{
+			"id" : "R2SQ5FQZKMGQ",
+			"currentLocation" : [37.65442, -122.11357],
+			"destLocation" : [37.56118, -122.45268],
+			"frequentUser" : false
+		},
+		{
+			"id" : "544T1C9A2D43",
+			"currentLocation" : [37.50538, -122.16895],
+			"destLocation" : [37.63027, -122.15938],
+			"frequentUser" : false
+		},
+		{
+			"id" : "I7SREI187249",
+			"currentLocation" : [37.56769, -122.48055],
+			"destLocation" : [37.67329, -122.34470],
+			"frequentUser" : false
+		},
+		{
+			"id" : "6YMZ2KN8T84L",
+			"currentLocation" : [37.68861, -122.12314],
+			"destLocation" : [37.56222, -122.41685],
+			"frequentUser" : false
+		},
+		{
+			"id" : "BW5847IN4QNE",
+			"currentLocation" : [37.64789, -122.39483],
+			"destLocation" : [37.56168, -122.43770],
+			"frequentUser" : false
+		},
+		{
+			"id" : "7S7GHWOFTZWD",
+			"currentLocation" : [37.62638, -122.21650],
+			"destLocation" : [37.78532, -122.22013],
+			"frequentUser" : false
+		},
+		{
+			"id" : "71KJAMIG3637",
+			"currentLocation" : [37.61297, -122.13339],
+			"destLocation" : [37.75676, -122.31598],
+			"frequentUser" : false
+		},
+		{
+			"id" : "9E978ZM59MHF",
+			"currentLocation" : [37.79411, -122.43217],
+			"destLocation" : [37.55245, -122.16922],
+			"frequentUser" : false
+		},
+		{
+			"id" : "6LRS4U76IUTO",
+			"currentLocation" : [37.54767, -122.43012],
+			"destLocation" : [37.66123, -122.35661],
+			"frequentUser" : false
+		},
+		{
+			"id" : "R8538A522AS3",
+			"currentLocation" : [37.78308, -122.17150],
+			"destLocation" : [37.77380, -122.10705],
+			"frequentUser" : false
+		},
+		{
+			"id" : "3JZS9BUHP62O",
+			"currentLocation" : [37.78686, -122.18167],
+			"destLocation" : [37.75771, -122.39010],
+			"frequentUser" : false
+		},
+		{
+			"id" : "A2J2Z3OXUPET",
+			"currentLocation" : [37.63015, -122.42332],
+			"destLocation" : [37.50757, -122.23469],
+			"frequentUser" : false
+		},
+		{
+			"id" : "3AY1YK8S3V43",
+			"currentLocation" : [37.56895, -122.18865],
+			"destLocation" : [37.68448, -122.26954],
+			"frequentUser" : false
+		},
+		{
+			"id" : "5KW5OV4WV6P9",
+			"currentLocation" : [37.71607, -122.49276],
+			"destLocation" : [37.50581, -122.48297],
+			"frequentUser" : false
+		},
+		{
+			"id" : "EIY7G0Y3BJSR",
+			"currentLocation" : [37.68855, -122.13913],
+			"destLocation" : [37.78509, -122.37118],
+			"frequentUser" : false
+		},
+		{
+			"id" : "T2369I2GKJC1",
+			"currentLocation" : [37.63016, -122.37426],
+			"destLocation" : [37.60579, -122.13686],
+			"frequentUser" : false
+		},
+		{
+			"id" : "XNZQ3OC49EGU",
+			"currentLocation" : [37.63979, -122.45560],
+			"destLocation" : [37.66143, -122.38627],
+			"frequentUser" : false
+		},
+		{
+			"id" : "0N306PDLVI1M",
+			"currentLocation" : [37.51389, -122.3831],
+			"destLocation" : [37.62929, -122.37668],
+			"frequentUser" : false
+		},
+		{
+			"id" : "8JMXQH0ZD3GC",
+			"currentLocation" : [37.55906, -122.19426],
+			"destLocation" : [37.78106, -122.44854],
+			"frequentUser" : false
+		}
+	]
+	
+}	

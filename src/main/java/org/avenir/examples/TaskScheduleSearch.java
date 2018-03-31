@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.avenir.optimize.BasicSearchDomain;
+import org.avenir.optimize.PopulationSearchDomain;
 import org.chombo.util.BasicUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -33,12 +34,9 @@ import org.codehaus.jackson.map.ObjectMapper;
  * @author pranab
  *
  */
-public class TaskScheduleSearch extends BasicSearchDomain {
+public class TaskScheduleSearch extends PopulationSearchDomain {
 	private TaskSchedule taskSchedule;
 	private SimpleDateFormat dateFormatter;
-	
-	private static final String compDelim = ";";
-	private static final String compItemDelim = ":";
 	
 	public TaskScheduleSearch() {
 	}
@@ -117,7 +115,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	 * @see org.avenir.optimize.BasicSearchDomain#createPopulationStrategyClone()
 	 */
 	@Override
-	public BasicSearchDomain createPopulationStrategyClone() {
+	public PopulationSearchDomain createPopulationStrategyClone() {
 		TaskScheduleSearch searchDomain = new TaskScheduleSearch();
 		searchDomain.taskSchedule = this.taskSchedule;
 		searchDomain.numComponents = this.numComponents;
@@ -129,17 +127,6 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 		return searchDomain;
 	}
 
-	@Override
-	public String[] getSolutionComponenets(String solution) {
-		return solution.split(compDelim);
-	}
-
-	@Override
-	public String aggregateSolutionComponenets(String[] components) {
-		return BasicUtils.join(components, compDelim);
-	}
-
-	
 	/**
 	 * @param components
 	 * @param endIndex
@@ -318,7 +305,7 @@ public class TaskScheduleSearch extends BasicSearchDomain {
 	}
 
 	@Override
-	protected void addComponent(String[] componenets, int index) {
+	protected void addSolutionComponent(String[] componenets, int index) {
 		String taskID = taskSchedule.getTasks().get(index).getId();
 		String employeeID = BasicUtils.selectRandom(taskSchedule.getEmployees()).getId();
 		String comp = taskID + compItemDelim + employeeID;

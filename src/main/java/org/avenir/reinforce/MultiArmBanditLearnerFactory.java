@@ -28,8 +28,8 @@ import java.util.Map;
  */
 public class MultiArmBanditLearnerFactory implements Serializable {
 	public static final String INTERVAL_ESTIMATOR = "intervalEstimator";
-	public static final String SAMPSON_SAMPLER = "sampsonSampler";
-	public static final String OPTIMISTIC_SAMPSON_SAMPLER = "optimisticSampsonSampler";
+	public static final String THOMPSON_SAMPLER = "thomsonSampler";
+	public static final String OPTIMISTIC_THOMPSON_SAMPLER = "optimisticThompsonSampler";
 	public static final String RANDOM_GREEDY = "randomGreedy";
 	public static final String UPPER_CONFIDENCE_BOUND_ONE = "upperConfidenceBoundOne";
 	public static final String UPPER_CONFIDENCE_BOUND_TWO = "upperConfidenceBoundTwo";
@@ -50,10 +50,10 @@ public class MultiArmBanditLearnerFactory implements Serializable {
 		MultiArmBanditLearner learner = null;
 		if (learnerType.equals(INTERVAL_ESTIMATOR)) {
 			learner = new IntervalEstimatorLearner();
-		} else if (learnerType.equals(SAMPSON_SAMPLER)) {
-			learner = new SampsonSamplerLearner();
-		} else if (learnerType.equals(OPTIMISTIC_SAMPSON_SAMPLER)) {
-			learner = new OptimisticSampsonSamplerLearner();
+		} else if (learnerType.equals(THOMPSON_SAMPLER)) {
+			learner = new ThompsonSamplerLearner();
+		} else if (learnerType.equals(OPTIMISTIC_THOMPSON_SAMPLER)) {
+			learner = new OptimisticThompsonSamplerLearner();
 		} else if (learnerType.equals(RANDOM_GREEDY)) {
 			learner = new RandomGreedyLearner();
 		} else if (learnerType.equals(UPPER_CONFIDENCE_BOUND_ONE)) {
