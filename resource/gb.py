@@ -66,6 +66,14 @@ class GradientBoostedTrees:
 	def getConfig(self):
 		return self.config
 	
+	#set config param
+	def setConfigParam(self, name, value):
+		self.config.setParam(name, value)
+	
+	#get mode
+	def getMode(self):
+		return self.config.getStringConfig("common.mode")[0]
+		
 	# train model	
 	def train(self):
 		#build model
@@ -237,11 +245,8 @@ class GradientBoostedTrees:
 		if successCriterion == "accuracy":
 			print "average " + scoreMethod + " with k fold cross validation %.3f" %(score)
 		elif successCriterion == "error":
-			if scoreMethod == "accuracy":
-				avError = 1.0 - score
-				print "average error with k fold cross validation %.3f" %(avError)
-			else:
-				print "error can be calculated only with accuracy scoring method"
+			error = 1.0 - score
+			print "average error with k fold cross validation %.3f" %(error)
 		else:
 			raise ValueError("invalid success criterion")
 	
@@ -281,7 +286,15 @@ class GradientBoostedTrees:
 
 ###########################################################################################
 gbt = GradientBoostedTrees(sys.argv[1])
-mode = gbt.getConfig().getStringConfig("common.mode")[0]
+
+if len(sys.argv) > 2:
+	#parameters over riiding config file
+	for i in range(2, len(sys.argv)):
+		items = sys.argv[i].split("=")
+		gbt.setConfigParam(items[0], items[1])
+		
+mode = gbt.getMode()
+print "running mode: " + mode
 if mode == "train":
 	gbt.train()
 elif mode == "trainValidate":
