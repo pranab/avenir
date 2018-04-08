@@ -133,6 +133,7 @@ class GradientBoostedTrees:
 		
 	#train with k fold validation and search parameter space for optimum
 	def trainValidateSearch(self):
+		print "...starting train validate with parameter search"
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
 			if searchStrategyName == "guided":
@@ -155,7 +156,7 @@ class GradientBoostedTrees:
 			
 		# add search param data
 		for searchParamName in searchParamNames:
-			searchParamData = self.config.getStringConfig(searmParamName)[0].split(",")
+			searchParamData = self.config.getStringConfig(searchParamName)[0].split(",")
 			searchStrategy.addParamVaues(searchParamName, searchParamData)
 			
 		# train and validate for various param value combination
@@ -163,6 +164,7 @@ class GradientBoostedTrees:
 		paramValues = searchStrategy.nextParamValues()
 		searchResults = []
 		while paramValues is not None:
+			print "...next parameter set"
 			paramStr = ""
 			for paramValue in paramValues:
 				self.setConfigParam(paramValue[0], str(paramValue[1]))
@@ -170,6 +172,7 @@ class GradientBoostedTrees:
 			result = self.trainValidate()
 			searchStrategy.setCost(result)
 			searchResults.append((paramStr, result))
+			paramValues = searchStrategy.nextParamValues()
 			
 		# output
 		print "all parameter search results"
@@ -178,6 +181,7 @@ class GradientBoostedTrees:
 		
 		print "best parameter search result"
 		bestSolution = searchStrategy.getBestSolution()
+		paramStr = ""
 		for paramValue in bestSolution[0]:
 			paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
 		print "%s\t%.3f" %(paramStr, bestSolution[1])

@@ -59,7 +59,8 @@ class GuidedParameterSearch:
 		retParamNameValue = None
 		if self.curParamValueCombIndx < len(self.paramValueCombList):
 			retParamNameValue = []
-			curParams = self.paramValueCombList[self.curParamValuueCombIndx]
+			curParams = self.paramValueCombList[self.curParamValueCombIndx]
+			print curParams
 			for i in range(len(curParams)):
 				paramName = self.parameters[i][0]
 				paramValue = self.paramData[paramName][curParams[i]]
