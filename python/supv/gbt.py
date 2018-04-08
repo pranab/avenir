@@ -18,7 +18,7 @@ from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
-from param_search import *
+from pasearch import *
 
 # gradient boosting classification
 class GradientBoostedTrees:
