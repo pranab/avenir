@@ -45,6 +45,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2017/10/09/combating-high-cardinality-features-in-supervised-machine-learning/
 * https://pkghosh.wordpress.com/2018/02/21/optimizing-discount-price-for-perishable-products-with-thompson-sampling-using-spark/
 * https://pkghosh.wordpress.com/2018/03/19/handling-categorical-feature-variables-in-machine-learning-using-spark/
+* https://pkghosh.wordpress.com/2018/04/18/predicting-crm-lead-conversion-with-gradient-boosting-using-scikitlearn/
 
 
 ## Getting started

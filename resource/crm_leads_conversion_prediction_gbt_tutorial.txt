@@ -1,6 +1,11 @@
 This tutorial is for predicting CRM lead conversion with Gradient Boosted Trees (GBT) and 
 ScikitLearn. 
 
+Setup
+=====
+Make sure you have ../lib and ../supv directories with all the python files wrt where gb.py
+is. The drive code is in gb.py. Configuration is contained in gb.properties
+
 Input data generation
 =====================
 ./sales_lead.py <num_of_leads > leads.txt
@@ -18,12 +23,40 @@ Set the following parameters in gb.properties. You could also change any paramet
 train group. 
 common.mode=train
 
+Run
 ./gb.py gb.properties
 
-Train and Validate
-==================
+Train and Validate with parameter search
+========================================
 Set the following parameters in gb.properties. You could also change any parameter train group.
 common.mode=trainValidate
+
+If you want to do parameters search set the following parameter
 train.search.param.strategy=guided
 
+Set the list of parameters to be included in search as below
+train.search.params=train.learning.rate:float,train.num.estimators:int
+
+For each of the parameters, provide a list of values as below
+train.learning.rate=0.04,0.07,0.12
+train.num.estimators=40,70,120
+
+Run
 ./gb.py gb.properties
+
+Train and Validate without parameter search
+===========================================
+Set the following parameters in gb.properties. You could also change any parameter train group.
+common.mode=trainValidate
+
+Set the following parameter
+train.search.param.strategy=_
+
+Make sure all parameters have singe values, in case you ran train and validate with parameter 
+search earlier
+
+Run
+./gb.py gb.properties
+
+
+
