@@ -1,0 +1,29 @@
+This tutorial is for predicting CRM lead conversion with Gradient Boosted Trees (GBT) and 
+ScikitLearn. 
+
+Input data generation
+=====================
+./sales_lead.py <num_of_leads > leads.txt
+where
+num_of_leads = number of leads e.g 5000
+
+Convert categorical variables to dummy binary variables
+=======================================================
+./sales_lead.py genDummyVar  <num_of_leads> leads.txt > <output_file>
+the file leads.txt was generated in the last step
+
+Train model
+===========
+Set the following parameters in gb.properties. You could also change any parameter in the 
+train group. 
+common.mode=train
+
+./gb.py gb.properties
+
+Train and Validate
+==================
+Set the following parameters in gb.properties. You could also change any parameter train group.
+common.mode=trainValidate
+train.search.param.strategy=guided
+
+./gb.py gb.properties
