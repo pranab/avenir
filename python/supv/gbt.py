@@ -146,17 +146,22 @@ class GradientBoostedTrees:
 		# add search params
 		searchParams = self.config.getStringConfig("train.search.params")[0].split(",")
 		searchParamNames = []
+		extSearchParamNames = []
 		if searchParams is not None:
 			for searchParam in searchParams:
 				paramItems = searchParam.split(":")
+				extSearchParamNames.append(paramItems[0])
+				paramNameItems = paramItems[0].split(".")
+				del paramNameItems[1]
+				paramItems[0] = ".".join(paramNameItems)
 				searchStrategy.addParam(paramItems)
 				searchParamNames.append(paramItems[0])
 		else:
 			raise ValueError("missing search parameter list")
 			
 		# add search param data
-		for searchParamName in searchParamNames:
-			searchParamData = self.config.getStringConfig(searchParamName)[0].split(",")
+		for (searchParamName,extSearchParamName)  in zip(searchParamNames,extSearchParamNames):
+			searchParamData = self.config.getStringConfig(extSearchParamName)[0].split(",")
 			searchStrategy.addParamVaues(searchParamName, searchParamData)
 			
 		# train and validate for various param value combination
