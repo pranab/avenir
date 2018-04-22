@@ -30,6 +30,8 @@ elif mode == "predict":
 	gbtClass.predict()
 elif mode == "validate":
 	gbtClass.validate()
+elif mode == "autoTrain":
+	gbtClass.autoTrain()
 else:
 	print "invalid running mode" 
 

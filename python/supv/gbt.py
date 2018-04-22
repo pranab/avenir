@@ -19,9 +19,10 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 from pasearch import *
+from bacl import *
 
 # gradient boosting classification
-class GradientBoostedTrees:
+class GradientBoostedTrees(BaseClassifier):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
@@ -97,11 +98,14 @@ class GradientBoostedTrees:
 		self.gbcClassifier.fit(featData, clsData) 
 		score = self.gbcClassifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		result = None
 		if successCriterion == "accuracy":
 			print "accuracy with training data %.3f" %(score)
+			result = score
 		elif successCriterion == "error":
 			error = 1.0 - score
 			print "error with training data %.3f" %(error)
+			result = error
 		else:
 			raise ValueError("invalid success criterion")
 			
@@ -109,7 +113,8 @@ class GradientBoostedTrees:
 			print "...saving model"
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.gbcClassifier, modelFilePath) 
-
+		return result
+		
 	#train with k fold validation
 	def trainValidate(self):
 		#build model
