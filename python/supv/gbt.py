@@ -64,23 +64,10 @@ class GradientBoostedTrees(BaseClassifier):
 		defValues["validate.use.saved.model"] = (False, None)
 		defValues["validate.score.method"] = ("accuracy", None)
 		
-		self.config = Configuration(configFile, defValues)
+		super(GradientBoostedTrees, self).__init__(configFile, defValues)
+		#self.initConfig(configFile, defValues)
 		
-	# get config object
-	def getConfig(self):
-		return self.config
-	
-	#set config param
-	def setConfigParam(self, name, value):
-		self.config.setParam(name, value)
-	
-	#get mode
-	def getMode(self):
-		return self.config.getStringConfig("common.mode")[0]
 		
-	#get mode
-	def getSearchParamStrategy(self):
-		return self.config.getStringConfig("train.search.param.strategy")[0]
 
 	# train model	
 	def train(self):
@@ -195,6 +182,7 @@ class GradientBoostedTrees(BaseClassifier):
 		for paramValue in bestSolution[0]:
 			paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
 		print "%s\t%.3f" %(paramStr, bestSolution[1])
+		return bestSolution
 			
 	#predict
 	def validate(self):
