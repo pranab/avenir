@@ -4,11 +4,17 @@ ScikitLearn.
 Setup
 =====
 Make sure you have ../lib and ../supv directories with all the python files wrt where gb.py
-is. The drive code is in gb.py. Configuration is contained in gb.properties
+is. The drive code is in gb.py. Configuration is contained in gb.properties. Since your python
+installation is likely to be different, please run all python scripts starting with 
+python abc.py ...
+
+I am using Anacondta which includes python along with many common python data science modules
+I am using tge version anaconda2-2.5.0. Python module jprops is used. Please install it 
+running  "pip install jprops"
 
 Input data generation
 =====================
-./sales_lead.py <num_of_leads > leads.txt
+./sales_lead.py generate <num_of_leads > leads.txt
 where
 num_of_leads = number of leads e.g 5000
 
@@ -57,6 +63,44 @@ search earlier
 
 Run
 ./gb.py gb.properties
+
+Saving trained model
+====================
+Please make sure the following parameters are set. Feel free to change the model directory 
+and file name
+
+common.model.directory=model
+common.model.file=crm_gb_model
+train.model.save=True
+
+Different use case and data set
+===============================
+To use gradient boosting predictor for another use case, you have to set the following meta data
+related parameters properly.
+
+train.data.file=leads_5000.txt
+train.data.fields=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+train.data.feature.fields=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+train.data.class.field=17
+
+predict.data.file=leads_1000.txt
+predict.data.fields=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
+predict.data.feature.fields=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+
+validate.data.file=leads_5000.txt
+validate.data.fields=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+validate.data.feature.fields=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+validate.data.class.field=17
+
+
+
+
+
+
+
+
+
+
 
 
 
