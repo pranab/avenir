@@ -65,9 +65,6 @@ class GradientBoostedTrees(BaseClassifier):
 		defValues["validate.score.method"] = ("accuracy", None)
 		
 		super(GradientBoostedTrees, self).__init__(configFile, defValues)
-		#self.initConfig(configFile, defValues)
-		
-		
 
 	# train model	
 	def train(self):
@@ -75,7 +72,14 @@ class GradientBoostedTrees(BaseClassifier):
 		self.buildModel()
 		
 		# training data
-		(featData, clsData) = self.prepTrainingData()
+		if self.featData is None:
+			(featData, clsData) = self.prepTrainingData()
+			(self.featData, self.clsData) = (featData, clsData)
+		else:
+			(featData, clsData) = (self.featData, self.clsData)
+		if self.subSampleRate is not None:
+			(featData, clsData) = subSample(featData, clsData, self.subSampleRate, False)
+			print "subsample size  " + str(featData.shape[0])
 		
 		# parameters
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
@@ -253,7 +257,7 @@ class GradientBoostedTrees(BaseClassifier):
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		clsData = extrColumns(data, classFieldIndex)
-		clsData = [int(a) for a in clsData]
+		clsData = np.array([int(a) for a in clsData])
 		return (featData, clsData)
 
 	#loads and prepares training data

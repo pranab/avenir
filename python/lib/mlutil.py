@@ -19,6 +19,11 @@ class Configuration:
 		self.defValues = defValues
 		self.verbose = verbose
 
+	#set config param
+	def setParam(self, name, value):
+		self.configs[name] = value
+
+	# get string param
 	def getStringConfig(self, name):
 		if self.isNone(name):
 			val = (None, False)
@@ -30,6 +35,7 @@ class Configuration:
 			print "%s %s %s" %(name, self.configs[name], val[0])
 		return val
 
+	# get int param
 	def getIntConfig(self, name):
 		#print "%s %s" %(name,self.configs[name])
 		if self.isNone(name):
@@ -42,6 +48,7 @@ class Configuration:
 			print "%s %s %d" %(name, self.configs[name], val[0])
 		return val
 		
+	# get float param
 	def getFloatConfig(self, name):
 		#print "%s %s" %(name,self.configs[name])
 		if self.isNone(name):
@@ -54,6 +61,7 @@ class Configuration:
 			print "%s %s %.3f" %(name, self.configs[name], val[0])
 		return val
 
+	# get boolean param
 	def getBooleanConfig(self, name):
 		if self.isNone(name):
 			val = (None, False)
@@ -119,3 +127,12 @@ def loadDataFile(file, delim, cols, colIndices):
 #extracts columns
 def extrColumns(arr, columns):
 	return arr[:, columns]
+
+# subsample feature and class label data	
+def subSample(featData, clsData, subSampleRate, withReplacement):
+	sampSize = int(featData.shape[0] * subSampleRate)
+	sampledIndx = np.random.choice(featData.shape[0],sampSize, replace=withReplacement)
+	sampFeat = featData[sampledIndx]
+	sampCls = clsData[sampledIndx]
+	return(sampFeat, sampCls)
+

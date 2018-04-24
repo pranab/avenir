@@ -15,9 +15,12 @@ from mlutil import *
 
 class BaseClassifier(object):
 	config = None
+	subSampleRate  = None
+	featData = None
+	clsData = None
+	
 	def __init__(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
-		
 	
 	def initConfig(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
@@ -47,6 +50,10 @@ class BaseClassifier(object):
 		result = self.trainValidateSearch()
 		testError = result[1]
 			
+		#subsample training size to match train size for k fold validation
+		numFolds = self.config.getIntConfig("train.num.folds")[0]
+		self.subSampleRate = float(numFolds - 1) / numFolds
+
 		#train only with optimum parameter values
 		for paramValue in result[0]:
 			pName = paramValue[0]
