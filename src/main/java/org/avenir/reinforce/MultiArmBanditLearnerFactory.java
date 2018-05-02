@@ -28,7 +28,7 @@ import java.util.Map;
  */
 public class MultiArmBanditLearnerFactory implements Serializable {
 	public static final String INTERVAL_ESTIMATOR = "intervalEstimator";
-	public static final String THOMPSON_SAMPLER = "thomsonSampler";
+	public static final String THOMPSON_SAMPLER = "thompsonSampler";
 	public static final String OPTIMISTIC_THOMPSON_SAMPLER = "optimisticThompsonSampler";
 	public static final String RANDOM_GREEDY = "randomGreedy";
 	public static final String UPPER_CONFIDENCE_BOUND_ONE = "upperConfidenceBoundOne";
