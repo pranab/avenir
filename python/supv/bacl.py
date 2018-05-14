@@ -46,6 +46,8 @@ class BaseClassifier(object):
 		maxErr = self.config.getFloatConfig("train.auto.max.error")[0]
 		maxErrDiff = self.config.getFloatConfig("train.auto.max.error.diff")[0]
 		
+		self.config.setParam("train.model.save", "False")
+		
 		#train, validate and serach optimum parameter
 		result = self.trainValidateSearch()
 		testError = result[1]
@@ -64,17 +66,29 @@ class BaseClassifier(object):
 			
 		avError = (trainError + testError) / 2
 		diffError = testError - trainError
-		print "training error %.3f test error: %.3f" %(trainError, testError)
-		print "average of test and training error: %.3f test and training error diff: %.3f" %(avError, diffError)  
-		if (diffError) > maxErrDiff:
-			print "High generalization error. Need larger training data set"
-			status = 1
-		elif avError > maxErr:
-			print "Converged, but with high error rate. Need to increase model complexity"
-			status = 2
+		print "Auto training  completed: training error %.3f test error: %.3f" %(trainError, testError)
+		print "Average of test and training error: %.3f test and training error diff: %.3f" %(avError, diffError)  
+		if diffError > maxErrDiff:
+			if avError > maxErr:
+				print "High generalization error and high error. Need larger training data set and increased model complexity"
+				status = 4
+			else:
+				print "High generalization error. Need larger training data set"
+				status = 3
 		else:
-			print "succesfully trained"
-			status = 0
+			if avError > maxErr:
+				print "Converged, but with high error rate. Need to increase model complexity"
+				status = 2
+			else:
+				print "Successfullt trained. Low generalization error and low error level"
+				status = 1
+				
+				#train final model, use all data and save model
+				print "...training the final model"
+				self.config.setParam("train.model.save", "True")
+				self.subSampleRate  = None
+				trainError = self.train()
+				print "training error in final model %.3f" %(trainError)
 		return status
 			
 			

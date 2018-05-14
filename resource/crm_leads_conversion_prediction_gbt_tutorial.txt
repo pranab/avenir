@@ -40,12 +40,14 @@ common.mode=trainValidate
 If you want to do parameters search set the following parameter
 train.search.param.strategy=guided
 
-Set the list of parameters to be included in search as below
-train.search.params=train.learning.rate:float,train.num.estimators:int
+Set the list of parameters to be included in search as below. The parameter list is up to you
+train.search.params=train.search.learning.rate:float,train.search.num.estimators:int
 
-For each of the parameters, provide a list of values as below
-train.learning.rate=0.04,0.07,0.12
-train.num.estimators=40,70,120
+For each of the parameters in the list, provide a list of values as below
+train.search.learning.rate=0.04,0.07,0.12
+train.search.num.estimators=40,70,120
+
+Parameter names are same as in normal training except for the added word search in the parameter name
 
 Run
 ./gb.py gb.properties
@@ -72,6 +74,20 @@ and file name
 common.model.directory=model
 common.model.file=crm_gb_model
 train.model.save=True
+
+Running in auto train mode
+==========================
+Set the following parameters in gb.properties. You could also change any parameter train group.
+common.mode=autoTrain
+
+Set the error and error difference threshold parameters 
+train.auto.max.error=0.08
+train.auto.max.error.diff=0.02
+
+Do the remaining settings as in "Train and Validate with parameter search" section
+
+Run
+./gb.py gb.properties
 
 Different use case and data set
 ===============================
