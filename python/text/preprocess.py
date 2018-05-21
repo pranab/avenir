@@ -18,11 +18,13 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import LancasterStemmer, WordNetLemmatizer
 from nltk.tag import StanfordNERTagger
+from collections import defaultdict
 
 #text preprocessor
 class TextPreProcessor:
-	def __init__(self, verbose=False):
+	def __init__(self, stemmer = "lancaster", verbose=False):
 		self.verbose = verbose
+		self.lemmatizer = WordNetLemmatizer()
 
 	def stripHtml(self, text):
 		soup = BeautifulSoup(text, "html.parser")
@@ -54,10 +56,7 @@ class TextPreProcessor:
 
 	def toLowercase(self, words):
 		"""Convert all characters to lowercase from list of tokenized words"""
-		newWords = []
-		for word in words:
-			newWord = word.lower()
-			newWords.append(newWord)
+		newWords = [word.lower() for word in words]
 		return newWords
 
 	def removePunctuation(self, words):
@@ -97,22 +96,33 @@ class TextPreProcessor:
 				newWords.append(word)
 		return newWords
 
+	def removeLowFreqWords(self, words, minFreq):
+		"""Remove low frewquncy words from list of tokenized words"""
+		frequency = defaultdict(int)
+		for word in words:
+			frequency[word] += 1
+		removed = [word for word in words if frequency[word] > minFreq]		
+		return removed	
+
 	def stemWords(self, words):
 		"""Stem words in list of tokenized words"""
-		stemmer = LancasterStemmer()
-		stems = []
-		for word in words:
-			stem = stemmer.stem(word)
-			stems.append(stem)
+		if stemmer == "lancaster":
+			stemmer = LancasterStemmer()
+		elif stemmer == "snowbal":
+			stemmer = SnowballStemmer()
+		elif stemmer == "porter":
+			stemmer = PorterStemmer()
+		stems = [stemmer.stem(word) for word in words]
 		return stems
+
+	def lemmatizeWords(self, words):
+		"""Lemmatize tokens in list of tokenized words"""
+		lemmas = [self.lemmatizer.lemmatize(word) for word in words]
+		return lemmas
 
 	def lemmatizeVerbs(self, words):
 		"""Lemmatize verbs in list of tokenized words"""
-		lemmatizer = WordNetLemmatizer()
-		lemmas = []
-		for word in words:
-			lemma = lemmatizer.lemmatize(word, pos='v')
-			lemmas.append(lemma)
+		lemmas = [self.lemmatizer.lemmatize(word, pos='v') for word in words]
 		return lemmas
 
 	def normalize(self, words):
