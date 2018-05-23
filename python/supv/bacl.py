@@ -43,6 +43,7 @@ class BaseClassifier(object):
 	
 	#auto train	
 	def autoTrain(self):
+		maxTestErr = self.config.getFloatConfig("train.auto.max.test.error")[0]
 		maxErr = self.config.getFloatConfig("train.auto.max.error")[0]
 		maxErrDiff = self.config.getFloatConfig("train.auto.max.error.diff")[0]
 		
@@ -63,32 +64,46 @@ class BaseClassifier(object):
 			print pName + "  " + pValue
 			self.setConfigParam(pName, pValue)
 		trainError = self.train()
-			
-		avError = (trainError + testError) / 2
-		diffError = testError - trainError
-		print "Auto training  completed: training error %.3f test error: %.3f" %(trainError, testError)
-		print "Average of test and training error: %.3f test and training error diff: %.3f" %(avError, diffError)  
-		if diffError > maxErrDiff:
-			if avError > maxErr:
-				print "High generalization error and high error. Need larger training data set and increased model complexity"
-				status = 4
-			else:
-				print "High generalization error. Need larger training data set"
-				status = 3
+		
+		if testError < maxTestErr:
+			# criteria based on test error only
+			print "Successfullt trained. Low test error level"
+			status = 1
 		else:
-			if avError > maxErr:
-				print "Converged, but with high error rate. Need to increase model complexity"
-				status = 2
+			# criteria based on bias error and generalization error
+			avError = (trainError + testError) / 2
+			diffError = testError - trainError
+			print "Auto training  completed: training error %.3f test error: %.3f" %(trainError, testError)
+			print "Average of test and training error: %.3f test and training error diff: %.3f" %(avError, diffError)  
+			if diffError > maxErrDiff:
+				# high generalization error
+				if avError > maxErr:
+					# high bias error
+					print "High generalization error and high error. Need larger training data set and increased model complexity"
+					status = 4
+				else:
+					# low bias error
+					print "High generalization error. Need larger training data set"
+					status = 3
 			else:
-				print "Successfullt trained. Low generalization error and low error level"
-				status = 1
+				# low generalization error
+				if avError > maxErr:
+					# high bias error
+					print "Converged, but with high error rate. Need to increase model complexity"
+					status = 2
+				else:
+					# low bias error
+					print "Successfullt trained. Low generalization error and low bias error level"
+					status = 1
 				
-				#train final model, use all data and save model
-				print "...training the final model"
-				self.config.setParam("train.model.save", "True")
-				self.subSampleRate  = None
-				trainError = self.train()
-				print "training error in final model %.3f" %(trainError)
+		if status == 1:
+			#train final model, use all data and save model
+			print "...training the final model"
+			self.config.setParam("train.model.save", "True")
+			self.subSampleRate  = None
+			trainError = self.train()
+			print "training error in final model %.3f" %(trainError)
+		
 		return status
 			
 			
