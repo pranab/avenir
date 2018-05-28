@@ -7,6 +7,7 @@ import numpy as np
 import sklearn as sk
 import random
 import jprops
+from util import *
 
 #configuration management
 class Configuration:
@@ -74,6 +75,12 @@ class Configuration:
 			print "%s %s %s" %(name, self.configs[name], val[0])
 		return val
 		
+	# get int list param
+	def getIntListConfig(self, name, delim):
+		delSepStr = self.getStringConfig(name)
+		intList = strToIntArray(delSepStr[0], delim)
+		return (intList, delSepStr[1])
+
 	def handleDefault(self, name):
 		dVal = self.defValues[name]
 		if (dVal[1] is None):

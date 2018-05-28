@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import sys
 from random import randint
 import random
@@ -124,7 +125,7 @@ def arrayContains(arr, item):
 
 # int array from delim separated string
 def strToIntArray(line, delim):	
-	arr = line.split(",")
+	arr = line.split(delim)
 	return [int(a) for a in arr]
 
 # return typed value given string
@@ -167,6 +168,14 @@ def typedValue(val):
 		tVal = val		
 	return tVal
 	
+#get all files recursively
+def getAllFiles(dirPath):
+	filePaths = []
+	for (thisDir, subDirs, fileNames) in os.walk(dirPath):
+		for fileName in fileNames:
+			filePaths.append(os.path.join(thisDir, fileName))
+	return filePaths
+
 # step function
 class StepFunction:
 	def __init__(self,  *values):
