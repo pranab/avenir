@@ -46,6 +46,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2018/02/21/optimizing-discount-price-for-perishable-products-with-thompson-sampling-using-spark/
 * https://pkghosh.wordpress.com/2018/03/19/handling-categorical-feature-variables-in-machine-learning-using-spark/
 * https://pkghosh.wordpress.com/2018/04/18/predicting-crm-lead-conversion-with-gradient-boosting-using-scikitlearn/
+* https://pkghosh.wordpress.com/2018/05/14/auto-training-and-parameter-tuning-for-a-scikitlearn-based-model-for-leads-conversion-prediction/
 
 
 ## Getting started
