@@ -7,18 +7,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sklearn as sk
 import matplotlib
+from sklearn.model_selection import cross_val_score
+from sklearn.externals import joblib
 import random
 import jprops
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
+from pasearch import *
 
 class BaseClassifier(object):
 	config = None
 	subSampleRate  = None
 	featData = None
 	clsData = None
-	
+	svmClassifier = None
+
 	def __init__(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
 	
@@ -40,7 +44,183 @@ class BaseClassifier(object):
 	#get search parameter
 	def getSearchParamStrategy(self):
 		return self.config.getStringConfig("train.search.param.strategy")[0]
+
+	# train model	
+	def train(self):
+		#build model
+		self.buildModel()
+
+		# training data
+		if self.featData is None:
+			(featData, clsData) = self.prepTrainingData()
+			(self.featData, self.clsData) = (featData, clsData)
+		else:
+			(featData, clsData) = (self.featData, self.clsData)
+		if self.subSampleRate is not None:
+			(featData, clsData) = subSample(featData, clsData, self.subSampleRate, False)
+			print "subsample size  " + str(featData.shape[0])
+		
+		# parameters
+		modelSave = self.config.getBooleanConfig("train.model.save")[0]
+		
+		#train
+		print "...training model"
+		self.svmClassifier.fit(featData, clsData) 
+		score = self.svmClassifier.score(featData, clsData)  
+		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		result = None
+		if successCriterion == "accuracy":
+			print "accuracy with training data %.3f" %(score)
+			result = score
+		elif successCriterion == "error":
+			error = 1.0 - score
+			print "error with training data %.3f" %(error)
+			result = error
+		else:
+			raise ValueError("invalid success criterion")
+			
+		if modelSave:
+			print "...saving model"
+			modelFilePath = self.getModelFilePath()
+			joblib.dump(self.svmClassifier, modelFilePath) 
+		return result
 	
+	#train with k fold validation
+	def trainValidate(self):
+		#build model
+		self.buildModel()
+
+		# training data
+		(featData, clsData) = self.prepTrainingData()
+		
+		#parameter
+		validation = self.config.getStringConfig("train.validation")[0]
+		numFolds = self.config.getIntConfig("train.num.folds")[0]
+		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
+		scoreMethod = self.config.getStringConfig("train.score.method")[0]
+		
+		#train with validation
+		print "...training and kfold cross validating model"
+		scores = cross_val_score(self.svmClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
+		avScore = np.mean(scores)
+		result = self.reportResult(avScore, successCriterion, scoreMethod)
+		return result
+
+	#train with k fold validation and search parameter space for optimum
+	def trainValidateSearch(self):
+		print "...starting train validate with parameter search"
+		searchStrategyName = self.getSearchParamStrategy()
+		if searchStrategyName is not None:
+			if searchStrategyName == "guided":
+				searchStrategy = GuidedParameterSearch()
+			else:
+				raise ValueError("invalid paramtere search strategy")
+		else:
+			raise ValueError("missing search strategy")
+				
+		# add search params
+		searchParams = self.config.getStringConfig("train.search.params")[0].split(",")
+		searchParamNames = []
+		extSearchParamNames = []
+		if searchParams is not None:
+			for searchParam in searchParams:
+				paramItems = searchParam.split(":")
+				extSearchParamNames.append(paramItems[0])
+				paramNameItems = paramItems[0].split(".")
+				del paramNameItems[1]
+				paramItems[0] = ".".join(paramNameItems)
+				searchStrategy.addParam(paramItems)
+				searchParamNames.append(paramItems[0])
+		else:
+			raise ValueError("missing search parameter list")
+			
+		# add search param data
+		for (searchParamName,extSearchParamName)  in zip(searchParamNames,extSearchParamNames):
+			searchParamData = self.config.getStringConfig(extSearchParamName)[0].split(",")
+			searchStrategy.addParamVaues(searchParamName, searchParamData)
+			
+		# train and validate for various param value combination
+		searchStrategy.prepare()
+		paramValues = searchStrategy.nextParamValues()
+		searchResults = []
+		while paramValues is not None:
+			print "...next parameter set"
+			paramStr = ""
+			for paramValue in paramValues:
+				self.setConfigParam(paramValue[0], str(paramValue[1]))
+				paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
+			result = self.trainValidate()
+			searchStrategy.setCost(result)
+			searchResults.append((paramStr, result))
+			paramValues = searchStrategy.nextParamValues()
+			
+		# output
+		print "all parameter search results"
+		for searchResult in searchResults:
+			print "%s\t%.3f" %(searchResult[0], searchResult[1])
+		
+		print "best parameter search result"
+		bestSolution = searchStrategy.getBestSolution()
+		paramStr = ""
+		for paramValue in bestSolution[0]:
+			paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
+		print "%s\t%.3f" %(paramStr, bestSolution[1])
+		return bestSolution
+
+	#predict
+	def validate(self):
+		# create model
+		useSavedModel = self.config.getBooleanConfig("validate.use.saved.model")[0]
+		if useSavedModel:
+			# load saved model
+			print "...loading model"
+			modelFilePath = self.getModelFilePath()
+			self.svmClassifier = joblib.load(modelFilePath)
+		else:
+			# train model
+			self.train()
+		
+		# prepare test data
+		(featData, clsDataActual) = self.prepValidationData()
+		
+		#predict
+		print "...predicting"
+		clsDataPred = self.svmClassifier.predict(featData) 
+		
+		print "...validating"
+		#print clsData
+		scoreMethod = self.config.getStringConfig("validate.score.method")[0]
+		if scoreMethod == "accuracy":
+			accuracy = accuracy_score(clsDataActual, clsDataPred) 
+			print "accuracy:"
+			print accuracy
+		elif scoreMethod == "confusionMatrix":
+			confMatrx = confusion_matrix(clsDataActual, clsDataPred)
+			print "confusion matrix:"
+			print confMatrx
+
+	#predict
+	def predict(self):
+		# create model
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			# load saved model
+			print "...loading model"
+			modelFilePath = self.getModelFilePath()
+			self.svmClassifier = joblib.load(modelFilePath)
+		else:
+			# train model
+			self.train()
+		
+		# prepare test data
+		featData = self.prepPredictData()
+		
+		#predict
+		print "...predicting"
+		clsData = self.svmClassifier.predict(featData) 
+		print clsData
+
+
 	#auto train	
 	def autoTrain(self):
 		maxTestErr = self.config.getFloatConfig("train.auto.max.test.error")[0]
@@ -106,5 +286,91 @@ class BaseClassifier(object):
 		
 		return status
 			
-			
+	#loads and prepares training data
+	def prepTrainingData(self):
+		# parameters
+		dataFile = self.config.getStringConfig("train.data.file")[0]
+		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
+		if not fieldIndices is None:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
+		if not featFieldIndices is None:
+			featFieldIndices = strToIntArray(featFieldIndices, ",")
+		classFieldIndex = self.config.getIntConfig("train.data.class.field")[0]
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		featData = self.scaleOrNormalize(featData)
+		clsData = extrColumns(data, classFieldIndex)
+		clsData = np.array([int(a) for a in clsData])
+		return (featData, clsData)
+
+	#loads and prepares training data
+	def prepValidationData(self):
+		# parameters
+		dataFile = self.config.getStringConfig("validate.data.file")[0]
+		fieldIndices = self.config.getStringConfig("validate.data.fields")[0]
+		if not fieldIndices is None:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		featFieldIndices = self.config.getStringConfig("validate.data.feature.fields")[0]
+		if not featFieldIndices is None:
+			featFieldIndices = strToIntArray(featFieldIndices, ",")
+		classFieldIndex = self.config.getIntConfig("validate.data.class.field")[0]
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		featData = self.scaleOrNormalize(featData)
+		clsData = extrColumns(data, classFieldIndex)
+		clsData = [int(a) for a in clsData]
+		return (featData, clsData)
+	
+	#loads and prepares training data
+	def prepPredictData(self):
+		# parameters
+		dataFile = self.config.getStringConfig("predict.data.file")[0]
+		if dataFile is None:
+			raise ValueError("missing prediction data file")
+		fieldIndices = self.config.getStringConfig("predict.data.fields")[0]
+		if not fieldIndices is None:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		featFieldIndices = self.config.getStringConfig("predict.data.feature.fields")[0]
+		if not featFieldIndices is None:
+			featFieldIndices = strToIntArray(featFieldIndices, ",")
+
+		#training data
+		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		featData = self.scaleOrNormalize(featData)
+		return featData
+
+	# scale or normalize data
+	def scaleOrNormalize(self, featData):
+		preprocess = self.config.getStringConfig("common.preprocessing")[0]
+		if preprocess == "scale":
+			featData = sk.preprocessing.scale(featData)
+		elif preprocess == "normalize":
+			featData = sk.preprocessing.normalize(featData, norm='l2')
+		return featData
+
+	# get model file path
+	def getModelFilePath(self):
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		if modelFile is None:
+			raise ValueError("missing model file name")
+		modelFilePath = modelDirectory + "/" + modelFile
+		return modelFilePath
+
+	# report result
+	def reportResult(self, score, successCriterion, scoreMethod):
+		if successCriterion == "accuracy":
+			print "average " + scoreMethod + " with k fold cross validation %.3f" %(score)
+			result = score
+		elif successCriterion == "error":
+			error = 1.0 - score
+			print "average error with k fold cross validation %.3f" %(error)
+			result = error
+		else:
+			raise ValueError("invalid success criterion")
+		return result
+		
 		
