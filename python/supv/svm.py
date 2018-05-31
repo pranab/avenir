@@ -86,8 +86,8 @@ class SupportVectorMachine(BaseClassifier):
 		else:
 			print "invalid svm algorithm"
 			sys.exit()
-		self.svmClassifier = model
-		return self.svmClassifier
+		self.classifier = model
+		return self.classifier
 
 
 

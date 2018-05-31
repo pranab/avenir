@@ -9,6 +9,8 @@ import sklearn as sk
 import matplotlib
 from sklearn.model_selection import cross_val_score
 from sklearn.externals import joblib
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 import random
 import jprops
 sys.path.append(os.path.abspath("../lib"))
@@ -21,7 +23,7 @@ class BaseClassifier(object):
 	subSampleRate  = None
 	featData = None
 	clsData = None
-	svmClassifier = None
+	classifier = None
 
 	def __init__(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
@@ -65,8 +67,8 @@ class BaseClassifier(object):
 		
 		#train
 		print "...training model"
-		self.svmClassifier.fit(featData, clsData) 
-		score = self.svmClassifier.score(featData, clsData)  
+		self.classifier.fit(featData, clsData) 
+		score = self.classifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
 		result = None
 		if successCriterion == "accuracy":
@@ -82,7 +84,7 @@ class BaseClassifier(object):
 		if modelSave:
 			print "...saving model"
 			modelFilePath = self.getModelFilePath()
-			joblib.dump(self.svmClassifier, modelFilePath) 
+			joblib.dump(self.classifier, modelFilePath) 
 		return result
 	
 	#train with k fold validation
@@ -101,7 +103,7 @@ class BaseClassifier(object):
 		
 		#train with validation
 		print "...training and kfold cross validating model"
-		scores = cross_val_score(self.svmClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
+		scores = cross_val_score(self.classifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
 		return result
@@ -175,7 +177,7 @@ class BaseClassifier(object):
 			# load saved model
 			print "...loading model"
 			modelFilePath = self.getModelFilePath()
-			self.svmClassifier = joblib.load(modelFilePath)
+			self.classifier = joblib.load(modelFilePath)
 		else:
 			# train model
 			self.train()
@@ -185,7 +187,7 @@ class BaseClassifier(object):
 		
 		#predict
 		print "...predicting"
-		clsDataPred = self.svmClassifier.predict(featData) 
+		clsDataPred = self.classifier.predict(featData) 
 		
 		print "...validating"
 		#print clsData
@@ -207,7 +209,7 @@ class BaseClassifier(object):
 			# load saved model
 			print "...loading model"
 			modelFilePath = self.getModelFilePath()
-			self.svmClassifier = joblib.load(modelFilePath)
+			self.classifier = joblib.load(modelFilePath)
 		else:
 			# train model
 			self.train()
@@ -217,7 +219,7 @@ class BaseClassifier(object):
 		
 		#predict
 		print "...predicting"
-		clsData = self.svmClassifier.predict(featData) 
+		clsData = self.classifier.predict(featData) 
 		print clsData
 
 
