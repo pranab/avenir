@@ -27,6 +27,7 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["common.mode"] = ("train", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
+		defValues["common.scale.file.path"] = (None, "missing scale file path")
 		defValues["common.preprocessing"] = ("scale", None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -38,7 +39,13 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["train.kernel.function"] = ("rbf", None)
 		defValues["train.poly.degree"] = (3, None)
 		defValues["train.penalty"] = (1.0, None)
-		defValues["train.gamma"] = (0, None)
+		defValues["train.gamma"] = ("auto", None)
+		defValues["train.penalty.norm"] = ("l2", None)
+		defValues["train.loss"] = ("squared_hinge", None)
+		defValues["train.dual"] = (True, None)
+		defValues["train.shrinking"] = (True, None)
+		defValues["train.nu"] = (0.5, None)
+		defValues["train.predict.probability"] = (False, None)
 		defValues["train.print.sup.vectors"] = (False, None)
 		defValues["train.success.criterion"] = ("error", None)
 		defValues["train.model.save"] = (False, None)
@@ -65,24 +72,33 @@ class SupportVectorMachine(BaseClassifier):
 		kernelFun = self.config.getStringConfig("train.kernel.function")[0]
 		penalty = self.config.getFloatConfig("train.penalty")[0]
 		polyDegree = self.config.getIntConfig("train.poly.degree")[0]
-		kernelCoeff =  self.config.getFloatConfig("train.penalty")[0]
+		kernelCoeff =  self.config.getStringConfig("train.gamma")[0]
+		kernelCoeff = typedValue(kernelCoeff)
+		penaltyNorm = self.config.getStringConfig("train.penalty.norm")[0]
+		trainLoss = self.config.getStringConfig("train.loss")[0]
+		dualOpt = self.config.getBooleanConfig("train.dual")[0]
+		shrinkHeuristic = self.config.getBooleanConfig("train.shrinking")[0]
+		predictProb = self.config.getBooleanConfig("train.predict.probability")[0]
+		supVecBound = self.config.getFloatConfig("train.nu")[0]
 
 		if (algo == "svc"):
 			if kernelFun == "poly":
-				model = sk.svm.SVC(C=penalty,kernel=kernelFun,degree=polyDegree,gamma=kernelCoeff)
+				model = sk.svm.SVC(C=penalty,kernel=kernelFun,degree=polyDegree,gamma=kernelCoeff, shrinking=shrinkHeuristic, \
+				probability=predictProb)
 			elif kernelFun == "rbf" or kernel_fun == "sigmoid":
-				model = sk.svm.SVC(C=penalty,kernel=kernelFun,gamma=kernelCoeff)
+				model = sk.svm.SVC(C=penalty,kernel=kernelFun,gamma=kernelCoeff, shrinking=shrinkHeuristic, probability=predictProb)
 			else:
-				model = sk.svm.SVC(C=penalty,kernel=kernelFun)
+				model = sk.svm.SVC(C=penalty, kernel=kernelFun, shrinking=shrinkHeuristic, probability=predictProb)
 		elif (algo == "nusvc"):
 			if kernelFun == "poly":
-				model = sk.svm.NuSVC(kernel=kernelFun,degree=polyDegree,gamma=kernelCoeff)
+				model = sk.svm.NuSVC(nu=supVecBound, kernel=kernelFun,degree=polyDegree,gamma=kernelCoeff, shrinking=shrinkHeuristic, \
+				probability=predictProb)
 			elif kernelFun == "rbf" or kernelFun == "sigmoid":
-				model = sk.svm.NuSVC(kernel=kernelFun,gamma=kernelCoeff)
+				model = sk.svm.NuSVC(nu=supVecBound, kernel=kernelFun,gamma=kernelCoeff, shrinking=shrinkHeuristic, probability=predictProb)
 			else:
-				model = sk.svm.NuSVC(kernel=kernelFun)
+				model = sk.svm.NuSVC(nu=supVecBound, kernel=kernelFun, shrinking=shrinkHeuristic, probability=predictProb)
 		elif (algo == "linearsvc"):
-			model = sk.svm.LinearSVC()
+			model = sk.svm.LinearSVC(penalty=penaltyNorm, loss=trainLoss, dual=dualOpt)
 		else:
 			print "invalid svm algorithm"
 			sys.exit()

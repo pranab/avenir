@@ -219,8 +219,16 @@ class BaseClassifier(object):
 		
 		#predict
 		print "...predicting"
-		clsData = self.classifier.predict(featData) 
-		print clsData
+		print "classes " + str(self.classifier.classes_)
+		predictProb = self.config.getBooleanConfig("train.predict.probability")[0]
+		if predictProb:
+			print "...predicting class probability"
+			clsprData = self.classifier.predict_proba(featData)
+			print clsprData
+		else:
+			print "...predicting class labels"
+			clsData = self.classifier.predict(featData) 
+			print clsData
 
 
 	#auto train	
@@ -302,7 +310,7 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
-		featData = self.scaleOrNormalize(featData)
+		featData = self.scaleOrNormalize(featData, False)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = np.array([int(a) for a in clsData])
 		return (featData, clsData)
@@ -321,7 +329,7 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
-		featData = self.scaleOrNormalize(featData)
+		featData = self.scaleOrNormalize(featData, True)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = [int(a) for a in clsData]
 		return (featData, clsData)
@@ -341,14 +349,21 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
-		featData = self.scaleOrNormalize(featData)
+		featData = self.scaleOrNormalize(featData, True)
 		return featData
 
 	# scale or normalize data
-	def scaleOrNormalize(self, featData):
+	def scaleOrNormalize(self, featData, useSavedScale):
 		preprocess = self.config.getStringConfig("common.preprocessing")[0]
 		if preprocess == "scale":
-			featData = sk.preprocessing.scale(featData)
+			scaleFilePath = self.config.getStringConfig("common.scale.file.path")[0]
+			if useSavedScale:
+				scaler = joblib.load(scaleFilePath)
+				featData = scaler.transform(featData)
+			else:
+				scaler = sk.preprocessing.StandardScaler().fit(featData)
+				featData = scaler.transform(featData)
+				joblib.dump(scaler, scaleFilePath) 
 		elif preprocess == "normalize":
 			featData = sk.preprocessing.normalize(featData, norm='l2')
 		return featData
