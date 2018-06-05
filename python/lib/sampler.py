@@ -4,6 +4,7 @@ import sys
 import random 
 import time
 import math
+import random
 from random import randint
 
 from stats import Histogram
@@ -103,6 +104,17 @@ class CategoricalRejectSampler:
 				done = True
 				samp = t[0]
 		return samp
+
+# sample cluster and then sample member of sampled cluster
+class ClusterSampler:
+	def __init__(self,  clusters, *clustDistr):
+		self.sampler = CategoricalRejectSampler(*clustDistr)
+		self.clusters = clusters
+	
+	def sample(self):
+		cluster = self.sampler.sample()
+		member = random.choice(self.clusters[cluster])
+		return (cluster, member)
 		
 # metropolitan sampler		
 class MetropolitanSampler:

@@ -98,6 +98,12 @@ def maxLimit(val, limit):
 		val = limit
 	return val;
 
+# if out side range sample within range
+def rangeSample(val, minLim, maxLim):
+	if val < minLim or val > maxLim:
+		val = randint(minLim, maxLim)
+	return val
+
 # breaks a line into fields and keeps only specified fileds and returns new line
 def extractFields(line, delim, keepIndices):
 	items = line.split(delim)
