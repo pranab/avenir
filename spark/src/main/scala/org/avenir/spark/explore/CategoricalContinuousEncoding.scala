@@ -23,7 +23,8 @@ import scala.collection.JavaConverters._
 import org.chombo.util.BasicUtils
 
 /**
- * converts categorical variable values to numerical
+ * Converts categorical variable values to numerical. Supports two algorithms : supervised ration
+ * weight of evidence
  * 
  */
 object CategoricalContinuousEncoding extends JobConfiguration {
@@ -47,7 +48,7 @@ object CategoricalContinuousEncoding extends JobConfiguration {
 	   val classPosVal = getMandatoryStringParam(appConfig, "class.pos.val")
 	   val encodingStrategy = getStringParamOrElse(appConfig, "encoding.strategy", "supervisedRatio")
 	   val isWeightOfEvidence = encodingStrategy.equals("weightOfEvidence")
-	   val scale = this.getIntParamOrElse(appConfig, "scale", 100)
+	   val scale = getIntParamOrElse(appConfig, "scale", 100)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
