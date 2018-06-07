@@ -47,14 +47,14 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val catFieldOrdinals = getMandatoryIntListParam(appConfig, "cat.field.ordinals").asScala.toArray
 	   val classFieldOrdinal = getMandatoryIntParam(appConfig, "class.field.ordinal")
-	   val classValCat = getBooleanParamOrElse(appConfig, "class.val.cat", false)
-	   val classPosVal = if (classValCat) getMandatoryStringParam(appConfig, "class.pos.val") else ""
+	   val classPosVal = getOptionalStringParam(appConfig, "class.pos.val") 
 	  
 	   val regularizationFactor = getIntParamOrElse(appConfig, "regularization.factor", 10)
 	   val randStdDev = getDoubleParamOrElse(appConfig, "rand.std.dev", 0.3)
 	   val trainDataSet = getMandatoryBooleanParam(appConfig, "train.data.set")
 	   val targetStatFilePath = getMandatoryStringParam(appConfig, "target.stat.file")
-	     
+	   val ouputPrecision = getIntParamOrElse(appConfig, "ouput.precision", 3)
+	   
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -66,7 +66,7 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 		   val fieldClassVal = data.flatMap(line => {
 			   val items = line.split(fieldDelimIn, -1)
 			   val classVal = items(classFieldOrdinal)
-			   val iClassVal = intClassVal(classVal, classValCat, classPosVal)
+			   val iClassVal = intClassVal(classVal,  classPosVal)
 			   val value =  (1, iClassVal) 
 			   val fcVal = catFieldOrdinals.map(i => {
 			     val key = (i.toInt, items(i))
@@ -110,7 +110,7 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	   val encData = data.map(line => {
 	     val items = line.split(fieldDelimIn, -1)
 		 val classVal = items(classFieldOrdinal)
-	     val iClassVal = intClassVal(classVal, classValCat, classPosVal)
+	     val iClassVal = intClassVal(classVal,  classPosVal)
 	     catFieldOrdinals.foreach(i => {
 	       val catVal = items(i)
 	       val stat = targetStatMap.get((i, catVal))
@@ -129,7 +129,7 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	         }
 	         enc
 	       }
-	       items(i) = BasicUtils.formatDouble(encVal, 3)
+	       items(i) = BasicUtils.formatDouble(encVal, ouputPrecision)
 	     })
 	     items.mkString(fieldDelimOut)
 	   })
@@ -151,12 +151,12 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
    * @param classPosVal
    * @return
    */   
-   def intClassVal(classVal:String, classValCat:Boolean, classPosVal:String) : Int = {
-     if (classValCat) {
-		 if (classVal.equals(classPosVal)) 1 else 0
-     } else {
-    	 classVal.toInt
+   def intClassVal(classVal:String, classPosVal:Option[String]) : Int = {
+     val iClsVal = classPosVal match {
+       case Some(clsValPos:String) => if (classVal.equals(clsValPos)) 1 else -1
+       case None => classVal.toInt
      }
-   }
+     iClsVal
+    }
 
 }
