@@ -12,14 +12,14 @@ from sampler import *
 class LoanApprove:
 	def __init__(self, numLoans):
 		self.numLoans = numLoans
-		self.threshold = 120
+		self.threshold = 118
 		self.margin = 5
 
 		# distributions
-		self.marriedDistr = CategoricalRejectSampler(("married", 80), ("single", 100))
+		self.marriedDistr = CategoricalRejectSampler(("married", 80), ("single", 100), ("divorced", 30))
 		self.numChildDistr = CategoricalRejectSampler(("1", 80), ("2", 100), ("2", 40))
 		self.eduDistr = CategoricalRejectSampler(("1", 60), ("2", 100), ("3", 30))
-		self.selfEmployedDistr = CategoricalRejectSampler(("selfEmployed", 30), ("employee", 100))
+		self.selfEmployedDistr = CategoricalRejectSampler(("1", 30), ("0", 100))
 		self.incomeDistr = GaussianRejectSampler(100,20)
 		self.numYearsExpDistr = GaussianRejectSampler(10,3)
 		self.outstandingLoanDistr = GaussianRejectSampler(20,5)
@@ -34,20 +34,20 @@ class LoanApprove:
 		self.zipDistr = ClusterSampler(zipClusters, ("high", 30), ("average", 100), ("low", 60))
 		
 		# scores
-		self.marriedScore = {"married" : 15, "single" : 10}
+		self.marriedScore = {"married" : 16, "single" : 10, "divorced" : 6}
 		self.numChildScore = {1 : 12, 2 : 9 , 3 : 4}
 		self.eduScore = {1 : 7 , 2 : 12, 3 : 15}
-		self.selfEmployedScore = {"employee" : 15, "selfEmployed" : 11}
+		self.selfEmployedScore = {"0" : 15, "1" : 11}
 		self.incomeScore = StepFunction((50, 70, 2), (70, 90, 5), (90, 100, 8), (100, 110, 12),\
 		(110, 130, 14), (130, 150, 18))
 		self.numYearsExpScore = StepFunction((6, 10, 4), (10, 14, 9), (14, 20, 13))
 		self.outstandingLoanScore = StepFunction((2, 4, 16), (4, 8, 13), (8, 14, 10), (14, 22, 8),\
 		(22, 32, 6), (32, 44, 2))
-		self.loanAmScore = StepFunction((200, 250, 22), (250, 300, 20), (300, 350, 16), (350, 400, 11),\
+		self.loanAmScore = StepFunction((200, 250, 22), (250, 300, 20), (300, 350, 16), (350, 400, 10),\
 		(400, 450, 5), (450, 500, 2))
 		self.loanTermScore = {10 : 15, 15 : 18 , 30 : 23}
-		self.credScoreScore = StepFunction((600, 650, 10), (650, 700, 13), (700, 750, 17), (750, 800, 22),\
-		(800, 850, 29))
+		self.credScoreScore = StepFunction((600, 650, 8), (650, 700, 12), (700, 750, 17), (750, 800, 23),\
+		(800, 850, 31))
 		self.zipRateScore = {"high" : 17, "average" : 15, "low" : 11}
 
 	def generate(self):
