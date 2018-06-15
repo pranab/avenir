@@ -1,0 +1,39 @@
+This tutorial is for categorical variable encoding using Leave One Out algorithm as 
+implemented on Spark
+
+Environment
+===========
+Path etc in shell script and configuration file corresposnds to my environment. Please Change 
+them  as needed for your environment
+
+Build
+=====
+Follow instructions in spark_dependency.txt
+
+Create loan approval data 
+=========================
+./caen.sh generate <num_of_loans>  <output_file>
+
+num_of_loan = number of loans e.g. 5000
+output_file = generated file name
+
+Copy the generated file to the input directory as specified in caen.sh
+
+Encoding training data
+======================
+Run
+./caen.sh encodeLoo
+
+Encoding validation data
+========================
+Create another data set , as described earlier
+
+Set
+train.data.set = false
+
+Run
+./caen.sh encodeLoo
+
+Configuration
+=============
+It's in caen.conf file. Make changes as necessary
