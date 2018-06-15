@@ -93,7 +93,7 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	   val targetStatMap = targetStat.collectAsMap
 	   if (trainDataSet) {
 	     if (debugOn) {
-	    	 targetStatMap.foreach(v => print(v._1.toString + " -> " + v._2.toString))
+	    	 targetStatMap.foreach(v => println(v._1.toString + " -> " + v._2.toString))
 	     }
 	     targetStat.map(r => {
 	       val ar  = new Array[String](4)
@@ -136,8 +136,8 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	   
 	   if (debugOn) {
 	     val endDataCol = encData.collect
-	     print("showing first 10 records only")
-	     endDataCol.slice(0,10).foreach(line => print(line))
+	     println("showing first 10 records only")
+	     endDataCol.slice(0,10).foreach(line => println(line))
 	   }
 	   
 	   if (saveOutput) {
