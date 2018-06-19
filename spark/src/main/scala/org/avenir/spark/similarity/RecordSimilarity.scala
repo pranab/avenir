@@ -1,4 +1,5 @@
 /*
+
  * avenir-spark: Predictive analytic based on Spark
  * Author: Pranab Ghosh
  * 
@@ -55,53 +56,110 @@ object RecordSimilarity extends JobConfiguration {
 	   val distFinder = new InterRecordDistance(genAttrSchema, distAttrSchema, fieldDelimIn)
 	   val numBuckets = getIntParamOrElse(appConfig, "num.buckets", 16)
 	   val buckets  = List.range(0, numBuckets)
+	   val interSetSimilarity = getBooleanParamOrElse(appConfig, "inter.set.similariry", false)
+	   val outputKeyOnly = getBooleanParamOrElse(appConfig, "output.key.only", true)
+	   val otherInputPath = 
+	     if (interSetSimilarity) getMandatoryStringParam(appConfig, "other.input.path", "missing second input path") 
+	     else ""
+	   
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
-
-	   //key with all bucket pairs and record as value
-	   val bucketedData = data.flatMap(line => {
-		   val items = line.split(fieldDelimIn, -1)
-		   val keyRec = Record(items, keyFieldOrdinals)
-		   val hash = keyRec.hashCode
-		   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
-		   var bucketId = 0
-		   val bucketedRec = buckets.map(b => {
-		     val bucketPairHash = if (thisBucket > b) {
-		        bucketId = 0
-		        thisBucket << 12 | b
-		     } else { 
-		        bucketId = 1
-		        b << 12 | thisBucket  
-		     }
-		       
-		     (bucketPairHash, (bucketId,line)) 
-		   })
+	   val bucketedData = if (interSetSimilarity) { 
+		   data.cache
+		   //for first set key with all bucket pairs and record as value
+		   val  bucketedDataThis = data.flatMap(line => {
+			   val items = line.split(fieldDelimIn, -1)
+			   val keyRec = Record(items, keyFieldOrdinals)
+			   val hash = keyRec.hashCode
+			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
+			   var bucketId = 0
+			   val bucketedRec = buckets.map(b => {
+			     val bucketPairHash = thisBucket << 12 | b
+			     (bucketPairHash, (bucketId,line)) 
+			   })
+			   
+			   bucketedRec
+		   }).cache
 		   
-		   bucketedRec
-	   })
+		   //for second set key with all bucket pairs and record as value
+		   val dataThat = sparkCntxt.textFile(otherInputPath)
+		   val  bucketedDataThat = dataThat.flatMap(line => {
+			   val items = line.split(fieldDelimIn, -1)
+			   val keyRec = Record(items, keyFieldOrdinals)
+			   val hash = keyRec.hashCode
+			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
+			   var bucketId = 1
+			   val bucketedRec = buckets.map(b => {
+			     val bucketPairHash = b << 12 | thisBucket 
+			     (bucketPairHash, (bucketId,line)) 
+			   })
+			   
+			   bucketedRec
+		   })
+
+		   bucketedDataThis ++ bucketedDataThat
+	   } else {
+		   //key with all bucket pairs and record as value
+		   data.flatMap(line => {
+			   val items = line.split(fieldDelimIn, -1)
+			   val keyRec = Record(items, keyFieldOrdinals)
+			   val hash = keyRec.hashCode
+			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
+			   var bucketId = 0
+			   val bucketedRec = buckets.map(b => {
+			     val bucketPairHash = if (thisBucket > b) {
+			        bucketId = 0
+			        thisBucket << 12 | b
+			     } else { 
+			        bucketId = 1
+			        b << 12 | thisBucket  
+			     }
+			       
+			     (bucketPairHash, (bucketId,line)) 
+			   })
+			   
+			   bucketedRec
+		   })
+   	   }
 	   
 	   //group by key and generate distances
 	   val bucketedDistances = bucketedData.groupByKey().flatMapValues(recs => {
 	     val firstBucket = recs.filter(r => r._1 == 0)
 	     val secondBucket = recs.filter(r => r._1 == 1)
 	     val distances = new ListBuffer[(Record, Record, Double)]()
+	     
+	     //first bucket
 	     firstBucket.foreach(f => {
-	       val firstRec = f._2
-	       val firstKey = Record(firstRec.split(fieldDelimIn, -1), keyFieldOrdinals)
+	       val firstRecStr = f._2
+	       val firstRecAr = firstRecStr.split(fieldDelimIn, -1)
+	       val firstKey = Record(firstRecAr, keyFieldOrdinals)
+	       val fistRec = if (outputKeyOnly) None else Some(Record(firstRecAr))
+	       
+	       //second bucket
 	       secondBucket.foreach(s => {
-	    	   val secondRec = s._2
-	    	   val secondKey = Record(secondRec.split(fieldDelimIn, -1), keyFieldOrdinals)
-	    	   val dist = distFinder.findDistance(firstRec, secondRec)
-	    	   distances += ((firstKey, secondKey, dist))
+	    	   val secondRecStr = s._2
+	    	   val secondRecAr = secondRecStr.split(fieldDelimIn, -1)
+	    	   val secondKey = Record(secondRecAr, keyFieldOrdinals)
+	    	   val dist = if (firstKey.equals(secondKey)) 0 else  distFinder.findDistance(firstRecStr, secondRecStr)
+	    	   distances +=  (if (outputKeyOnly) {
+	    		   ((firstKey, secondKey, dist))
+	    	   } else {
+	    	     val secondRec = Record(secondRecAr)
+	    	     val res = fistRec match {
+	    	       case (Some(rec : Record) ) => ((rec, secondRec, dist))
+	    	       case None => throw new IllegalStateException("missing whole record")
+	    	     }
+	    	     res
+	    	   })
 	       })
 	     })
 	     distances
 	   })
 	   
-	   //only distances
+	   //only distances, discard hash bucket keys
 	   val distances = bucketedDistances.values
 	   
 	   if (debugOn) {
