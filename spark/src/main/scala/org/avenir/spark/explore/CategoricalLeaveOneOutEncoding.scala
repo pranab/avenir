@@ -52,7 +52,8 @@ object CategoricalLeaveOneOutEncoding extends JobConfiguration {
 	   val regularizationFactor = getIntParamOrElse(appConfig, "regularization.factor", 10)
 	   val randStdDev = getDoubleParamOrElse(appConfig, "rand.std.dev", 0.3)
 	   val trainDataSet = getMandatoryBooleanParam(appConfig, "train.data.set")
-	   val targetStatFilePath = getMandatoryStringParam(appConfig, "target.stat.file")
+	   val targetStatFilePath = getMandatoryStringParam(appConfig, "target.stat.file.path")
+	   //val targetStatFileInput = getMandatoryStringParam(appConfig, "target.stat.file.input")
 	   val ouputPrecision = getIntParamOrElse(appConfig, "ouput.precision", 3)
 	   
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
