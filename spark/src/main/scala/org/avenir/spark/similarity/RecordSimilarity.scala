@@ -29,6 +29,7 @@ import scala.collection.mutable.ListBuffer
 
 
 /**
+ * distance between pair of records
  * @param args
  * @return
  */
@@ -68,7 +69,6 @@ object RecordSimilarity extends JobConfiguration {
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
 	   val bucketedData = if (interSetSimilarity) { 
-		   data.cache
 		   //for first set key with all bucket pairs and record as value
 		   val  bucketedDataThis = data.flatMap(line => {
 			   val items = line.split(fieldDelimIn, -1)
