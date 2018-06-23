@@ -140,7 +140,7 @@ object NearestRecords extends JobConfiguration {
 	   
 	   if (debugOn) {
 	     val serNeighborsCol = serNeighbors.collect
-	     serNeighborsCol.slice(0,20)foreach(d => {
+	     serNeighborsCol.slice(0,20).foreach(d => {
 	       println(d)
 	     })
 	   }	
