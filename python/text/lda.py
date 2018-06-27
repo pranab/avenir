@@ -26,6 +26,10 @@ class LatentDirichletAllocation:
 		defValues["train.data.dir"] = (None, "missing training data dir")
 		defValues["train.num.topics"] = (None, "missing num of topics")
 		defValues["train.num.pass"] = (100, None)
+		defValues["train.min.doc.occurence.abs"] = (5, None)
+		defValues["train.max.doc.occurence.fraction"] = (0.5, None)
+		defValues["train.keep.most.frequent.count"] = (100000, None)
+		defValues["train.remove.most.frequent.count"] = (2, None)
 		defValues["train.model.save"] = (False, None)
 		defValues["train.plot.perplexity"] = (False, None)
 		defValues["analyze.data.dir"] = (None, "missing analyze data dir")
@@ -45,7 +49,13 @@ class LatentDirichletAllocation:
 		return self.config.getStringConfig("common.mode")[0]
 
 	# train model	
-	def train(self, docTermMatrix, dictionary):
+	def train(self, docs):
+		# create dictionary
+		dictionary = self.createDictionary(docs)
+
+		# Converting list of documents (corpus) into Document Term Matrix using dictionary prepared above.
+		docTermMatrix = [dictionary.doc2bow(doc) for doc in docs]
+
 		#build model
 		topicRange = self.config.getIntListConfig("train.num.topics", ",")[0]
 		numPass = self.config.getIntConfig("train.num.pass")[0]
@@ -83,6 +93,32 @@ class LatentDirichletAllocation:
 			self.ldaModel.save(self.getModelFilePath())
 
 		return (topics, perplex)
+
+	# create dictionary
+	def createDictionary(self, docs):
+		# Creating the term dictionary of our courpus, where every unique term is assigned an index. 
+		dictionary = corpora.Dictionary(docs)
+		print dictionary
+
+		# filter out some terms
+		kwargs = {}
+		minDoc = self.config.getIntConfig("train.min.doc.occurence.abs")[0]
+		if minDoc is not None:
+			kwargs["no_below"] = minDoc
+		maxDoc = self.config.getFloatConfig("train.max.doc.occurence.fraction")[0]
+		if maxDoc is not None:
+			kwargs["no_above"] = maxDoc
+		keep = self.config.getIntConfig("train.keep.most.frequent.count")[0]
+		if keep is not None:
+			kwargs["keep_n"] = keep
+		dictionary.filter_extremes(**kwargs)
+
+		# remove most frequent terms
+		remove = self.config.getIntConfig("train.remove.most.frequent.count")[0]
+		if remove is not None:
+			dictionary.filter_n_most_frequent(remove)
+
+		return dictionary
 
 	# build model
 	def buildModel(self, docTermMatrix, numTopics, dictionary, numPasses):

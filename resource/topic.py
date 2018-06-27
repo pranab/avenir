@@ -35,12 +35,14 @@ lda = LatentDirichletAllocation(configFile)
 
 # execute		
 mode = lda.getMode()
+config = lda.getConfig()
 print "running mode: " + mode
 if mode == "train":
 	# dcument list
 	docComplete  = []
-	path = lda.getConfig().getStringConfig("train.data.dir")[0]
+	path = config.getStringConfig("train.data.dir")[0]
 	filePaths = getAllFiles(path)
+	config = lda.getConfig()
 
 	# read files
 	for filePath in filePaths:
@@ -56,13 +58,7 @@ if mode == "train":
 	# pre process
 	docClean = [clean(doc, preprocessor) for doc in docComplete]
 
-	# Creating the term dictionary of our courpus, where every unique term is assigned an index. 
-	dictionary = corpora.Dictionary(docClean)
-	print dictionary
-
-	# Converting list of documents (corpus) into Document Term Matrix using dictionary prepared above.
-	docTermMatrix = [dictionary.doc2bow(doc) for doc in docClean]
-	result = lda.train(docTermMatrix, dictionary)
+	result = lda.train(docClean)
 
 	plotPerplexity = lda.getConfig().getBooleanConfig("train.plot.perplexity")[0]
 	if plotPerplexity:
