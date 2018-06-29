@@ -7,6 +7,8 @@ from nltk.corpus import movie_reviews
 from random import shuffle
 import gensim
 from gensim import corpora
+from gensim.corpora import Dictionary
+from gensim.models.ldamodel import LdaModel
 import matplotlib.pyplot as plt
 import jprops
 sys.path.append(os.path.abspath("../lib"))
@@ -18,11 +20,13 @@ from mlutil import *
 class LatentDirichletAllocation:
 	config = None
 	ldaModel = None
+	dictionary = None
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = (None, "missing model dir")
 		defValues["common.model.file"] = ("lda", None)
+		defValues["common.dictionary.file"] = ("dict", None)
 		defValues["train.data.dir"] = (None, "missing training data dir")
 		defValues["train.num.topics"] = (None, "missing num of topics")
 		defValues["train.num.pass"] = (100, None)
@@ -33,6 +37,8 @@ class LatentDirichletAllocation:
 		defValues["train.model.save"] = (False, None)
 		defValues["train.plot.perplexity"] = (False, None)
 		defValues["analyze.data.dir"] = (None, "missing analyze data dir")
+		defValues["analyze.doc.topic.odds.ratio"] = (1.5, None)
+		defValues["analyze.topic.word.odds.ratio"] = (1.5, None)
 
 		self.config = Configuration(configFile, defValues)
 
@@ -51,10 +57,10 @@ class LatentDirichletAllocation:
 	# train model	
 	def train(self, docs):
 		# create dictionary
-		dictionary = self.createDictionary(docs)
+		self.dictionary = self.createDictionary(docs)
 
 		# Converting list of documents (corpus) into Document Term Matrix using dictionary prepared above.
-		docTermMatrix = [dictionary.doc2bow(doc) for doc in docs]
+		docTermMatrix = [self.dictionary.doc2bow(doc) for doc in docs]
 
 		#build model
 		topicRange = self.config.getIntListConfig("train.num.topics", ",")[0]
@@ -70,7 +76,7 @@ class LatentDirichletAllocation:
 			print "**num of topics " + str(numTopics)
 
 			# Running and Trainign LDA model on the document term matrix.
-			self.buildModel(docTermMatrix, numTopics, dictionary, numPass)
+			self.buildModel(docTermMatrix, numTopics,  numPass)
 			
 			# output
 			print "--topics"
@@ -90,11 +96,23 @@ class LatentDirichletAllocation:
 
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		if modelSave:
-			self.ldaModel.save(self.getModelFilePath())
+			self.dictionary.save(self.getModelFilePath("common.dictionary.file"))
+			self.ldaModel.save(self.getModelFilePath("common.model.file"))
 
 		return (topics, perplex)
 
-	# create dictionary
+	# train model	
+	def analyze(self, docs):
+		# load dictionary and model
+		self.dictionary = Dictionary.load(self.getModelFilePath("common.dictionary.file"))
+		self.ldaModel = LdaModel.load(self.getModelFilePath("common.model.file"))
+
+		# Converting list of documents (corpus) into Document Term Matrix using dictionary prepared above.
+		docTermMatrix = [self.dictionary.doc2bow(doc) for doc in docs]
+
+		docTopicDistr = self.getDocumentTopics(docTermMatrix)
+		return docTopicDistr
+
 	def createDictionary(self, docs):
 		# Creating the term dictionary of our courpus, where every unique term is assigned an index. 
 		dictionary = corpora.Dictionary(docs)
@@ -121,9 +139,9 @@ class LatentDirichletAllocation:
 		return dictionary
 
 	# build model
-	def buildModel(self, docTermMatrix, numTopics, dictionary, numPasses):
+	def buildModel(self, docTermMatrix, numTopics,  numPasses):
 		"""  LDA for topic modeling  """
-		self.ldaModel = gensim.models.ldamodel.LdaModel(docTermMatrix, num_topics=numTopics, id2word=dictionary, passes=numPasses)
+		self.ldaModel = gensim.models.ldamodel.LdaModel(docTermMatrix, num_topics=numTopics, id2word=self.dictionary, passes=numPasses)
 		return self.ldaModel
 
 	# doc topic distr
@@ -134,7 +152,10 @@ class LatentDirichletAllocation:
 	# topic word distr
 	def getTopicTerms(self, topicId, topN):
 		""" return word distribution for a topic """
-		return self.ldaModel.get_topic_terms(topicId, topN)
+		idto = self.dictionary.id2token
+		tiDistr =  self.ldaModel.get_topic_terms(topicId, topN)
+		toDistr = [(idto[ti[0]], ti[1])  for ti in tiDistr]
+		return toDistr
 
 	# all topic word distr
 	def getAllTopicTerms(self):
@@ -142,9 +163,9 @@ class LatentDirichletAllocation:
 		return self.ldaModel.get_topics()
 
 	# get model file path
-	def getModelFilePath(self):
+	def getModelFilePath(self, fileNameParam):
 		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
-		modelFile = self.config.getStringConfig("common.model.file")[0]
+		modelFile = self.config.getStringConfig(fileNameParam)[0]
 		if modelFile is None:
 			raise ValueError("missing model file name")
 		modelFilePath = os.path.join(modelDirectory, modelFile)
