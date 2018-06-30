@@ -39,6 +39,7 @@ class LatentDirichletAllocation:
 		defValues["analyze.data.dir"] = (None, "missing analyze data dir")
 		defValues["analyze.doc.topic.odds.ratio"] = (1.5, None)
 		defValues["analyze.topic.word.odds.ratio"] = (1.5, None)
+		defValues["analyze.topic.word.top.max"] = (20, None)
 
 		self.config = Configuration(configFile, defValues)
 

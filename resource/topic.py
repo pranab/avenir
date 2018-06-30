@@ -102,6 +102,7 @@ elif mode == "analyze":
 	result = lda.analyze(docClean)
 	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
 	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
+	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
 	for dt in result:
 		dt.sort(key=takeSecond, reverse=True)
 		dtTop = topByOddsRatio(dt, dtOddsRatio)
@@ -109,7 +110,7 @@ elif mode == "analyze":
 			print 
 			print "topic: " + str(t)
 			tid = t[0]
-			tw = lda.getTopicTerms(tid, 50)
+			tw = lda.getTopicTerms(tid, twTopMax)
 			twTop = topByOddsRatio(tw, twOddsRatio)
 			print "words: " + str(twTop)
 
