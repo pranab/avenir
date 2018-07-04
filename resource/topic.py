@@ -9,6 +9,8 @@ import gensim
 from gensim import corpora
 import matplotlib.pyplot as plt
 import jprops
+from sklearn.datasets import fetch_20newsgroups
+import pickle
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from preprocess import *
@@ -46,7 +48,7 @@ def clean(doc, preprocessor):
 def takeSecond(elem):
     return elem[1]
 
-# 
+# top elements by odds ration
 def topByOddsRatio(distr, oddsRatio):
 	s = 0.0
 	sel = []
@@ -57,6 +59,29 @@ def topByOddsRatio(distr, oddsRatio):
 			break	
 	return sel
 
+# base term ditsribution
+def crateTermDistr(docs, vocFilt, saveFile):
+	print "term distribution"
+	print "num of doc" + str(len(docs))
+	tfidf = TfIdf(vocFilt, False)
+	for d in docs:
+		tfidf.countDocWords(d)
+	tf = tfidf.getWordFreq()
+	print "term distr size " + str(len(tf))
+	verbose = False
+	if verbose:
+		for t in tf.items():
+			print "%s	%.6f" %(t[0], t[1])
+	
+	if saveFile is not None:
+		tfidf.save(saveFile)
+		tfidf = TfIdf.load(saveFile)
+	return tf
+
+# load term distr from file
+def loadTermDistr(saveFile):
+	tfidf = TfIdf.load(saveFile)
+	return tfidf
 
 #######################
 configFile  = sys.argv[1]
@@ -99,19 +124,63 @@ elif mode == "analyze":
 
 	# pre process
 	docClean = [clean(doc, preprocessor) for doc in docComplete]
+
+	# analyze all docs
 	result = lda.analyze(docClean)
+
 	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
 	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
 	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
-	for dt in result:
+	docByTopic = {}
+	wordsByTopic = {}
+
+	# doc id tpoc list
+	for didx, dt in enumerate(result):
 		dt.sort(key=takeSecond, reverse=True)
 		dtTop = topByOddsRatio(dt, dtOddsRatio)
 		for t in dtTop:
 			print 
 			print "topic: " + str(t)
 			tid = t[0]
+			appendKeyedList(docByTopic, tid, didx)
 			tw = lda.getTopicTerms(tid, twTopMax)
 			twTop = topByOddsRatio(tw, twOddsRatio)
+			if wordsByTopic.get(tid) is None:
+				for w, p in twTop:
+					appendKeyedList(wordsByTopic, tid, w)
 			print "words: " + str(twTop)
+
+	# each topic
+	ceFilt = config.getBooleanConfig("analyze.word.cross.entropy.filter")[0]
+	if ceFilt:
+		saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
+		glTf = loadTermDistr(saveFile).getWordFreq()
+		for tid in docByTopic.keys():
+			print "topic id " + str(tid)
+			# all docs for the topic
+			dids = docByTopic.get(tid)
+			docs = [docClean[did] for did in dids]
+			print "num of docs " + str(len(docs))
+			tf = crateTermDistr(docs, None, None)
+			
+			wordCe = []
+			for w in wordsByTopic.get(tid):
+				p = tf.get(w)
+				q = glTf.get(w)
+				if q is not None:
+					ce = p * math.log(p / q)
+					wordCe.append((w, ce))
+			wordCe.sort(key=takeSecond, reverse=True)			
+			print "word cross entropy " + str(wordCe)	
+
+elif mode == "baseTermDistr":
+	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc']
+	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
+	print "pre processing " + str(len(twentyTrain.data)) + " docs"
+	docsClean = [clean(doc, preprocessor) for doc in twentyTrain.data]	
+
+	saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
+	crateTermDistr(docsClean, None, saveFile)
+
 
 

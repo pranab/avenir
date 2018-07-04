@@ -19,6 +19,7 @@ from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import LancasterStemmer, WordNetLemmatizer
 from nltk.tag import StanfordNERTagger
 from collections import defaultdict
+import pickle
 
 #text preprocessor
 class TextPreProcessor:
@@ -148,6 +149,74 @@ class TextPreProcessor:
 		for word in wordFeatures:
 			features[word] = (word in documentWords)
 		return features
+
+# TF IDF 
+class TfIdf:
+	# initialize
+	def __init__(self, vocFilt, doIdf):
+		self.vocFilt = vocFilt
+		self.doIdf = doIdf
+		self.wordCounter = {}
+		self.wordFreq = {}
+		self.wordInDocCount = {}
+		self.docCount = 0
+		self.corpSize = 0
+		self.freqDone = False
+		self.vocabulary = set()
+		self.wordIndex = None
+	
+	# count words in a doc
+	def countDocWords(self, words):
+		print "doc size " + str(len(words))
+		for word in words:
+			if self.vocFilt is None or word in self.vocFilt:
+				count = self.wordCounter.get(word, 0)
+				self.wordCounter[word] = count + 1
+		self.corpSize += len(words)
+
+		if (self.doIdf):
+			self.docCount += 1
+			for word in set(words):
+				self.wordInDocCount.get(word, 0)
+				self.wordInDocCount[word] = count + 1
+		self.freqDone = False
+	
+	# get tfidf for corpus
+	def getWordFreq(self):
+		print "counter size " + str(len(self.wordCounter))
+		if not self.freqDone:
+			for item in self.wordCounter.items():
+				self.wordFreq[item[0]] = float(item[1]) / self.corpSize					
+			if self.doIdf:
+				for k in self.wordFreq.keys():
+					self.wordFreq.items[k] *=  math.log(self.docCount / self.wordInDocCount.items[k])	
+			self.freqDone = True
+			self.wordCounter = {}
+		return self.wordFreq
+	
+	# build vocbulary
+	def buildVocabulary(self, words):
+		self.vocabulary.update(words)
+	
+	# index for all words in vcabulary
+	def creatWordIndex(self):
+		self.wordIndex = {word : idx for idx, word in enumerate(list(self.vocabulary))}
+
+	# save 
+	def save(self, saveFile):
+		sf = open(saveFile, "wb")
+		pickle.dump(self, sf)
+		sf.close()
+
+	# load 
+	@staticmethod
+	def load(saveFile):
+		sf = open(saveFile, "rb")
+		tfidf = pickle.load(sf)
+		sf.close()
+		return tfidf
+
+
 
 
 

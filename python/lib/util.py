@@ -182,6 +182,21 @@ def getAllFiles(dirPath):
 			filePaths.append(os.path.join(thisDir, fileName))
 	return filePaths
 
+# keyed counter
+def addToKeyedCounter(dCounter, key, count):
+	curCount = dCounter.get(key, 0)
+	dCounter[key] = curCount + count
+
+# keyed counter
+def incrKeyedCounter(dCounter, key):
+	addToKeyedCounter(dCounter, key, 1)
+
+# keyed list
+def appendKeyedList(dList, key, elem):
+	curList = dList.get(key, [])
+	curList.append(elem)
+	dList[key] = curList
+
 # step function
 class StepFunction:
 	def __init__(self,  *values):
