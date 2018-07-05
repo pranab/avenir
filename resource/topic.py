@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import jprops
 from sklearn.datasets import fetch_20newsgroups
 import pickle
+import math
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from preprocess import *
@@ -33,8 +34,8 @@ def getFileContent(dirPathParam):
 	return docComplete
 
 def clean(doc, preprocessor):
-	#print "--raw doc"
-	#print doc
+	print "--raw doc"
+	print doc
 	words = preprocessor.tokenize(doc)
 	words = preprocessor.toLowercase(words)
 	words = preprocessor.removeStopwords(words)
@@ -62,7 +63,7 @@ def topByOddsRatio(distr, oddsRatio):
 # base term ditsribution
 def crateTermDistr(docs, vocFilt, saveFile):
 	print "term distribution"
-	print "num of doc" + str(len(docs))
+	print "num of docs " + str(len(docs))
 	tfidf = TfIdf(vocFilt, False)
 	for d in docs:
 		tfidf.countDocWords(d)
@@ -75,7 +76,6 @@ def crateTermDistr(docs, vocFilt, saveFile):
 	
 	if saveFile is not None:
 		tfidf.save(saveFile)
-		tfidf = TfIdf.load(saveFile)
 	return tf
 
 # load term distr from file
@@ -164,16 +164,20 @@ elif mode == "analyze":
 			tf = crateTermDistr(docs, None, None)
 			
 			wordCe = []
+			skippedWords = []
 			for w in wordsByTopic.get(tid):
 				p = tf.get(w)
 				q = glTf.get(w)
-				if q is not None:
+				if not (p is None or q is None):
 					ce = p * math.log(p / q)
 					wordCe.append((w, ce))
+				else:
+					skippedWords.append(w)
 			wordCe.sort(key=takeSecond, reverse=True)			
-			print "word cross entropy " + str(wordCe)	
+			print "words after cross entropy filter" + str(wordCe)	
+			print "skipped " + str(skippedWords) 
 
-elif mode == "baseTermDistr":
+elif mode == "buildBaseTermDistr":
 	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc']
 	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
 	print "pre processing " + str(len(twentyTrain.data)) + " docs"
@@ -182,5 +186,8 @@ elif mode == "baseTermDistr":
 	saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
 	crateTermDistr(docsClean, None, saveFile)
 
+elif mode == "loadBaseTermDistr":
+	saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
+	loadTermDistr(saveFile)
 
 

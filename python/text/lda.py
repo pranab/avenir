@@ -18,9 +18,6 @@ from mlutil import *
 
 # gradient boosting classification
 class LatentDirichletAllocation:
-	config = None
-	ldaModel = None
-	dictionary = None
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
@@ -40,8 +37,12 @@ class LatentDirichletAllocation:
 		defValues["analyze.doc.topic.odds.ratio"] = (1.5, None)
 		defValues["analyze.topic.word.odds.ratio"] = (1.5, None)
 		defValues["analyze.topic.word.top.max"] = (20, None)
+		defValues["analyze.base.word.distr.file"] = (None, None)
+		defValues["analyze.word.cross.entropy.filter"] = (False, None)
 
 		self.config = Configuration(configFile, defValues)
+		self.ldaModel = None
+		self.dictionary = None
 
 	# get config object
 	def getConfig(self):
@@ -117,7 +118,7 @@ class LatentDirichletAllocation:
 	def createDictionary(self, docs):
 		# Creating the term dictionary of our courpus, where every unique term is assigned an index. 
 		dictionary = corpora.Dictionary(docs)
-		print dictionary
+		#print dictionary
 
 		# filter out some terms
 		kwargs = {}
@@ -136,7 +137,7 @@ class LatentDirichletAllocation:
 		remove = self.config.getIntConfig("train.remove.most.frequent.count")[0]
 		if remove is not None:
 			dictionary.filter_n_most_frequent(remove)
-
+		print dictionary
 		return dictionary
 
 	# build model
