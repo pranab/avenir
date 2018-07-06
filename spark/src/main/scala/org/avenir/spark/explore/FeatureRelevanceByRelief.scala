@@ -39,7 +39,7 @@ object FeatureRelevanceByRelief extends JobConfiguration {
     * @return
     */
    def main(args: Array[String])  {
-	   val appName = "nearestRecords"
+	   val appName = "featureRelevanceByRelief"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -60,8 +60,9 @@ object FeatureRelevanceByRelief extends JobConfiguration {
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
-	   val data = sparkCntxt.textFile(inputPath)
-	   val fieldScore = data.flatMap(line => {	
+	   val data = sparkCntxt.textFile(inputPath).cache
+	   val size = data.count
+	   var fieldScore = data.flatMap(line => {	
 		   val items = line.split(fieldDelimIn, -1)
 		   val srcClsVal = items(0)
 		   val neighborClsVal = items(1)
@@ -69,10 +70,14 @@ object FeatureRelevanceByRelief extends JobConfiguration {
 		   val srcRec = items.slice(2, 2 + recLen)
 		   var offset = 2 + recLen
 		   val attrScores = ArrayBuffer[(Int,Double)]()
+		   
+		   //each neighbor
 		   for (i <- 1 to maxNeighborCount) {
 		     val neighborRec = items.slice(offset, offset + recLen)
 		     distFinder.findDistance(srcRec, neighborRec)
 		     val attrDist = distFinder.getAttributeDistances().asScala.toArray
+		     
+		     //each field
 		     attrDist.foreach(r => {
 		       val score = (r._1.toInt, r._2.toDouble * polarity)
 		       attrScores += score
@@ -81,6 +86,9 @@ object FeatureRelevanceByRelief extends JobConfiguration {
 		   }
 		   attrScores
 	   }).reduceByKey((v1, v2) => v1 + v2)
+	   
+	   //scale
+	   fieldScore = fieldScore.mapValues(v => v / size)
 	   
 	   if (debugOn) {
 	     val fieldScoreCol = fieldScore.collect
@@ -92,7 +100,6 @@ object FeatureRelevanceByRelief extends JobConfiguration {
 	   if (saveOutput) {
 	     fieldScore.saveAsTextFile(outputPath)
 	   }
-	   
 	   
    }
 
