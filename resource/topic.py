@@ -60,6 +60,60 @@ def topByOddsRatio(distr, oddsRatio):
 			break	
 	return sel
 
+# document word distr marginalizing over topic
+def netWordDistr(docResult):
+	wordDistr = {}
+	for tid, (tp,tw) in docResult.iteritems():
+		print "topic id " + str(tid)
+		print "topic pr " + str(tp)
+		print "word distr " + str(tw)
+		
+		for w, wp in tw:
+			p = wp * tp
+			addToKeyedCounter(wordDistr, w, p)
+	
+	wdList = [(k, v) for k, v in wordDistr.items()]	
+	#print "final word list " + str(wdList)
+	wdList.sort(key=takeSecond, reverse=True)
+	return wdList
+
+# analyzes results
+def processResult(config, result, lda, verbose):
+	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
+	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
+	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
+	docByTopic = {}
+	wordsByTopic = {}
+	
+	if verbose:
+		print "result size " + str(len(result))
+
+	# all docs 
+	for didx, dt in enumerate(result):
+		print "doc " + str(didx)
+		docResult = {}
+		dt.sort(key=takeSecond, reverse=True)
+		dtTop = topByOddsRatio(dt, dtOddsRatio)
+		# all topics
+		for t in dtTop:
+			if verbose:
+				print "topic and distr : " + str(t)
+			tid = t[0]
+			appendKeyedList(docByTopic, tid, didx)
+			tw = lda.getTopicTerms(tid, twTopMax)
+			twTop = topByOddsRatio(tw, twOddsRatio)
+			docResult[tid] = (t[1], twTop)
+			if wordsByTopic.get(tid) is None:
+				for w, p in twTop:
+					appendKeyedList(wordsByTopic, tid, w)
+			if verbose:
+				print "topic words: " + str(twTop)
+		
+		# net word dist for doc
+		wdList = netWordDistr(docResult)
+		print "final doc words distr " + str(wdList)
+	return (docByTopic, wordsByTopic)
+
 # base term ditsribution
 def crateTermDistr(docs, vocFilt, saveFile):
 	print "term distribution"
@@ -90,11 +144,13 @@ lda = LatentDirichletAllocation(configFile)
 # execute		
 mode = lda.getMode()
 config = lda.getConfig()
+verbose = lda.getConfig().getBooleanConfig("common.verbose")[0]
 
 # processor object
 preprocessor = TextPreProcessor()
 
-print "running mode: " + mode
+if verbose:
+	print "running mode: " + mode
 if mode == "train":
 	# dcument list
 	docComplete  = getFileContent("train.data.dir")
@@ -105,18 +161,24 @@ if mode == "train":
 	# train
 	result = lda.train(docClean)
 
-	plotPerplexity = lda.getConfig().getBooleanConfig("train.plot.perplexity")[0]
-	if plotPerplexity:
-		# plot
-		plt.plot(result[0], result[1])
+	if lda.isSingleNumOfTopics():
+		# one topic number
+		result = lda.getDocTopics()		
+		docByTopic, wordsByTopic = processResult(config, result, lda, verbose)
+	else:
+		# multiple topic numbers to decide optimum number
+		plotPerplexity = lda.getConfig().getBooleanConfig("train.plot.perplexity")[0]
+		if plotPerplexity:
+			# plot
+			plt.plot(result[0], result[1])
  
-		# naming the x and y axis
-		plt.xlabel("num of topics")
-		plt.ylabel("peplexity")
+			# naming the x and y axis
+			plt.xlabel("num of topics")
+			plt.ylabel("peplexity")
  
-		# giving a title to my graph
-		plt.title("perplexity variation")
-		plt.show()
+			# giving a title to my graph
+			plt.title("perplexity variation")
+			plt.show()
 
 elif mode == "analyze":
 	# dcument list
@@ -127,28 +189,8 @@ elif mode == "analyze":
 
 	# analyze all docs
 	result = lda.analyze(docClean)
+	docByTopic, wordsByTopic = processResult(config, result, lda, verbose)
 
-	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
-	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
-	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
-	docByTopic = {}
-	wordsByTopic = {}
-
-	# doc id tpoc list
-	for didx, dt in enumerate(result):
-		dt.sort(key=takeSecond, reverse=True)
-		dtTop = topByOddsRatio(dt, dtOddsRatio)
-		for t in dtTop:
-			print 
-			print "topic: " + str(t)
-			tid = t[0]
-			appendKeyedList(docByTopic, tid, didx)
-			tw = lda.getTopicTerms(tid, twTopMax)
-			twTop = topByOddsRatio(tw, twOddsRatio)
-			if wordsByTopic.get(tid) is None:
-				for w, p in twTop:
-					appendKeyedList(wordsByTopic, tid, w)
-			print "words: " + str(twTop)
 
 	# each topic
 	ceFilt = config.getBooleanConfig("analyze.word.cross.entropy.filter")[0]

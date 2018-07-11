@@ -21,6 +21,7 @@ class LatentDirichletAllocation:
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
+		defValues["common.verbose"] = (False, None)
 		defValues["common.model.directory"] = (None, "missing model dir")
 		defValues["common.model.file"] = ("lda", None)
 		defValues["common.dictionary.file"] = ("dict", None)
@@ -43,6 +44,9 @@ class LatentDirichletAllocation:
 		self.config = Configuration(configFile, defValues)
 		self.ldaModel = None
 		self.dictionary = None
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		self.docTopics = []
+		self.singleNumOfTopics = True
 
 	# get config object
 	def getConfig(self):
@@ -74,6 +78,7 @@ class LatentDirichletAllocation:
 			topicMax = topicRange[0]
 		topics = []
 		perplex = []
+		self.singleNumOfTopics = (topicMin == topicMax)
 		for numTopics in range(topicMin, topicMax+1):
 			print "**num of topics " + str(numTopics)
 
@@ -81,17 +86,23 @@ class LatentDirichletAllocation:
 			self.buildModel(docTermMatrix, numTopics,  numPass)
 			
 			# output
-			print "--topics"
-			print(self.ldaModel.print_topics(num_topics=numTopics, num_words=5))
+			if self.verbose:
+				print "--topics"
+				print(self.ldaModel.print_topics(num_topics=numTopics, num_words=5))
 
-			print "--doc latent vector"
+			self.docTopics = []
+			if self.verbose:
+				print "--doc topic vector"
 			for doc in docTermMatrix:
 				docLda = self.ldaModel[doc]
-				print docLda
+				self.docTopics.append(docLda)
+				if self.verbose:
+					print docLda
 
 			# perplexity
 			perplexity = self.ldaModel.log_perplexity(docTermMatrix)
-			print "--perplexity %.6f" %(perplexity)
+			if self.verbose:
+				print "--perplexity %.6f" %(perplexity)
 
 			topics.append(numTopics)
 			perplex.append(perplexity)
@@ -102,6 +113,14 @@ class LatentDirichletAllocation:
 			self.ldaModel.save(self.getModelFilePath("common.model.file"))
 
 		return (topics, perplex)
+
+	# get topic distr for docs
+	def getDocTopics(self):
+		return 	self.docTopics
+	
+	# only one number of topics
+	def isSingleNumOfTopics(self):
+		return self.singleNumOfTopics
 
 	# train model	
 	def analyze(self, docs):
@@ -115,6 +134,7 @@ class LatentDirichletAllocation:
 		docTopicDistr = self.getDocumentTopics(docTermMatrix)
 		return docTopicDistr
 
+	# create dictionary
 	def createDictionary(self, docs):
 		# Creating the term dictionary of our courpus, where every unique term is assigned an index. 
 		dictionary = corpora.Dictionary(docs)
