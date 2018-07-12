@@ -19,7 +19,7 @@ from util import *
 from mlutil import *
 from lda import *
 
-def getFileContent(dirPathParam):
+def getFileContent(dirPathParam, verbose):
 	# dcument list
 	docComplete  = []
 	path = config.getStringConfig(dirPathParam)[0]
@@ -27,22 +27,25 @@ def getFileContent(dirPathParam):
 
 	# read files
 	for filePath in filePaths:
-		print "next file " + filePath
+		if verbose:
+			print "next file " + filePath
 		with open(filePath, 'r') as contentFile:
 			content = contentFile.read()
 			docComplete.append(content)
-	return docComplete
+	return (docComplete, filePaths)
 
-def clean(doc, preprocessor):
-	print "--raw doc"
-	print doc
+def clean(doc, preprocessor, verbose):
+	if verbose:
+		print "--raw doc"
+		print doc
 	words = preprocessor.tokenize(doc)
 	words = preprocessor.toLowercase(words)
 	words = preprocessor.removeStopwords(words)
 	words = preprocessor.removePunctuation(words)
 	words = preprocessor.lemmatizeWords(words)
-	#print "--after pre processing"
-	#print words
+	if verbose:
+		print "--after pre processing"
+		print words
 	return words
 
 # soring
@@ -61,24 +64,24 @@ def topByOddsRatio(distr, oddsRatio):
 	return sel
 
 # document word distr marginalizing over topic
-def netWordDistr(docResult):
+def netWordDistr(docResult, verbore):
 	wordDistr = {}
 	for tid, (tp,tw) in docResult.iteritems():
-		print "topic id " + str(tid)
-		print "topic pr " + str(tp)
-		print "word distr " + str(tw)
+		if verbose:
+			print "topic id " + str(tid)
+			print "topic pr " + str(tp)
+			print "word distr " + str(tw)
 		
 		for w, wp in tw:
 			p = wp * tp
 			addToKeyedCounter(wordDistr, w, p)
 	
 	wdList = [(k, v) for k, v in wordDistr.items()]	
-	#print "final word list " + str(wdList)
 	wdList.sort(key=takeSecond, reverse=True)
 	return wdList
 
 # analyzes results
-def processResult(config, result, lda, verbose):
+def processResult(config, result, lda, filePaths, verbose):
 	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
 	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
 	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
@@ -90,7 +93,7 @@ def processResult(config, result, lda, verbose):
 
 	# all docs 
 	for didx, dt in enumerate(result):
-		print "doc " + str(didx)
+		print "doc " + filePaths[didx]
 		docResult = {}
 		dt.sort(key=takeSecond, reverse=True)
 		dtTop = topByOddsRatio(dt, dtOddsRatio)
@@ -110,7 +113,7 @@ def processResult(config, result, lda, verbose):
 				print "topic words: " + str(twTop)
 		
 		# net word dist for doc
-		wdList = netWordDistr(docResult)
+		wdList = netWordDistr(docResult, verbose)
 		print "final doc words distr " + str(wdList)
 	return (docByTopic, wordsByTopic)
 
@@ -153,20 +156,24 @@ if verbose:
 	print "running mode: " + mode
 if mode == "train":
 	# dcument list
-	docComplete  = getFileContent("train.data.dir")
+	docComplete, filePaths  = getFileContent("train.data.dir", verbose)
 
 	# pre process
-	docClean = [clean(doc, preprocessor) for doc in docComplete]
+	docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]
 
 	# train
 	result = lda.train(docClean)
 
 	if lda.isSingleNumOfTopics():
 		# one topic number
+		if verbose:
+			print "one topic number"
 		result = lda.getDocTopics()		
-		docByTopic, wordsByTopic = processResult(config, result, lda, verbose)
+		docByTopic, wordsByTopic = processResult(config, result, lda, filePaths. verbose)
 	else:
 		# multiple topic numbers to decide optimum number
+		if verbose:
+			print "multiple topic numbers"
 		plotPerplexity = lda.getConfig().getBooleanConfig("train.plot.perplexity")[0]
 		if plotPerplexity:
 			# plot
@@ -182,14 +189,14 @@ if mode == "train":
 
 elif mode == "analyze":
 	# dcument list
-	docComplete  = getFileContent("analyze.data.dir")
+	docComplete, filePaths  = getFileContent("analyze.data.dir", verbose)
 
 	# pre process
-	docClean = [clean(doc, preprocessor) for doc in docComplete]
+	docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]
 
 	# analyze all docs
 	result = lda.analyze(docClean)
-	docByTopic, wordsByTopic = processResult(config, result, lda, verbose)
+	docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
 
 
 	# each topic
@@ -223,7 +230,7 @@ elif mode == "buildBaseTermDistr":
 	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc']
 	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
 	print "pre processing " + str(len(twentyTrain.data)) + " docs"
-	docsClean = [clean(doc, preprocessor) for doc in twentyTrain.data]	
+	docsClean = [clean(doc, preprocessor, verbose) for doc in twentyTrain.data]	
 
 	saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
 	crateTermDistr(docsClean, None, saveFile)
