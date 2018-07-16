@@ -169,7 +169,7 @@ if mode == "train":
 		if verbose:
 			print "one topic number"
 		result = lda.getDocTopics()		
-		docByTopic, wordsByTopic = processResult(config, result, lda, filePaths. verbose)
+		docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
 	else:
 		# multiple topic numbers to decide optimum number
 		if verbose:
