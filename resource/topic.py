@@ -93,18 +93,19 @@ def processResult(config, result, lda, filePaths, verbose):
 
 	# all docs 
 	for didx, dt in enumerate(result):
-		print "doc " + filePaths[didx]
+		print "\n** next doc " + filePaths[didx]
 		docResult = {}
 		dt.sort(key=takeSecond, reverse=True)
 		dtTop = topByOddsRatio(dt, dtOddsRatio)
+		print "filtered doc topic distribution " + str(dtTop)
 		# all topics
 		for t in dtTop:
-			if verbose:
-				print "topic and distr : " + str(t)
+			print "topic with distr : " + str(t)
 			tid = t[0]
 			appendKeyedList(docByTopic, tid, didx)
 			tw = lda.getTopicTerms(tid, twTopMax)
 			twTop = topByOddsRatio(tw, twOddsRatio)
+			print "filtered topic word distribution " + str(twTop)
 			docResult[tid] = (t[1], twTop)
 			if wordsByTopic.get(tid) is None:
 				for w, p in twTop:
@@ -114,7 +115,7 @@ def processResult(config, result, lda, filePaths, verbose):
 		
 		# net word dist for doc
 		wdList = netWordDistr(docResult, verbose)
-		print "final doc words distr " + str(wdList)
+		print "final doc word distr " + str(wdList)
 	return (docByTopic, wordsByTopic)
 
 # base term ditsribution
