@@ -20,6 +20,8 @@ from nltk.stem import LancasterStemmer, WordNetLemmatizer
 from nltk.tag import StanfordNERTagger
 from collections import defaultdict
 import pickle
+sys.path.append(os.path.abspath("../lib"))
+from util import *
 
 #text preprocessor
 class TextPreProcessor:
@@ -104,6 +106,16 @@ class TextPreProcessor:
 			frequency[word] += 1
 		removed = [word for word in words if frequency[word] > minFreq]		
 		return removed	
+
+	def removeNumbers(self, words):
+		"""Remove numbers"""
+		removed = [word for word in words if not isNumber(word)]		
+		return removed		
+
+	def removeShortWords(self, words, minLengh):
+		"""Remove short words """
+		removed = [word for word in words if len(word) >= minLengh]		
+		return removed		
 
 	def stemWords(self, words):
 		"""Stem words in list of tokenized words"""

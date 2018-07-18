@@ -197,6 +197,10 @@ def appendKeyedList(dList, key, elem):
 	curList.append(elem)
 	dList[key] = curList
 
+# Returns True is string is a number
+def isNumber(st):
+    return st.replace('.','',1).isdigit()
+
 # step function
 class StepFunction:
 	def __init__(self,  *values):
