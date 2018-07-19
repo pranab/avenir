@@ -19,38 +19,6 @@ from util import *
 from mlutil import *
 from lda import *
 
-def getFileContent(dirPathParam, verbose):
-	# dcument list
-	docComplete  = []
-	path = config.getStringConfig(dirPathParam)[0]
-	filePaths = getAllFiles(path)
-
-	# read files
-	for filePath in filePaths:
-		if verbose:
-			print "next file " + filePath
-		with open(filePath, 'r') as contentFile:
-			content = contentFile.read()
-			docComplete.append(content)
-	return (docComplete, filePaths)
-
-def clean(doc, preprocessor, verbose):
-	if verbose:
-		print "--raw doc"
-		print doc
-	words = preprocessor.tokenize(doc)
-	words = preprocessor.toLowercase(words)
-	words = preprocessor.removeStopwords(words)
-	words = preprocessor.removePunctuation(words)
-	words = preprocessor.lemmatizeWords(words)
-	if verbose:
-		print "--after pre processing"
-		print words
-	return words
-
-# soring
-def takeSecond(elem):
-    return elem[1]
 
 # top elements by odds ration
 def topByOddsRatio(distr, oddsRatio):
@@ -96,6 +64,7 @@ def processResult(config, result, lda, filePaths, verbose):
 		print "\n** next doc " + filePaths[didx]
 		docResult = {}
 		dt.sort(key=takeSecond, reverse=True)
+		print "doc topic distribution " + str(dt)
 		dtTop = topByOddsRatio(dt, dtOddsRatio)
 		print "filtered doc topic distribution " + str(dtTop)
 		# all topics
@@ -157,7 +126,8 @@ if verbose:
 	print "running mode: " + mode
 if mode == "train":
 	# dcument list
-	docComplete, filePaths  = getFileContent("train.data.dir", verbose)
+	path = config.getStringConfig("train.data.dir")[0]
+	docComplete, filePaths  = getFileContent(path, verbose)
 
 	# pre process
 	docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]
@@ -190,7 +160,8 @@ if mode == "train":
 
 elif mode == "analyze":
 	# dcument list
-	docComplete, filePaths  = getFileContent("analyze.data.dir", verbose)
+	path = config.getStringConfig("analyze.data.dir")[0]
+	docComplete, filePaths  = getFileContent(path, verbose)
 
 	# pre process
 	docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]

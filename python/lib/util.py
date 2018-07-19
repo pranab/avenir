@@ -182,6 +182,29 @@ def getAllFiles(dirPath):
 			filePaths.append(os.path.join(thisDir, fileName))
 	return filePaths
 
+# get file content
+def getFileContent(path, verbose):
+	# dcument list
+	docComplete  = []
+	filePaths = getAllFiles(path)
+
+	# read files
+	for filePath in filePaths:
+		if verbose:
+			print "next file " + filePath
+		with open(filePath, 'r') as contentFile:
+			content = contentFile.read()
+			docComplete.append(content)
+	return (docComplete, filePaths)
+
+# soring
+def takeFirst(elem):
+    return elem[0]
+
+# soring
+def takeSecond(elem):
+    return elem[1]
+
 # keyed counter
 def addToKeyedCounter(dCounter, key, count):
 	curCount = dCounter.get(key, 0)

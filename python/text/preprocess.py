@@ -228,7 +228,19 @@ class TfIdf:
 		sf.close()
 		return tfidf
 
-
-
+# clean doc to create term array
+def clean(doc, preprocessor, verbose):
+	if verbose:
+		print "--raw doc"
+		print doc
+	words = preprocessor.tokenize(doc)
+	words = preprocessor.toLowercase(words)
+	words = preprocessor.removeStopwords(words)
+	words = preprocessor.removePunctuation(words)
+	words = preprocessor.lemmatizeWords(words)
+	if verbose:
+		print "--after pre processing"
+		print words
+	return words
 
 
