@@ -1,0 +1,31 @@
+This tutorial is for predicting CRM lead conversion with Gradient Boosted Trees (GBT) and 
+ScikitLearn. 
+
+Setup
+=====
+Make sure you have ../lib and ../text directories with all the python files wrt where topic.py
+is. The driver code is in topic.py. Configuration is contained in lda.properties. Since your python
+installation is likely to be different, please run all python scripts starting with 
+python abc.py ...
+
+Training
+========
+Run
+./topic.py lda.properties
+
+The parameter mode should be set as common.mode=train. If the model needs to saved all the directory
+and filename related parameters need to set. The save flag should be set as follows train.model.save=True
+The training input data directory should be specified as train.data.dir=data/topics/train
+
+if the purpose is to explore differ number of topics, the topic number parameter should se set to a range
+as train.num.topics=3,8. Once the number of topics has been decided, the parameter should be set to single
+value as train.num.topics=5
+
+
+Analyze
+=======
+Run
+./topic.py lda.properties
+
+The parameter mode should be set as common.mode=analyze. To run in analyze mode, the model must have been trained
+and saved already. The analyze input data directory should be specified as analyze.data.dir=data/topics/analyze
