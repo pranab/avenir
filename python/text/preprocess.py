@@ -57,6 +57,11 @@ class TextPreProcessor:
 			newWords.append(newWord)
 		return newWords
 
+	def allow(self, words):
+		""" allow only specific charaters """
+		allowed = [word for word in words if re.match('^[A-Za-z0-9\.\,\:\;\!\?\(\)\'\-\$\@\%\"]+$', word) is not None]		
+		return allowed		
+		
 	def toLowercase(self, words):
 		"""Convert all characters to lowercase from list of tokenized words"""
 		newWords = [word.lower() for word in words]
@@ -185,6 +190,7 @@ class TfIdf:
 				count = self.wordCounter.get(word, 0)
 				self.wordCounter[word] = count + 1
 		self.corpSize += len(words)
+		self.vocabulary.update(words)
 
 		if (self.doIdf):
 			self.docCount += 1
@@ -203,12 +209,19 @@ class TfIdf:
 				for k in self.wordFreq.keys():
 					self.wordFreq.items[k] *=  math.log(self.docCount / self.wordInDocCount.items[k])	
 			self.freqDone = True
-			self.wordCounter = {}
 		return self.wordFreq
 	
+	# reset counter
+	def resetCounter(self):
+		self.wordCounter = {}
+
 	# build vocbulary
 	def buildVocabulary(self, words):
 		self.vocabulary.update(words)
+
+	# return vocabulary
+	def getVocabulary(self):
+		return self.vocabulary
 	
 	# index for all words in vcabulary
 	def creatWordIndex(self):
@@ -234,8 +247,10 @@ def clean(doc, preprocessor, verbose):
 		print "--raw doc"
 		print doc
 	words = preprocessor.tokenize(doc)
+	words = preprocessor.allow(words)
 	words = preprocessor.toLowercase(words)
 	words = preprocessor.removeStopwords(words)
+	words = preprocessor.removeShortWords(words, 3)
 	words = preprocessor.removePunctuation(words)
 	words = preprocessor.lemmatizeWords(words)
 	if verbose:

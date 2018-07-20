@@ -205,6 +205,10 @@ def takeFirst(elem):
 def takeSecond(elem):
     return elem[1]
 
+# soring
+def takeThird(elem):
+    return elem[2]
+
 # keyed counter
 def addToKeyedCounter(dCounter, key, count):
 	curCount = dCounter.get(key, 0)
