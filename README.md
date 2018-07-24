@@ -48,6 +48,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2018/04/18/predicting-crm-lead-conversion-with-gradient-boosting-using-scikitlearn/
 * https://pkghosh.wordpress.com/2018/05/14/auto-training-and-parameter-tuning-for-a-scikitlearn-based-model-for-leads-conversion-prediction/
 * https://pkghosh.wordpress.com/2018/06/18/leave-one-out-encoding-for-categorical-feature-variables-on-spark/
+* https://pkghosh.wordpress.com/2018/07/18/improving-elastic-search-query-result-with-query-expansion-using-topic-modeling/
 
 
 ## Getting started
