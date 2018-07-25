@@ -98,11 +98,8 @@ class TextPreProcessor:
 
 	def removeCustomStopwords(self, words, stopWords):
 		"""Remove stop words from list of tokenized words"""
-		newWords = []
-		for word in words:
-			if word not in stopWords:
-				newWords.append(word)
-		return newWords
+		removed = [word for word in words if word not in stopWords]		
+		return removed
 
 	def removeLowFreqWords(self, words, minFreq):
 		"""Remove low frewquncy words from list of tokenized words"""
@@ -121,6 +118,11 @@ class TextPreProcessor:
 		"""Remove short words """
 		removed = [word for word in words if len(word) >= minLengh]		
 		return removed		
+
+	def keepAllowedWords(self, words, keepWords):
+		"""Keep  words from the list only"""
+		kept = [word for word in words if word in keepWords]		
+		return kept
 
 	def stemWords(self, words):
 		"""Stem words in list of tokenized words"""
