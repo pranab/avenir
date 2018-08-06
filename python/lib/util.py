@@ -243,6 +243,15 @@ def appendKeyedList(dList, key, elem):
 def isNumber(st):
     return st.replace('.','',1).isdigit()
 
+# file record generator
+def fileRecGen(filePath, delim = None):
+	with open(filePath, "r") as fp:
+		for line in fp:	
+			line = line[:-1]
+			if delim is not None:
+				line = line.split(delim)
+			yield line
+	
 # step function
 class StepFunction:
 	def __init__(self,  *values):
