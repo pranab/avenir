@@ -24,14 +24,17 @@ from random import randint
 
 from stats import Histogram
 
+# sample float within range
 def randomFloat(low, high):
 	return random.random() * (high-low) + low
 
+# min limit
 def minLimit(val, min):
 	if (val < min):
 		val = min
 	return val
-	
+
+#range limit	
 def rangeLimit(val, min, max):
 	if (val < min):
 		val = min
@@ -39,11 +42,31 @@ def rangeLimit(val, min, max):
 		val = max
 	return val
 
+# sample int within range
 def sampleUniform(min, max):
 	return randint(min, max)
 
+# sample int wrt base
 def sampleFromBase(value, dev):
 	return randint(value - dev, value + dev)
+
+# sample float wrt base
+def sampleFloatFromBase(value, dev):
+	return randomFloat(value - dev, value + dev)
+
+# uniformly distribute with some randomness
+def distrUniformWithRanndom(total, numItems, noiseLevel):
+	perItem = total / numItems
+	var = perItem * noiseLevel
+	items = []
+	for i in range(numItems):
+		item = perItem + randomFloat(perItem - var, perItem + var)
+		items.append(item)	
+	
+	#adjust last item
+	sm = sum(items[:-1])
+	items[-1] = total - sm
+	return items
 	
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:

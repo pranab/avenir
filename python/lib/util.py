@@ -251,7 +251,15 @@ def fileRecGen(filePath, delim = None):
 			if delim is not None:
 				line = line.split(delim)
 			yield line
-	
+
+# returns int list
+def asIntList(items):
+	return [int(i) for i in items]
+			
+# returns float list
+def asFloatList(items):
+	return [float(i) for i in items]
+
 # step function
 class StepFunction:
 	def __init__(self,  *values):
