@@ -60,7 +60,7 @@ def distrUniformWithRanndom(total, numItems, noiseLevel):
 	var = perItem * noiseLevel
 	items = []
 	for i in range(numItems):
-		item = perItem + randomFloat(perItem - var, perItem + var)
+		item = perItem + randomFloat(-var, var)
 		items.append(item)	
 	
 	#adjust last item
