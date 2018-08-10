@@ -31,7 +31,7 @@ from preprocess import *
 from util import *
 from mlutil import *
 
-# base term ditsribution
+# term ditsribution
 def crateTermDistr(docs, vocFilt, saveFile):
 	print "term distribution"
 	print "num of docs " + str(len(docs))
@@ -49,6 +49,19 @@ def crateTermDistr(docs, vocFilt, saveFile):
 		tfidf.save(saveFile)
 	return tfidf
 
+# base term distribution
+def createBaseTermDistr(saveFile, categories = None):
+	defCategories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc',\
+	'misc.forsale', 'sci.electronics', 'rec.sport.baseball', 'talk.religion.misc']
+	if categories is None:
+		categories = defCategories
+		
+	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
+	print "pre processing " + str(len(twentyTrain.data)) + " docs"
+	docsClean = [clean(doc, preprocessor, verbose) for doc in twentyTrain.data]	
+	crateTermDistr(docsClean, None, saveFile)
+
+
 # load term distr from file
 def loadTermDistr(saveFile):
 	tfidf = TfIdf.load(saveFile)
@@ -61,12 +74,7 @@ verbose = False
 
 if mode == "buildBaseTf":
 	saveFile = sys.argv[2]
-	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc', 'misc.forsale', 'sci.electronics', 'rec.sport.baseball', 'talk.religion.misc']
-
-	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
-	print "pre processing " + str(len(twentyTrain.data)) + " docs"
-	docsClean = [clean(doc, preprocessor, verbose) for doc in twentyTrain.data]	
-	crateTermDistr(docsClean, None, saveFile)
+	createBaseTermDistr(saveFile)
 
 elif mode == "loadBaseTf":
 	saveFile = sys.argv[2]
@@ -112,5 +120,6 @@ elif mode == "tfDiff":
 	print "showing top 100"
 	for f in filt[:100]:
 		print f
-
+else:
+	print "invalid command"
 
