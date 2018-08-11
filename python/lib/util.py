@@ -26,6 +26,7 @@ from datetime import datetime
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
 	"N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"]
 numTokens = tokens[:10]
+alphaTokens = tokens[10:36]
 
 #generates ID
 def genID(len):
@@ -260,6 +261,22 @@ def asIntList(items):
 def asFloatList(items):
 	return [float(i) for i in items]
 
+# mutate string multiple times
+def mutateString(val, numMutate, ctype):
+	mutations = set()
+	for i in range(numMutate):
+		j = randint(0, len(val)-1)
+		if j not in mutations:
+			if ctype == "alpha":
+				ch = selectRandomFromList(alphaTokens)
+			elif ctype == "num":
+				ch = selectRandomFromList(numTokens)
+			elif ctype == "any":
+				ch = selectRandomFromList(tokens)
+			val = val[:j] + ch + val[j+1:]
+			mutations.add(j)
+	return val
+			
 # step function
 class StepFunction:
 	def __init__(self,  *values):

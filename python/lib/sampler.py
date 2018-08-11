@@ -67,7 +67,11 @@ def distrUniformWithRanndom(total, numItems, noiseLevel):
 	sm = sum(items[:-1])
 	items[-1] = total - sm
 	return items
-	
+
+# sample event
+def isEventSampled(threshold, max=100):
+	return randint(0, max) < threshold
+		
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:
 	def __init__(self, mean, stdDev):
