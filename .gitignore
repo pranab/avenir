@@ -18,4 +18,5 @@ spark/dist
 spark/bin
 .class
 .ivy2
+.pyc
 

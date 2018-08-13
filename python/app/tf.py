@@ -61,28 +61,8 @@ def createBaseTermDistr(saveFile, categories = None):
 	docsClean = [clean(doc, preprocessor, verbose) for doc in twentyTrain.data]	
 	crateTermDistr(docsClean, None, saveFile)
 
-
-# load term distr from file
-def loadTermDistr(saveFile):
-	tfidf = TfIdf.load(saveFile)
-	return tfidf
-
-###############################################################################
-preprocessor = TextPreProcessor()
-mode = sys.argv[1]
-verbose = False
-
-if mode == "buildBaseTf":
-	saveFile = sys.argv[2]
-	createBaseTermDistr(saveFile)
-
-elif mode == "loadBaseTf":
-	saveFile = sys.argv[2]
-	tfidf = loadTermDistr(saveFile)
-
-elif mode == "tfDiff":
-	dataDir = sys.argv[2]
-	basTfFile = sys.argv[3]
+# term freq difference between base corpus and other
+def termDistrDiff(dataDir, basTfFile):
 	baseTf = loadTermDistr(basTfFile)
 	baseDistr = baseTf.getWordFreq()
 
@@ -120,6 +100,31 @@ elif mode == "tfDiff":
 	print "showing top 100"
 	for f in filt[:100]:
 		print f
+
+
+# load term distr from file
+def loadTermDistr(saveFile):
+	tfidf = TfIdf.load(saveFile)
+	return tfidf
+
+###############################################################################
+preprocessor = TextPreProcessor()
+mode = sys.argv[1]
+verbose = False
+
+if mode == "buildBaseTf":
+	saveFile = sys.argv[2]
+	createBaseTermDistr(saveFile)
+
+elif mode == "loadBaseTf":
+	saveFile = sys.argv[2]
+	tfidf = loadTermDistr(saveFile)
+
+elif mode == "tfDiff":
+	dataDir = sys.argv[2]
+	basTfFile = sys.argv[3]
+	termDistrDiff(dataDir, basTfFile)
+	
 else:
 	print "invalid command"
 
