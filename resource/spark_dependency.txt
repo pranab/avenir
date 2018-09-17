@@ -1,19 +1,19 @@
 Build all necessary jars
 ========================
-chombo
-mvn install
+in chombo
+mvn clean install
 sbt publishLocal
 
-chombo/spark
-sbt package
+in chombo/spark
+sbt clean package
 sbt publishLocal
 
-avenir
-mvn install
+in avenir
+mvn clean install
 sbt publishLocal
 
-avenir/spark
-sbt package
+in avenir/spark
+sbt clean package
 
 Build uber jar
 ==============
