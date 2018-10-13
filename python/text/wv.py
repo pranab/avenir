@@ -4,12 +4,12 @@
 import os
 import sys
 import nltk
-from nltk.corpus import movie_reviews
 from random import shuffle
 import gensim
 from gensim import corpora
 from gensim.corpora import Dictionary
-from gensim.models import word2vec
+from gensim.models import Word2Vec
+from gensim.models import KeyedVectors
 import matplotlib.pyplot as plt
 import jprops
 sys.path.append(os.path.abspath("../lib"))
@@ -30,10 +30,17 @@ class WordToVec:
 		defValues["train.window.context"] = (20, None)
 		defValues["train.min.word.count"] = (3, None)
 		defValues["train.num.iter"] = (50, None)
+		defValues["train.algo"] = (0, None)
+		defValues["train.learn.rate"] = (0.025, None)
+		defValues["train.hir.softmax"] = (0, None)
+		defValues["train.neg.samp"] = (5, None)
+		defValues["train.neg.samp.exp"] = (0.75, None)
+		defValues["train.sample"] = (0.001, None)
 		defValues["train.model.save"] = (False, None)
 		
 		self.config = Configuration(configFile, defValues)
 		self.model = None
+		self.wv = None
 		
 	# get config object
 	def getConfig(self):
@@ -49,9 +56,15 @@ class WordToVec:
 		windowContext = self.config.getIntConfig("train.window.context")[0]
 		minWordCount = self.config.getIntConfig("train.min.word.count")[0]
 		numIter = self.config.getIntConfig("train.num.iter")[0]
-		sample = .001
-		self.model = word2vec.Word2Vec(docs, size=featureSize, window=windowContext, min_count=minWordCount, \
-		sample=sample, iter=numIter)
+		sample = self.config.getFloatConfig("train.sample")[0]
+		algo = self.config.getIntConfig("train.algo")[0]
+		learnRate = self.config.getFloatConfig("train.learn.rate")[0]
+		hSoftmax = self.config.getIntConfig("train.hir.softmax")[0]
+		negSamp = self.config.getIntConfig("train.neg.samp")[0]
+		negSampExp = self.config.getFloatConfig("train.neg.samp.exp")[0]
+
+		self.model = Word2Vec(docs, size=featureSize, alpha=learnRate, window=windowContext, min_count=minWordCount, \
+		sample=sample, iter=numIter, sg=algo, hs=hSoftmax, negative=negSamp)
 		
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		if modelSave:
@@ -105,10 +118,10 @@ class WordToVec:
 	# initialize word vectors	
 	def initModel(self):
 		path = self.getModelFilePath()
-		modelFull = self.config.getBooleanConfig("train.model.full")[0]
+		modelFull = self.config.getBooleanConfig("common.model.full")[0]
 		if modelFull:
 			if self.model is None:
-				self.model = word2vec.load(path)
+				self.model = Word2Vec.load(path)
 			self.wv = self.model.wv
 		else:
 			if self.wv is None:
