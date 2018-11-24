@@ -19,16 +19,21 @@
 package org.avenir.cluster;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.chombo.distance.InterRecordDistance;
+import org.chombo.stats.CategoricalHistogramStat;
 
 /**
  * @author pranab
  *
  */
-public class ClusterGroup {
+public class ClusterGroup implements Serializable {
+	private int id;
 	private List<Cluster> clusters = new ArrayList<Cluster>();
 	private double movementThreshold;
 	private boolean active;
@@ -44,6 +49,16 @@ public class ClusterGroup {
 	}
 
 	/**
+	 * @param id
+	 * @param movementThreshold
+	 */
+	public ClusterGroup(int id, double movementThreshold) {
+		super();
+		this.id = id;
+		this.movementThreshold = movementThreshold;
+	}
+
+	/**
 	 * @param centroid
 	 * @param movement
 	 * @param status
@@ -51,6 +66,14 @@ public class ClusterGroup {
 	public void addCluster(String centroid,  double movement, String status, String delim) {
 		status = movement < movementThreshold ?  STATUS_STOPPED  :  status;
 		clusters.add( new Cluster(centroid,  movement, status, delim));
+	}
+
+	/**
+	 * @param centroid
+	 * @param delim
+	 */
+	public void addCluster(String centroid, String delim) {
+		clusters.add( new Cluster(centroid, STATUS_ACTIVE, delim));
 	}
 
 	/**
@@ -96,12 +119,18 @@ public class ClusterGroup {
 	 * @author pranab
 	 *
 	 */
-	public static class Cluster {
+	public static class Cluster implements Serializable {
 		private String centroid;
+		private String newCentroid;
 		private double movement;
 		private String status; 
 		private String[] items;
 		private double distance;
+		private double avDistance;
+		private double distSum;
+		private int count;
+        private Map<Integer, Double> numSums = new HashMap<Integer, Double>();
+        private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
 		
 		/**
 		 * @param centroid
@@ -116,6 +145,23 @@ public class ClusterGroup {
             this.items = centroid.split(delim, -1);
 		}
 
+		/**
+		 * @param centroid
+		 * @param status
+		 * @param delim
+		 */
+		public Cluster(String centroid, String status, String delim) {
+			this.centroid = centroid;
+            this.status = status;
+            this.items = centroid.split(delim, -1);
+		}
+
+		public void intialize() {
+			numSums.clear();
+			catHist.clear();
+			count = 0;
+		}
+		
 		/**
 		 * @return
 		 */
@@ -146,6 +192,10 @@ public class ClusterGroup {
 		public double findDistaneToCentroid(String[] record,  InterRecordDistance distanceFinder) throws IOException {
 			distance =  distanceFinder.findDistance(items, record);
 			return distance;
+		}
+
+		public void addMember(String[] record,  InterRecordDistance distanceFinder) throws IOException {
+			double distance =  distanceFinder.findDistance(items, record);
 		}
 
 		/**

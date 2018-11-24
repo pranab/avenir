@@ -209,11 +209,11 @@ public class KmeansCluster extends Configured implements Tool {
         		throw new IllegalStateException("missing schema");
         	}
         	distanceFinder = new InterRecordDistance(schema, attrDistSchema, fieldDelim);
+           	attrOrdinals = Utility.assertIntArrayConfigParam(config, "kmc.attr.odinals", Utility.configDelim, 
+        			"missing attribute ordinals");
         	distanceFinder.withFacetedFields(attrOrdinals);
        	
         	//attributes
-           	attrOrdinals = Utility.assertIntArrayConfigParam(config, "kmc.attr.odinals", Utility.configDelim, 
-        			"missing attribute ordinals");
            	for (int attr : attrOrdinals) {
            		if (schema.areNumericalAttributes(attr)) {
            			numSums.put(attr, 0.0);
