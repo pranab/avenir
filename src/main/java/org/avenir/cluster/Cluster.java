@@ -20,12 +20,15 @@ package org.avenir.cluster;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.chombo.distance.AttributeDistanceSchema;
 import org.chombo.distance.InterRecordDistance;
 import org.chombo.stats.CategoricalHistogramStat;
+import org.chombo.util.BasicUtils;
 import org.chombo.util.GenericAttributeSchema;
 
 /**
@@ -47,8 +50,10 @@ public class Cluster implements Serializable {
 	private double sumDist;
 	private double sumDistSq;
 	private int count;
+	public double sse;
     private Map<Integer, Double> numSums = new HashMap<Integer, Double>();
     private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
+    private int outputPrecision = 3;
 
     public Cluster() {
     }
@@ -89,6 +94,9 @@ public class Cluster implements Serializable {
         this.items = centroid.split(delim, -1);
 	}
 
+	/**
+	 * 
+	 */
 	public void intialize() {
 		numSums.clear();
 		catHist.clear();
@@ -200,6 +208,62 @@ public class Cluster implements Serializable {
 		return this;
 	}
 
+	/**
+	 * @param previous
+	 * @param distanceFinder
+	 * @param outputPrecision
+	 * @param delim
+	 * @throws IOException
+	 */
+	public void finishMemebership(Cluster previous, InterRecordDistance distanceFinder, int outputPrecision,
+			String delim) throws IOException {
+		numClusterInGroup = previous.numClusterInGroup;
+		groupId = previous.groupId;
+		id = previous.id;
+		String[] pFields = BasicUtils.getTrimmedFields(previous.centroid, delim);		
+		
+		sse = sumDistSq / count;
+		avDistance = sumDist / count;
+		
+		//numerical attr mean
+		List<Integer> attrs = new ArrayList<Integer>(numSums.keySet());
+		for (int attr : attrs) {
+			double sum = numSums.get(attr);
+			numSums.put(attr, sum/count);
+		}
+		
+		//new centroid
+		int recSize = pFields.length;
+		String[] newCentroid = new String[recSize];
+		for (int i = 0; i < recSize; ++i) {
+			Double sum = numSums.get(i);
+			CategoricalHistogramStat hist = catHist.get(i);
+			if (null != sum) {
+				newCentroid[i] = BasicUtils.formatDouble(sum,outputPrecision);
+			} else if (null != hist) {
+				newCentroid[i] = hist.getMode();
+			} else {
+				//attribute not included
+				newCentroid[i] = null;
+			}
+		}
+		centroid = BasicUtils.join(newCentroid, delim);
+		
+		//movement
+		movement =  distanceFinder.findDistance(newCentroid, pFields);
+	}
+	
+	public void makeCurrent(Cluster previous, InterRecordDistance distanceFinder) throws IOException {
+		numClusterInGroup = previous.numClusterInGroup;
+		groupId = previous.groupId;
+		id = previous.id;
+		
+		//movement
+		String[] fields = BasicUtils.getTrimmedFields(centroid, ",");
+		String[] pFields = BasicUtils.getTrimmedFields(previous.centroid, ",");
+		movement =  distanceFinder.findDistance(fields, pFields);
+	}
+	
 	/**
 	 * @return
 	 */
