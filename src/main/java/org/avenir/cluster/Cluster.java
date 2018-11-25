@@ -43,7 +43,7 @@ public class Cluster implements Serializable {
 	private String centroid;
 	private String newCentroid;
 	private double movement;
-	private String status; 
+	private boolean active; 
 	private String[] items;
 	private double distance;
 	private double avDistance;
@@ -76,10 +76,10 @@ public class Cluster implements Serializable {
 	 * @param status
 	 * @param delim
 	 */
-	public Cluster(String centroid,  double movement, String status, String delim) {
+	public Cluster(String centroid,  double movement, boolean active, String delim) {
 		this.centroid = centroid;
         this.movement = movement;
-        this.status = status;
+        this.active = active;
         this.items = centroid.split(delim, -1);
 	}
 
@@ -88,9 +88,9 @@ public class Cluster implements Serializable {
 	 * @param status
 	 * @param delim
 	 */
-	public Cluster(String centroid, String status, String delim) {
+	public Cluster(String centroid, boolean active, String delim) {
 		this.centroid = centroid;
-        this.status = status;
+        this.active = active;
         this.items = centroid.split(delim, -1);
 	}
 
@@ -120,10 +120,45 @@ public class Cluster implements Serializable {
 	/**
 	 * @return
 	 */
-	public String getStatus() {
-		return status;
+	public boolean isActive() {
+		return active;
 	}
 	
+	/**
+	 * @return
+	 */
+	public int getNumClusterInGroup() {
+		return numClusterInGroup;
+	}
+
+	/**
+	 * @return
+	 */
+	public int getGroupId() {
+		return groupId;
+	}
+
+	/**
+	 * @return
+	 */
+	public int getId() {
+		return id;
+	}
+
+	/**
+	 * @return
+	 */
+	public double getAvDistance() {
+		return avDistance;
+	}
+
+	/**
+	 * @return
+	 */
+	public double getSse() {
+		return sse;
+	}
+
 	/**
 	 * @param record
 	 * @param distanceFinder
@@ -215,8 +250,8 @@ public class Cluster implements Serializable {
 	 * @param delim
 	 * @throws IOException
 	 */
-	public void finishMemebership(Cluster previous, InterRecordDistance distanceFinder, int outputPrecision,
-			String delim) throws IOException {
+	public void finishMemebership(Cluster previous, InterRecordDistance distanceFinder, double centroidShiftThreshold, 
+			int outputPrecision, String delim) throws IOException {
 		numClusterInGroup = previous.numClusterInGroup;
 		groupId = previous.groupId;
 		id = previous.id;
@@ -251,6 +286,7 @@ public class Cluster implements Serializable {
 		
 		//movement
 		movement =  distanceFinder.findDistance(newCentroid, pFields);
+		active = movement > centroidShiftThreshold;
 	}
 	
 	public void makeCurrent(Cluster previous, InterRecordDistance distanceFinder) throws IOException {
