@@ -54,6 +54,7 @@ public class Cluster implements Serializable {
     private Map<Integer, Double> numSums = new HashMap<Integer, Double>();
     private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
     private int outputPrecision = 3;
+    private String fieldDelim;
 
     public Cluster() {
     }
@@ -157,6 +158,24 @@ public class Cluster implements Serializable {
 	 */
 	public double getSse() {
 		return sse;
+	}
+
+	/**
+	 * @param outputPrecision
+	 * @return
+	 */
+	public Cluster withOutputPrecision(int outputPrecision) {
+		this.outputPrecision = outputPrecision;
+		return this;
+	}
+
+	/**
+	 * @param fieldDelim
+	 * @return
+	 */
+	public Cluster withFieldDelim(String fieldDelim) {
+		this.fieldDelim = fieldDelim;
+		return this;
 	}
 
 	/**
@@ -329,4 +348,16 @@ public class Cluster implements Serializable {
 		return isEqual;
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		StringBuilder stBld = new StringBuilder();
+		String sseStr = BasicUtils.formatDouble(sse, outputPrecision);
+		String avDistanceStr = BasicUtils.formatDouble(avDistance, outputPrecision);
+		stBld.append(numClusterInGroup).append(fieldDelim).append(groupId).
+			append(fieldDelim).append(sseStr).append(fieldDelim).append(avDistanceStr).
+			append(fieldDelim).append(centroid);
+		return stBld.toString();
+	}
 }
