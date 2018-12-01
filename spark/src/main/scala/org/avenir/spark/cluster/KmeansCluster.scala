@@ -61,6 +61,7 @@ object KmeansCluster extends JobConfiguration {
        val numIter = getIntParamOrElse(appConfig, "num.iter", 10)	
        val centroidShiftThreshold = getDoubleParamOrElse(appConfig, "centroid.shiftThreshold", .05)
        val clusterOutputPath = getMandatoryStringParam(appConfig, "cluster.outputPath", "missing cluster output path")
+       
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   var activeCount = 0
@@ -110,10 +111,43 @@ object KmeansCluster extends JobConfiguration {
 		     allClusters.foreach(v => {
 		       val (nc, cg) = v._1
 		       val clusters = v._2
-		       val clDist = clusters.map(cl => {
-		         val dist = cl.findDistaneToCentroid(fields, distanceFinder)
+		       val allClusters = clusters.sortBy(c => c.getId()).toArray
+		       
+		       //real clusters
+		       val realClusters = maxDist match {
+		         case Some(mDist : Double) => {
+		           //outlier tracking
+		           allClusters.slice(0, allClusters.length-1)
+		       	 }
+		       	 case None => {
+		       	   //normal case
+		       	   allClusters
+		       	 }
+		       }
+		     
+		       //closest cluster
+		       var clDist = realClusters.map(cl => {
+		         var dist = cl.findDistaneToCentroid(fields, distanceFinder)
+		         if (useDistRatio && i > 1) {
+		           dist /= cl.getAvDistance()
+		         }
 		         (cl, line, dist)
 		       }).sortBy(r => r._3).head
+		       
+		       clDist =  maxDist match {
+		         case Some(mDist : Double) => {
+		           //max dist and outlier tracking
+		           if (clDist._3 > mDist)
+		        	   (realClusters.last, clDist._2, clDist._3)
+		           else
+		             clDist
+		       	 }
+		       	 case None => {
+		       	   //normal case
+		       	   clDist
+		       	 }
+		       }
+		       
 		       val value = Record(2)
 		       value.add(clDist._2, clDist._3)
 		       clMembers += ((clDist._1, value))
