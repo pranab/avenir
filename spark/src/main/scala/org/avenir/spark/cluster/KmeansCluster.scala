@@ -43,8 +43,8 @@ object KmeansCluster extends JobConfiguration {
 	   val appConfig = config.getConfig(appName)
 	   
 	   //config params
-	   val fieldDelimIn = appConfig.getString("field.delim.in")
-	   val fieldDelimOut = appConfig.getString("field.delim.out")
+	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
+	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val attrOrdinals = getMandatoryIntListParam(config, "attr.ordinals", "missing attribute field").
 	   	asScala.toArray.map(v => v.toInt)
 	   val numClustGroup = getIntParamOrElse(appConfig, "num.clustGroup", 10)
@@ -137,7 +137,7 @@ object KmeansCluster extends JobConfiguration {
 		       clDist =  maxDist match {
 		         case Some(mDist : Double) => {
 		           //max dist and outlier tracking
-		           if (clDist._3 > mDist)
+		           if (i > 1 && clDist._3 > mDist)
 		        	   (realClusters.last, clDist._2, clDist._3)
 		           else
 		             clDist
@@ -167,6 +167,7 @@ object KmeansCluster extends JobConfiguration {
 		     cl
 		   }
 		   
+		   //add to cluster
 		   val addToCluster = (cl: Cluster, value: Record) => {
 		     val record = value.getString(0)
 		     val distance = value.getDouble(1)
@@ -175,13 +176,15 @@ object KmeansCluster extends JobConfiguration {
 		     cl
 		   }
 		   
+		   //merge cluster
 		   val mergeCluster = (clOne: Cluster, clTwo: Cluster) => {
 			   clOne.merge(clTwo)
 		   }
 		   
+		   //adjusted clusters
 		   val adjustedClusters = clMemebers.combineByKey(createCluster, addToCluster, mergeCluster)
 		   
-		   //final clusters
+		   //replace previous with current
 		   val newClusters = adjustedClusters.map(r => {
 		     val pClust = r._1
 		     val cClust =  r._2
