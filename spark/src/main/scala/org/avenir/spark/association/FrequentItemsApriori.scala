@@ -26,6 +26,7 @@ import org.chombo.util.BasicUtils
 import org.chombo.spark.common.Record
 import scala.collection.mutable.ArrayBuffer
 import org.chombo.spark.common.GeneralUtility
+import java.io.File
 
 /**
 * @param keyFields
@@ -84,7 +85,7 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 	     val nextItemSets = itemsSetsMap match {
 	       //items sets exits
 	       case Some(itemsSetsMap) => {
-	          var itemSets = data.flatMap(line => {
+	          val itemSets = data.flatMap(line => {
 	            val records = ArrayBuffer[(Record, Record)]()
 	            val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 	            
@@ -122,18 +123,19 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 		    	     }
 		    	}
 	            records
-	          })
-	          
-	          //reduce to remove duplicates
-	          itemSets = itemSets.reduceByKey((v1, v2) => {
+	          }).reduceByKey((v1, v2) => {
+	            //remove duplicate or accumulate counts
 	            if (withTransId) v1 else Record(1, v1.getInt(0) + v2.getInt(0))
 	          })
 	          
 	         //only item sets with support over threshold
-		     val colItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport).collect
+		     val filtItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport)
+		     
+		     //output
+		     writeOutput(filtItemSets, itemSetLen, outputPath, debugOn, saveOutput)
 	         
 	         //convert to a nested map to be used in the next iteration
-		     createItemSetMap(colItemSets, baseKeyLen)
+		     createItemSetMap(filtItemSets.collect, baseKeyLen)
 	       }
 	        
 	       //first time
@@ -151,7 +153,10 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 		    	   }
 		    	   (key, value)
 		         })
-		     }).reduceByKey((v1, v2) => if (withTransId) Record(v1, v2) else Record(1, v1.getInt(0) + v2.getInt(0)))
+		     }).reduceByKey((v1, v2) => {
+		       //aggregate transIds or counts
+		       if (withTransId) Record(v1, v2) else Record(1, v1.getInt(0) + v2.getInt(0))
+		     })
 		     
 		     //only item sets with support over threshold
 		     val colItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport).collect
@@ -263,6 +268,24 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
        val sup = count / totCount
        sup > minSupport
      })
+  }
+  
+  /**
+  * @param itemSets
+  * @param itemSetLen
+  * @param outputPath
+  * @param debugOn
+  * @param saveOutput
+  */
+  def writeOutput(itemSets:RDD[(Record, Record)], itemSetLen:Int, outputPath: String, debugOn:Boolean, saveOutput:Boolean) {
+	  if (debugOn) {
+	     itemSets.collect.slice(0,100).foreach(s => println(s))
+	  }
+	   
+	  if (saveOutput) {
+	     val itemOutputPath = outputPath + File.pathSeparator + "itemSetLen=" + itemSetLen
+	     itemSets.saveAsTextFile(itemOutputPath)
+	  }
   }
   
 }
