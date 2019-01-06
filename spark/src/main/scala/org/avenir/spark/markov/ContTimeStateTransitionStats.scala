@@ -26,7 +26,7 @@ import org.apache.spark.HashPartitioner
 import org.chombo.util.DoubleTable
 import java.text.SimpleDateFormat
 import org.chombo.util.Utility
-import org.chombo.util.Matrix
+import org.chombo.math.Matrix
 import org.chombo.stats.PoisonDistr
 
  /**

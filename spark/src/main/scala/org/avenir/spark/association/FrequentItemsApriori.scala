@@ -57,8 +57,9 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 	   }
 	   val keyFields = getOptionalIntListParam(appConfig, "id.fieldOrdinals")
 	   val keyFieldOrdinals = toOptionalIntegerArray(keyFields)
-	   val maxItemSetLength = getOptionalIntParam(appConfig, "max.itemSetLength")
+	   val maxItemSetLength = getMandatoryIntParam(appConfig, "max.itemSetLength")
 	   val minSupport = getMandatoryDoubleParam(appConfig, "min.support", "missing minimumm support")
+	   val maxSupport = getOptionalDoubleParam(appConfig, "max.support")
 	   val itemFiledOrdinals = toIntegerArray(getMandatoryIntListParam(appConfig, "item.filedOrdinals", "missing items field ordinals"))
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
@@ -78,7 +79,7 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 	   val itemsSets : Option[RDD[(Record, Record)]] = None
 	   var itemsSetsMap : Option[Map[Record, Map[Record, Record]]] = None
 	   
-	   while(!done) {
+	   for (i <- 1 to maxItemSetLength if !done) {
 	     val data = sparkCntxt.textFile(inputPath)
 	     val keyLen = baseKeyLen + itemSetLen
 	     
@@ -129,13 +130,18 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 	          })
 	          
 	         //only item sets with support over threshold
-		     val filtItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport)
+		     val filtItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport).cache
 		     
-		     //output
-		     writeOutput(filtItemSets, itemSetLen, outputPath, debugOn, saveOutput)
-	         
-	         //convert to a nested map to be used in the next iteration
-		     createItemSetMap(filtItemSets.collect, baseKeyLen)
+		     if (filtItemSets.count > 0)  {
+			     //output
+			     writeOutput(filtItemSets, itemSetLen, outputPath, debugOn, saveOutput)
+		         
+		         //convert to a nested map to be used in the next iteration
+			     Some(createItemSetMap(filtItemSets.collect, baseKeyLen))
+		     } else {
+		       done = true
+		       None
+		     }
 	       }
 	        
 	       //first time
@@ -162,13 +168,12 @@ object FrequentItemsApriori extends JobConfiguration with GeneralUtility {
 		     val colItemSets = filterForSupport(itemSets, baseKeyLen, counts, withTransId, minSupport).collect
 		     
 		     //convert to a nested map to be used in the next iteration
-		     createItemSetMap(colItemSets, baseKeyLen)
+		     Some(createItemSetMap(colItemSets, baseKeyLen))
 	       }
 	     }
 	   
-	     //itemsSetsMap = Some(nextItemSets.collectAsMap)
 	     itemSetLen += 1
-	     itemsSetsMap = Some(nextItemSets)
+	     itemsSetsMap = nextItemSets
 	   }
 
    }
