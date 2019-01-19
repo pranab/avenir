@@ -28,6 +28,10 @@ tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H
 numTokens = tokens[:10]
 alphaTokens = tokens[10:36]
 
+typeInt = "int"
+typeFloat = "float"
+typeString = "string"
+
 #generates ID
 def genID(len):
 	id = ""
@@ -261,6 +265,29 @@ def asIntList(items):
 def asFloatList(items):
 	return [float(i) for i in items]
 
+# process command line args and returns args as typed values
+def processCmdLineArgs(expectedTypes, usage):
+	args = []
+	numComLineArgs = len(sys.argv)
+	numExpected = len(expectedTypes)
+	if (numComLineArgs - 1 == len(expectedTypes)):
+		try:
+			for i in range(0, numExpected):
+				if (expectedTypes[i] == typeInt):
+					args.append(int(sys.argv[i+1]))
+				elif (expectedTypes[i] == typeFloat):
+					args.append(float(sys.argv[i+1]))
+				elif (expectedTypes[i] == typeString):
+					args.append(sys.argv[i+1])
+		except ValueError:
+			print "expected number of command line arguments found but there is type mis match"
+			sys.exit(1)
+	else:
+		print "expected number of command line arguments not found"
+		print usage
+		sys.exit(1)
+	return args
+	
 # mutate string multiple times
 def mutateString(val, numMutate, ctype):
 	mutations = set()
