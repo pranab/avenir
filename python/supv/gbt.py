@@ -1,20 +1,5 @@
 #!/Users/pranab/Tools/anaconda/bin/python
 
-# avenir-python: Machine Learning
-# Author: Pranab Ghosh
-# 
-# Licensed under the Apache License, Version 2.0 (the "License"); you
-# may not use this file except in compliance with the License. You may
-# obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0 
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# permissions and limitations under the License.
-
 # Package imports
 import os
 import sys
@@ -29,6 +14,7 @@ from sklearn.externals import joblib
 from sklearn.ensemble import BaggingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import cross_val_score
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -137,7 +123,7 @@ class GradientBoostedTrees(BaseClassifier):
 		
 		#train with validation
 		print "...training and kfold cross validating model"
-		scores = sk.cross_validation.cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
+		scores = cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
 		return result
