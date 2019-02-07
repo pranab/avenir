@@ -7,9 +7,45 @@ import numpy as np
 import sklearn as sk
 import random
 import jprops
+import abc 
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 
+#base parameter search
+class BaseParameterSearch(object):
+	__metaclass__ = abc.ABCMeta
+	 
+	def __init__(self, verbose):
+		self.verbose = verbose
+		self.parameters = []
+		self.paramData = {}	
+		self.currentParams = []
+		self.bestSolution = None
+	
+	# add param name and type
+	def addParam(self, param):
+		self.parameters.append(param)
+	
+	# add param data	
+	def addParamVaues(self, paramName, paramData):
+		self.paramData[paramName] = paramData
+	
+	@abc.abstractmethod
+	def prepare(self):
+		pass
+
+	@abc.abstractmethod
+	def nextParamValues(self):
+		pass
+
+	@abc.abstractmethod
+	def setCost(self, cost):
+		pass
+	
+	@abc.abstractmethod	
+	def getBestSolution(self):
+		pass
+		
 #enumerate through provided list of param values
 class GuidedParameterSearch:
 	def __init__(self, verbose=False):
@@ -86,22 +122,10 @@ class GuidedParameterSearch:
 		return 	self.bestSolution
 		
 #random search through provided list of parameter values
-class RandomParameterSearch:
+class RandomParameterSearch(BaseParameterSearch):
 	def __init__(self, verbose=False):
-		self.verbose = verbose
-		self.parameters = []
-		self.paramData = {}	
-		self.currentParams = []
-		self.bestSolution = None
 		self.curIter = 0
-
-	# add param name and type
-	def addParam(self, param):
-		self.parameters.append(param)
-	
-	# add param data	
-	def addParamVaues(self, paramName, paramData):
-		self.paramData[paramName] = paramData
+		super(RandomParameterSearch, self).__init__(verbose)
 		
 	# max iterations	
 	def setMaxIter(self,maxIter):
