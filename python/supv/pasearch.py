@@ -1,20 +1,5 @@
 #!/Users/pranab/Tools/anaconda/bin/python
 
-# avenir-python: Machine Learning
-# Author: Pranab Ghosh
-# 
-# Licensed under the Apache License, Version 2.0 (the "License"); you
-# may not use this file except in compliance with the License. You may
-# obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0 
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# permissions and limitations under the License.
-
 # Package imports
 import os
 import sys
@@ -22,8 +7,10 @@ import numpy as np
 import sklearn as sk
 import random
 import jprops
+sys.path.append(os.path.abspath("../lib"))
+from util import *
 
-#configuration management
+#enumerate through provided list of param values
 class GuidedParameterSearch:
 	def __init__(self, verbose=False):
 		self.verbose = verbose
@@ -47,6 +34,8 @@ class GuidedParameterSearch:
 		self.numParams = len(self.parameters)
 		for i in range(self.numParams):
 			self.paramIndexes.append(0)
+			
+			#number of values for each parameter
 			paramName = self.parameters[i][0]
 			self.numParamValues.append(len(self.paramData[paramName]))
 		self.curParamIndex = 0
@@ -95,3 +84,54 @@ class GuidedParameterSearch:
 	# get best solution
 	def getBestSolution(self):
 		return 	self.bestSolution
+		
+#random search through provided list of parameter values
+class RandomParameterSearch:
+	def __init__(self, verbose=False):
+		self.verbose = verbose
+		self.parameters = []
+		self.paramData = {}	
+		self.currentParams = []
+		self.bestSolution = None
+		self.curIter = 0
+
+	# add param name and type
+	def addParam(self, param):
+		self.parameters.append(param)
+	
+	# add param data	
+	def addParamVaues(self, paramName, paramData):
+		self.paramData[paramName] = paramData
+		
+	# max iterations	
+	def setMaxIter(self,maxIter):
+		self.maxIter = maxIter
+
+	# prepare
+	def prepare(self):
+		pass
+
+	# next param combination
+	def nextParamValues(self):
+		retParamNameValue = None
+		if (self.curIter < self.maxIter):
+			retParamNameValue = []
+			for pName, pValues in self.paramData.iteritems():
+				pValue = selectRandomFromList(pValues)
+				retParamNameValue.append((pName, pValue))
+			self.curIter = self.curIter + 1
+			self.currentParams = retParamNameValue
+		return retParamNameValue
+				
+	# set cost of current parameter set
+	def setCost(self, cost):
+		if self.bestSolution is not None:
+			if cost < self.bestSolution[1]:
+				self.bestSolution = (self.currentParams, cost)
+		else:
+			self.bestSolution = (self.currentParams, cost)
+			
+	# get best solution
+	def getBestSolution(self):
+		return 	self.bestSolution
+		

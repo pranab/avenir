@@ -135,6 +135,10 @@ class GradientBoostedTrees(BaseClassifier):
 		if searchStrategyName is not None:
 			if searchStrategyName == "guided":
 				searchStrategy = GuidedParameterSearch()
+			elif searchStrategyName == "random":
+				searchStrategy = RandomParameterSearch()
+				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
+				searchStrategy.setMaxIter(maxIter)
 			else:
 				raise ValueError("invalid paramtere search strategy")
 		else:
@@ -148,15 +152,18 @@ class GradientBoostedTrees(BaseClassifier):
 			for searchParam in searchParams:
 				paramItems = searchParam.split(":")
 				extSearchParamNames.append(paramItems[0])
+				
+				#get rid name component search
 				paramNameItems = paramItems[0].split(".")
 				del paramNameItems[1]
 				paramItems[0] = ".".join(paramNameItems)
+				
 				searchStrategy.addParam(paramItems)
 				searchParamNames.append(paramItems[0])
 		else:
 			raise ValueError("missing search parameter list")
 			
-		# add search param data
+		# add search param data list for each param
 		for (searchParamName,extSearchParamName)  in zip(searchParamNames,extSearchParamNames):
 			searchParamData = self.config.getStringConfig(extSearchParamName)[0].split(",")
 			searchStrategy.addParamVaues(searchParamName, searchParamData)
