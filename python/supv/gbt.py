@@ -139,6 +139,14 @@ class GradientBoostedTrees(BaseClassifier):
 				searchStrategy = RandomParameterSearch()
 				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
 				searchStrategy.setMaxIter(maxIter)
+			elif searchStrategyName == "simuan":
+				searchStrategy = SimulatedAnnealingParameterSearch(True)
+				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
+				searchStrategy.setMaxIter(maxIter)
+				temp = self.config.getFloatConfig("train.search.sa.temp")[0]
+				searchStrategy.setTemp(temp)
+				tempRedRate = self.config.getFloatConfig("train.search.sa.temp.red.rate")[0]
+				searchStrategy.setTempReductionRate(tempRedRate)
 			else:
 				raise ValueError("invalid paramtere search strategy")
 		else:

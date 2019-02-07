@@ -8,6 +8,8 @@ import sklearn as sk
 import random
 import jprops
 import abc 
+import math
+import random
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 
@@ -20,6 +22,7 @@ class BaseParameterSearch(object):
 		self.parameters = []
 		self.paramData = {}	
 		self.currentParams = []
+		self.curIter = 0
 		self.bestSolution = None
 	
 	# add param name and type
@@ -29,6 +32,10 @@ class BaseParameterSearch(object):
 	# add param data	
 	def addParamVaues(self, paramName, paramData):
 		self.paramData[paramName] = paramData
+	
+	# max iterations	
+	def setMaxIter(self, maxIter):
+		self.maxIter = maxIter
 	
 	@abc.abstractmethod
 	def prepare(self):
@@ -41,10 +48,10 @@ class BaseParameterSearch(object):
 	@abc.abstractmethod
 	def setCost(self, cost):
 		pass
-	
-	@abc.abstractmethod	
+
+	# get best solution
 	def getBestSolution(self):
-		pass
+		return self.bestSolution
 		
 #enumerate through provided list of param values
 class GuidedParameterSearch:
@@ -56,6 +63,10 @@ class GuidedParameterSearch:
 		self.numParamValues = []
 		self.currentParams = []
 		self.bestSolution = None
+	
+	# max iterations	
+	def setMaxIter(self,maxIter):
+		self.maxIter = maxIter
 		
 	# add param name and type
 	def addParam(self, param):
@@ -124,12 +135,8 @@ class GuidedParameterSearch:
 #random search through provided list of parameter values
 class RandomParameterSearch(BaseParameterSearch):
 	def __init__(self, verbose=False):
-		self.curIter = 0
 		super(RandomParameterSearch, self).__init__(verbose)
 		
-	# max iterations	
-	def setMaxIter(self,maxIter):
-		self.maxIter = maxIter
 
 	# prepare
 	def prepare(self):
@@ -155,7 +162,78 @@ class RandomParameterSearch(BaseParameterSearch):
 		else:
 			self.bestSolution = (self.currentParams, cost)
 			
-	# get best solution
-	def getBestSolution(self):
-		return 	self.bestSolution
+#random search through provided list of parameter values
+class SimulatedAnnealingParameterSearch(BaseParameterSearch):
+	def __init__(self, verbose=False):
+		self.curSolution = None
+		self.nextSolution = None
+		super(SimulatedAnnealingParameterSearch, self).__init__(verbose)
+
+	# prepare
+	def prepare(self):
+		pass
 		
+	def setTemp(self, temp):
+		self.temp = temp	
+		
+	def setTempReductionRate(self, tempRedRate):
+		self.tempRedRate = tempRedRate	
+
+	# next param combination
+	def nextParamValues(self):
+		retParamNameValue = None
+		if (self.curIter == 0):
+			#initial random solution
+			retParamNameValue = []
+			for pName, pValues in self.paramData.iteritems():
+				pValue = selectRandomFromList(pValues)
+				retParamNameValue.append((pName, pValue))
+			self.curIter = self.curIter + 1
+			self.currentParams = retParamNameValue
+		elif (self.curIter < self.maxIter):
+			#perturb current solution
+			retParamNameValue = []
+			
+			#randomly mutate one parameter value
+			(pNameSel, pValue) = selectRandomFromList(self.currentParams)
+			pValueNext = selectRandomFromList(self.paramData[pNameSel])
+			while (pValueNext == pValue):
+				pValueNext = selectRandomFromList(self.paramData[pNameSel])
+			
+			#copy	
+			for (pName, pValue) in self.currentParams:
+				if (pName == pNameSel):
+					pValueNew = pValueNext
+				else:
+					pValueNew = pValue
+				retParamNameValue.append((pName, pValueNew))
+			self.curIter = self.curIter + 1
+			self.currentParams = retParamNameValue
+		return retParamNameValue		
+				
+	# set cost of current parameter set
+	def setCost(self, cost):
+		if self.curSolution is None:
+			self.curSolution = (self.currentParams, cost)
+			self.bestSolution = (self.currentParams, cost)
+		else:
+			self.nextSolution = (self.currentParams, cost)
+			if (self.nextSolution[1] < self.curSolution[1]):
+				if (self.verbose):
+					print "next soln better"
+				self.curSolution = self.nextSolution
+				if (self.nextSolution[1] < self.bestSolution[1]):
+					if (self.verbose):
+						print "next soln better than best"
+					self.bestSolution = self.nextSolution
+			else:
+				if (self.verbose):
+					print "next soln worst"
+				pr = math.exp((self.curSolution[1] - self.nextSolution[1]) / self.temp)
+				if (pr > random.random()):
+					self.curSolution = self.nextSolution
+					if (self.verbose):
+						print "next soln worst but accepted"
+			self.temp = self.temp * self.tempRedRate
+				
+			
