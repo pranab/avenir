@@ -23,7 +23,7 @@ from pasearch import *
 from bacl import *
 
 # gradient boosting classification
-class GradientBoostedTrees(BaseClassifier):
+class GradientBoostedTrees(object):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.mode"] = ("training", None)
@@ -64,8 +64,31 @@ class GradientBoostedTrees(BaseClassifier):
 		defValues["validate.data.class.field"] = (None, "missing class field ordinal")
 		defValues["validate.use.saved.model"] = (False, None)
 		defValues["validate.score.method"] = ("accuracy", None)
+
+		self.config = Configuration(configFile, defValues)
+		self.subSampleRate  = None
+		self.featData = None
+		self.clsData = None
 		
-		super(GradientBoostedTrees, self).__init__(configFile, defValues)
+	# initialize config
+	def initConfig(self, configFile, defValues):
+		self.config = Configuration(configFile, defValues)
+	
+	# get config object
+	def getConfig(self):
+		return self.config
+	
+	#set config param
+	def setConfigParam(self, name, value):
+		self.config.setParam(name, value)
+	
+	#get mode
+	def getMode(self):
+		return self.config.getStringConfig("common.mode")[0]
+		
+	#get search parameter
+	def getSearchParamStrategy(self):
+		return self.config.getStringConfig("train.search.param.strategy")[0]
 
 	# train model	
 	def train(self):

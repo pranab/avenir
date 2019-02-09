@@ -21,7 +21,6 @@ class BaseClassifier(object):
 	
 	def __init__(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
-		self.config = None
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
