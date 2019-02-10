@@ -108,6 +108,24 @@ validate.data.fields=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
 validate.data.feature.fields=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
 validate.data.class.field=17
 
+Parameter space search and tuning
+=================================
+Set the following parameters
+common.mode  to trainValidate
+
+train.search.param to a list of parameters to search. Look at bw.properties as example. The parameter
+names are same as in the rest of the configuration, except that the "search" is added as the second 
+component of the name
+
+Ror each parameter in the list, define a set of values. Look at bw.properties as example. These are 
+the values that will be tried 
+
+There are 3 search algorithms supported. Set  train.search.param.strategy as below, depending on
+the desired search algorithm
+train.search.param.strategy=grid  (grid search)
+train.search.param.strategy=random  (random search)
+train.search.param.strategy=simuan  (simulated annealing search)
+
 
 
 

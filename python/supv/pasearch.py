@@ -234,6 +234,10 @@ class SimulatedAnnealingParameterSearch(BaseParameterSearch):
 					self.curSolution = self.nextSolution
 					if (self.verbose):
 						print "next soln worst but accepted"
+				else:
+					if (self.verbose):
+						print "next soln worst and rejected"
+				
 			self.temp = self.temp * self.tempRedRate
 				
 			

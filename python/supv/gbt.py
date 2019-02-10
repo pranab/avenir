@@ -29,6 +29,7 @@ class GradientBoostedTrees(object):
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
+		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
@@ -69,6 +70,7 @@ class GradientBoostedTrees(object):
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		
 	# initialize config
 	def initConfig(self, configFile, defValues):
@@ -156,14 +158,14 @@ class GradientBoostedTrees(object):
 		print "...starting train validate with parameter search"
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
-			if searchStrategyName == "guided":
-				searchStrategy = GuidedParameterSearch()
+			if searchStrategyName == "grid":
+				searchStrategy = GuidedParameterSearch(self.verbose)
 			elif searchStrategyName == "random":
-				searchStrategy = RandomParameterSearch()
+				searchStrategy = RandomParameterSearch(self.verbose)
 				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
 				searchStrategy.setMaxIter(maxIter)
 			elif searchStrategyName == "simuan":
-				searchStrategy = SimulatedAnnealingParameterSearch(True)
+				searchStrategy = SimulatedAnnealingParameterSearch(self.verbose)
 				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
 				searchStrategy.setMaxIter(maxIter)
 				temp = self.config.getFloatConfig("train.search.sa.temp")[0]
