@@ -24,7 +24,8 @@ class BaseClassifier(object):
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
-	
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		
 	def initConfig(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
 	
@@ -110,14 +111,14 @@ class BaseClassifier(object):
 		print "...starting train validate with parameter search"
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
-			if searchStrategyName == "guided":
-				searchStrategy = GuidedParameterSearch()
+			if searchStrategyName == "grid":
+				searchStrategy = GuidedParameterSearch(self.verbose)
 			elif searchStrategyName == "random":
-				searchStrategy = RandomParameterSearch()
+				searchStrategy = RandomParameterSearch(self.verbose)
 				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
 				searchStrategy.setMaxIter(maxIter)
 			elif searchStrategyName == "simuan":
-				searchStrategy = SimulatedAnnealingParameterSearch(True)
+				searchStrategy = SimulatedAnnealingParameterSearch(self.verbose)
 				maxIter = self.config.getIntConfig("train.search.max.iterations")[0]
 				searchStrategy.setMaxIter(maxIter)
 				temp = self.config.getFloatConfig("train.search.sa.temp")[0]

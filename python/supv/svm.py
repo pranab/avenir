@@ -44,6 +44,7 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["common.model.file"] = (None, None)
 		defValues["common.scale.file.path"] = (None, "missing scale file path")
 		defValues["common.preprocessing"] = ("scale", None)
+		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
