@@ -71,7 +71,15 @@ def distrUniformWithRanndom(total, numItems, noiseLevel):
 # sample event
 def isEventSampled(threshold, max=100):
 	return randint(0, max) < threshold
-		
+
+#sample binary events
+def sampleBinaryEvents(events, probPercent):
+	if (randint(0, 100) < probPercent):
+		event = events[0]
+	else:
+		event = events[1]
+	return event
+	
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:
 	def __init__(self, mean, stdDev):
