@@ -71,7 +71,7 @@ object RecordSimilarity extends JobConfiguration {
 	   val bucketedData = if (interSetSimilarity) { 
 		   //for first set key with all bucket pairs and record as value
 		   val  bucketedDataThis = data.flatMap(line => {
-			   val items = line.split(fieldDelimIn, -1)
+			   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 			   val keyRec = Record(items, keyFieldOrdinals)
 			   val hash = keyRec.hashCode
 			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
@@ -87,7 +87,7 @@ object RecordSimilarity extends JobConfiguration {
 		   //for second set key with all bucket pairs and record as value
 		   val dataThat = sparkCntxt.textFile(otherInputPath)
 		   val  bucketedDataThat = dataThat.flatMap(line => {
-			   val items = line.split(fieldDelimIn, -1)
+			   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 			   val keyRec = Record(items, keyFieldOrdinals)
 			   val hash = keyRec.hashCode
 			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets
@@ -104,7 +104,7 @@ object RecordSimilarity extends JobConfiguration {
 	   } else {
 		   //key with all bucket pairs and record as value
 		   data.flatMap(line => {
-			   val items = line.split(fieldDelimIn, -1)
+			   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 			   val keyRec = Record(items, keyFieldOrdinals)
 			   val hash = keyRec.hashCode
 			   val thisBucket = (if (hash < 0) -hash else hash) % numBuckets

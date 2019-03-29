@@ -25,6 +25,7 @@ import org.chombo.util.BasicUtils
 import org.chombo.spark.common.GeneralUtility
 import org.chombo.spark.common.Record
 import scala.collection.mutable.ArrayBuffer
+import org.chombo.util.TabularData
 
 /**
 * Pair wise sub sequence matching
@@ -49,6 +50,7 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delimIn", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delimOut", ",")
 	   val seqDelim = getStringParamOrElse(appConfig, "seq.delim", "\\s+")
+	   val windowLength = getIntParamOrElse(appConfig, "window.length", 2)
 	   val numBuckets = getIntParamOrElse(appConfig, "num.buckets", 16)
 	   val buckets  = List.range(0, numBuckets)
 	   
@@ -101,7 +103,7 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	    	   val secondItems = BasicUtils.getTrimmedFields(BasicUtils.splitOnFirstOccurence(secondRec, fieldDelimIn, true))
 	           val secondKey = secondItems(0)
 	           val secondSeq = secondItems(1)
-	           val score = findScore(firstSeq, secondSeq, seqDelim)
+	           val score = findScore(firstSeq, secondSeq, seqDelim, windowLength)
 	           
 	           val scoreRec = Record(3)
 	           scoreRec.addString(firstKey)
@@ -126,9 +128,41 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 
    }
    
-   def findScore(firstSeq:String, secondSeq:String, seqDelim:String) : Int = {
-     //TODO
-     0
+   /**
+   * @param firstSeq
+   * @param secondSeq
+   * @param seqDelim
+   * @param windowLength
+   * @return
+   */
+   def findScore(firstSeq:String, secondSeq:String, seqDelim:String, windowLength:Int) : Int = {
+     val firstItems = BasicUtils.getTrimmedFields(firstSeq, seqDelim)
+     val secondItems = BasicUtils.getTrimmedFields(secondSeq, seqDelim)
+     val window = new Array[String](2)
+     val dotMatrix = new TabularData(firstItems, secondItems)
+     
+     //first seq as rows
+     for (i <- 0 to firstItems.length - windowLength) {
+       //match in second seq
+       Array.copy(firstItems, i, window, 0, windowLength)
+       val positions = BasicUtils.findStringSubSequencePositions(secondItems, window)
+       
+       //each match
+       positions.foreach(pos => {
+         var row = i
+         var col = pos
+         
+         //match all window elements
+         for (j <- 0 to windowLength) {
+        	 dotMatrix.set(row, col, 1)
+        	 row += 1
+        	 col += 1
+         }
+       })
+       
+     }
+     
+     dotMatrix.getSum()
    }
 
 }
