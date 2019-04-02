@@ -65,6 +65,7 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	     case None => None
 	   }
 	   val outputAlignments = this.getBooleanParamOrElse(appConfig, "output.alignments", false)
+	   val precision = getIntParamOrElse(appConfig, "output.precision", 3)
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
 	   
@@ -122,14 +123,14 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	    	     case None => 
 	    	       findScore(firstSeq, secondSeq, seqDelim, windowLength)
 	    	   }
-	           val score = dotMatrix.getSum()
+		       val firstSeqLen = BasicUtils.getTrimmedFields(firstSeq, seqDelim).length
+		       val secondSeqLen = BasicUtils.getTrimmedFields(secondSeq, seqDelim).length
+		       val score = dotMatrix.getSum().toDouble / (firstSeqLen + secondSeqLen)
 	           if (outputAlignments) {
 		           val scoreRec = Record(6)
 		           scoreRec.addString(firstKey)
 		           scoreRec.addString(secondKey)
-		           scoreRec.addInt(score)
-		           val firstSeqLen = BasicUtils.getTrimmedFields(firstSeq, seqDelim).length
-		           val secondSeqLen = BasicUtils.getTrimmedFields(secondSeq, seqDelim).length
+		           scoreRec.addDouble(score)
 		           val alignments = dotMatrix.withDeilmeter(seqDelim).toString()
 		           scoreRec.addInt(firstSeqLen)
 		           scoreRec.addInt(secondSeqLen)
@@ -139,7 +140,7 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 		           val scoreRec = Record(3)
 		           scoreRec.addString(firstKey)
 		           scoreRec.addString(secondKey)
-		           scoreRec.addInt(score)
+		           scoreRec.addDouble(score)
 		           pairScores += scoreRec
 	           }
 	           
@@ -149,14 +150,18 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	     pairScores
 	   }).values
 	   
+	   //serialize
+	   val serRecs = pairScores.map(r => {
+	     r.withFloatPrecision(precision).toString
+	   })
 	   
        if (debugOn) {
-         val records = pairScores.collect.sliding(10)
+         val records = serRecs.collect.sliding(10)
          records.foreach(r => println(r))
        }
 	   
 	   if(saveOutput) {	   
-	     pairScores.saveAsTextFile(outputPath) 
+	     serRecs.saveAsTextFile(outputPath) 
 	   }
 
    }
