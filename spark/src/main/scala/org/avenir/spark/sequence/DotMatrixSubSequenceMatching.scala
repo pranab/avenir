@@ -54,6 +54,17 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	   val numBuckets = getIntParamOrElse(appConfig, "num.buckets", 16)
 	   val buckets  = List.range(0, numBuckets)
 	   
+	   val scoreMatrixFilePath = getOptionalStringParam(appConfig, "score.matrixFilePath")
+	   val scoreConfig = scoreMatrixFilePath match {
+	     case Some(path) => {
+	       val fiStrm = BasicUtils.getFileStream(path)
+	       val scoreTable = new TabularData(fiStrm)
+	       val scoreThreshold = this.getMandatoryIntParam(appConfig, "score.threshold", "")
+	       Some(scoreTable, scoreThreshold)
+	     }
+	     case None => None
+	   }
+	   val outputAlignments = this.getBooleanParamOrElse(appConfig, "output.alignments", false)
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
 	   
@@ -103,13 +114,35 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
 	    	   val secondItems = BasicUtils.getTrimmedFields(BasicUtils.splitOnFirstOccurence(secondRec, fieldDelimIn, true))
 	           val secondKey = secondItems(0)
 	           val secondSeq = secondItems(1)
-	           val score = findScore(firstSeq, secondSeq, seqDelim, windowLength)
+	           //val score = findScore(firstSeq, secondSeq, seqDelim, windowLength)
 	           
-	           val scoreRec = Record(3)
-	           scoreRec.addString(firstKey)
-	           scoreRec.addString(secondKey)
-	           scoreRec.addInt(score)
-	           pairScores += scoreRec
+	           val dotMatrix = scoreConfig match {
+	    	     case Some((scoreTable, scoreThreshold)) => 
+	    	       findScore(firstSeq, secondSeq, seqDelim, windowLength, scoreTable, scoreThreshold)
+	    	     case None => 
+	    	       findScore(firstSeq, secondSeq, seqDelim, windowLength)
+	    	   }
+	           val score = dotMatrix.getSum()
+	           if (outputAlignments) {
+		           val scoreRec = Record(6)
+		           scoreRec.addString(firstKey)
+		           scoreRec.addString(secondKey)
+		           scoreRec.addInt(score)
+		           val firstSeqLen = BasicUtils.getTrimmedFields(firstSeq, seqDelim).length
+		           val secondSeqLen = BasicUtils.getTrimmedFields(secondSeq, seqDelim).length
+		           val alignments = dotMatrix.withDeilmeter(seqDelim).toString()
+		           scoreRec.addInt(firstSeqLen)
+		           scoreRec.addInt(secondSeqLen)
+		           scoreRec.addString(alignments)
+		           pairScores += scoreRec
+	           } else {
+		           val scoreRec = Record(3)
+		           scoreRec.addString(firstKey)
+		           scoreRec.addString(secondKey)
+		           scoreRec.addInt(score)
+		           pairScores += scoreRec
+	           }
+	           
 	       })
 	       
 	     })
@@ -135,11 +168,12 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
    * @param windowLength
    * @return
    */
-   def findScore(firstSeq:String, secondSeq:String, seqDelim:String, windowLength:Int) : Int = {
+   def findScore(firstSeq:String, secondSeq:String, seqDelim:String, windowLength:Int) : TabularData = {
      val firstItems = BasicUtils.getTrimmedFields(firstSeq, seqDelim)
      val secondItems = BasicUtils.getTrimmedFields(secondSeq, seqDelim)
      val window = new Array[String](2)
      val dotMatrix = new TabularData(firstItems, secondItems)
+     dotMatrix.setAll(-1)
      
      //first seq as rows
      for (i <- 0 to firstItems.length - windowLength) {
@@ -161,8 +195,80 @@ object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility
        })
        
      }
+     dotMatrix
+   }
+   
+   /**
+   * @param firstSeq
+   * @param secondSeq
+   * @param seqDelim
+   * @param windowLength
+   * @return
+   */
+   def findScore(firstSeq:String, secondSeq:String, seqDelim:String, windowLength:Int, scoreTable: TabularData, 
+       scoreThreshold:Int) : TabularData = {
+     val firstItems = BasicUtils.getTrimmedFields(firstSeq, seqDelim)
+     val secondItems = BasicUtils.getTrimmedFields(secondSeq, seqDelim)
+     val window = new Array[String](2)
+     val dotMatrix = new TabularData(firstItems, secondItems)
+     dotMatrix.setAll(-1)
      
-     dotMatrix.getSum()
+     //first seq as rows
+     var score = 0
+     for (i <- 0 to firstItems.length - windowLength) {
+       //match in second seq
+       Array.copy(firstItems, i, window, 0, windowLength)
+       val positions = findStringSubSequencePositions(secondItems, window, scoreTable, scoreThreshold)
+       
+       //each match
+       positions.foreach(pos => {
+         score += pos._2
+         
+         //match all window elements
+         var row = i
+         var col = pos._1
+         for (j <- 0 to windowLength) {
+        	 dotMatrix.set(row, col, 1)
+        	 row += 1
+        	 col += 1
+         }
+         
+       })
+       
+     }
+     dotMatrix
    }
 
+  /**
+  * @param source
+  * @param window
+  * @param scoreTable
+  * @param scoreThreshold
+  * @return
+  */
+  def findStringSubSequencePositions(source: Array[String], window: Array[String],scoreTable: TabularData, 
+       scoreThreshold:Int) : Array[(Int, Int)] =  {
+     val lastPos = source.length - window.length
+     val positions = ArrayBuffer[(Int, Int)]()
+     
+     var score = 0
+     var i = 0
+     while (i < lastPos) {
+       for (j <- 0 to window.length) {
+         val s = source(i + j)
+         val w = window(j)
+         score += scoreTable.get(s, w)
+       }
+       
+       if (score >= scoreThreshold) {
+         val posScore = (i, score)
+         positions += posScore
+         i += window.length
+       } else {
+         i += 1
+       }
+     }
+     
+     positions.toArray
+   }
 }
