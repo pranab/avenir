@@ -32,14 +32,14 @@ import org.chombo.util.TabularData
 * @param args
 * @return
 */
-object DotMatrixSubSequenceMatching extends JobConfiguration with GeneralUtility {
+object DotMatrixMatching extends JobConfiguration with GeneralUtility {
 
    /**
  * @param args
  * @return
  */
    def main(args: Array[String]) {
-	   val appName = "normalizer"
+	   val appName = "dotMatrixMatching"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
