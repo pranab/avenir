@@ -59,7 +59,7 @@ object DotMatrixMatching extends JobConfiguration with GeneralUtility {
 	     case Some(path) => {
 	       val fiStrm = BasicUtils.getFileStream(path)
 	       val scoreTable = new TabularData(fiStrm)
-	       val scoreThreshold = this.getMandatoryIntParam(appConfig, "score.threshold", "")
+	       val scoreThreshold = getMandatoryIntParam(appConfig, "score.threshold", "")
 	       Some(scoreTable, scoreThreshold)
 	     }
 	     case None => None

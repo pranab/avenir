@@ -138,6 +138,8 @@ class NonParamRejectSampler:
 class CategoricalRejectSampler:
 	def __init__(self,  *values):
 		self.distr = values
+		if (len(self.distr) == 1):
+			self.distr = self.distr[0]
 		max = 0
 		for t in self.distr:
 			if t[1] > max:

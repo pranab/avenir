@@ -32,6 +32,11 @@ typeInt = "int"
 typeFloat = "float"
 typeString = "string"
 
+secInHour = 60 * 60
+secInDay = 24 * secInHour
+secInWeek = 7 * secInDay
+secInYear = 365 * secInDay
+
 #generates ID
 def genID(len):
 	id = ""
@@ -39,6 +44,12 @@ def genID(len):
 		id = id + selectRandomFromList(tokens)
 	return id
 
+def genIdList(numId, idSize):
+	iDs = []
+	for i in range(numId):
+		iDs.append(genID(idSize))
+	return iDs
+	
 #generates ID consisting of digits only		
 def genNumID(len):
 	id = ""
@@ -303,6 +314,12 @@ def mutateString(val, numMutate, ctype):
 			val = val[:j] + ch + val[j+1:]
 			mutations.add(j)
 	return val
+
+#swap two elements
+def swap(values, first, second):
+	t = values[first]
+	values[first] = values[second]	
+	values[second] = t
 			
 # step function
 class StepFunction:
