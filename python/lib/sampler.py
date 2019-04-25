@@ -21,6 +21,7 @@ import time
 import math
 import random
 from random import randint
+from util import *
 
 from stats import Histogram
 
@@ -79,7 +80,19 @@ def sampleBinaryEvents(events, probPercent):
 	else:
 		event = events[1]
 	return event
-	
+
+# add noise to numeric value
+def addNoiseNum(value, sampler):
+	return value + sampler.sample()
+
+#add noise to categorical value	
+def addNoiseCat(value, values, noise):	
+	newValue = value
+	threshold = int(noise * 100)
+	if (isEventSampled(threshold)):
+		newValue = selectRandomFromList(values)
+	return newValue
+		
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:
 	def __init__(self, mean, stdDev):
@@ -157,6 +170,39 @@ class CategoricalRejectSampler:
 				samp = t[0]
 		return samp
 
+#distr mixture sampler
+class DistrMixtureSampler:
+	def __init__(self,  mixtureWtDistr, *compDistr):
+		self.mixtureWtDistr = mixtureWtDistr
+		self.compDistr = compDistr
+		if (len(self.compDistr) == 1):
+			self.compDistr = self.compDistr[0]
+	
+	def sample(self):
+		#sample comp wt distr
+		comp = self.mixtureWtDistr.sample()
+		
+		#sample  sampled comp distr
+		return self.compDistr[comp].sample()
+
+#ancestral sampler
+class AncestralSampler:
+	def __init__(self,  parentDistr, childDistr, numChildren):
+		self.parentDistr = parentDistr
+		self.childDistr = childDistr
+	
+	def sample(self):
+		#sample parent
+		parent = self.parentDistr.sample()
+		
+		#sample all children conditioned on parent
+		children = []
+		for i in range(numChildren):
+			key = (parent, i)
+			child = childDistr[key].sample()
+			children.add(child)
+		return (parent, children)
+		
 # sample cluster and then sample member of sampled cluster
 class ClusterSampler:
 	def __init__(self,  clusters, *clustDistr):
