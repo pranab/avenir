@@ -165,6 +165,15 @@ def strToIntArray(line, delim):
 	arr = line.split(delim)
 	return [int(a) for a in arr]
 
+#converts any type to string	
+def toStr(val, precision):
+	if type(val) is float:
+		format = "%" + ".%df" %(precision)
+		sVal = format %(val)
+	else:
+		sVal = str(val)
+	return sVal
+
 # return typed value given string
 def typedValue(val):
 	tVal = None

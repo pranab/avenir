@@ -190,6 +190,7 @@ class AncestralSampler:
 	def __init__(self,  parentDistr, childDistr, numChildren):
 		self.parentDistr = parentDistr
 		self.childDistr = childDistr
+		self.numChildren = numChildren
 	
 	def sample(self):
 		#sample parent
@@ -197,10 +198,10 @@ class AncestralSampler:
 		
 		#sample all children conditioned on parent
 		children = []
-		for i in range(numChildren):
+		for i in range(self.numChildren):
 			key = (parent, i)
-			child = childDistr[key].sample()
-			children.add(child)
+			child = self.childDistr[key].sample()
+			children.append(child)
 		return (parent, children)
 		
 # sample cluster and then sample member of sampled cluster
