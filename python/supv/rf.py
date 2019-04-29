@@ -116,3 +116,17 @@ class RandomForest(BaseClassifier):
 		verbose=verbose, warm_start=warmStart, class_weight=None)
 		self.classifier = model
 		return self.classifier
+		
+	#predict probability
+	def predict(self, rec):
+		# create model
+		self.prepModel()
+		
+		#input record
+		featData = self.prepStringPredictData(recs)
+		
+		#predict
+		print "...predicting"
+		clsData = self.classifier.predict_proba(featData) 
+		return clsData
+

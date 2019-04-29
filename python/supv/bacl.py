@@ -9,6 +9,7 @@ import sklearn as sk
 import matplotlib
 import random
 import jprops
+from io import StringIO
 from sklearn.model_selection import cross_val_score
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
@@ -16,7 +17,7 @@ from util import *
 from mlutil import *
 from pasearch import *
 
-
+#base classifier class
 class BaseClassifier(object):
 	
 	def __init__(self, configFile, defValues):
@@ -24,8 +25,10 @@ class BaseClassifier(object):
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
+		self.classifier = None
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
-		
+	
+	#initialize config	
 	def initConfig(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
 	
@@ -65,8 +68,8 @@ class BaseClassifier(object):
 		
 		#train
 		print "...training model"
-		self.gbcClassifier.fit(featData, clsData) 
-		score = self.gbcClassifier.score(featData, clsData)  
+		self.classifier.fit(featData, clsData) 
+		score = self.classifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
 		result = None
 		if successCriterion == "accuracy":
@@ -82,7 +85,7 @@ class BaseClassifier(object):
 		if modelSave:
 			print "...saving model"
 			modelFilePath = self.getModelFilePath()
-			joblib.dump(self.gbcClassifier, modelFilePath) 
+			joblib.dump(self.classifier, modelFilePath) 
 		return result
 		
 	#train with k fold validation
@@ -101,7 +104,7 @@ class BaseClassifier(object):
 		
 		#train with validation
 		print "...training and kfold cross validating model"
-		scores = cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
+		scores = cross_val_score(self.classifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
 		return result
@@ -190,7 +193,7 @@ class BaseClassifier(object):
 			# load saved model
 			print "...loading model"
 			modelFilePath = self.getModelFilePath()
-			self.gbcClassifier = joblib.load(modelFilePath)
+			self.classifier = joblib.load(modelFilePath)
 		else:
 			# train model
 			self.train()
@@ -200,7 +203,7 @@ class BaseClassifier(object):
 		
 		#predict
 		print "...predicting"
-		clsDataPred = self.gbcClassifier.predict(featData) 
+		clsDataPred = self.classifier.predict(featData) 
 		
 		print "...validating"
 		#print clsData
@@ -218,23 +221,44 @@ class BaseClassifier(object):
 	#predict
 	def predict(self):
 		# create model
-		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
-		if useSavedModel:
-			# load saved model
-			print "...loading model"
-			modelFilePath = self.getModelFilePath()
-			self.gbcClassifier = joblib.load(modelFilePath)
-		else:
-			# train model
-			self.train()
+		self.prepModel()
 		
 		# prepare test data
 		featData = self.prepPredictData()
 		
 		#predict
 		print "...predicting"
-		clsData = self.gbcClassifier.predict(featData) 
+		clsData = self.classifier.predict(featData) 
 		print clsData
+	
+	#predict
+	def predict(self, recs):
+		# create model
+		self.prepModel()
+		
+		#input record
+		featData = self.prepStringPredictData(recs)
+		
+		#predict
+		print "...predicting"
+		clsData = self.classifier.predict(featData) 
+		return clsData
+		
+	#predict probability
+	def predictProb(self, rec):
+		raise ValueError("can not predict class probability")
+		
+	#preparing model
+	def prepModel(self):
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			# load saved model
+			print "...loading saved model"
+			modelFilePath = self.getModelFilePath()
+			self.classifier = joblib.load(modelFilePath)
+		else:
+			# train model
+			self.train()
 	
 	#loads and prepares training data
 	def prepTrainingData(self):
@@ -288,6 +312,12 @@ class BaseClassifier(object):
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		
+		return featData
+	
+	#prepare string predict data
+	def prepStringPredictData(self, recs):
+		frecs = StringIO(recs)
+		featData = np.loadtxt(frecs, delimiter=',')
 		return featData
 	
 	# get model file path
