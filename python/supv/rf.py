@@ -117,16 +117,18 @@ class RandomForest(BaseClassifier):
 		self.classifier = model
 		return self.classifier
 		
-	#predict probability
-	def predict(self, rec):
+	#predict probability with in memory data
+	def predictProb(self, recs):
 		# create model
 		self.prepModel()
 		
 		#input record
 		featData = self.prepStringPredictData(recs)
+		if (featData.ndim == 1):
+			featData = featData.reshape(1, -1)
 		
 		#predict
-		print "...predicting"
+		print "...predicting class probability"
 		clsData = self.classifier.predict_proba(featData) 
 		return clsData
 

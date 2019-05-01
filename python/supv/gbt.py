@@ -1,5 +1,20 @@
 #!/Users/pranab/Tools/anaconda/bin/python
 
+# avenir-python: Machine Learning
+# Author: Pranab Ghosh
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License. You may
+# obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0 
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
 # Package imports
 import os
 import sys
@@ -16,6 +31,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import cross_val_score
 from random import randint
+from io import StringIO
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -70,6 +86,7 @@ class GradientBoostedTrees(object):
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
+		self.gbcClassifier = None
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		
 	# initialize config
@@ -282,6 +299,56 @@ class GradientBoostedTrees(object):
 		print "...predicting"
 		clsData = self.gbcClassifier.predict(featData) 
 		print clsData
+
+	#predict with in memory data
+	def predict(self, recs):
+		# create model
+		self.prepModel()
+		
+		#input record
+		featData = self.prepStringPredictData(recs)
+		if (featData.ndim == 1):
+			featData = featData.reshape(1, -1)
+		
+		#predict
+		print "...predicting"
+		clsData = self.gbcClassifier.predict(featData) 
+		return clsData
+
+	#predict probability with in memory data
+	def predictProb(self, recs):
+		# create model
+		self.prepModel()
+		
+		#input record
+		featData = self.prepStringPredictData(recs)
+		#print featData.shape
+		if (featData.ndim == 1):
+			featData = featData.reshape(1, -1)
+		
+		#predict
+		print "...predicting class probability"
+		clsData = self.gbcClassifier.predict_proba(featData) 
+		return clsData
+	
+	#preparing model
+	def prepModel(self):
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+		if (useSavedModel and not self.gbcClassifier):
+			# load saved model
+			print "...loading saved model"
+			modelFilePath = self.getModelFilePath()
+			self.gbcClassifier = joblib.load(modelFilePath)
+		else:
+			# train model
+			self.train()
+
+	#prepare string predict data
+	def prepStringPredictData(self, recs):
+		frecs = StringIO(recs)
+		featData = np.loadtxt(frecs, delimiter=',')
+		#print featData
+		return featData
 	
 	#loads and prepares training data
 	def prepTrainingData(self):
