@@ -269,7 +269,7 @@ class BaseClassifier(object):
 	#preparing model
 	def prepModel(self):
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
-		if (useSavedModel and not self.classifier)::
+		if (useSavedModel and not self.classifier):
 			# load saved model
 			print "...loading saved model"
 			modelFilePath = self.getModelFilePath()

@@ -54,8 +54,8 @@ class RandomForest(BaseClassifier):
 		defValues["train.num.trees"] = (100, None)
 		defValues["train.split.criterion"] = ("gini", None)
 		defValues["train.max.depth"] = (None, None)
-		defValues["train.min.samples.split"] = ("4", None)
-		defValues["train.min.samples.leaf"] = ("2", None)
+		defValues["train.min.samples.split"] = (4, None)
+		defValues["train.min.samples.leaf"] = (2, None)
 		defValues["train.min.weight.fraction.leaf"] = (0, None)
 		defValues["train.max.features"] = ("auto", None)
 		defValues["train.max.leaf.nodes"] = (None, None)
@@ -63,7 +63,7 @@ class RandomForest(BaseClassifier):
 		defValues["train.min.impurity.split"] = (1.0e-07, None)
 		defValues["train.bootstrap"] = (True, None)
 		defValues["train.oob.score"] = (False, None)
-		defValues["train.num.jobs"] = (None, None)
+		defValues["train.num.jobs"] = (1, None)
 		defValues["train.random.state"] = (None, None)
 		defValues["train.verbose"] = (0, None)
 		defValues["train.warm.start"] = (False, None)
@@ -110,7 +110,7 @@ class RandomForest(BaseClassifier):
 		warmStart = self.config.getBooleanConfig("train.warm.start")[0]
 		
 		model = RandomForestClassifier(n_estimators=numTrees, criterion=splitCriterion, max_depth=maxDepth, \
-		min_samples_split=minSamplesSplit, min_samples_leaf=minSamplesLeaf, min_weight_fraction=minWeightFractionLeaf, \
+		min_samples_split=minSamplesSplit, min_samples_leaf=minSamplesLeaf, min_weight_fraction_leaf=minWeightFractionLeaf, \
 		max_features=maxFeatures, max_leaf_nodes=maxLeafNodes, min_impurity_decrease=minImpurityDecrease, \
 		min_impurity_split=None, bootstrap=bootstrap, oob_score=oobScore, n_jobs=numJobs, random_state=randomState, \
 		verbose=verbose, warm_start=warmStart, class_weight=None)
