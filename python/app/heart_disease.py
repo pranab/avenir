@@ -25,14 +25,22 @@ from sampler import *
 
 op = sys.argv[1]
 keyLen  = None
-if (len(sys.argv) == 4):
-	keyLen = int(sys.argv[3])
+
+classes = ["1", "0"]
+sex = ["M", "F"]
+smoker = ["NS", "SS", "SM"]
+diet = ["BA", "AV", "GO"]
+ethnicity = ["WH", "BL", "SA", "EA"]
+
 
 if op == "generate":
 	numSample = int(sys.argv[2])
+	noise = float(sys.argv[3])
+	if (len(sys.argv) == 5):
+		keyLen = int(sys.argv[4])
+	
 	diseaseDistr = CategoricalRejectSampler(("1", 25), ("0", 75))
 	featCondDister = {}
-	classes = ["1", "0"]
 	
 	#sex
 	key = ("1", 0)
@@ -41,7 +49,6 @@ if op == "generate":
 	key = ("0", 0)
 	distr = CategoricalRejectSampler(("M", 50), ("F", 50))
 	featCondDister[key] = distr
-	sex = ["M", "F"]
 	
 	#age
 	key = ("1", 1)
@@ -82,7 +89,6 @@ if op == "generate":
 	key = ("0", 5)
 	distr = CategoricalRejectSampler(("NS", 40), ("SS", 20), ("SM", 15))
 	featCondDister[key] = distr
-	smoker = ["NS", "SS", "SM"]
 	
 	#diet
 	key = ("1", 6)
@@ -91,7 +97,6 @@ if op == "generate":
 	key = ("0", 6)
 	distr = CategoricalRejectSampler(("BA", 15), ("AV", 40), ("GO", 45))
 	featCondDister[key] = distr
-	diet = ["BA", "AV", "GO"]
 
 	#physical activity per week
 	key = ("1", 7)
@@ -116,10 +121,9 @@ if op == "generate":
 	key = ("0", 9)
 	distr = CategoricalRejectSampler(("WH", 50), ("BL", 20), ("SA", 16), ("EA", 20))
 	featCondDister[key] = distr
-	ethnicity = ["WH", "BL", "SA", "EA"]
 	
 	#error
-	erDistr = GaussianRejectSampler(0, .05)
+	erDistr = GaussianRejectSampler(0, noise)
 	
 	sampler = AncestralSampler(diseaseDistr, featCondDister, 10)
 
@@ -130,13 +134,12 @@ if op == "generate":
 		features[2] = int(addNoiseNum(features[2], erDistr))
 		features[7] = int(addNoiseNum(features[7], erDistr))
 		features[8] = int(addNoiseNum(features[8], erDistr))
+		features[0] = addNoiseCat(features[0], sex, noise)
+		features[5] = addNoiseCat(features[5], smoker, noise)
+		features[6] = addNoiseCat(features[6], diet, noise)
+		features[9] = addNoiseCat(features[9], ethnicity, noise)
 		
-		features[0] = addNoiseCat(features[0], sex, .05)
-		features[5] = addNoiseCat(features[5], smoker, .05)
-		features[6] = addNoiseCat(features[6], diet, .05)
-		features[9] = addNoiseCat(features[9], ethnicity, .05)
-		
-		claz = addNoiseCat(claz, classes, .08)
+		claz = addNoiseCat(claz, classes, noise)
 		
 		strFeatures = [toStr(f, 3) for f in features]
 		rec =  ",".join(strFeatures) + "," + claz
@@ -145,25 +148,28 @@ if op == "generate":
 		print rec
 		
 elif op == "genDummyVar":		
-		file = sys.argv[2]
-		catVars = {}
-		if keyLen:
-			catVars[1] = ("M", "F")
-			catVars[6] = ("NS", "SS", "SM")
-			catVars[7] = ("BA", "AV", "GO")
-			catVars[10] = ("WH", "BL", "SA", "EA")
-			rs = 12
-		else:
-			catVars[0] = ("M", "F")
-			catVars[5] = ("NS", "SS", "SM")
-			catVars[6] = ("BA", "AV", "GO")
-			catVars[9] = ("WH", "BL", "SA", "EA")
-			rs = 11
-		dummyVarGen = DummyVarGenerator(rs, catVars, "1", "0", ",")
-		fp = open(file, "r")
-		for row in fp:
-			newRow = dummyVarGen.processRow(row)
-			print newRow.strip()
-		fp.close()
+	file = sys.argv[2]
+	if (len(sys.argv) == 4):
+		keyLen = int(sys.argv[3])
+		
+	catVars = {}
+	if keyLen:
+		catVars[1] = sex
+		catVars[6] = smoker
+		catVars[7] = diet
+		catVars[10] = ethnicity
+		rs = 12
+	else:
+		catVars[0] = sex
+		catVars[5] = smoker
+		catVars[6] = diet
+		catVars[9] = ethnicity
+		rs = 11
+	dummyVarGen = DummyVarGenerator(rs, catVars, "1", "0", ",")
+	fp = open(file, "r")
+	for row in fp:
+		newRow = dummyVarGen.processRow(row)
+		print newRow.strip()
+	fp.close()
 	
 	

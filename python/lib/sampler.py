@@ -83,7 +83,7 @@ def sampleBinaryEvents(events, probPercent):
 
 # add noise to numeric value
 def addNoiseNum(value, sampler):
-	return value + sampler.sample()
+	return value * (1 + sampler.sample())
 
 #add noise to categorical value	
 def addNoiseCat(value, values, noise):	
@@ -121,25 +121,34 @@ class GaussianRejectSampler:
 # non parametric sampling using given distribution based on rejection sampling	
 class NonParamRejectSampler:
 	def __init__(self, min, binWidth, *values):
-		self.xmin = min
-		self.xmax = min + binWidth * (len(values) - 1)
-		self.ymin = 0
-		self.binWidth = binWidth
 		self.values = values
+		if (len(self.values) == 1):
+			self.values = self.values[0]
+		self.xmin = min
+		self.xmax = min + binWidth * (len(self.values) - 1)
+		self.binWidth = binWidth
 		self.fmax = 0
-		for v in values:
+		for v in self.values:
 			if (v > self.fmax):
 				self.fmax = v
 		self.ymin = 0.0
 		self.ymax = self.fmax
+		self.sampleAsInt = True
+		
+	def sampleAsFloat():
+		self.sampleAsInt = False
 	
 	def sample(self):
 		done = False
 		samp = 0
 		while not done:
-			x = random.randint(self.xmin, self.xmax)
-			y = random.randint(self.ymin, self.ymax)
-			bin = (x - self.xmin) / self.binWidth
+			if self.sampleAsInt:
+				x = random.randint(self.xmin, self.xmax)
+				y = random.randint(self.ymin, self.ymax)
+			else:
+				x = randomFloat(self.xmin, self.xmax)
+				y = randomFloat(self.ymin, self.ymax)
+			bin = int((x - self.xmin) / self.binWidth)
 			f = self.values[bin]
 			if (y < f):
 				done = True

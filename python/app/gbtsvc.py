@@ -17,7 +17,7 @@
 
 import os
 import sys
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask import current_app
 #from flask.ext.cache import Cache
 from flask_cache import Cache
@@ -31,25 +31,41 @@ app.config['CACHE_TYPE'] = 'simple'
 cache.init_app(app)
 
 configPath = sys.argv[1]
+portNum = int(sys.argv[2])
 
 @app.route('/gbt/predict/<string:recs>', methods=['GET'])
 def predict(recs):
 	print recs
-	nrecs = recs.replace(":", "\n")
-	model = getModel()
-	cls = model.predictProb(nrecs)
+	nrecs = recs.replace(",,", "\n")
+	print nrecs
+ 	resp = getResponse(nrecs)
+	return resp
+
+
+@app.route('/gbt/predict/batch', methods=['GET', 'POST'])
+def batchPredict():
+	content = request.json
+	nrecs = content["recs"].replace(",,", "\n")
+	print nrecs
+ 	resp = getResponse(nrecs)
+	return resp
+   
+def getResponse(nrecs):
+	classifier = getClassifier()
+	cls = classifier.predictProb(nrecs)
 	result = cls[:,1]
 	result = ["%.3f" %(r) for r in result] 
 	result = ",".join(result)
 	return jsonify({'predictions': result})
-
-def getModel():
-    model = cache.get('gbt_model')
-    if model is None:
-		model = GradientBoostedTrees(configPath)
-		cache.set('gbt_model', model, timeout=600)   
-		print "creating and caching gb model"
-    return model
+    	
+def getClassifier():
+	classifier = cache.get('gbt_classifier')
+	if (classifier is None):
+		print "creating and caching gb classifier"
+		classifier = GradientBoostedTrees(configPath)
+		cache.set('gbt_classifier', classifier, timeout=600)   
+	return classifier
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=portNum, threaded=True)
+    
