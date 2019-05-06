@@ -1,0 +1,26 @@
+This tutorial is for generating synthetic training  data for machine learning classification 
+problems using ancestral sampling. Specifically we will use generate training data for heart 
+disease prediction.
+
+
+Setup
+=====
+Make sure you have ../lib  directory with all the python files wrt where heart_disease.py
+is. 
+
+Generate data
+=============
+./heart_disease.py generate <num_samples> <noise_level> <key_len> > <output_file>
+
+num_samples = number of samples e.g 5000
+noise_level = noise level e.g. 0.1
+key_len = unique key length (otional)
+output_file = output file
+
+If key_len parameter is provided, then unique key of specified is pre pended to each generated
+record.
+
+Other classification problem
+============================
+If you want to generate data for another classification problem, you will need to replace the 
+code from line 42 to 123 containing the distribution definitions yiu need for your problem.

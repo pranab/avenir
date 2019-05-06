@@ -83,6 +83,10 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	   
 	   val refRecTag = "R"
 	   val genRecTag = "G"
+	   val predictionUrl = getMandatoryStringParam(appConfig, "prediction.url", "missing prediction service URL")
+	   val predictionFieldDelim = getStringParamOrElse(appConfig, "prediction.reqFieldDelim", ",")
+	   val predictionRecDelim = getStringParamOrElse(appConfig, "prediction.reqRecDelim", ",,")
+	   
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
 	   
@@ -99,7 +103,23 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	   })	
 	   
 	   //group by key and get predictions
-	   
+	   val x = genRecs.map(line => {
+   		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
+   	       val keyRec = Record(items, 0, keyLen)
+   	       (keyRec, line)
+	   }).groupByKey.flatMap(r => {
+	     val recs = r._2.toArray
+	     val reqMsgArr = ArrayBuffer[String]()
+	     for (rec <- recs) {
+	       val reqRec = BasicUtils.getTrimmedFields(rec, fieldDelimIn).slice(keyLen, rec.length - 2).
+	    		   mkString(predictionFieldDelim)
+	       reqMsgArr += reqRec
+	     }
+	     val reqMsg = reqMsgArr.mkString(predictionRecDelim)
+	     val reqJson = "{\"recs\":\"" +  reqMsg + "\"}"
+	     val respJson = BasicUtils.httpJsonPost(predictionUrl, reqJson)
+	     List()
+	   })
    }
      
    
