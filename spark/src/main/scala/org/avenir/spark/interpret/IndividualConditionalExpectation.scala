@@ -26,6 +26,7 @@ import org.chombo.util.BaseAttribute
 import com.typesafe.config.Config
 import org.chombo.spark.common.GeneralUtility
 import scala.collection.mutable.ArrayBuffer
+import org.avenir.util.Prediction
 
 /**
 * Black box Machine learning interpretation by Individual Conditional Expectation (ICE)
@@ -76,6 +77,7 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	       case BaseAttribute.DATA_TYPE_CATEGORICAL => {
 	         val cardinality = getMandatoryIntParam(feConfig, "cardinality", "missing cardinality")
 	         val encoded = getMandatoryBooleanParam(feConfig, "encoded", "missing encoded")
+	         BasicUtils.assertCondition(encoded, "only binary encoded categorical supported")
 	         featureGrid += (i -> Feature(feType, 0, 0, 0, cardinality, encoded))
 	       }
 	     }
@@ -86,6 +88,7 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	   val predictionUrl = getMandatoryStringParam(appConfig, "prediction.url", "missing prediction service URL")
 	   val predictionFieldDelim = getStringParamOrElse(appConfig, "prediction.reqFieldDelim", ",")
 	   val predictionRecDelim = getStringParamOrElse(appConfig, "prediction.reqRecDelim", ",,")
+	   val sortByPrediction = getBooleanParamOrElse(appConfig, "prediction.sortDescending", true)
 	   
 	   val debugOn = appConfig.getBoolean("debug.on")
 	   val saveOutput = appConfig.getBoolean("save.output")
@@ -93,17 +96,16 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	   //input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
-	   //key by record key and record status
+	   //generate neighborhood records
 	   val genRecs = data.flatMap(line => {
    		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
    		   val refRec = line +  fieldDelimIn + refRecTag
    		   val recs = Array[String](line)
    		   genCandidates(recs, fieldDelimIn, featureOrdinals.toArray, 0, featureGrid, genRecTag:String, precision, refRec)
-   		   //List()
 	   })	
 	   
 	   //group by key and get predictions
-	   val x = genRecs.map(line => {
+	   val recsWithPrediction = genRecs.map(line => {
    		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
    	       val keyRec = Record(items, 0, keyLen)
    	       (keyRec, line)
@@ -118,8 +120,27 @@ object IndividualConditionalExpectation extends JobConfiguration with GeneralUti
 	     val reqMsg = reqMsgArr.mkString(predictionRecDelim)
 	     val reqJson = "{\"recs\":\"" +  reqMsg + "\"}"
 	     val respJson = BasicUtils.httpJsonPost(predictionUrl, reqJson)
-	     List()
+	     val prediction = Prediction.decodeJson(respJson)	   
+	     var recsWithPred = recs.zip(prediction.getPredictions()).toList.map(r => {r._1 + fieldDelimOut + r._2})
+	     if(sortByPrediction) {
+	       recsWithPred = recsWithPred.sortWith((r1, r2) => {
+	         val f1 = BasicUtils.getTrimmedFields(r1, fieldDelimIn)
+	         val f2 = BasicUtils.getTrimmedFields(r2, fieldDelimIn)
+	         f1(f1.length-1).toDouble > f2(f2.length-1).toDouble
+	       })
+	     }
+	     recsWithPred
 	   })
+	   
+       if (debugOn) {
+         val records = recsWithPrediction.collect.slice(0, 19)
+         records.foreach(r => println(r))
+       }
+	   
+	   if(saveOutput) {	   
+	     recsWithPrediction.saveAsTextFile(outputPath) 
+	   }
+	   
    }
      
    
