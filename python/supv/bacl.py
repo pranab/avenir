@@ -26,6 +26,7 @@ import random
 import jprops
 from io import StringIO
 from sklearn.model_selection import cross_val_score
+from sklearn.externals import joblib
 from random import randint
 from io import StringIO
 sys.path.append(os.path.abspath("../lib"))
@@ -235,7 +236,7 @@ class BaseClassifier(object):
 
 	 
 	#predict
-	def predict(self):
+	def predictx(self):
 		# create model
 		self.prepModel()
 		
@@ -248,14 +249,19 @@ class BaseClassifier(object):
 		print clsData
 	
 	#predict with in memory data
-	def predict(self, recs):
+	def predict(self, recs=None):
 		# create model
 		self.prepModel()
 		
 		#input record
-		featData = self.prepStringPredictData(recs)
-		if (featData.ndim == 1):
-			featData = featData.reshape(1, -1)
+		if recs:
+			#passed record
+			featData = self.prepStringPredictData(recs)
+			if (featData.ndim == 1):
+				featData = featData.reshape(1, -1)
+		else:
+			#file
+			featData = self.prepPredictData()
 		
 		#predict
 		print "...predicting"

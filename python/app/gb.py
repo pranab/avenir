@@ -27,7 +27,8 @@ elif mode == "trainValidate":
 	else:
 		gbtClass.trainValidateSearch()
 elif mode == "predict":
-	gbtClass.predict()
+	clsData = gbtClass.predict()
+	print clsData
 elif mode == "validate":
 	gbtClass.validate()
 elif mode == "autoTrain":

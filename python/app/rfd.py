@@ -27,7 +27,8 @@ elif mode == "trainValidate":
 	else:
 		rfClass.trainValidateSearch()
 elif mode == "predict":
-	rfClass.predict()
+	clsData = rfClass.predict()
+	print clsData
 elif mode == "validate":
 	rfClass.validate()
 elif mode == "autoTrain":

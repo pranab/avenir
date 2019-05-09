@@ -109,6 +109,9 @@ class GradientBoostedTrees(object):
 	def getSearchParamStrategy(self):
 		return self.config.getStringConfig("train.search.param.strategy")[0]
 
+	def setModel(self, model):
+		self.gbcClassifier = model
+		
 	# train model	
 	def train(self):
 		#build model
@@ -280,7 +283,7 @@ class GradientBoostedTrees(object):
 
 	 
 	#predict
-	def predict(self):
+	def predictx(self):
 		# create model
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if useSavedModel:
@@ -301,14 +304,20 @@ class GradientBoostedTrees(object):
 		print clsData
 
 	#predict with in memory data
-	def predict(self, recs):
+	def predict(self, recs=None):
 		# create model
 		self.prepModel()
 		
 		#input record
-		featData = self.prepStringPredictData(recs)
-		if (featData.ndim == 1):
-			featData = featData.reshape(1, -1)
+		#input record
+		if recs:
+			#passed record
+			featData = self.prepStringPredictData(recs)
+			if (featData.ndim == 1):
+				featData = featData.reshape(1, -1)
+		else:
+			#file
+			featData = self.prepPredictData()
 		
 		#predict
 		print "...predicting"
@@ -342,7 +351,8 @@ class GradientBoostedTrees(object):
 		else:
 			# train model
 			self.train()
-
+		return self.gbcClassifier
+		
 	#prepare string predict data
 	def prepStringPredictData(self, recs):
 		frecs = StringIO(recs)
