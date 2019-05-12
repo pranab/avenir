@@ -258,6 +258,24 @@ class TfIdf:
 		sf.close()
 		return tfidf
 
+# sentence processor
+class DocSentences:
+	# initialize
+	def __init__(self, filePath):
+		self.filePath = filePath
+		with open(filePath, 'r') as contentFile:
+			content = contentFile.read()
+		self.sentences = content.split('.')
+		print "num of sentences " + str(len(self.sentences))
+		tp = TextPreProcessor()
+		self.sentencesAsTokens = [clean(s, tp, True) for s in self.sentences]	
+	
+	def getSentencesAsTokens(self):
+		return self.sentencesAsTokens
+
+	def getSentences(self):
+		return self.sentences
+
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
 	if verbose:
