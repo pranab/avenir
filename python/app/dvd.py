@@ -27,6 +27,27 @@ from preprocess import *
 from util import *
 from dv import *
 
+# get sentences as token list
+def getSentecesAsTokens(dataFile, minSentenceLength, verbose):
+	docSent = DocSentences(dataFile)
+	sents = docSent.getSentences()
+	if verbose:
+		print "*******sentences as text"
+		for s in sents:
+			print s
+
+	sentAsToks = docSent.getSentencesAsTokens()
+	
+	if verbose:
+		print "*******sentences as token list"
+		for t in sentAsToks:
+			print len(t)
+			
+	# train
+	sentAsToks = list(filter(lambda s: len(s) >= minSentenceLength, sentAsToks))
+	if verbose:
+		print "number of sentences after filter " + str(len(sentAsToks)) 
+	return sentAsToks
 
 if __name__ == "__main__":
 	configFile  = sys.argv[1]
@@ -42,9 +63,9 @@ if __name__ == "__main__":
 
 	if op == "train":
 		if granularity == "document":
-			print "document level analysis"
+			print "document level training"
 		elif granularity == "sentence":
-			print "sentence level analysis"
+			print "sentence level training"
 			dataFile = config.getStringConfig("train.data.file")[0]
 			docSent = DocSentences(dataFile)
 			sents = docSent.getSentences()
@@ -67,6 +88,18 @@ if __name__ == "__main__":
 			taggedSents = [TaggedDocument(s, [i]) for i, s in enumerate(sentsAsText)]
 			d2v.train(taggedSents)
 			print "**done with training"
+	elif op == "genVec":
+		if granularity == "document":
+			print "document level vector generation"
+		elif granularity == "sentence":
+			print "sentence level vector generation"
+			dataFile = config.getStringConfig("generate.data.file")[0]
+			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
+			vecEmbed = VectorEmbedding(dataFile, granularity)
+			vecEmbed.getVectors(sentAsToks, d2v)
+			if (config.getBooleanConfig("generate.vector.save")[0]):
+				vecEmbed.save(config.getStringConfig("generate.vector.directory")[0],\
+					config.getStringConfig("generate.vector.file")[0])
 
 	else:
 		print "invalid operation"

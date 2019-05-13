@@ -26,6 +26,7 @@ from gensim.corpora import Dictionary
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from gensim.models import KeyedVectors
 import matplotlib.pyplot as plt
+import pickle
 import jprops
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
@@ -67,6 +68,11 @@ class DocToVec:
 		defValues["train.distr.model.tag.count"] = (1, None)
 		defValues["train.dbow.words"] = (0, None)
 		defValues["train.trim.rule"] = (None, None)
+		defValues["generate.data.dir"] = (None, "missing generation data directory")
+		defValues["generate.data.file"] = (None, "missing generation data file")
+		defValues["generate.vector.dir"] = (None, "missing generated vector directory")
+		defValues["generate.vector.file"] = (None, "missing generated vector file")
+		defValues["generate.vector.save"] = (False, None)
 
 
 		self.config = Configuration(configFile, defValues)
@@ -108,14 +114,23 @@ class DocToVec:
 
 	# get vector embedding
 	def getDocEmbedding(self, doc):
-		initModel(self)
+		self.initModel()
 		return self.model.infer_vector(doc)
 
 
 	# get vector embedding multiple docs
 	def getDocEmbeddings(self, docs):
-		vectors = [getDocEmbedding(self, doc) for doc in docs]
+		vectors = [self.getDocEmbedding(doc) for doc in docs]
 		return vectors
+
+	# get model file path
+	def getModelFilePath(self):
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		if modelFile is None:
+			raise ValueError("missing model file name")
+		modelFilePath = os.path.join(modelDirectory, modelFile)
+		return modelFilePath
 
 	# initialize word vectors	
 	def initModel(self):		
@@ -123,4 +138,23 @@ class DocToVec:
 			path = self.getModelFilePath()
 			self.model = Doc2Vec.load(path)
 
+# manage vector embedding
+class VectorEmbedding:
+	def __init__(self, path, granularity):
+		self.path = path
+		self.granularity = granularity
+		self.vectors = None
+	
+	#generate vectors
+	def getVectors(self, tokens, doc2Vec):
+		self.vectors = doc2Vec.getDocEmbeddings(tokens)
+		for v in self.vectors:
+			print v
+		
+	# save 
+	def save(self, saveDir, saveFile):
+		saveFilePath = os.path.join(saveDir, saveFile)
+		with open(saveFilePath, "wb") as sf:
+			pickle.dump(self, sf)
+		
 
