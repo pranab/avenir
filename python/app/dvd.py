@@ -29,7 +29,7 @@ from dv import *
 
 # get sentences as token list
 def getSentecesAsTokens(dataFile, minSentenceLength, verbose):
-	docSent = DocSentences(dataFile)
+	docSent = DocSentences(dataFile, verbose)
 	sents = docSent.getSentences()
 	if verbose:
 		print "*******sentences as text"
@@ -67,27 +67,15 @@ if __name__ == "__main__":
 		elif granularity == "sentence":
 			print "sentence level training"
 			dataFile = config.getStringConfig("train.data.file")[0]
-			docSent = DocSentences(dataFile)
-			sents = docSent.getSentences()
-			if verbose:
-				print "*******sentences as text"
-				for s in sents:
-					print s
-
-			sentAsToks = docSent.getSentencesAsTokens()
-	
-			if verbose:
-				print "*******sentences as token list"
-				for t in sentAsToks:
-					print len(t)
-			
-			# train
-			sentAsToks = list(filter(lambda s: len(s) >= minSentenceLength, sentAsToks))
+			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
 			print "number of sentences after filter " + str(len(sentAsToks)) 
 			sentsAsText = list(map(lambda t: " ".join(t), sentAsToks))
+			
+			# train
 			taggedSents = [TaggedDocument(s, [i]) for i, s in enumerate(sentsAsText)]
 			d2v.train(taggedSents)
 			print "**done with training"
+	
 	elif op == "genVec":
 		if granularity == "document":
 			print "document level vector generation"
@@ -100,6 +88,28 @@ if __name__ == "__main__":
 			if (config.getBooleanConfig("generate.vector.save")[0]):
 				vecEmbed.save(config.getStringConfig("generate.vector.directory")[0],\
 					config.getStringConfig("generate.vector.file")[0])
+
+	elif op == "neighbor":
+		if granularity == "document":
+			print "document level nearest neighbors"
+		elif granularity == "sentence":
+			print "sentence level nearest neighbors"
+			sentIndx  = int(sys.argv[3])
+			vecEmbed = VectorEmbedding.load(config.getStringConfig("generate.vector.directory")[0],\
+				config.getStringConfig("generate.vector.file")[0])
+			distances = vecEmbed.getCosineDistances(sentIndx)
+			print distances
+
+	elif op == "show":
+		if granularity == "document":
+			print "show docy=ument"
+		elif granularity == "sentence":
+			print "show sentence"
+			sentIndx  = int(sys.argv[3])
+			dataFile = config.getStringConfig("generate.data.file")[0]
+			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
+			sentsAsText = list(map(lambda t: " ".join(t), sentAsToks))
+			print sentsAsText[sentIndx]
 
 	else:
 		print "invalid operation"

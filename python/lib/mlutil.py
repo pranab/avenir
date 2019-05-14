@@ -21,6 +21,8 @@ import sys
 import numpy as np
 import sklearn as sk
 import random
+from math import *
+from decimal import Decimal
 import jprops
 from util import *
 
@@ -157,4 +159,35 @@ def subSample(featData, clsData, subSampleRate, withReplacement):
 	sampFeat = featData[sampledIndx]
 	sampCls = clsData[sampledIndx]
 	return(sampFeat, sampCls)
+
+#euclidean distance
+def euclideanDistance(x,y):
+	return sqrt(sum(pow(a-b, 2) for a, b in zip(x, y)))
+
+def squareRooted(x):
+	return round(sqrt(sum([a*a for a in x])),3)
+
+#cosine similarity
+def cosineSimilarity(x,y):
+	numerator = sum(a*b for a,b in zip(x,y))
+	denominator = squareRooted(x) * squareRooted(y)
+	return round(numerator / float(denominator), 3)
+
+# manhattan distance
+def manhattanDistance(x,y):
+	return sum(abs(a-b) for a,b in zip(x,y))
+
+def nthRoot(value, nRoot):
+	rootValue = 1/float(nRoot)
+	return round (Decimal(value) ** Decimal(rootValue),3)
+
+# minkowski distance 
+def minkowskiDistance(x,y,pValue):
+	return nthRoot(sum(pow(abs(a-b),pValue) for a,b in zip(x, y)), pValue)
+
+#jaccard similarity
+def jaccardSimilarity(x,y):
+	intersectionCardinality = len(set.intersection(*[set(x), set(y)]))
+	unionCardinality = len(set.union(*[set(x), set(y)]))
+ 	return intersectionCardinality/float(unionCardinality)
 

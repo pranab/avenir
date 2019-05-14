@@ -28,6 +28,7 @@ from gensim.models import KeyedVectors
 import matplotlib.pyplot as plt
 import pickle
 import jprops
+from scipy import spatial
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -150,11 +151,28 @@ class VectorEmbedding:
 		self.vectors = doc2Vec.getDocEmbeddings(tokens)
 		for v in self.vectors:
 			print v
-		
+
+	# cosine distances
+	def getCosineDistances(self, indx):
+		this = self.vectors[indx]
+		#distances = list(map(lambda other: spatial.distance.cosine(this, other), self.vectors))	
+		distances = list(map(lambda other: 1.0 - cosineSimilarity(this, other), self.vectors))	
+		distances = [(i,v) for i,v in enumerate(distances)]
+		distances.sort(key=takeSecond)
+		return distances
+
 	# save 
 	def save(self, saveDir, saveFile):
 		saveFilePath = os.path.join(saveDir, saveFile)
-		with open(saveFilePath, "wb") as sf:
+		with open(saveFilePath, "w") as sf:
 			pickle.dump(self, sf)
+
+	# load 
+	@staticmethod
+	def load(saveDir, saveFile):
+		saveFilePath = os.path.join(saveDir, saveFile)
+		with open(saveFilePath, "r") as sf:
+			vecEmbed = pickle.load(sf)
+		return vecEmbed
 		
 

@@ -261,14 +261,14 @@ class TfIdf:
 # sentence processor
 class DocSentences:
 	# initialize
-	def __init__(self, filePath):
+	def __init__(self, filePath, verbose):
 		self.filePath = filePath
 		with open(filePath, 'r') as contentFile:
 			content = contentFile.read()
 		self.sentences = content.split('.')
 		print "num of sentences " + str(len(self.sentences))
 		tp = TextPreProcessor()
-		self.sentencesAsTokens = [clean(s, tp, True) for s in self.sentences]	
+		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
 	def getSentencesAsTokens(self):
 		return self.sentencesAsTokens
