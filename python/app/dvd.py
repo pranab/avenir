@@ -43,11 +43,14 @@ def getSentecesAsTokens(dataFile, minSentenceLength, verbose):
 		for t in sentAsToks:
 			print len(t)
 			
-	# train
-	sentAsToks = list(filter(lambda s: len(s) >= minSentenceLength, sentAsToks))
-	if verbose:
-		print "number of sentences after filter " + str(len(sentAsToks)) 
-	return sentAsToks
+	sentAsToksIndx = [(i,st) for i,st in enumerate(sentAsToks)]
+	sentAsToksIndx = list(filter(lambda s: len(s[1]) >= minSentenceLength, sentAsToksIndx))
+	sentAsToks = list(map(lambda sti: sti[1], sentAsToksIndx))	
+	sentIndexes = list(map(lambda sti: sti[0], sentAsToksIndx))	
+
+	print "number of sentences after filter " + str(len(sentAsToks)) 
+	#print sentIndexes
+	return (sentAsToks, sentIndexes)
 
 if __name__ == "__main__":
 	configFile  = sys.argv[1]
@@ -67,7 +70,7 @@ if __name__ == "__main__":
 		elif granularity == "sentence":
 			print "sentence level training"
 			dataFile = config.getStringConfig("train.data.file")[0]
-			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
+			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)[0]
 			print "number of sentences after filter " + str(len(sentAsToks)) 
 			sentsAsText = list(map(lambda t: " ".join(t), sentAsToks))
 			
@@ -82,7 +85,7 @@ if __name__ == "__main__":
 		elif granularity == "sentence":
 			print "sentence level vector generation"
 			dataFile = config.getStringConfig("generate.data.file")[0]
-			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
+			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)[0]
 			vecEmbed = VectorEmbedding(dataFile, granularity)
 			vecEmbed.getVectors(sentAsToks, d2v)
 			if (config.getBooleanConfig("generate.vector.save")[0]):
@@ -97,19 +100,21 @@ if __name__ == "__main__":
 			sentIndx  = int(sys.argv[3])
 			vecEmbed = VectorEmbedding.load(config.getStringConfig("generate.vector.directory")[0],\
 				config.getStringConfig("generate.vector.file")[0])
-			distances = vecEmbed.getCosineDistances(sentIndx)
+			distances = vecEmbed.getDistances(sentIndx, config.getStringConfig("distance.algorithm")[0],\
+				config.getFloatConfig("distance.algorithm.param")[0])
 			print distances
 
 	elif op == "show":
 		if granularity == "document":
-			print "show docy=ument"
+			print "show document"
 		elif granularity == "sentence":
 			print "show sentence"
 			sentIndx  = int(sys.argv[3])
 			dataFile = config.getStringConfig("generate.data.file")[0]
-			sentAsToks = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
-			sentsAsText = list(map(lambda t: " ".join(t), sentAsToks))
-			print sentsAsText[sentIndx]
+			sentAsToks, sentIndexes = getSentecesAsTokens(dataFile, minSentenceLength, verbose)
+			sentIndex = sentIndexes[sentIndx]
+			print "real sentence index " + str(sentIndex)
+			print getSentences(dataFile)[sentIndex]
 
 	else:
 		print "invalid operation"

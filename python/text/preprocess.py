@@ -293,4 +293,11 @@ def clean(doc, preprocessor, verbose):
 		print words
 	return words
 
+# get sentences
+def getSentences(filePath):
+	with open(filePath, 'r') as contentFile:
+		content = contentFile.read()
+		sentences = content.split('.')
+	return sentences
+
 
