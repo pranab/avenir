@@ -52,6 +52,7 @@ def getSentecesAsTokens(dataFile, minSentenceLength, verbose):
 	#print sentIndexes
 	return (sentAsToks, sentIndexes)
 
+
 if __name__ == "__main__":
 	configFile  = sys.argv[1]
 	op  = sys.argv[2]
@@ -67,6 +68,16 @@ if __name__ == "__main__":
 	if op == "train":
 		if granularity == "document":
 			print "document level training"
+			dataDir = config.getStringConfig("train.data.dir")[0]
+			dirFiles = DirFiles(dataDir, verbose)
+			docsAsTokens = dirFiles.getDocsAsTokens()
+			docsAsText = list(map(lambda dt: " ".join(dt), docsAsTokens))
+
+			# train
+			taggedDocs = [TaggedDocument(dt, [i]) for i, dt in enumerate(docsAsText)]
+			d2v.train(taggedDocs)
+			print "**done with training"
+
 		elif granularity == "sentence":
 			print "sentence level training"
 			dataFile = config.getStringConfig("train.data.file")[0]
@@ -82,6 +93,15 @@ if __name__ == "__main__":
 	elif op == "genVec":
 		if granularity == "document":
 			print "document level vector generation"
+			dataDir = config.getStringConfig("generate.data.dir")[0]
+			dirFiles = DirFiles(dataDir, verbose)
+			docsAsTokens = dirFiles.getDocsAsTokens()
+			vecEmbed = VectorEmbedding(dataDir, granularity)
+			vecEmbed.getVectors(docsAsTokens, d2v)
+			if (config.getBooleanConfig("generate.vector.save")[0]):
+				vecEmbed.save(config.getStringConfig("generate.vector.directory")[0],\
+					config.getStringConfig("generate.vector.file")[0])
+
 		elif granularity == "sentence":
 			print "sentence level vector generation"
 			dataFile = config.getStringConfig("generate.data.file")[0]
@@ -95,6 +115,19 @@ if __name__ == "__main__":
 	elif op == "neighbor":
 		if granularity == "document":
 			print "document level nearest neighbors"
+			fileName = sys.argv[3]
+			dirPath = config.getStringConfig("generate.data.dir")[0]
+			filePath = os.path.join(dirPath, fileName)
+			filePaths = getAllFiles(dirPath)
+			print filePaths
+			fileIndex = filePaths.index(filePath)
+			print fileIndex
+			vecEmbed = VectorEmbedding.load(config.getStringConfig("generate.vector.directory")[0],\
+				config.getStringConfig("generate.vector.file")[0])
+			distances = vecEmbed.getDistances(fileIndex, config.getStringConfig("distance.algorithm")[0],\
+				config.getFloatConfig("distance.algorithm.param")[0])
+			print distances
+
 		elif granularity == "sentence":
 			print "sentence level nearest neighbors"
 			sentIndx  = int(sys.argv[3])
@@ -107,6 +140,11 @@ if __name__ == "__main__":
 	elif op == "show":
 		if granularity == "document":
 			print "show document"
+			fileIndx  = int(sys.argv[3])
+			dirPath = config.getStringConfig("generate.data.dir")[0]
+			filePaths = getAllFiles(dirPath)
+			print filePaths[fileIndx]
+
 		elif granularity == "sentence":
 			print "show sentence"
 			sentIndx  = int(sys.argv[3])

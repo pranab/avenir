@@ -72,6 +72,10 @@ class TextPreProcessor:
 			newWords.append(newWord)
 		return newWords
 
+	def replaceNonAscii(self, text):
+		""" replaces non ascii with blank  """
+		return ''.join([i if ord(i) < 128 else ' ' for i in text])
+
 	def allow(self, words):
 		""" allow only specific charaters """
 		allowed = [word for word in words if re.match('^[A-Za-z0-9\.\,\:\;\!\?\(\)\'\-\$\@\%\"]+$', word) is not None]		
@@ -276,11 +280,31 @@ class DocSentences:
 	def getSentences(self):
 		return self.sentences
 
+# sentence processor
+class DirFiles:
+	# initialize
+	def __init__(self, dirPath, verbose):
+		self.dirPath = dirPath
+		docs, filePaths  = getFileContent(dirPath, verbose)
+		self.docs = docs
+		self.filePaths = filePaths
+		print filePaths
+		tp = TextPreProcessor()
+		self.docsAsTokens = [clean(doc, tp, verbose) for doc in docs]
+
+	def getDocsAsTokens(self):
+		return self.docsAsTokens
+
+	def getDocs(self):
+		return self.docs
+
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
 	if verbose:
 		print "--raw doc"
 		print doc
+	#print "next clean"
+	doc = preprocessor.replaceNonAscii(doc)
 	words = preprocessor.tokenize(doc)
 	words = preprocessor.allow(words)
 	words = preprocessor.toLowercase(words)

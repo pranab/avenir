@@ -220,6 +220,7 @@ def getAllFiles(dirPath):
 	for (thisDir, subDirs, fileNames) in os.walk(dirPath):
 		for fileName in fileNames:
 			filePaths.append(os.path.join(thisDir, fileName))
+	filePaths.sort()
 	return filePaths
 
 # get file content
@@ -227,6 +228,7 @@ def getFileContent(path, verbose):
 	# dcument list
 	docComplete  = []
 	filePaths = getAllFiles(path)
+	filePaths
 
 	# read files
 	for filePath in filePaths:
