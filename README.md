@@ -50,6 +50,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2018/06/18/leave-one-out-encoding-for-categorical-feature-variables-on-spark/
 * https://pkghosh.wordpress.com/2018/07/18/improving-elastic-search-query-result-with-query-expansion-using-topic-modeling/
 * https://pkghosh.wordpress.com/2019/02/10/supervised-machine-learning-parameter-search-and-tuning-with-simulated-annealing/
+* https://pkghosh.wordpress.com/2019/05/07/synthetic-training-data-generation-for-machine-learning-classification-problems-using-ancestral-sampling/
 
 
 ## Getting started
