@@ -33,6 +33,7 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import LancasterStemmer, WordNetLemmatizer
 from nltk.tag import StanfordNERTagger
+from nltk.tokenize import word_tokenize, sent_tokenize
 from collections import defaultdict
 import pickle
 sys.path.append(os.path.abspath("../lib"))
@@ -72,10 +73,14 @@ class TextPreProcessor:
 			newWords.append(newWord)
 		return newWords
 
-	def replaceNonAscii(self, text):
+	def replaceNonAsciiFromText(self, text):
 		""" replaces non ascii with blank  """
 		return ''.join([i if ord(i) < 128 else ' ' for i in text])
 
+	def removeNonAsciiFromText(self, text):
+		""" replaces non ascii with blank  """
+		return ''.join([i if ord(i) < 128 else '' for i in text])
+	
 	def allow(self, words):
 		""" allow only specific charaters """
 		allowed = [word for word in words if re.match('^[A-Za-z0-9\.\,\:\;\!\?\(\)\'\-\$\@\%\"]+$', word) is not None]		
@@ -220,6 +225,7 @@ class TfIdf:
 				self.wordInDocCount[word] = count + 1
 		self.freqDone = False
 	
+	
 	# get tfidf for corpus
 	def getWordFreq(self):
 		print "counter size " + str(len(self.wordCounter))
@@ -232,6 +238,14 @@ class TfIdf:
 			self.freqDone = True
 		return self.wordFreq
 	
+	# get counter
+	def getCount(self, word):
+		if word in self.wordCounter:
+			count = self.wordCounter[word]
+		else:
+			raise ValueError("word not found in count table " + word)
+		return count
+		
 	# reset counter
 	def resetCounter(self):
 		self.wordCounter = {}
@@ -265,13 +279,17 @@ class TfIdf:
 # sentence processor
 class DocSentences:
 	# initialize
-	def __init__(self, filePath, verbose):
+	def __init__(self, filePath, minLength, verbose):
 		self.filePath = filePath
 		with open(filePath, 'r') as contentFile:
 			content = contentFile.read()
-		self.sentences = content.split('.')
-		print "num of sentences " + str(len(self.sentences))
+		#self.sentences = content.split('.')
 		tp = TextPreProcessor()
+		content = tp.removeNonAsciiFromText(content)
+		sentences = sent_tokenize(content)
+		self.sentences = list(filter(lambda s: len(nltk.word_tokenize(s)) >= minLength, sentences))
+
+		print "num of sentences " + str(len(self.sentences))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
 	def getSentencesAsTokens(self):
@@ -304,7 +322,7 @@ def clean(doc, preprocessor, verbose):
 		print "--raw doc"
 		print doc
 	#print "next clean"
-	doc = preprocessor.replaceNonAscii(doc)
+	doc = preprocessor.removeNonAsciiFromText(doc)
 	words = preprocessor.tokenize(doc)
 	words = preprocessor.allow(words)
 	words = preprocessor.toLowercase(words)
