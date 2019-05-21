@@ -196,7 +196,7 @@ class TextPreProcessor:
 # TF IDF 
 class TfIdf:
 	# initialize
-	def __init__(self, vocFilt, doIdf):
+	def __init__(self, vocFilt, doIdf, verbose=False):
 		self.vocFilt = vocFilt
 		self.doIdf = doIdf
 		self.wordCounter = {}
@@ -207,10 +207,12 @@ class TfIdf:
 		self.freqDone = False
 		self.vocabulary = set()
 		self.wordIndex = None
+		self.verbose = verbose
 	
 	# count words in a doc
 	def countDocWords(self, words):
-		print "doc size " + str(len(words))
+		if self.verbose:
+			print "doc size " + str(len(words))
 		for word in words:
 			if self.vocFilt is None or word in self.vocFilt:
 				count = self.wordCounter.get(word, 0)
@@ -228,7 +230,8 @@ class TfIdf:
 	
 	# get tfidf for corpus
 	def getWordFreq(self):
-		print "counter size " + str(len(self.wordCounter))
+		if self.verbose:
+			print "counter size " + str(len(self.wordCounter))
 		if not self.freqDone:
 			for item in self.wordCounter.items():
 				self.wordFreq[item[0]] = float(item[1]) / self.corpSize					
@@ -288,6 +291,7 @@ class DocSentences:
 		content = tp.removeNonAsciiFromText(content)
 		sentences = sent_tokenize(content)
 		self.sentences = list(filter(lambda s: len(nltk.word_tokenize(s)) >= minLength, sentences))
+		print "num of senteces after length filter " + str(len(self.sentences))
 
 		print "num of sentences " + str(len(self.sentences))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	

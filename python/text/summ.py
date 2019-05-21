@@ -22,6 +22,7 @@ import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
 import pickle
 import jprops
+import math
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -39,6 +40,8 @@ class SummariseByTermFreq:
 		defValues["summ.min.sentence.length"] = (5, None)
 		defValues["summ.size"] = (5, None)
 		defValues["summ.byCount"] = (True, None)
+		defValues["summ.length.normalizer"] = ("linear", None)
+		defValues["summ.show.score"] = (False, None)
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 
@@ -48,6 +51,8 @@ class SummariseByTermFreq:
 			
 	def getSummary(self, filePath):
 		minSentLength = self.config.getIntConfig("summ.min.sentence.length")[0]
+		normalizer = self.config.getStringConfig("summ.length.normalizer")[0]
+		
 		docSent = DocSentences(filePath, minSentLength, self.verbose)
 		sents = docSent.getSentences()
 
@@ -68,18 +73,34 @@ class SummariseByTermFreq:
 			counts = list(map(lambda w: termTable.getCount(w), seWords))	
 			totCount = reduce((lambda c1, c2: c1 + c2), counts)
 			sentScores.append(totCount)
+		
+		#sentence length	
+		sentLens = list(map(lambda seWords: len(seWords), sentWords))	
+		minLen = min(sentLens)
 			
-		#sentScores = list(map(lambda seWords: reduce((lambda w1, w2: termTable.getCount(w1) +\
-		#	termTable.getCount(w2)), seWords), sentWords))	
+ 		#sentence index, score, sentence length
+ 		zippedSents = zip(range(len(sents)), sentScores, sentLens)
  		
- 		#sort and select from the top
- 		zippedSents = zip(sents, sentScores)
+ 		#normalize scores
+ 		if normalizer == "linear":
+ 			zippedSents = list(map(lambda zs: (zs[0], zs[1]/zs[2]), zippedSents))
+ 		if normalizer == "log":
+ 			zippedSents = list(map(lambda zs: (zs[0], int(zs[1] * (1.0 / (1.0 + math.log(zs[2]/minLen))))), zippedSents))
+ 		
+ 		# sort of decreasing score	
  		sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
+ 		print "after soerting num sentences " + str(len(sortedSents))
+ 		
+ 		#retain top sentences
  		summSize  = self.config.getIntConfig("summ.size")[0]
- 		byCount = self.config.getBooleanConfig("summ.size")[0]
+ 		byCount = self.config.getBooleanConfig("summ.byCount")[0]
  		if not byCount:
  			summSize = (len(sortedSents) * summSize) / 100
- 		return list(map(lambda stSc: (stSc[0],stSc[1]), sortedSents))[:summSize]
+ 		print "summSize " + str(summSize)
+ 		topSents = sortedSents[:summSize]
  		
+ 		#sort sentence by position 
+ 		topSents = sorted(topSents, key=takeFirst)	
+ 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
  		
  		

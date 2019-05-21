@@ -32,7 +32,10 @@ if __name__ == "__main__":
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
+		showScore = config.getBooleanConfig("summ.show.score")[0]
 		for sen in sumSenteces:
-			print sen[0]
-			print "score " + str(sen[1])
+			sent =  sen[0]
+			if showScore:
+				sent = sent + "  (" + str(sen[1]) + ")"
+			print sent
 	
