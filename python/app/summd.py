@@ -38,4 +38,15 @@ if __name__ == "__main__":
 			if showScore:
 				sent = sent + "  (" + str(sen[1]) + ")"
 			print sent
+	elif op == "sbSumm":
+		summarizer = SumBasic(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		showScore = config.getBooleanConfig("common.show.score")[0]
+		for sen in sumSenteces:
+			sent =  sen[0]
+			if showScore:
+				sent = sent + "  (" + str(sen[1]) + ")"
+			print sent
 	

@@ -249,6 +249,14 @@ class TfIdf:
 			raise ValueError("word not found in count table " + word)
 		return count
 		
+	# get normalized frequency
+	def getFreq(self, word):
+		if word in self.wordFreq:
+			freq = self.wordFreq[word]
+		else:
+			raise ValueError("word not found in count table " + word)
+		return freq
+
 	# reset counter
 	def resetCounter(self):
 		self.wordCounter = {}

@@ -30,7 +30,7 @@ from mlutil import *
 from preprocess import *
 nltk.download('punkt')
 	
-# text summarizer
+# text summarizer based on term frequency
 class SummariseByTermFreq:
 	def __init__(self, configFile):
 		defValues = {}
@@ -102,5 +102,69 @@ class SummariseByTermFreq:
  		#sort sentence by position 
  		topSents = sorted(topSents, key=takeFirst)	
  		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
+ 		
+# sum basic summarizer		
+class SumBasic:
+	def __init__(self, configFile):
+		defValues = {}
+		defValues["common.verbose"] = (False, None)
+		defValues["common.data.directory"] = (None, "missing data dir")
+		defValues["common.data.file"] = (None, "missing data file")
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["Common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
+		defValues["common.show.score"] = (False, None)
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+ 	
+	# get config object
+	def getConfig(self):
+		return self.config
+			
+	def getSummary(self, filePath):
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
+		docSent = DocSentences(filePath, minSentLength, self.verbose)
+		sents = docSent.getSentences()
+		
+		# term count table for all words
+		termTable = TfIdf(None, False)
+		sentWords = docSent.getSentencesAsTokens()
+		for seWords in sentWords:
+			termTable.countDocWords(seWords)
+		wordFreq = termTable.getWordFreq()
+ 		
+		summSize  = self.config.getIntConfig("common.size")[0]
+		byCount = self.config.getBooleanConfig("common.byCount")[0]
+		if not byCount:
+ 			summSize = (len(sortedSents) * summSize) / 100
+
+		topSentences = []
+		for i in range(summSize):
+			#score for each sentence
+			sentScores = []
+			for seWords in sentWords:
+				frquencies = list(map(lambda w: wordFreq[w], seWords))	
+				totFreq = reduce((lambda f1, f2: f1 + f2), frquencies)
+				totFreq /= len(seWords)
+				sentScores.append(totFreq)
+ 	
+ 			zippedSents = zip(range(len(sents)), sentScores)
+ 			sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
+ 			
+ 			#add to summary sentence list
+ 			tsIndex = sortedSents[0][0]
+ 			selSent = (tsIndex, sents[tsIndex], sortedSents[0][1])
+ 			topSentences.append(selSent) 
+ 			
+ 			#regularize frequencies
+ 			for w in sentWords[tsIndex]:
+ 				wordFreq[w] = wordFreq[w] * wordFreq[w]
+ 				
+ 			#remove from existing list
+ 			del sents[tsIndex]
+ 			del sentWords[tsIndex]
+ 		
+ 		topSentences = sorted(topSentences, key=takeFirst)	
+ 		return list(map(lambda ts: (ts[1], ts[2]), topSentences))
  		
  		
