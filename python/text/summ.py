@@ -23,6 +23,7 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 import pickle
 import jprops
 import math
+from gensim.summarization.summarizer import summarize
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -31,26 +32,27 @@ from preprocess import *
 nltk.download('punkt')
 	
 # text summarizer based on term frequency
-class SummariseByTermFreq:
+class TermFreqSumm:
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
 		defValues["common.data.directory"] = (None, "missing data dir")
 		defValues["common.data.file"] = (None, "missing data file")
-		defValues["summ.min.sentence.length"] = (5, None)
-		defValues["summ.size"] = (5, None)
-		defValues["summ.byCount"] = (True, None)
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
 		defValues["summ.length.normalizer"] = ("linear", None)
-		defValues["summ.show.score"] = (False, None)
+		defValues["common.show.score"] = (False, None)
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 
 	# get config object
 	def getConfig(self):
 		return self.config
-			
+	
+	# get summary sentences		
 	def getSummary(self, filePath):
-		minSentLength = self.config.getIntConfig("summ.min.sentence.length")[0]
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		normalizer = self.config.getStringConfig("summ.length.normalizer")[0]
 		
 		docSent = DocSentences(filePath, minSentLength, self.verbose)
@@ -92,8 +94,8 @@ class SummariseByTermFreq:
  		print "after soerting num sentences " + str(len(sortedSents))
  		
  		#retain top sentences
- 		summSize  = self.config.getIntConfig("summ.size")[0]
- 		byCount = self.config.getBooleanConfig("summ.byCount")[0]
+ 		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
  		if not byCount:
  			summSize = (len(sortedSents) * summSize) / 100
  		print "summSize " + str(summSize)
@@ -104,7 +106,7 @@ class SummariseByTermFreq:
  		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
  		
 # sum basic summarizer		
-class SumBasic:
+class SumBasicSumm:
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -166,5 +168,91 @@ class SumBasic:
  		
  		topSentences = sorted(topSentences, key=takeFirst)	
  		return list(map(lambda ts: (ts[1], ts[2]), topSentences))
+
+# sum basic summarizer		
+class TextRankSumm:
+	def __init__(self, configFile):
+		defValues = {}
+		defValues["common.verbose"] = (False, None)
+		defValues["common.data.directory"] = (None, "missing data dir")
+		defValues["common.data.file"] = (None, "missing data file")
+		defValues["Common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+
+	# get config object
+	def getConfig(self):
+		return self.config
+
+	def getSummary(self, filePath=None, text=None):
+		if filePath:
+			with open(filePath, 'r') as contentFile:
+				content = contentFile.read()
+		elif text:
+			content = text
+		else:
+			raise ValueError("either file path or text must be provided")
+
+ 		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
+		if byCount:
+			fraction = 0.2
+			wordCount = summSize
+		else:
+			fraction = float(summSize) / 100
+			wordCount = None
+		return summarize(content, ratio=fraction, word_count=wordCount, split=True)
  		
- 		
+# sentence selection by max marginal relevance
+class MaxMarginalRelevance: 	
+	def __init__(self, termFreq, byCount, normalized):
+		self.termFreq = termFreq
+		self.byCount = byCount
+		self.normalized = normalized
+	
+	def select(self, sentsWithScore, numSel, regParam, noveltyAggr):
+		#normalize scores
+		mss = 0
+		for sc in sentsWithScore:
+			if sc[2] > msc:
+				msc = sc[2]
+		msc = float(msc)
+		sentsWithScore = list(map(lambda sc: (sc[0], sc[1], sc[2]/msc), sentsWithScore))		
+
+
+		selected = []
+		for i in range(numSel):
+			maxSc = 0
+			nextSel = None
+			nextVec = None
+			for sc in sentsWithScore:
+				words = sc[1]
+				vec = termFreq.getVector(words, self.byCount, self.normalized)
+				if len(selected) > 0:	
+					dists = list(map(lambda se: cosineDistance(vec, se[4]), selected))
+					if noveltyAggr == "max":
+						novelty = max(dists)
+					elif noveltyAggr == "min":
+						novelty = min(dists)
+					elif noveltyAggr == "avearge":
+						novelty = sum(dists) / len(dists)
+					else:
+						raise ValueError("invalid novelty aggregator")
+				else:
+					novelty = 0
+				newSc = regParam * sc[2] + (1.0 - regParam) * novelty
+				if newSc > maxSc:
+					maxSc = newSc
+					nextSel = sc
+					nextVec = vec
+			next = (nextSel[0], nextSel[1], nextSel[2], maxSc, nextVec)
+			selected.append(next)
+			sentsWithScore.remove(nextSel)
+				
+		#sort by index
+		selected = sorted(selected, key=takeFirst)	
+		return selected
+
+	
+	

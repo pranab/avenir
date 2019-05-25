@@ -28,18 +28,8 @@ if __name__ == "__main__":
 	configFile  = sys.argv[1]
 	op  = sys.argv[2]
 	if op == "tfSumm":
-		summarizer = SummariseByTermFreq(configFile)
-		config = summarizer.getConfig()
-		filePath = config.getStringConfig("common.data.file")[0]
-		sumSenteces = summarizer.getSummary(filePath)
-		showScore = config.getBooleanConfig("summ.show.score")[0]
-		for sen in sumSenteces:
-			sent =  sen[0]
-			if showScore:
-				sent = sent + "  (" + str(sen[1]) + ")"
-			print sent
-	elif op == "sbSumm":
-		summarizer = SumBasic(configFile)
+		print "executing term freq summarizer"
+		summarizer = TermFreqSumm(configFile)
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
@@ -49,4 +39,25 @@ if __name__ == "__main__":
 			if showScore:
 				sent = sent + "  (" + str(sen[1]) + ")"
 			print sent
+	elif op == "sbSumm":
+		print "executing sum basic summarizer"
+		summarizer = SumBasicSumm(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		showScore = config.getBooleanConfig("common.show.score")[0]
+		for sen in sumSenteces:
+			sent =  sen[0]
+			if showScore:
+				sent = sent + "  (" + str(sen[1]) + ")"
+			print sent
+	elif op == "trSumm":
+		print "executing text rank summarizer"
+		summarizer = TextRankSumm(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		print "num sentences " + str(len(sumSenteces)) 
+		for sen in sumSenteces:
+			print sen
 	
