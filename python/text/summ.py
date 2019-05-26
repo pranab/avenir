@@ -51,11 +51,11 @@ class TermFreqSumm:
 		return self.config
 	
 	# get summary sentences		
-	def getSummary(self, filePath):
+	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		normalizer = self.config.getStringConfig("summ.length.normalizer")[0]
 		
-		docSent = DocSentences(filePath, minSentLength, self.verbose)
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 
 		termTable = TfIdf(None, False)
@@ -123,9 +123,9 @@ class SumBasicSumm:
 	def getConfig(self):
 		return self.config
 			
-	def getSummary(self, filePath):
+	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
-		docSent = DocSentences(filePath, minSentLength, self.verbose)
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		
 		# term count table for all words
@@ -185,7 +185,7 @@ class TextRankSumm:
 	def getConfig(self):
 		return self.config
 
-	def getSummary(self, filePath=None, text=None):
+	def getSummary(self, filePath, text=None):
 		if filePath:
 			with open(filePath, 'r') as contentFile:
 				content = contentFile.read()

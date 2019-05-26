@@ -208,6 +208,7 @@ class TfIdf:
 		self.vocabulary = set()
 		self.wordIndex = None
 		self.verbose = verbose
+		self.vecWords = None
 	
 	# count words in a doc
 	def countDocWords(self, words):
@@ -273,6 +274,26 @@ class TfIdf:
 	def creatWordIndex(self):
 		self.wordIndex = {word : idx for idx, word in enumerate(list(self.vocabulary))}
 
+	# get vector
+	def getVector(self, words, byCount, normalized):
+		if self.vecWords is None:
+			self.vecWords = list(self.wordCounter)
+		vec = list(map(lambda vw: self.getVecElem(vw, words, byCount, normalized), self.vecWords))
+		return vec
+	
+	# vector element
+	def getVecElem(self, vw, words, byCount, normalized):
+		el = 0
+		if vw in words:
+			if byCount:
+				if normalized:
+					el = self.wordFreq[vw]
+				else:
+					el = self.wordCounter[vw]
+			else:
+				el = 1
+		return el
+				
 	# save 
 	def save(self, saveFile):
 		sf = open(saveFile, "wb")
@@ -290,18 +311,22 @@ class TfIdf:
 # sentence processor
 class DocSentences:
 	# initialize
-	def __init__(self, filePath, minLength, verbose):
-		self.filePath = filePath
-		with open(filePath, 'r') as contentFile:
-			content = contentFile.read()
+	def __init__(self, filePath, minLength, verbose, text=None):
+		if filePath:
+			self.filePath = filePath
+			with open(filePath, 'r') as contentFile:
+				content = contentFile.read()
+		elif text:
+			content = text
+		else:
+			raise valueError("either file path or text must be provided")
+
 		#self.sentences = content.split('.')
 		tp = TextPreProcessor()
 		content = tp.removeNonAsciiFromText(content)
 		sentences = sent_tokenize(content)
 		self.sentences = list(filter(lambda s: len(nltk.word_tokenize(s)) >= minLength, sentences))
 		print "num of senteces after length filter " + str(len(self.sentences))
-
-		print "num of sentences " + str(len(self.sentences))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
 	def getSentencesAsTokens(self):
