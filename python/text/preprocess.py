@@ -329,11 +329,22 @@ class DocSentences:
 		print "num of senteces after length filter " + str(len(self.sentences))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
+	# get sentence tokens
 	def getSentencesAsTokens(self):
 		return self.sentencesAsTokens
-
+	
+	# get sentences
 	def getSentences(self):
 		return self.sentences
+	
+	# build term freq table
+	def getTermFreqTable(self):
+		# term count table for all words
+		termTable = TfIdf(None, False)
+		sentWords = self.getSentencesAsTokens()
+		for seWords in sentWords:
+			termTable.countDocWords(seWords)
+		return termTable
 
 # sentence processor
 class DirFiles:

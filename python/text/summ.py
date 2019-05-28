@@ -24,6 +24,7 @@ import pickle
 import jprops
 import math
 from gensim.summarization.summarizer import summarize
+from gensim import corpora, models
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -169,7 +170,78 @@ class SumBasicSumm:
  		topSentences = sorted(topSentences, key=takeFirst)	
  		return list(map(lambda ts: (ts[1], ts[2]), topSentences))
 
-# sum basic summarizer		
+# tatent sematic analysis  summarizer		
+class LatentSemSumm:
+	def __init__(self, configFile):
+		defValues = {}
+		defValues["common.verbose"] = (False, None)
+		defValues["common.data.directory"] = (None, "missing data dir")
+		defValues["common.data.file"] = (None, "missing data file")
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["Common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
+		defValues["common.show.score"] = (False, None)
+		defValues["lsi.num.topics"] = (5, None)
+		defValues["lsi.chunk.size"] = (20000, None)
+		defValues["lsi.decay"] = (1.0, None)
+		defValues["lsi.distributed"] = (False, None)
+		defValues["lsi.onepass"] = (True, None)
+		defValues["lsi.power.iters"] = (2, None)
+		defValues["lsi.extra.samples"] = (100, None)
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+ 	
+	# get config object
+	def getConfig(self):
+		return self.config
+
+	def getSummary(self, filePath, text=None):
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
+		sents = docSent.getSentences()
+
+		#LSI model
+		sentTokens = docSent.getSentencesAsTokens()
+		dct = corpora.Dictionary(sentTokens)
+		corpus = list(map(lambda st: dct.doc2bow(st), sentTokens))
+		numTopics = self.config.getIntConfig("lsi.num.topics")[0]
+		chunkSize = self.config.getIntConfig("lsi.chunk.size")[0]
+		decay = self.config.getFloatConfig("lsi.decay")[0]
+		distributed = self.config.getBooleanConfig("lsi.distributed")[0]
+		onepass = self.config.getBooleanConfig("lsi.onepass")[0]
+		powerIters = self.config.getIntConfig("lsi.power.iters")[0]
+		extraSamples = self.config.getIntConfig("lsi.extra.samples")[0]
+		lsi = models.LsiModel(corpus, id2word=dct, num_topics=numTopics, chunksize=chunkSize, decay=decay,\
+			distributed=distributed, onepass=onepass, power_iters=powerIters, extra_samples=extraSamples)
+		vecCorpus = lsi[corpus]
+
+		#sort each vector by score
+		sortedVecs = list(map(lambda i: list(), range(numTopics)))
+		for i,dv in enumerate(vecCorpus):
+			for sc in dv:
+				isc = (i, abs(sc[1]))
+				sortedVecs[sc[0]].append(isc)
+		sortedVecs = list(map(lambda iscl: sorted(iscl,key=takeSecond,reverse=True), sortedVecs))	
+		if self.verbose:
+			print "num topics " + str(len(sortedVecs))
+			print "lat vec length " + str(len(sortedVecs[0]))
+
+		#select sentences
+ 		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
+ 		if not byCount:
+ 			summSize = (len(sortedSents) * summSize) / 100
+		numScans = (summSize / numTopics) + 1
+
+		topSentences = []
+		for i in range(numScans):
+			for j in range(numTopics):
+				vecs = sortedVecs[j]
+				topSentences.append(vecs[i])
+		topSentences = sorted(topSentences[:summSize], key=takeFirst)
+		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
+
+# text rank summarizer		
 class TextRankSumm:
 	def __init__(self, configFile):
 		defValues = {}

@@ -24,6 +24,15 @@ sys.path.append(os.path.abspath("../text"))
 from preprocess import *
 from summ import *
 
+def display(config, sumSenteces):
+	print "num sentences " + str(len(sumSenteces)) 
+	showScore = config.getBooleanConfig("common.show.score")[0]
+	for sen in sumSenteces:
+		sent =  sen[0]
+		if showScore:
+			sent = sent + "  (" + str(sen[1]) + ")"
+		print sent
+		
 if __name__ == "__main__":
 	configFile  = sys.argv[1]
 	op  = sys.argv[2]
@@ -51,6 +60,13 @@ if __name__ == "__main__":
 			if showScore:
 				sent = sent + "  (" + str(sen[1]) + ")"
 			print sent
+	elif op == "lsSumm":
+		print "executing LSI summarizer"
+		summarizer = LatentSemSumm(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		display(config, sumSenteces)
 	elif op == "trSumm":
 		print "executing text rank summarizer"
 		summarizer = TextRankSumm(configFile)
