@@ -42,24 +42,14 @@ if __name__ == "__main__":
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
-		showScore = config.getBooleanConfig("common.show.score")[0]
-		for sen in sumSenteces:
-			sent =  sen[0]
-			if showScore:
-				sent = sent + "  (" + str(sen[1]) + ")"
-			print sent
+		display(config, sumSenteces)
 	elif op == "sbSumm":
 		print "executing sum basic summarizer"
 		summarizer = SumBasicSumm(configFile)
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
-		showScore = config.getBooleanConfig("common.show.score")[0]
-		for sen in sumSenteces:
-			sent =  sen[0]
-			if showScore:
-				sent = sent + "  (" + str(sen[1]) + ")"
-			print sent
+		display(config, sumSenteces)
 	elif op == "lsSumm":
 		print "executing LSI summarizer"
 		summarizer = LatentSemSumm(configFile)

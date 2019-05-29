@@ -173,6 +173,10 @@ def cosineSimilarity(x,y):
 	denominator = squareRooted(x) * squareRooted(y)
 	return round(numerator / float(denominator), 3)
 
+#cosine distance
+def cosineDistance(x,y):
+	return 1.0 - cosineSimilarity(x,y)
+
 # manhattan distance
 def manhattanDistance(x,y):
 	return sum(abs(a-b) for a,b in zip(x,y))
@@ -190,4 +194,11 @@ def jaccardSimilarity(x,y):
 	intersectionCardinality = len(set.intersection(*[set(x), set(y)]))
 	unionCardinality = len(set.union(*[set(x), set(y)]))
  	return intersectionCardinality/float(unionCardinality)
+
+# norm
+def norm(values, po=2):
+	no = sum(list(map(lambda v: pow(v,po), values)))
+	no = pow(no,1.0/po)
+	return list(map(lambda v: v/no, values))
+	
 
