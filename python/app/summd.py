@@ -66,4 +66,11 @@ if __name__ == "__main__":
 		print "num sentences " + str(len(sumSenteces)) 
 		for sen in sumSenteces:
 			print sen
+	elif op == "etrSumm":
+		print "executing embedding text rank  summarizer"
+		summarizer = EmbeddingTextRankSumm(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		display(config, sumSenteces)
 	

@@ -25,6 +25,9 @@ import jprops
 import math
 from gensim.summarization.summarizer import summarize
 from gensim import corpora, models
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+import networkx as nx
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -275,7 +278,95 @@ class TextRankSumm:
 			fraction = float(summSize) / 100
 			wordCount = None
 		return summarize(content, ratio=fraction, word_count=wordCount, split=True)
- 		
+
+# sum basic summarizer		
+class EmbeddingTextRankSumm:
+	def __init__(self, configFile):
+		defValues = {}
+		defValues["common.verbose"] = (False, None)
+		defValues["common.data.directory"] = (None, "missing data dir")
+		defValues["common.data.file"] = (None, "missing data file")
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
+		defValues["common.show.score"] = (False, None)
+		defValues["etr.model.path"] = (None, "missing embedding model file path")
+		defValues["etr.vec.size"] = (None, "missing embedding vector size")
+		defValues["etr.max.missing.vec"] = (0.05, None)
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		self.totalWordCount = 0
+		self.missingWordCount = 0
+		
+ 	
+	# get config object
+	def getConfig(self):
+		return self.config
+			
+	def getSummary(self, filePath, text=None):
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
+		sents = docSent.getSentences()
+		sentWords = docSent.getSentencesAsTokens()
+		numSents = len(sents)
+		vecSize = self.config.getIntConfig("etr.vec.size")[0]
+		
+		#glove embedding
+		emModPath = self.config.getStringConfig("etr.model.path")[0]
+		embeddings = {}
+		with open(emModPath, 'r') as fi:
+			for line in fi:
+				values = line.split()
+				word = values[0]
+				coefs = np.asarray(values[1:], dtype='float32')
+				embeddings[word] = coefs
+		
+		#sentence vecs
+		sentVecs = []
+		for sw in sentWords:
+			wv = list(map(lambda w: self.getWordVec(w, embeddings, vecSize), sw))
+			sv = sum(wv) / len(sw)
+			sentVecs.append(sv)
+		if self.verbose:
+			print "num of words  " + str(self.totalWordCount)
+			print "num of missing word embedding " + str(self.missingWordCount)
+		maxMissingVec = self.config.getFloatConfig("etr.max.missing.vec")[0]
+		fracMissing = self.missingWordCount / float(self.totalWordCount)
+		if fracMissing > maxMissingVec:
+			print "too many missing vectore..... quitting"
+			return []
+			
+		#similarity
+		sentVec2d = np.array(sentVecs)
+		simMat = cosine_similarity(sentVec2d)
+		for i in range(numSents):
+			simMat[i][i] = 0
+
+		#page rank
+		graph = nx.from_numpy_array(simMat)
+		scores = nx.pagerank(graph)
+		
+		#top sentences
+		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
+ 		if not byCount:
+ 			summSize = (len(sortedSents) * summSize) / 100
+
+		sentWithScores = enumerate(scores)
+		sortedSents = sorted(sentWithScores, key=takeSecond, reverse=True)
+		topSents = sortedSents[:summSize]
+		topSents = sorted(topSents, key=takeFirst)
+ 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
+
+	def getWordVec(self, w, embeddings, vecSize):
+		self.totalWordCount += 1
+		if w in embeddings:
+			v = embeddings.get(w)
+		else:
+			self.missingWordCount += 1
+			v = np.zeros((vecSize,))
+		return v	
+		
 # sentence selection by max marginal relevance
 class MaxMarginalRelevance: 	
 	def __init__(self, termFreq, byCount, normalized):
