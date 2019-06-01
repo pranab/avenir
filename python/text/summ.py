@@ -28,6 +28,7 @@ from gensim import corpora, models
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
+from sklearn.decomposition import NMF
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -173,7 +174,7 @@ class SumBasicSumm:
  		topSentences = sorted(topSentences, key=takeFirst)	
  		return list(map(lambda ts: (ts[1], ts[2]), topSentences))
 
-# tatent sematic analysis  summarizer		
+# latent sematic analysis  summarizer		
 class LatentSemSumm:
 	def __init__(self, configFile):
 		defValues = {}
@@ -229,6 +230,92 @@ class LatentSemSumm:
 			print "num topics " + str(len(sortedVecs))
 			print "lat vec length " + str(len(sortedVecs[0]))
 
+		#select sentences
+ 		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
+ 		if not byCount:
+ 			summSize = (len(sortedSents) * summSize) / 100
+		numScans = (summSize / numTopics) + 1
+
+		topSentences = []
+		for i in range(numScans):
+			for j in range(numTopics):
+				vecs = sortedVecs[j]
+				topSentences.append(vecs[i])
+		topSentences = sorted(topSentences[:summSize], key=takeFirst)
+		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
+
+# non negative matrix factorization summarizer		
+class NonNegMatFactSumm:
+	def __init__(self, configFile):
+		defValues = {}
+		defValues["common.verbose"] = (False, None)
+		defValues["common.data.directory"] = (None, "missing data dir")
+		defValues["common.data.file"] = (None, "missing data file")
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["Common.size"] = (5, None)
+		defValues["common.byCount"] = (True, None)
+		defValues["common.show.score"] = (False, None)
+		defValues["nmf.num.topics"] = (5, None)
+		defValues["nmf.init"] = (None, None)
+		defValues["nmf.solver"] = ("cd", None)
+		defValues["nmf.beta.loss"] = ("frobenius", None)
+		defValues["nmf.tol"] = (0.0001, None)
+		defValues["nmf.max.iter"] = (200, None)
+		defValues["nmf.random.state"] = (None, None)
+		defValues["nmf.alpha"] = (0.0, None)
+		defValues["nmf.l1.ratio"] = (0.0, None)
+		defValues["nmf.shuffle"] = (False, None)
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+ 	
+	# get config object
+	def getConfig(self):
+		return self.config
+
+	def getSummary(self, filePath, text=None):
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
+		sents = docSent.getSentences()
+		numTopics = self.config.getIntConfig("nmf.num.topics")[0]
+		
+		
+		# term count table for all words
+		termTable = TfIdf(None, False)
+		sentTokens = docSent.getSentencesAsTokens()
+		for seToks in sentTokens:
+			termTable.countDocWords(seToks)
+			
+		#vectorize
+		sentVecs = list(map(lambda seToks: termTable.getVector(seToks, True, False), sentTokens))
+		
+		# NMF
+		init = self.config.getStringConfig("nmf.init")[0]
+		solver = self.config.getStringConfig("nmf.solver")[0]
+		betaLoss = self.config.getStringConfig("nmf.beta.loss")[0]
+		betaLoss = typedValue(betaLoss)
+		tol = self.config.getFloatConfig("nmf.tol")[0]
+		maxIter = self.config.getIntConfig("nmf.max.iter")[0]
+		randomState = self.config.getIntConfig("nmf.random.state")[0]
+		alpha = self.config.getFloatConfig("nmf.alpha")[0]
+		l1Ratio = self.config.getFloatConfig("nmf.l1.ratio")[0]
+		shuffle = self.config.getBooleanConfig("nmf.shuffle")[0]
+		mat = np.array(sentVecs)
+		model = NMF(n_components=numTopics, init=init, solver=solver, beta_loss=betaLoss, tol=tol,\
+			max_iter=maxIter, random_state=randomState, alpha=alpha, l1_ratio=l1Ratio, shuffle=shuffle)
+		vecCorpus = model.fit_transform(mat)
+		H = model.components_
+		if self.verbose:
+			print vecCorpus.shape
+			print vecCorpus
+		
+		#sort each vector by score
+		sortedVecs = []
+		for i in range(numTopics):
+			col = list(enumerate(list(vecCorpus[:,i])))
+			col = sorted(col,key=takeSecond,reverse=True)
+			sortedVecs.append(col)
+		
 		#select sentences
  		summSize  = self.config.getIntConfig("common.size")[0]
  		byCount = self.config.getBooleanConfig("common.byCount")[0]
@@ -365,6 +452,8 @@ class EmbeddingTextRankSumm:
 		else:
 			self.missingWordCount += 1
 			v = np.zeros((vecSize,))
+			if self.verbose:
+				print "missing vector for " + w
 		return v	
 		
 # sentence selection by max marginal relevance

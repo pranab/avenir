@@ -57,6 +57,13 @@ if __name__ == "__main__":
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
+	elif op == "nmfSumm":
+		print "executing non negative matrix factorization summarizer"
+		summarizer = NonNegMatFactSumm(configFile)
+		config = summarizer.getConfig()
+		filePath = config.getStringConfig("common.data.file")[0]
+		sumSenteces = summarizer.getSummary(filePath)
+		display(config, sumSenteces)
 	elif op == "trSumm":
 		print "executing text rank summarizer"
 		summarizer = TextRankSumm(configFile)
