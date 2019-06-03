@@ -46,8 +46,13 @@ class TermFreqSumm:
 		defValues["common.min.sentence.length"] = (5, None)
 		defValues["common.size"] = (5, None)
 		defValues["common.byCount"] = (True, None)
-		defValues["summ.length.normalizer"] = ("linear", None)
 		defValues["common.show.score"] = (False, None)
+		defValues["tf.length.normalizer"] = ("linear", None)
+		defValues["tf.diversify"] = (False, None)
+		defValues["tf.diversify.byCount"] = (True, None)
+		defValues["tf.diversify.normalized"] = (True, None)
+		defValues["tf.diversify.regularizer"] = (0.7, None)
+		defValues["tf.diversify.aggr"] = ("average", None)
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 
@@ -58,7 +63,7 @@ class TermFreqSumm:
 	# get summary sentences		
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
-		normalizer = self.config.getStringConfig("summ.length.normalizer")[0]
+		normalizer = self.config.getStringConfig("tf.length.normalizer")[0]
 		
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -94,21 +99,41 @@ class TermFreqSumm:
  		if normalizer == "log":
  			zippedSents = list(map(lambda zs: (zs[0], int(zs[1] * (1.0 / (1.0 + math.log(zs[2]/minLen))))), zippedSents))
  		
- 		# sort of decreasing score	
- 		sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
- 		print "after soerting num sentences " + str(len(sortedSents))
- 		
- 		#retain top sentences
+ 		# top count
  		summSize  = self.config.getIntConfig("common.size")[0]
  		byCount = self.config.getBooleanConfig("common.byCount")[0]
  		if not byCount:
  			summSize = (len(sortedSents) * summSize) / 100
  		print "summSize " + str(summSize)
- 		topSents = sortedSents[:summSize]
+
+		diversify = self.config.getBooleanConfig("tf.diversify")[0]
+		if diversify:
+			#sentence index, words and score
+			termTable.getWordFreq()
+			zippedSentsWithWords = zip(zippedSents, sentWords)
+			sentsWithScore = list(map(lambda zsw: (zsw[0][0], zsw[1], zsw[0][1]), zippedSentsWithWords))
+			
+			#diversify
+			byCount = self.config.getBooleanConfig("tf.diversify.byCount")[0]
+			normalized = self.config.getBooleanConfig("tf.diversify.normalized")[0]
+			regParam = self.config.getFloatConfig("tf.diversify.regularizer")[0]
+			diversityAggr = self.config.getStringConfig("tf.diversify.aggr")[0]
+			mmr = MaxMarginalRelevance(termTable, byCount, normalized)
+			topSents = mmr.select(sentsWithScore, summSize, regParam, diversityAggr)
+			
+			#include sentence, original score, diversify base score
+			topSents =  list(map(lambda sc: (sents[sc[0]], sc[2],  sc[3]), topSents))	
+			return topSents
+		else:
+ 			# sort by decreasing score	
+ 			sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
+ 			print "after soerting num sentences " + str(len(sortedSents))
+
+ 			topSents = sortedSents[:summSize]
  		
- 		#sort sentence by position 
- 		topSents = sorted(topSents, key=takeFirst)	
- 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
+ 			#sort sentence by position 
+ 			topSents = sorted(topSents, key=takeFirst)	
+ 			return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
  		
 # sum basic summarizer		
 class SumBasicSumm:
@@ -463,16 +488,16 @@ class MaxMarginalRelevance:
 		self.byCount = byCount
 		self.normalized = normalized
 	
-	def select(self, sentsWithScore, numSel, regParam, noveltyAggr):
+	def select(self, sentsWithScore, numSel, regParam, diversityAggr):
 		#normalize scores
-		mss = 0
+		msc = 0
 		for sc in sentsWithScore:
 			if sc[2] > msc:
 				msc = sc[2]
 		msc = float(msc)
 		sentsWithScore = list(map(lambda sc: (sc[0], sc[1], sc[2]/msc), sentsWithScore))		
 
-
+		#diversify
 		selected = []
 		for i in range(numSel):
 			maxSc = 0
@@ -480,24 +505,28 @@ class MaxMarginalRelevance:
 			nextVec = None
 			for sc in sentsWithScore:
 				words = sc[1]
-				vec = termFreq.getVector(words, self.byCount, self.normalized)
+				vec = self.termFreq.getVector(words, self.byCount, self.normalized)
 				if len(selected) > 0:	
 					dists = list(map(lambda se: cosineDistance(vec, se[4]), selected))
-					if noveltyAggr == "max":
-						novelty = max(dists)
-					elif noveltyAggr == "min":
-						novelty = min(dists)
-					elif noveltyAggr == "avearge":
-						novelty = sum(dists) / len(dists)
+					if diversityAggr == "max":
+						diversity = max(dists)
+					elif diversityAggr == "min":
+						diversity = min(dists)
+					elif diversityAggr == "average":
+						diversity = sum(dists) / len(dists)
 					else:
-						raise ValueError("invalid novelty aggregator")
+						raise ValueError("invalid diversity aggregator " + diversityAggr)
 				else:
-					novelty = 0
-				newSc = regParam * sc[2] + (1.0 - regParam) * novelty
+					diversity = 0
+
+				#diversity based score
+				newSc = regParam * sc[2] + (1.0 - regParam) * diversity
 				if newSc > maxSc:
 					maxSc = newSc
 					nextSel = sc
 					nextVec = vec
+			
+			#add new score and vector 
 			next = (nextSel[0], nextSel[1], nextSel[2], maxSc, nextVec)
 			selected.append(next)
 			sentsWithScore.remove(nextSel)
