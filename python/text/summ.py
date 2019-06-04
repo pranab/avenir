@@ -36,8 +36,36 @@ from mlutil import *
 from preprocess import *
 nltk.download('punkt')
 	
+#base classifier class
+class BaseSummarizer(object):
+	def __init__(self, configFile, defValues):
+		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+	
+	#initialize config	
+	def initConfig(self, configFile, defValues):
+		self.config = Configuration(configFile, defValues)
+	
+	# get config object
+	def getConfig(self):
+		return self.config
+
+	# top sentence count
+	def getTopCount(self, sents):
+		# top count
+ 		summSize  = self.config.getIntConfig("common.size")[0]
+ 		byCount = self.config.getBooleanConfig("common.byCount")[0]
+ 		if not byCount:
+ 			summSize = (len(sents) * summSize) / 100
+ 		print "summSize " + str(summSize)
+		return summSize
+	
+	# summarize everything
+	def summarizeAll(self, sents):
+		return list(map(lambda s: (s, 1.0), sents))	
+
 # text summarizer based on term frequency
-class TermFreqSumm:
+class TermFreqSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -53,20 +81,16 @@ class TermFreqSumm:
 		defValues["tf.diversify.normalized"] = (True, None)
 		defValues["tf.diversify.regularizer"] = (0.7, None)
 		defValues["tf.diversify.aggr"] = ("average", None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		super(TermFreqSumm, self).__init__(configFile, defValues)
 
-	# get config object
-	def getConfig(self):
-		return self.config
-	
 	# get summary sentences		
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		normalizer = self.config.getStringConfig("tf.length.normalizer")[0]
-		
+
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
 
 		termTable = TfIdf(None, False)
 		if self.verbose:
@@ -99,13 +123,6 @@ class TermFreqSumm:
  		if normalizer == "log":
  			zippedSents = list(map(lambda zs: (zs[0], int(zs[1] * (1.0 / (1.0 + math.log(zs[2]/minLen))))), zippedSents))
  		
- 		# top count
- 		summSize  = self.config.getIntConfig("common.size")[0]
- 		byCount = self.config.getBooleanConfig("common.byCount")[0]
- 		if not byCount:
- 			summSize = (len(sortedSents) * summSize) / 100
- 		print "summSize " + str(summSize)
-
 		diversify = self.config.getBooleanConfig("tf.diversify")[0]
 		if diversify:
 			#sentence index, words and score
@@ -136,7 +153,7 @@ class TermFreqSumm:
  			return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
  		
 # sum basic summarizer		
-class SumBasicSumm:
+class SumBasicSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -146,17 +163,13 @@ class SumBasicSumm:
 		defValues["Common.size"] = (5, None)
 		defValues["common.byCount"] = (True, None)
 		defValues["common.show.score"] = (False, None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
- 	
-	# get config object
-	def getConfig(self):
-		return self.config
-			
+		super(SumBasicSumm, self).__init__(configFile, defValues)
+ 			
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
 		
 		# term count table for all words
 		termTable = TfIdf(None, False)
@@ -165,11 +178,6 @@ class SumBasicSumm:
 			termTable.countDocWords(seWords)
 		wordFreq = termTable.getWordFreq()
  		
-		summSize  = self.config.getIntConfig("common.size")[0]
-		byCount = self.config.getBooleanConfig("common.byCount")[0]
-		if not byCount:
- 			summSize = (len(sortedSents) * summSize) / 100
-
 		topSentences = []
 		for i in range(summSize):
 			#score for each sentence
@@ -200,7 +208,7 @@ class SumBasicSumm:
  		return list(map(lambda ts: (ts[1], ts[2]), topSentences))
 
 # latent sematic analysis  summarizer		
-class LatentSemSumm:
+class LatentSemSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -217,17 +225,13 @@ class LatentSemSumm:
 		defValues["lsi.onepass"] = (True, None)
 		defValues["lsi.power.iters"] = (2, None)
 		defValues["lsi.extra.samples"] = (100, None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		super(LatentSemSumm, self).__init__(configFile, defValues)
  	
-	# get config object
-	def getConfig(self):
-		return self.config
-
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
 
 		#LSI model
 		sentTokens = docSent.getSentencesAsTokens()
@@ -256,10 +260,6 @@ class LatentSemSumm:
 			print "lat vec length " + str(len(sortedVecs[0]))
 
 		#select sentences
- 		summSize  = self.config.getIntConfig("common.size")[0]
- 		byCount = self.config.getBooleanConfig("common.byCount")[0]
- 		if not byCount:
- 			summSize = (len(sortedSents) * summSize) / 100
 		numScans = (summSize / numTopics) + 1
 
 		topSentences = []
@@ -271,7 +271,7 @@ class LatentSemSumm:
 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
 
 # non negative matrix factorization summarizer		
-class NonNegMatFactSumm:
+class NonNegMatFactSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -291,17 +291,13 @@ class NonNegMatFactSumm:
 		defValues["nmf.alpha"] = (0.0, None)
 		defValues["nmf.l1.ratio"] = (0.0, None)
 		defValues["nmf.shuffle"] = (False, None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
- 	
-	# get config object
-	def getConfig(self):
-		return self.config
+		super(NonNegMatFactSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
 		numTopics = self.config.getIntConfig("nmf.num.topics")[0]
 		
 		
@@ -357,7 +353,7 @@ class NonNegMatFactSumm:
 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
 
 # text rank summarizer		
-class TextRankSumm:
+class TextRankSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -365,12 +361,7 @@ class TextRankSumm:
 		defValues["common.data.file"] = (None, "missing data file")
 		defValues["Common.size"] = (5, None)
 		defValues["common.byCount"] = (True, None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
-
-	# get config object
-	def getConfig(self):
-		return self.config
+		super(TextRankSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
 		if filePath:
@@ -392,7 +383,7 @@ class TextRankSumm:
 		return summarize(content, ratio=fraction, word_count=wordCount, split=True)
 
 # sum basic summarizer		
-class EmbeddingTextRankSumm:
+class EmbeddingTextRankSumm(BaseSummarizer):
 	def __init__(self, configFile):
 		defValues = {}
 		defValues["common.verbose"] = (False, None)
@@ -405,20 +396,15 @@ class EmbeddingTextRankSumm:
 		defValues["etr.model.path"] = (None, "missing embedding model file path")
 		defValues["etr.vec.size"] = (None, "missing embedding vector size")
 		defValues["etr.max.missing.vec"] = (0.05, None)
-		self.config = Configuration(configFile, defValues)
-		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.totalWordCount = 0
 		self.missingWordCount = 0
-		
+		super(EmbeddingTextRankSumm, self).__init__(configFile, defValues) 	
  	
-	# get config object
-	def getConfig(self):
-		return self.config
-			
 	def getSummary(self, filePath, text=None):
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
 		sentWords = docSent.getSentencesAsTokens()
 		numSents = len(sents)
 		vecSize = self.config.getIntConfig("etr.vec.size")[0]
@@ -459,11 +445,6 @@ class EmbeddingTextRankSumm:
 		scores = nx.pagerank(graph)
 		
 		#top sentences
-		summSize  = self.config.getIntConfig("common.size")[0]
- 		byCount = self.config.getBooleanConfig("common.byCount")[0]
- 		if not byCount:
- 			summSize = (len(sortedSents) * summSize) / 100
-
 		sentWithScores = enumerate(scores)
 		sortedSents = sorted(sentWithScores, key=takeSecond, reverse=True)
 		topSents = sortedSents[:summSize]
