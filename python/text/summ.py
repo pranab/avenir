@@ -91,6 +91,8 @@ class TermFreqSumm(BaseSummarizer):
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
 
 		termTable = TfIdf(None, False)
 		if self.verbose:
@@ -170,6 +172,8 @@ class SumBasicSumm(BaseSummarizer):
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
 		
 		# term count table for all words
 		termTable = TfIdf(None, False)
@@ -232,6 +236,8 @@ class LatentSemSumm(BaseSummarizer):
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
 
 		#LSI model
 		sentTokens = docSent.getSentencesAsTokens()
@@ -298,6 +304,8 @@ class NonNegMatFactSumm(BaseSummarizer):
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
 		numTopics = self.config.getIntConfig("nmf.num.topics")[0]
 		
 		
@@ -405,6 +413,8 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
 		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
 		sentWords = docSent.getSentencesAsTokens()
 		numSents = len(sents)
 		vecSize = self.config.getIntConfig("etr.vec.size")[0]
