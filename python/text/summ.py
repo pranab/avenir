@@ -64,6 +64,15 @@ class BaseSummarizer(object):
 	def summarizeAll(self, sents):
 		return list(map(lambda s: (s, 1.0), sents))	
 
+	#get term frequency
+	def getTermFrequency(self, sentWords):
+		# term count table for all words
+		termTable = TfIdf(None, False)
+		for seWords in sentWords:
+			termTable.countDocWords(seWords)
+		termTable.getWordFreq()
+		return termTable
+		
 # text summarizer based on term frequency
 class TermFreqSumm(BaseSummarizer):
 	def __init__(self, configFile):
@@ -367,11 +376,46 @@ class TextRankSumm(BaseSummarizer):
 		defValues["common.verbose"] = (False, None)
 		defValues["common.data.directory"] = (None, "missing data dir")
 		defValues["common.data.file"] = (None, "missing data file")
-		defValues["Common.size"] = (5, None)
+		defValues["common.min.sentence.length"] = (5, None)
+		defValues["common.size"] = (5, None)
 		defValues["common.byCount"] = (True, None)
+		defValues["common.show.score"] = (False, None)
 		super(TextRankSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
+		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
+		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
+		sents = docSent.getSentences()
+		summSize = self.getTopCount(sents)
+		if len(sents) <= summSize:
+			return self.summarizeAll(sents)
+		sentWords = docSent.getSentencesAsTokens()
+		numSents = len(sents)
+		
+		termFreq = self.getTermFrequency(sentWords)
+		
+		#sentence vecs
+		sentVecs = list(map(lambda sw: termFreq.getVector(sw, True, True), sentWords))	
+			
+		#similarity
+		sentVec2d = np.array(sentVecs)
+		simMat = cosine_similarity(sentVec2d)
+		for i in range(numSents):
+			simMat[i][i] = 0
+
+		#page rank
+		graph = nx.from_numpy_array(simMat)
+		scores = nx.pagerank(graph)
+		
+		#top sentences
+		sentWithScores = enumerate(scores)
+		sortedSents = sorted(sentWithScores, key=takeSecond, reverse=True)
+		topSents = sortedSents[:summSize]
+		topSents = sorted(topSents, key=takeFirst)
+ 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
+
+
+	def getSummaryX(self, filePath, text=None):
 		if filePath:
 			with open(filePath, 'r') as contentFile:
 				content = contentFile.read()

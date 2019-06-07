@@ -24,15 +24,13 @@ sys.path.append(os.path.abspath("../text"))
 from preprocess import *
 from summ import *
 
-def display(config, sumSenteces, diversify=False):
+def display(config, sumSenteces):
 	print "num sentences " + str(len(sumSenteces)) 
 	showScore = config.getBooleanConfig("common.show.score")[0]
 	for sen in sumSenteces:
 		sent =  sen[0]
 		if showScore:
 			sent = sent + "  (" + str(sen[1]) + ")"
-			if diversify:
-				sent = sent + "   (" + str(sen[2]) + ")"
 		print sent
 		
 if __name__ == "__main__":
@@ -44,8 +42,7 @@ if __name__ == "__main__":
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
-		diversify = config.getBooleanConfig("tf.diversify")[0]
-		display(config, sumSenteces, diversify)
+		display(config, sumSenteces)
 	elif op == "sbSumm":
 		print "executing sum basic summarizer"
 		summarizer = SumBasicSumm(configFile)
@@ -73,9 +70,7 @@ if __name__ == "__main__":
 		config = summarizer.getConfig()
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
-		print "num sentences " + str(len(sumSenteces)) 
-		for sen in sumSenteces:
-			print sen
+		display(config, sumSenteces)
 	elif op == "etrSumm":
 		print "executing embedding text rank  summarizer"
 		summarizer = EmbeddingTextRankSumm(configFile)
