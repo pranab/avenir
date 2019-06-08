@@ -53,6 +53,8 @@ class LatentDirichletAllocation:
 		defValues["analyze.doc.topic.odds.ratio"] = (1.5, None)
 		defValues["analyze.topic.word.odds.ratio"] = (1.5, None)
 		defValues["analyze.topic.word.top.max"] = (20, None)
+		defValues["analyze.doc.topic.min.count"] = (5, None)
+		defValues["analyze.topic.word.min.count"] = (10, None)
 		defValues["analyze.base.word.distr.file"] = (None, None)
 		defValues["analyze.word.cross.entropy.filter"] = (False, None)
 
@@ -204,6 +206,9 @@ class LatentDirichletAllocation:
 	# topic word distr
 	def getTopicTerms(self, topicId, topN):
 		""" return word distribution for a topic """
+		if self.ldaModel is None:
+			self.dictionary = Dictionary.load(self.getModelFilePath("common.dictionary.file"))
+			self.ldaModel = LdaModel.load(self.getModelFilePath("common.model.file"))
 		idto = self.dictionary.id2token
 		tiDistr =  self.ldaModel.get_topic_terms(topicId, topN)
 		toDistr = [(idto[ti[0]], ti[1])  for ti in tiDistr]
@@ -212,7 +217,12 @@ class LatentDirichletAllocation:
 	# all topic word distr
 	def getAllTopicTerms(self):
 		""" return all topic / word distribution """
-		return self.ldaModel.get_topics()
+		# load dictionary and model
+		self.dictionary = Dictionary.load(self.getModelFilePath("common.dictionary.file"))
+		self.ldaModel = LdaModel.load(self.getModelFilePath("common.model.file"))
+		idto = self.dictionary.id2token
+		allTiDistr = self.ldaModel.get_topics()
+		return allTiDistr
 
 	# get model file path
 	def getModelFilePath(self, fileNameParam):

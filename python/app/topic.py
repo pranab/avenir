@@ -21,7 +21,7 @@ from lda import *
 
 
 # top elements by odds ration
-def topByOddsRatio(distr, oddsRatio):
+def topByOddsRatio(distr, oddsRatio, minCount=None):
 	s = 0.0
 	sel = []
 	for d in distr:
@@ -29,6 +29,8 @@ def topByOddsRatio(distr, oddsRatio):
 		sel.append(d)
 		if (s / (1.0 - s)) > oddsRatio:
 			break	
+	if minCount and len(sel) < minCount:
+		sel = distr[:minCount]
 	return sel
 
 # document word distr marginalizing over topic
@@ -53,6 +55,9 @@ def processResult(config, result, lda, filePaths, verbose):
 	dtOddsRatio = config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
 	twOddsRatio = config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
 	twTopMax = config.getIntConfig("analyze.topic.word.top.max")[0]
+	dtMinCount = config.getIntConfig("analyze.doc.topic.min.count")[0]
+	twMinCount = config.getIntConfig("analyze.topic.word.min.count")[0]
+
 	docByTopic = {}
 	wordsByTopic = {}
 	
@@ -65,7 +70,7 @@ def processResult(config, result, lda, filePaths, verbose):
 		docResult = {}
 		dt.sort(key=takeSecond, reverse=True)
 		print "doc topic distribution " + str(dt)
-		dtTop = topByOddsRatio(dt, dtOddsRatio)
+		dtTop = topByOddsRatio(dt, dtOddsRatio, dtMinCount)
 		print "filtered doc topic distribution " + str(dtTop)
 		# all topics
 		for t in dtTop:
@@ -73,7 +78,7 @@ def processResult(config, result, lda, filePaths, verbose):
 			tid = t[0]
 			appendKeyedList(docByTopic, tid, didx)
 			tw = lda.getTopicTerms(tid, twTopMax)
-			twTop = topByOddsRatio(tw, twOddsRatio)
+			twTop = topByOddsRatio(tw, twOddsRatio, twMinCount)
 			print "filtered topic word distribution " + str(twTop)
 			docResult[tid] = (t[1], twTop)
 			if wordsByTopic.get(tid) is None:
@@ -109,6 +114,14 @@ def crateTermDistr(docs, vocFilt, saveFile):
 def loadTermDistr(saveFile):
 	tfidf = TfIdf.load(saveFile)
 	return tfidf
+
+def getAllTopics(config, lda):
+	numTopic = config.getIntConfig("train.num.topics")[0]
+	topics = []
+	for i in range(numTopic):
+		topTerms = lda.getTopicTerms(i, 10)
+		topics.append(topTerms)
+	return topics
 
 #######################
 configFile  = sys.argv[1]
@@ -211,4 +224,8 @@ elif mode == "loadBaseTermDistr":
 	saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
 	loadTermDistr(saveFile)
 
+elif mode == "getAllTopics":
+	#allTopics = lda.getAllTopicTerms()	
+	topTerms = getAllTopics(config, lda)
+	print topTerms
 
