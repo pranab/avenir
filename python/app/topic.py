@@ -58,6 +58,7 @@ def processResult(config, result, lda, filePaths, verbose):
 	dtMinCount = config.getIntConfig("analyze.doc.topic.min.count")[0]
 	twMinCount = config.getIntConfig("analyze.topic.word.min.count")[0]
 
+	docTopics = []
 	docByTopic = {}
 	wordsByTopic = {}
 	
@@ -71,10 +72,11 @@ def processResult(config, result, lda, filePaths, verbose):
 		dt.sort(key=takeSecond, reverse=True)
 		print "doc topic distribution " + str(dt)
 		dtTop = topByOddsRatio(dt, dtOddsRatio, dtMinCount)
+		docTopics.append(dtTop)
 		print "filtered doc topic distribution " + str(dtTop)
 		# all topics
 		for t in dtTop:
-			print "topic with distr : " + str(t)
+			print "next topic with distr : " + str(t)
 			tid = t[0]
 			appendKeyedList(docByTopic, tid, didx)
 			tw = lda.getTopicTerms(tid, twTopMax)
@@ -90,7 +92,7 @@ def processResult(config, result, lda, filePaths, verbose):
 		# net word dist for doc
 		wdList = netWordDistr(docResult, verbose)
 		print "final doc word distr " + str(wdList)
-	return (docByTopic, wordsByTopic)
+	return (docTopics, docByTopic, wordsByTopic)
 
 # base term ditsribution
 def crateTermDistr(docs, vocFilt, saveFile):
@@ -124,19 +126,19 @@ def getAllTopics(config, lda):
 	return topics
 
 #######################
+
 configFile  = sys.argv[1]
 lda = LatentDirichletAllocation(configFile)
 
-# execute		
-mode = lda.getMode()
+# execute	
+mode = sys.argv[2] if len(sys.argv) == 3 else lda.getMode()
 config = lda.getConfig()
 verbose = lda.getConfig().getBooleanConfig("common.verbose")[0]
 
 # processor object
 preprocessor = TextPreProcessor()
 
-if verbose:
-	print "running mode: " + mode
+print "running mode: " + mode
 if mode == "train":
 	# dcument list
 	path = config.getStringConfig("train.data.dir")[0]
@@ -153,7 +155,7 @@ if mode == "train":
 		if verbose:
 			print "one topic number"
 		result = lda.getDocTopics()		
-		docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
+		docTopics, docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
 	else:
 		# multiple topic numbers to decide optimum number
 		if verbose:
@@ -181,14 +183,20 @@ elif mode == "analyze":
 
 	# analyze all docs
 	result = lda.analyze(docClean)
-	docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
+	docTopics, docByTopic, wordsByTopic = processResult(config, result, lda, filePaths, verbose)
 
+	#doc topics with file name
+	fileDocTopics = zip(filePaths, docTopics)
+	print "file topics"
+	print fileDocTopics
 
 	# each topic
 	ceFilt = config.getBooleanConfig("analyze.word.cross.entropy.filter")[0]
 	if ceFilt:
 		saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
 		glTf = loadTermDistr(saveFile).getWordFreq()
+		topicWords = []
+		print "filtering topic words for each topic with cross entropy"
 		for tid in docByTopic.keys():
 			print "topic id " + str(tid)
 			# all docs for the topic
@@ -211,8 +219,20 @@ elif mode == "analyze":
 			print "words after cross entropy filter" + str(wordCe)	
 			print "skipped " + str(skippedWords) 
 
+			#final topic words
+			tWords = list(map(lambda wc: wc[0], wordCe))
+			t = (tid, tWords)
+			topicWords.append(t)
+		
+		#word list for each topic
+		topicWords.sort(key=takeFirst)
+		topicWords = list(map(lambda tw: tw[1], topicWords))
+		print "final topic words"
+		print topicWords
+
 elif mode == "buildBaseTermDistr":
-	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc']
+	categories = ['rec.autos', 'soc.religion.christian','comp.graphics', 'sci.med', 'talk.politics.misc',\
+		'talk.religion.misc', 'sci.med']
 	twentyTrain = fetch_20newsgroups(subset='train',categories=categories, shuffle=True, random_state=42)
 	print "pre processing " + str(len(twentyTrain.data)) + " docs"
 	docsClean = [clean(doc, preprocessor, verbose) for doc in twentyTrain.data]	
