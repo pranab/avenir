@@ -187,7 +187,7 @@ elif mode == "analyze":
 
 	#doc topics with file name
 	fileDocTopics = zip(filePaths, docTopics)
-	print "file topics"
+	print "**file topics"
 	print fileDocTopics
 
 	# each topic
@@ -195,8 +195,8 @@ elif mode == "analyze":
 	if ceFilt:
 		saveFile = config.getStringConfig("analyze.base.word.distr.file")[0]
 		glTf = loadTermDistr(saveFile).getWordFreq()
-		topicWords = []
 		print "filtering topic words for each topic with cross entropy"
+		topicWords = []
 		for tid in docByTopic.keys():
 			print "topic id " + str(tid)
 			# all docs for the topic
@@ -226,8 +226,7 @@ elif mode == "analyze":
 		
 		#word list for each topic
 		topicWords.sort(key=takeFirst)
-		topicWords = list(map(lambda tw: tw[1], topicWords))
-		print "final topic words"
+		print "**filtered topic words"
 		print topicWords
 
 elif mode == "buildBaseTermDistr":
