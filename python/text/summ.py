@@ -447,7 +447,7 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 		defValues["common.show.score"] = (False, None)
 		defValues["etr.model.path"] = (None, "missing embedding model file path")
 		defValues["etr.vec.size"] = (None, "missing embedding vector size")
-		defValues["etr.max.missing.vec"] = (0.05, None)
+		defValues["etr.max.missing.vec"] = (None, None)
 		self.totalWordCount = 0
 		self.missingWordCount = 0
 		super(EmbeddingTextRankSumm, self).__init__(configFile, defValues) 	
@@ -481,11 +481,11 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 			sentVecs.append(sv)
 		if self.verbose:
 			print "num of words  " + str(self.totalWordCount)
-			print "num of missing word embedding " + str(self.missingWordCount)
+			print "num of missing word embedding vectors " + str(self.missingWordCount)
 		maxMissingVec = self.config.getFloatConfig("etr.max.missing.vec")[0]
 		fracMissing = self.missingWordCount / float(self.totalWordCount)
-		if fracMissing > maxMissingVec:
-			print "too many missing vectore..... quitting"
+		if maxMissingVec and fracMissing > maxMissingVec:
+			print "too many missing word embedding vectors..... quitting"
 			return []
 			
 		#similarity
