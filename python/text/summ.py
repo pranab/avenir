@@ -57,7 +57,8 @@ class BaseSummarizer(object):
  		byCount = self.config.getBooleanConfig("common.byCount")[0]
  		if not byCount:
  			summSize = (len(sents) * summSize) / 100
- 		print "summSize " + str(summSize)
+ 		if self.verbose:
+ 			print "summSize " + str(summSize)
 		return summSize
 	
 	# summarize everything
@@ -149,8 +150,8 @@ class TermFreqSumm(BaseSummarizer):
 			mmr = MaxMarginalRelevance(termTable, byCount, normalized)
 			topSents = mmr.select(sentsWithScore, summSize, regParam, diversityAggr)
 			
-			#include sentence, original score, diversify base score
-			topSents =  list(map(lambda sc: (sents[sc[0]], sc[2],  sc[3]), topSents))	
+			#include sentence, diversify base score
+			topSents =  list(map(lambda sc: (sents[sc[0]], sc[3]), topSents))	
 			return topSents
 		else:
  			# sort by decreasing score	
@@ -380,6 +381,11 @@ class TextRankSumm(BaseSummarizer):
 		defValues["common.size"] = (5, None)
 		defValues["common.byCount"] = (True, None)
 		defValues["common.show.score"] = (False, None)
+		defValues["tr.diversify"] = (False, None)
+		defValues["tr.diversify.byCount"] = (True, None)
+		defValues["tr.diversify.normalized"] = (True, None)
+		defValues["tr.diversify.regularizer"] = (0.7, None)
+		defValues["tr.diversify.aggr"] = ("average", None)
 		super(TextRankSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
@@ -409,11 +415,26 @@ class TextRankSumm(BaseSummarizer):
 		
 		#top sentences
 		sentWithScores = enumerate(scores)
-		sortedSents = sorted(sentWithScores, key=takeSecond, reverse=True)
-		topSents = sortedSents[:summSize]
-		topSents = sorted(topSents, key=takeFirst)
- 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
-
+		sentWithScores = sorted(sentWithScores, key=takeSecond, reverse=True)
+		
+		diversify = self.config.getBooleanConfig("tr.diversify")[0]
+		if diversify:
+			sentWithScores = list(map(lambda sc: (sc[0], sentWords[sc[0]], sc[1]), sentWithScores))
+			byCount = self.config.getBooleanConfig("tr.diversify.byCount")[0]
+			normalized = self.config.getBooleanConfig("tr.diversify.normalized")[0]
+			regParam = self.config.getFloatConfig("tr.diversify.regularizer")[0]
+			diversityAggr = self.config.getStringConfig("tr.diversify.aggr")[0]
+			termTable = self.getTermFrequency(sentWords)			
+			mmr = MaxMarginalRelevance(termTable, byCount, normalized)
+			topSents = mmr.select(sentWithScores, summSize, regParam, diversityAggr)
+			
+			#include sentence, diversify base score
+			topSents =  list(map(lambda sc: (sents[sc[0]],  sc[3]), topSents))	
+		else:
+			topSents = sentWithScores[:summSize]
+			topSents = sorted(topSents, key=takeFirst)
+ 			topSents =  list(map(lambda ts: (sents[ts[0]], ts[1]), topSents))
+		return topSents
 
 	def getSummaryX(self, filePath, text=None):
 		if filePath:

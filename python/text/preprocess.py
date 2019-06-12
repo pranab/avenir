@@ -322,11 +322,13 @@ class DocSentences:
 			raise valueError("either file path or text must be provided")
 
 		#self.sentences = content.split('.')
+		self.verbose = verbose
 		tp = TextPreProcessor()
 		content = tp.removeNonAsciiFromText(content)
 		sentences = sent_tokenize(content)
 		self.sentences = list(filter(lambda s: len(nltk.word_tokenize(s)) >= minLength, sentences))
-		print "num of senteces after length filter " + str(len(self.sentences))
+		if self.verbose:
+			print "num of senteces after length filter " + str(len(self.sentences))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
 	# get sentence tokens

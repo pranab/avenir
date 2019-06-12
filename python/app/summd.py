@@ -25,7 +25,7 @@ from preprocess import *
 from summ import *
 
 def display(config, sumSenteces):
-	print "num sentences " + str(len(sumSenteces)) 
+	#print "num sentences " + str(len(sumSenteces)) 
 	showScore = config.getBooleanConfig("common.show.score")[0]
 	for sen in sumSenteces:
 		sent =  sen[0]
@@ -37,44 +37,55 @@ if __name__ == "__main__":
 	configFile  = sys.argv[1]
 	op  = sys.argv[2]
 	if op == "tfSumm":
-		print "executing term freq summarizer"
 		summarizer = TermFreqSumm(configFile)
 		config = summarizer.getConfig()
+		verbose = config.getBooleanConfig("common.verbose")[0]
+		if verbose:
+			print "executing term freq summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "sbSumm":
-		print "executing sum basic summarizer"
 		summarizer = SumBasicSumm(configFile)
 		config = summarizer.getConfig()
+		verbose = config.getBooleanConfig("common.verbose")[0]
+		if verbose:
+			print "executing sum basic summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "lsSumm":
-		print "executing LSI summarizer"
 		summarizer = LatentSemSumm(configFile)
 		config = summarizer.getConfig()
+		if verbose:
+			print "executing LSI summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "nmfSumm":
-		print "executing non negative matrix factorization summarizer"
 		summarizer = NonNegMatFactSumm(configFile)
 		config = summarizer.getConfig()
+		verbose = config.getBooleanConfig("common.verbose")[0]
+		if verbose:
+			print "executing non negative matrix factorization summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "trSumm":
-		print "executing text rank summarizer"
 		summarizer = TextRankSumm(configFile)
 		config = summarizer.getConfig()
+		verbose = config.getBooleanConfig("common.verbose")[0]
+		if verbose:
+			print "executing text rank summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "etrSumm":
-		print "executing embedding text rank  summarizer"
 		summarizer = EmbeddingTextRankSumm(configFile)
 		config = summarizer.getConfig()
+		verbose = config.getBooleanConfig("common.verbose")[0]
+		if verbose:
+			print "executing embedding text rank  summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
