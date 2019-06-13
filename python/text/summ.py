@@ -156,7 +156,8 @@ class TermFreqSumm(BaseSummarizer):
 		else:
  			# sort by decreasing score	
  			sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
- 			print "after soerting num sentences " + str(len(sortedSents))
+ 			if self.verbose:
+ 				print "after sorting num sentences " + str(len(sortedSents))
 
  			topSents = sortedSents[:summSize]
  		
@@ -276,16 +277,26 @@ class LatentSemSumm(BaseSummarizer):
 			print "lat vec length " + str(len(sortedVecs[0]))
 
 		#select sentences
-		numScans = (summSize / numTopics) + 1
-
-		topSentences = []
-		for i in range(numScans):
-			for j in range(numTopics):
-				vecs = sortedVecs[j]
-				topSentences.append(vecs[i])
-		topSentences = sorted(topSentences[:summSize], key=takeFirst)
+		topSentences = self.selTopSents(summSize, numTopics, sortedVecs)			
+		topSentences = sorted(topSentences, key=takeFirst)
 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
 
+	def selTopSents(self, summSize, numTopics, sortedVecs):
+		topSentences = []
+		sentIndexes = set()
+		sCount = 0
+		for i in range(summSize):
+			for j in range(numTopics):
+				vecs = sortedVecs[j]
+				si = vecs[i][0]
+				if si not in sentIndexes:
+					topSentences.append(vecs[i])
+					sentIndexes.add(si)
+					sCount += 1
+					if sCount == summSize:
+						return topSentences
+	
+	
 # non negative matrix factorization summarizer		
 class NonNegMatFactSumm(BaseSummarizer):
 	def __init__(self, configFile):
