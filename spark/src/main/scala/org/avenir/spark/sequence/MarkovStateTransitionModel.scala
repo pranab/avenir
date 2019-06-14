@@ -24,6 +24,9 @@ import scala.collection.JavaConverters._
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.avenir.util.StateTransitionProbability
+import org.apache.spark.rdd.RDD
+import org.chombo.spark.common.GeneralUtility
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * generates Markov state transition probability matrix for data with or without class labels
@@ -31,7 +34,7 @@ import org.avenir.util.StateTransitionProbability
  * @param args
  * @return
  */
-object MarkovStateTransitionModel extends JobConfiguration {
+object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
   
    /**
     * @param args
@@ -48,16 +51,20 @@ object MarkovStateTransitionModel extends JobConfiguration {
 	   //configurations
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
-	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
+	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.field.ordinals"))
 	   val classAttrOrdinal = getOptionalIntParam(appConfig, "class.attr.ordinal")
 	   val seqStartOrdinal = getMandatoryIntParam(appConfig, "seq.start.ordinal")
 	   val states = getMandatoryStringListParam(appConfig, "state.list", "missing state list")
 	   val statesArr = BasicUtils.fromListToStringArray(states)
 	   val scale = getMandatoryIntParam(appConfig, "trans.prob.scale")
 	   val outputPrecision = getIntParamOrElse(appConfig, "output.precision", 3);
+	   val seqFormat = getBooleanParamOrElse(appConfig, "data.formatSeq", false)
+	   val seqFieldOrd = if (seqFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
+	   val stateFieldOrd = if (seqFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
+	   
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
-
+	   
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
@@ -131,5 +138,54 @@ object MarkovStateTransitionModel extends JobConfiguration {
 	     transProb.saveAsTextFile(outputPath)
 	   }
 
+   }
+   
+   /**
+  * @param data
+  * @param fieldDelimIn
+  * @param classAttrOrdinal
+  * @param keyFieldOrdinals
+  * @param seqFieldOrd
+  * @param stateFieldOrd
+  * @return
+  */
+  def keyedStatePairForLongFormat(data:RDD[String], fieldDelimIn:String, classAttrOrdinal:Option[Int], 
+       keyFieldOrdinals:Array[Int], seqFieldOrd:Int,  stateFieldOrd:Int) : RDD[(Record,Int)] = {
+    data.map(line => {
+    	 val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
+    	 val keyRec = classAttrOrdinal match {
+	   		case Some(classOrd:Int) => {
+	   			//with class attribute
+	   			val classVal = items(classOrd)
+	   			val keyRec = Record(keyFieldOrdinals.length + 1, items, keyFieldOrdinals)
+	   			keyRec.addString(classVal)
+	   			keyRec
+	   		}
+     
+	   		case None => {
+	   			//without class attribute
+	   			val keyRec = Record(keyFieldOrdinals.length, items, keyFieldOrdinals)
+	   			keyRec
+	   		}
+		  }
+    	 val valRec = Record(2)
+    	 valRec.addLong(items(seqFieldOrd).toLong)
+    	 valRec.addString(items(stateFieldOrd))
+    	 (keyRec, valRec)
+     }).groupByKey.flatMap(r => {
+       val key = r._1
+       val values = r._2.toArray
+       val sortedValues = values.sortWith((v1, v2) => v1.getLong(0) < v2.getLong(0))
+       val statePairs = ArrayBuffer[Record]()
+       for (i <- 1 to sortedValues.length - 1) {
+         val pair = Record(2)
+         pair.add(sortedValues(i-1).getString(1), sortedValues(i).getString(1))
+         statePairs += pair
+       }
+       statePairs.map(v => {
+         val newKey = Record(key, v)
+         (newKey, 1)
+       })
+     }).reduceByKey((v1, v2) => v1 + v2)
    }
 }
