@@ -58,15 +58,21 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val statesArr = BasicUtils.fromListToStringArray(states)
 	   val scale = getMandatoryIntParam(appConfig, "trans.prob.scale")
 	   val outputPrecision = getIntParamOrElse(appConfig, "output.precision", 3);
-	   val seqFormat = getBooleanParamOrElse(appConfig, "data.formatSeq", false)
-	   val seqFieldOrd = if (seqFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
-	   val stateFieldOrd = if (seqFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
+	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
+	   val seqFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
+	   val stateFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
 	   
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
+	   
+	   val keyedStatePairs = if (seqLongFormat) {
+	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd)
+	   } else {
+	     keyedStatePairForCompactFormat(data, fieldDelimIn, seqStartOrdinal,classAttrOrdinal, keyFieldOrdinals)
+	   }
 	   
 	   //key value records
 	   val keyedTransData = data.flatMap(line => {
@@ -138,6 +144,43 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	     transProb.saveAsTextFile(outputPath)
 	   }
 
+   }
+   
+   /**
+   * @param config
+   * @param paramName
+   * @param defValue
+   * @param errorMsg
+   * @return
+   */
+   def keyedStatePairForCompactFormat(data:RDD[String], fieldDelimIn:String, seqStartOrdinal:Int,
+       classAttrOrdinal:Option[Int], keyFieldOrdinals:Array[Int]) : RDD[(Record,Int)] = {
+	   data.flatMap(line => {
+		   val items = line.split(fieldDelimIn, -1)
+		   val seqValIndexes = List.range(seqStartOrdinal+1, items.length)
+		   
+		   val stateTrans = seqValIndexes.map(idx => {
+			   val keyRec = classAttrOrdinal match {
+			   		case Some(classOrd:Int) => {
+			   			//with class attribute
+			   			val classVal = items(classOrd)
+			   			val keyRec = Record(keyFieldOrdinals.length + 3, items, keyFieldOrdinals)
+			   			keyRec.addString(classVal)
+			   			keyRec
+			   		}
+		     
+			   		case None => {
+			   			//without class attribute
+			   			val keyRec = Record(keyFieldOrdinals.length + 2, items, keyFieldOrdinals)
+			   			keyRec
+			   		}
+			   }
+			   keyRec.addString(items(idx-1)).addString(items(idx))
+			   (keyRec, 1)
+		     
+		   	})
+		   stateTrans
+	   }).reduceByKey(_ + _)
    }
    
    /**

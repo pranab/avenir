@@ -23,6 +23,7 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 import pickle
 import jprops
 import math
+import logging
 from gensim.summarization.summarizer import summarize
 from gensim import corpora, models
 import numpy as np
@@ -39,9 +40,32 @@ nltk.download('punkt')
 #base classifier class
 class BaseSummarizer(object):
 	def __init__(self, configFile, defValues):
+		defValues["common.logging.file"] = (None, "missing log file path")
+		defValues["common.logging.level"] = ("error", None)
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
-	
+		
+		#set up logging
+		self.logger = logging.getLogger(__name__)
+		logFilePath = self.config.getStringConfig("common.logging.file")[0]
+		fHandler = logging.FileHandler(logFilePath)
+		logLevelParam = self.config.getStringConfig("common.logging.level")[0].lower()
+		if logLevelParam == "debug":
+			logLevel = logging.DEBUG
+		elif logLevelParam == "info":
+			logLevel = logging.INFO
+		elif logLevelParam == "warning":
+			logLevel = logging.WARNING
+		elif logLevelParam == "error":
+			logLevel = logging.ERROR
+		elif logLevelParam == "critical":
+			logLevel = logging.CRITICAL
+		fHandler.setLevel(logLevel)
+		fFormat = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+		fHandler.setFormatter(fFormat)
+		self.logger.addHandler(fHandler)
+		self.logger.setLevel(logLevel)
+
 	#initialize config	
 	def initConfig(self, configFile, defValues):
 		self.config = Configuration(configFile, defValues)
@@ -49,7 +73,11 @@ class BaseSummarizer(object):
 	# get config object
 	def getConfig(self):
 		return self.config
-
+	
+	# get logger
+	def getLogger(self):
+		return self.logger
+		
 	# top sentence count
 	def getTopCount(self, sents):
 		# top count
@@ -95,6 +123,7 @@ class TermFreqSumm(BaseSummarizer):
 
 	# get summary sentences		
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing TermFreqSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		normalizer = self.config.getStringConfig("tf.length.normalizer")[0]
 
@@ -105,10 +134,6 @@ class TermFreqSumm(BaseSummarizer):
 			return self.summarizeAll(sents)
 
 		termTable = TfIdf(None, False)
-		if self.verbose:
-			print "*******sentences as text"
-			for s in sents:
-				print s
 
 		# term count table for all words
 		sentWords = docSent.getSentencesAsTokens()
@@ -156,9 +181,7 @@ class TermFreqSumm(BaseSummarizer):
 		else:
  			# sort by decreasing score	
  			sortedSents = sorted(zippedSents, key=takeSecond, reverse=True)
- 			if self.verbose:
- 				print "after sorting num sentences " + str(len(sortedSents))
-
+			self.logger.info("after sorting num sentences " + str(len(sortedSents)))
  			topSents = sortedSents[:summSize]
  		
  			#sort sentence by position 
@@ -179,6 +202,7 @@ class SumBasicSumm(BaseSummarizer):
 		super(SumBasicSumm, self).__init__(configFile, defValues)
  			
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing SumBasicSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -243,6 +267,7 @@ class LatentSemSumm(BaseSummarizer):
 		super(LatentSemSumm, self).__init__(configFile, defValues)
  	
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing LatentSemSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -272,10 +297,9 @@ class LatentSemSumm(BaseSummarizer):
 				isc = (i, abs(sc[1]))
 				sortedVecs[sc[0]].append(isc)
 		sortedVecs = list(map(lambda iscl: sorted(iscl,key=takeSecond,reverse=True), sortedVecs))	
-		if self.verbose:
-			print "num topics " + str(len(sortedVecs))
-			print "lat vec length " + str(len(sortedVecs[0]))
-
+		self.logger.info("num topics " + str(len(sortedVecs)))
+		self.logger.info("lat vec length " + str(len(sortedVecs[0])))
+		
 		#select sentences
 		topSentences = self.selTopSents(summSize, numTopics, sortedVecs)			
 		topSentences = sorted(topSentences, key=takeFirst)
@@ -321,6 +345,7 @@ class NonNegMatFactSumm(BaseSummarizer):
 		super(NonNegMatFactSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing NonNegMatFactSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -355,10 +380,7 @@ class NonNegMatFactSumm(BaseSummarizer):
 			max_iter=maxIter, random_state=randomState, alpha=alpha, l1_ratio=l1Ratio, shuffle=shuffle)
 		vecCorpus = model.fit_transform(mat)
 		H = model.components_
-		if self.verbose:
-			print vecCorpus.shape
-			print vecCorpus
-		
+		self.logger.info("vector shape " + str(vecCorpus.shape))
 		#sort each vector by score
 		sortedVecs = []
 		for i in range(numTopics):
@@ -400,6 +422,7 @@ class TextRankSumm(BaseSummarizer):
 		super(TextRankSumm, self).__init__(configFile, defValues) 	
 
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing TextRankSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -485,6 +508,7 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 		super(EmbeddingTextRankSumm, self).__init__(configFile, defValues) 	
  	
 	def getSummary(self, filePath, text=None):
+		self.logger.info("executing EmbeddingTextRankSumm summarizer")
 		minSentLength = self.config.getIntConfig("common.min.sentence.length")[0]
 		docSent = DocSentences(filePath, minSentLength, self.verbose, text)
 		sents = docSent.getSentences()
@@ -511,13 +535,13 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 			wv = list(map(lambda w: self.getWordVec(w, embeddings, vecSize), sw))
 			sv = sum(wv) / len(sw)
 			sentVecs.append(sv)
-		if self.verbose:
-			print "num of words  " + str(self.totalWordCount)
-			print "num of missing word embedding vectors " + str(self.missingWordCount)
+		self.logger.info("num of words  " + str(self.totalWordCount))
+		self.logger.info("num of missing word embedding vectors " + str(self.missingWordCount))
+		
 		maxMissingVec = self.config.getFloatConfig("etr.max.missing.vec")[0]
 		fracMissing = self.missingWordCount / float(self.totalWordCount)
 		if maxMissingVec and fracMissing > maxMissingVec:
-			print "too many missing word embedding vectors..... quitting"
+			self.logger.error("too many missing word embedding vectors..... quitting")
 			return []
 			
 		#similarity
@@ -544,8 +568,7 @@ class EmbeddingTextRankSumm(BaseSummarizer):
 		else:
 			self.missingWordCount += 1
 			v = np.zeros((vecSize,))
-			if self.verbose:
-				print "missing vector for " + w
+			self.logger.warn("missing vector for " + w)
 		return v	
 		
 # sentence selection by max marginal relevance

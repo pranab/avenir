@@ -40,8 +40,6 @@ if __name__ == "__main__":
 		summarizer = TermFreqSumm(configFile)
 		config = summarizer.getConfig()
 		verbose = config.getBooleanConfig("common.verbose")[0]
-		if verbose:
-			print "executing term freq summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
@@ -49,16 +47,13 @@ if __name__ == "__main__":
 		summarizer = SumBasicSumm(configFile)
 		config = summarizer.getConfig()
 		verbose = config.getBooleanConfig("common.verbose")[0]
-		if verbose:
-			print "executing sum basic summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
 	elif op == "lsSumm":
 		summarizer = LatentSemSumm(configFile)
 		config = summarizer.getConfig()
-		if verbose:
-			print "executing LSI summarizer"
+		verbose = config.getBooleanConfig("common.verbose")[0]
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
@@ -66,8 +61,6 @@ if __name__ == "__main__":
 		summarizer = NonNegMatFactSumm(configFile)
 		config = summarizer.getConfig()
 		verbose = config.getBooleanConfig("common.verbose")[0]
-		if verbose:
-			print "executing non negative matrix factorization summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
@@ -75,8 +68,6 @@ if __name__ == "__main__":
 		summarizer = TextRankSumm(configFile)
 		config = summarizer.getConfig()
 		verbose = config.getBooleanConfig("common.verbose")[0]
-		if verbose:
-			print "executing text rank summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
@@ -84,8 +75,6 @@ if __name__ == "__main__":
 		summarizer = EmbeddingTextRankSumm(configFile)
 		config = summarizer.getConfig()
 		verbose = config.getBooleanConfig("common.verbose")[0]
-		if verbose:
-			print "executing embedding text rank  summarizer"
 		filePath = config.getStringConfig("common.data.file")[0]
 		sumSenteces = summarizer.getSummary(filePath)
 		display(config, sumSenteces)
