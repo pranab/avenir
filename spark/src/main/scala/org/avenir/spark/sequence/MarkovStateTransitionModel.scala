@@ -61,7 +61,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
 	   val seqFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
 	   val stateFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
-	   
+	   val mergeKeys = getBooleanParamOrElse(appConfig, "data.mergeKeys", false)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
@@ -69,13 +69,13 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val data = sparkCntxt.textFile(inputPath)
 	   
 	   val keyedStatePairs = if (seqLongFormat) {
-	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd)
+	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd, mergeKeys)
 	   } else {
 	     keyedStatePairForCompactFormat(data, fieldDelimIn, seqStartOrdinal,classAttrOrdinal, keyFieldOrdinals)
 	   }
 	   
 	   //key value records
-	   val keyedTransData = data.flatMap(line => {
+	   val x = data.flatMap(line => {
 		   val items = line.split(fieldDelimIn, -1)
 		   val seqValIndexes = List.range(seqStartOrdinal+1, items.length)
 		   
@@ -103,19 +103,13 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   }).reduceByKey(_ + _)
 	   
 	   //move state pairs from key to value
-	   val transData = keyedTransData.map(kv => {
+	   val transData = keyedStatePairs.map(kv => {
 	     //key: id and optional class value
-		 val newKeyRec = classAttrOrdinal match {
-			 //entity key and class attribute value
-		 	 case Some(classOrd:Int) => Record(kv._1, 0, 3)
-		 	 
-		 	 //entity key
-			 case None => Record(kv._1, 0, 2)
-		 }
-		 
+	     val size = kv._1.size
+	     val newKeyRec = Record(kv._1, 0, size-2)
+	     
 		 //value: state pairs from key  and count from value
 	     val newValRec = Record(3)
-	     val size = kv._1.size
 	     newValRec.add(kv._1, size-2, size)
 		 newValRec.add(kv._2)
 		 (newKeyRec, newValRec)
@@ -193,7 +187,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
   * @return
   */
   def keyedStatePairForLongFormat(data:RDD[String], fieldDelimIn:String, classAttrOrdinal:Option[Int], 
-       keyFieldOrdinals:Array[Int], seqFieldOrd:Int,  stateFieldOrd:Int) : RDD[(Record,Int)] = {
+       keyFieldOrdinals:Array[Int], seqFieldOrd:Int,  stateFieldOrd:Int, mergeKeys:Boolean) : RDD[(Record,Int)] = {
     data.map(line => {
     	 val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
     	 val keyRec = classAttrOrdinal match {
@@ -226,7 +220,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
          statePairs += pair
        }
        statePairs.map(v => {
-         val newKey = Record(key, v)
+         val newKey = if (mergeKeys) Record(Record("all"), v) else Record(key, v)
          (newKey, 1)
        })
      }).reduceByKey((v1, v2) => v1 + v2)
