@@ -61,46 +61,35 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
 	   val seqFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
 	   val stateFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
-	   val mergeKeys = getBooleanParamOrElse(appConfig, "data.mergeKeys", false)
+	   val mergeKeys = getBooleanParamOrElse(appConfig, "data.mergeKeysNeeded", false)
+	   val laplaceCorr = getBooleanParamOrElse(appConfig, "laplaceCorr.needed", false)
+	   val lapalcaeCorrFilePath = 
+	     if(laplaceCorr) getMandatoryStringParam(appConfig, "lapalcaeCorr.filePath", "missing laplace correction file path")
+	     else ""
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
-	   val keyedStatePairs = if (seqLongFormat) {
+	   var keyedStatePairs = if (seqLongFormat) {
 	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd, mergeKeys)
 	   } else {
 	     keyedStatePairForCompactFormat(data, fieldDelimIn, seqStartOrdinal,classAttrOrdinal, keyFieldOrdinals)
-	   }
+	   }.cache
 	   
-	   //key value records
-	   val x = data.flatMap(line => {
-		   val items = line.split(fieldDelimIn, -1)
-		   val seqValIndexes = List.range(seqStartOrdinal+1, items.length)
-		   
-		   val stateTrans = seqValIndexes.map(idx => {
-			   val keyRec = classAttrOrdinal match {
-			   		case Some(classOrd:Int) => {
-			   			//with class attribute
-			   			val classVal = items(classOrd)
-			   			val keyRec = Record(keyFieldOrdinals.length + 3, items, keyFieldOrdinals)
-			   			keyRec.addString(classVal)
-			   			keyRec
-			   		}
-		     
-			   		case None => {
-			   			//without class attribute
-			   			val keyRec = Record(keyFieldOrdinals.length + 2, items, keyFieldOrdinals)
-			   			keyRec
-			   		}
-			   }
-			   keyRec.addString(items(idx-1)).addString(items(idx))
-			   (keyRec, 1)
-		     
-		   	})
-		   stateTrans
-	   }).reduceByKey(_ + _)
+	   //laplace correction
+	   keyedStatePairs = if (laplaceCorr) {
+	     val laplaceCorrData = sparkCntxt.textFile(lapalcaeCorrFilePath)
+	     val laplaceCorrkeyedStatePair = laplaceCorrData.map(line => {
+	       val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
+	       val key = Record(items, 0, items.length-1)
+	       (key, items(items.length-1).toInt)
+	     })
+	     (keyedStatePairs ++ laplaceCorrkeyedStatePair).reduceByKey((v1, v2) => if (v1 > v2) v1 else v2)
+	   } else {
+	     keyedStatePairs
+	   }
 	   
 	   //move state pairs from key to value
 	   val transData = keyedStatePairs.map(kv => {
@@ -150,7 +139,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
    def keyedStatePairForCompactFormat(data:RDD[String], fieldDelimIn:String, seqStartOrdinal:Int,
        classAttrOrdinal:Option[Int], keyFieldOrdinals:Array[Int]) : RDD[(Record,Int)] = {
 	   data.flatMap(line => {
-		   val items = line.split(fieldDelimIn, -1)
+		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 		   val seqValIndexes = List.range(seqStartOrdinal+1, items.length)
 		   
 		   val stateTrans = seqValIndexes.map(idx => {
