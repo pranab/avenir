@@ -101,6 +101,23 @@ class BaseSummarizer(object):
 			termTable.countDocWords(seWords)
 		termTable.getWordFreq()
 		return termTable
+	
+	# select top sentences for matix factorization based summarizer
+	def selTopSents(self, summSize, numTopics, sortedVecs):
+		topSentences = []
+		sentIndexes = set()
+		sCount = 0
+		for i in range(summSize):
+			for j in range(numTopics):
+				vecs = sortedVecs[j]
+				si = vecs[i][0]
+				if si not in sentIndexes:
+					topSentences.append(vecs[i])
+					sentIndexes.add(si)
+					sCount += 1
+					if sCount == summSize:
+						return topSentences
+	
 		
 # text summarizer based on term frequency
 class TermFreqSumm(BaseSummarizer):
@@ -305,22 +322,6 @@ class LatentSemSumm(BaseSummarizer):
 		topSentences = sorted(topSentences, key=takeFirst)
 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
 
-	def selTopSents(self, summSize, numTopics, sortedVecs):
-		topSentences = []
-		sentIndexes = set()
-		sCount = 0
-		for i in range(summSize):
-			for j in range(numTopics):
-				vecs = sortedVecs[j]
-				si = vecs[i][0]
-				if si not in sentIndexes:
-					topSentences.append(vecs[i])
-					sentIndexes.add(si)
-					sCount += 1
-					if sCount == summSize:
-						return topSentences
-	
-	
 # non negative matrix factorization summarizer		
 class NonNegMatFactSumm(BaseSummarizer):
 	def __init__(self, configFile):
@@ -388,19 +389,8 @@ class NonNegMatFactSumm(BaseSummarizer):
 			col = sorted(col,key=takeSecond,reverse=True)
 			sortedVecs.append(col)
 		
-		#select sentences
- 		summSize  = self.config.getIntConfig("common.size")[0]
- 		byCount = self.config.getBooleanConfig("common.byCount")[0]
- 		if not byCount:
- 			summSize = (len(sortedSents) * summSize) / 100
-		numScans = (summSize / numTopics) + 1
-
-		topSentences = []
-		for i in range(numScans):
-			for j in range(numTopics):
-				vecs = sortedVecs[j]
-				topSentences.append(vecs[i])
-		topSentences = sorted(topSentences[:summSize], key=takeFirst)
+		topSentences = self.selTopSents(summSize, numTopics, sortedVecs)			
+		topSentences = sorted(topSentences, key=takeFirst)
 		return list(map(lambda ts: (sents[ts[0]], ts[1]), topSentences))
 
 # text rank summarizer		
