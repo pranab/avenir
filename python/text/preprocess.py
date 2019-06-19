@@ -452,7 +452,6 @@ class WordVectorContainer:
 				else:
 					raise ValueError("invalid similarity algorithms")
 				simArray[i][j] = sim
-				simArray[j][i] = sim
 		return simArray
 
 	def getNumWordVectors(self):
