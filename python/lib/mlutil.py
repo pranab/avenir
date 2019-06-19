@@ -190,10 +190,20 @@ def minkowskiDistance(x,y,pValue):
 	return nthRoot(sum(pow(abs(a-b),pValue) for a,b in zip(x, y)), pValue)
 
 #jaccard similarity
-def jaccardSimilarity(x,y):
+def jaccardSimilarityX(x,y):
 	intersectionCardinality = len(set.intersection(*[set(x), set(y)]))
 	unionCardinality = len(set.union(*[set(x), set(y)]))
  	return intersectionCardinality/float(unionCardinality)
+
+def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
+	sx = set(x)
+	sy = set(y)
+	sxyInt = sx.intersection(sy)
+	intCardinality = len(sxyInt)
+	sxIntDiff = sx.difference(sxyInt)
+	syIntDiff = sy.difference(sxyInt)
+	unionCardinality = len(sx.union(sy))
+ 	return intCardinality/float(intCardinality + wx * len(sxIntDiff) + wy * len(syIntDiff))
 
 # norm
 def norm(values, po=2):

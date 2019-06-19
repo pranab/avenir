@@ -36,8 +36,10 @@ from nltk.tag import StanfordNERTagger
 from nltk.tokenize import word_tokenize, sent_tokenize
 from collections import defaultdict
 import pickle
+import numpy as np
 sys.path.append(os.path.abspath("../lib"))
 from util import *
+from mlutil import *
 
 #text preprocessor
 class TextPreProcessor:
@@ -69,7 +71,10 @@ class TextPreProcessor:
 		"""Remove non-ASCII characters from list of tokenized words"""
 		newWords = []
 		for word in words:
-			newWord = unicodedata.normalize('NFKD', word).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+			if isinstance(word, unicode):
+				newWord = unicodedata.normalize('NFKD', word).encode('ascii', 'ignore')
+			else:
+				newWord = word
 			newWords.append(newWord)
 		return newWords
 
@@ -349,22 +354,111 @@ class DocSentences:
 		return termTable
 
 # sentence processor
-class DirFiles:
+class WordVectorContainer:
 	# initialize
 	def __init__(self, dirPath, verbose):
-		self.dirPath = dirPath
-		docs, filePaths  = getFileContent(dirPath, verbose)
-		self.docs = docs
-		self.filePaths = filePaths
-		print filePaths
-		tp = TextPreProcessor()
-		self.docsAsTokens = [clean(doc, tp, verbose) for doc in docs]
+		self.docs = list()
+		self.wordVectors = list()
+		self.tp = TextPreProcessor()
+		self.similarityAlgo = "cosine"
+		self.simAlgoNormalizer = None
+		self.termTable = None
 
-	def getDocsAsTokens(self):
-		return self.docsAsTokens
+
+	# all files in a dir
+	def addDir(self, dirPath):
+		docs, filePaths  = getFileContent(dirPath, verbose)
+		self.docs.extend(docs)
+		self.wordVectors.extend([clean(doc, self.tp, verbose) for doc in docs])
+	
+	# one file
+	def addFile(self, filePath):
+		with open(filePath, 'r') as contentFile:
+			content = contentFile.read()
+		self.wordVectors.append(clean(content, self.tp, verbose))
+	
+	# text
+	def addText(self, text):
+		self.wordVectors.append(clean(text, self.tp, verbose))
+
+	# words
+	def addWords(self, words):
+		self.wordVectors.append(words)
+
+	# set similarity algo
+	def withSimilarityAlgo(self, algo, normalizer=None):
+		self.similarityAlgo = algo
+		self.simAlgoNormalizer = normalizer
+		
+	def getDocsWords(self):
+		return self.wordVectors
 
 	def getDocs(self):
 		return self.docs
+	
+	# term count table for all words
+	def getTermFreqTable(self):
+		self.termTable = TfIdf(None, False)
+		for words in self.wordVectors:
+			self.termTable.countDocWords(words)
+		self.termTable.getWordFreq()
+		return self.termTable
+
+	# pair wise similarity
+	def getPairWiseSimilarity(self, byCount, normalized):
+		self.getNumWordVectors()
+		
+		size = len(self.wordVectors)
+		simArray = np.empty(shape=(size,size))
+		for i in range(size):
+			simArray[i][i] = 1.0
+		
+		for i in range(size):
+			for j in range(i+1, size):
+				if self.similarityAlgo == "cosine":
+					sim = cosineSimilarity(self.numWordVectors[i], self.numWordVectors[j])
+				elif self.similarityAlgo == "jaccard":
+					sim = jaccardSimilarity(self.wordVectors[i], self.wordVectors[j],\
+						self.simAlgoNormalizer[0], self.simAlgoNormalizer[1])
+				else:
+					raise ValueError("invalid similarity algorithms")
+				simArray[i][j] = sim
+				simArray[j][i] = sim
+		return simArray
+
+	# inter set pair wise  similarity
+	def getInterSetSimilarity(self, byCount, normalized, split):
+		self.getNumWordVectors()
+		size = len(self.wordVectors)
+		if not self.similarityAlgo == "jaccard":
+			firstNumVec = self.numWordVectors[:split]
+			secNumVec = self.numWordVectors[split:]
+			fiSize = len(firstNumVec)
+			seSize = len(secNumVec)
+		else:
+			firstVec = self.wordVectors[:split]
+			secVec = self.wordVectors[split:]
+			fiSize = len(firstVec)
+			seSize = len(secVec)
+		
+		simArray = np.empty(shape=(fiSize,seSize))
+		for i in range(fiSize):
+			for j in range(seSize):
+				if self.similarityAlgo == "cosine":
+					sim = cosineSimilarity(self.numWordVectors[i], self.numWordVectors[j])
+				elif self.similarityAlgo == "jaccard":
+					sim = jaccardSimilarity(self.wordVectors[i], self.wordVectors[j],\
+						self.simAlgoNormalizer[0], self.simAlgoNormalizer[1])
+				else:
+					raise ValueError("invalid similarity algorithms")
+				simArray[i][j] = sim
+				simArray[j][i] = sim
+		return simArray
+
+	def getNumWordVectors(self):
+		if not self.similarityAlgo == "jaccard":
+			if self.numWordVectors is None:
+				self.numWordVectors = list(map(lambda wv: self.termTable.getVector(wv, byCount, normalized), self.wordVectors))
 
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
@@ -380,6 +474,7 @@ def clean(doc, preprocessor, verbose):
 	words = preprocessor.removeShortWords(words, 3)
 	words = preprocessor.removePunctuation(words)
 	words = preprocessor.lemmatizeWords(words)
+	words = preprocessor.removeNonAscii(words)
 	if verbose:
 		print "--after pre processing"
 		print words
