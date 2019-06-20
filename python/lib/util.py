@@ -22,6 +22,7 @@ import random
 import time
 import uuid
 from datetime import datetime
+import logging
 
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
 	"N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"]
@@ -331,7 +332,31 @@ def swap(values, first, second):
 	t = values[first]
 	values[first] = values[second]	
 	values[second] = t
-			
+
+# creates logger
+def createLogger(name, logFilePath, logLevName):
+	logger = logging.getLogger(name)
+	fHandler = logging.FileHandler(logFilePath)
+	logLev = logLevName.lower()
+	if logLev == "debug":
+		logLevel = logging.DEBUG
+	elif logLev == "info":
+		logLevel = logging.INFO
+	elif logLev == "warning":
+		logLevel = logging.WARNING
+	elif logLev == "error":
+		logLevel = logging.ERROR
+	elif logLev == "critical":
+		logLevel = logging.CRITICAL
+	else:
+		raise ValueError("invalid log level name " + logLevelName)
+	fHandler.setLevel(logLevel)
+	fFormat = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+	fHandler.setFormatter(fFormat)
+	logger.addHandler(fHandler)
+	logger.setLevel(logLevel)
+	return logger
+		
 # step function
 class StepFunction:
 	def __init__(self,  *values):

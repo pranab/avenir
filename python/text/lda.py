@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath("../text"))
 from util import *
 from mlutil import *
 
-# gradient boosting classification
+# tpic modeling with LDA
 class LatentDirichletAllocation:
 	def __init__(self, configFile):
 		defValues = {}
@@ -64,7 +64,11 @@ class LatentDirichletAllocation:
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.docTopics = []
 		self.singleNumOfTopics = True
-
+		
+		logFilePath = self.config.getStringConfig("common.logging.file")[0]
+		logLevName = self.config.getStringConfig("common.logging.level")[0]
+		self.logger = createLogger(__name__, logFilePath, logLevName)
+		
 	# get config object
 	def getConfig(self):
 		return self.config
@@ -97,29 +101,25 @@ class LatentDirichletAllocation:
 		perplex = []
 		self.singleNumOfTopics = (topicMin == topicMax)
 		for numTopics in range(topicMin, topicMax+1):
-			print "**num of topics " + str(numTopics)
-
+			self.logger.info("--num of topics " + str(numTopics))
+			
 			# Running and Trainign LDA model on the document term matrix.
 			self.buildModel(docTermMatrix, numTopics,  numPass)
 			
 			# output
-			if self.verbose:
-				print "--topics"
-				print(self.ldaModel.print_topics(num_topics=numTopics, num_words=5))
+			self.logger.info("--topics " + str(self.ldaModel.print_topics(num_topics=numTopics, num_words=5)))
 
 			self.docTopics = []
-			if self.verbose:
-				print "--doc topic vector"
+			self.logger.info("--doc topic vector--")
 			for doc in docTermMatrix:
 				docLda = self.ldaModel[doc]
 				self.docTopics.append(docLda)
-				if self.verbose:
-					print docLda
+				self.logger.info(str(docLda))
 
 			# perplexity
 			perplexity = self.ldaModel.log_perplexity(docTermMatrix)
-			if self.verbose:
-				print "--perplexity %.6f" %(perplexity)
+			msg = "--perplexity %.6f" %(perplexity)
+			self.logger.info(msg)
 
 			topics.append(numTopics)
 			perplex.append(perplexity)
@@ -233,4 +233,75 @@ class LatentDirichletAllocation:
 		modelFilePath = os.path.join(modelDirectory, modelFile)
 		return modelFilePath
 
+	# analyzes results
+	def processAnalyzeResult(self, result, filePaths, verbose):
+		dtOddsRatio = self.config.getFloatConfig("analyze.doc.topic.odds.ratio")[0]
+		twOddsRatio = self.config.getFloatConfig("analyze.topic.word.odds.ratio")[0]
+		twTopMax = self.config.getIntConfig("analyze.topic.word.top.max")[0]
+		dtMinCount = self.config.getIntConfig("analyze.doc.topic.min.count")[0]
+		twMinCount = self.config.getIntConfig("analyze.topic.word.min.count")[0]
 
+		docTopics = []
+		docByTopic = {}
+		wordsByTopic = {}
+	
+		self.logger.info("result size " + str(len(result)))
+
+		# all docs 
+		for didx, dt in enumerate(result):
+			self.logger.info("-- next doc " + filePaths[didx])
+			docResult = {}
+			dt.sort(key=takeSecond, reverse=True)
+			self.logger.info("doc topic distribution " + str(dt))
+			dtTop = self.topByOddsRatio(dt, dtOddsRatio, dtMinCount)
+			docTopics.append(dtTop)
+			self.logger.info("filtered doc topic distribution " + str(dtTop))
+			# all topics
+			for t in dtTop:
+				self.logger.info("next topic with distr : " + str(t))
+				tid = t[0]
+				appendKeyedList(docByTopic, tid, didx)
+				if not tid in wordsByTopic:
+					tw = self.getTopicTerms(tid, twTopMax)
+					twTop = self.topByOddsRatio(tw, twOddsRatio, twMinCount)
+					self.logger.info("filtered topic word distribution " + str(twTop))
+					docResult[tid] = (t[1], twTop)
+					if wordsByTopic.get(tid) is None:
+						for w, p in twTop:
+							appendKeyedList(wordsByTopic, tid, w)
+					self.logger.info("topic words: " + str(twTop))
+		
+			# net word dist for doc
+			wdList = self.netWordDistr(docResult, verbose)
+			self.logger.info("final doc word distr " + str(wdList))
+		return (docTopics, docByTopic, wordsByTopic)
+
+	# top elements by odds ration
+	def topByOddsRatio(self,distr, oddsRatio, minCount=None):
+		s = 0.0
+		sel = []
+		for d in distr:
+			s += d[1]
+			sel.append(d)
+			if (s / (1.0 - s)) > oddsRatio:
+				break	
+		if minCount and len(sel) < minCount:
+			sel = distr[:minCount]
+		return sel
+		
+	# document word distr marginalizing over topic
+	def netWordDistr(docResult, verbore):
+		wordDistr = {}
+		for tid, (tp,tw) in docResult.iteritems():
+			self.logger.info("topic id " + str(tid))
+			self.logger.info("topic pr " + str(tp))
+			self.logger.info("word distr " + str(tw))
+			
+			for w, wp in tw:
+				p = wp * tp
+				addToKeyedCounter(wordDistr, w, p)
+	
+		wdList = [(k, v) for k, v in wordDistr.items()]	
+		wdList.sort(key=takeSecond, reverse=True)
+		return wdList
+	
