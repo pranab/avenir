@@ -445,9 +445,9 @@ class WordVectorContainer:
 		for i in range(fiSize):
 			for j in range(seSize):
 				if self.similarityAlgo == "cosine":
-					sim = cosineSimilarity(self.numWordVectors[i], self.numWordVectors[j])
+					sim = cosineSimilarity(firstNumVec[i], secNumVec[j])
 				elif self.similarityAlgo == "jaccard":
-					sim = jaccardSimilarity(self.wordVectors[i], self.wordVectors[j],\
+					sim = jaccardSimilarity(firstVec[i], secVec[j],\
 						self.simAlgoNormalizer[0], self.simAlgoNormalizer[1])
 				else:
 					raise ValueError("invalid similarity algorithms")
