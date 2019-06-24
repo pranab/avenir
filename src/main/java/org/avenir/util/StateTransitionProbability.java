@@ -18,6 +18,8 @@
 
 package org.avenir.util;
 
+import java.util.List;
+
 import org.chombo.util.BasicUtils;
 import org.chombo.util.TabularData;
 
@@ -113,14 +115,25 @@ public class StateTransitionProbability extends TabularData {
 			}
 		}
 	}
-	
 	/* (non-Javadoc)
 	 * @see org.chombo.util.TabularData#toString()
 	 */
 	public String toString() {
+		return toString(true);
+	}
+	
+	/**
+	 * @param compact
+	 * @return
+	 */
+	public String toString(boolean compact) {
 		StringBuilder stBld = new StringBuilder();
 		for (int i = 0; i < numRow; ++i) {
-			stBld.append(serializeRow(i)).append(DELIMETER);
+			if (compact) {
+				stBld.append(serializeRow(i)).append(delimeter);
+			} else {
+				stBld.append(serializeRow(i)).append(rowDelimeter);
+			}
 		}
 		return stBld.substring(0, stBld.length()-1);
 	}
@@ -132,9 +145,9 @@ public class StateTransitionProbability extends TabularData {
 		StringBuilder stBld = new StringBuilder();
 		for (int c = 0; c < numCol; ++c) {
 			if (scale > 1) {
-				stBld.append(table[row][c]).append(DELIMETER);
+				stBld.append(table[row][c]).append(delimeter);
 			} else {
-				stBld.append(BasicUtils.formatDouble(dTable[row][c], floatPrecision)).append(DELIMETER);
+				stBld.append(BasicUtils.formatDouble(dTable[row][c], floatPrecision)).append(delimeter);
 			}
 		}
 		
@@ -145,7 +158,7 @@ public class StateTransitionProbability extends TabularData {
 	 * @see org.chombo.util.TabularData#deseralizeRow(java.lang.String, int)
 	 */
 	public void deseralizeRow(String data, int row) {
-		String[] items = data.split(DELIMETER);
+		String[] items = data.split(delimeter);
 		int k = 0;
 		for (int c = 0; c < numCol; ++c) {
 			if (scale > 1) {
@@ -173,11 +186,35 @@ public class StateTransitionProbability extends TabularData {
 	}
 	
 	/**
+	 * @param tableData
+	 */
+	public void fromCompactFormatString(String tableData) {
+		String[] items = tableData.split(delimeter);
+		int offset = items.length - numRow * numCol;
+		for (int i = 0; i < numRow; ++i) {
+			deseralizeRow(items, offset, i);
+			offset += numCol;
+		}
+	}
+	
+	/**
+	 * @param tableData
+	 * @param offset
+	 */
+	public void fromLongFormatString(List<String> tableData, int offset) {
+		for (int i = 0; i < numRow; ++i) {
+			String rowData = tableData.get(offset + i);
+			deseralizeRow(rowData.split(delimeter), 0, i);
+		}		
+	}
+	
+	
+	/**
 	 * @param rowLabel
 	 * @param colLabel
 	 * @return
 	 */
-	public double get(String rowLabel, String colLabel) {
+	public double getDouble(String rowLabel, String colLabel) {
 		double value = 0;
 		int[] rowCol = getRowCol(rowLabel, colLabel);
 		if (scale > 1) {
