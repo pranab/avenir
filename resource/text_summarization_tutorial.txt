@@ -1,0 +1,35 @@
+This tutorial is for text summarization with  6 text extraction algorithms
+
+Setup
+=====
+Make sure you have ../lib and ../text directories with all the python files wrt where summd.py
+is. The driver code is in summd.py. Each algorithm configuration is contained in in it's own properties. 
+Since your python installation is likely to be different, please run all python scripts starting with 
+python abc.py ...
+
+Execution
+=========
+Run the different algorithms as follows. You can set the number of sentences desired in the properties
+file. The parameter common.data.file  should be set to the path of the file you want to summarize.
+The parameter common.size should be set to the number of sentences you want in the summary. 
+You can also set loggig related parameters in the properties file. There are algorithm specific 
+parameters. If you are familiar with the algorithms, you can can change them from the defaiult values.
+
+Term frequency
+python summd.py summd.properties tfSumm
+
+Sum basic
+python summd.py sbsumm.properties sbSumm
+
+Latent semantic indexing
+python summd.py lssumm.properties lsSumm
+
+Non negative matrix factorization
+python summd.py nmfsumm.properties nmfSumm
+
+Text rank
+python summd.py trsumm.properties trSumm
+
+Embedding text rank
+python summd.py etrsumm.properties etrSumm
+

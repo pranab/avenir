@@ -1,5 +1,4 @@
-This tutorial is for predicting CRM lead conversion with Gradient Boosted Trees (GBT) and 
-ScikitLearn. 
+This tutorial is for topic modeling with LDA algorithm based on python gensim library
 
 Setup
 =====
