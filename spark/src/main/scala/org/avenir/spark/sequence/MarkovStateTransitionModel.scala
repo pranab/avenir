@@ -66,6 +66,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val lapalcaeCorrFilePath = 
 	     if(laplaceCorr) getMandatoryStringParam(appConfig, "lapalcaeCorr.filePath", "missing laplace correction file path")
 	     else ""
+	   val outputCompact = getBooleanParamOrElse(appConfig, "output.compact", true)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
@@ -115,16 +116,31 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	     stTransProb
 	   })
 	   
+	   val serTransRecs = if (outputCompact) {
+	     //whole trans matrix in one record
+	     transProb.map(r => {
+	       r._1.toString() + fieldDelimOut + r._2.toString()
+	     })
+	   } else {
+	     // trans matrix in multiple lines
+	     transProb.flatMap(r => {
+	       val recs = ArrayBuffer[String]()
+	       recs += r._1.toString()
+	       val trRecs = r._2.toString(false).split("\\n")
+	       recs ++= trRecs
+	       recs
+	     })
+	   }
+	   
 	   if (debugOn) {
-	     val colTransProb = transProb.collect
+	     val colTransProb = serTransRecs.collect
 	     colTransProb.foreach(s => {
-	       println("id:" + s._1)
-	       println("state trans probability:" + s._2)
+	       println("state trans probability:" + s)
 	     })
 	   }
 
 	   if (saveOutput) {
-	     transProb.saveAsTextFile(outputPath)
+	     serTransRecs.saveAsTextFile(outputPath)
 	   }
 
    }
