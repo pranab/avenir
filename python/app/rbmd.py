@@ -31,8 +31,37 @@ if len(sys.argv) > 2:
 		items = sys.argv[i].split("=")
 		rbm.setConfigParam(items[0], items[1])
 
-# execute		
+# execute	
+config = rbm.getConfig()	
 mode = rbm.getMode()
 print "running mode: " + mode
 if mode == "train":
 	rbm.train()
+
+elif mode == "reconstruct":
+	recon = rbm.reconstruct()
+	for r in recon:
+		print r
+
+elif mode == "missing":
+	data = rbm.getAnalyzeData()
+	sh = data.shape
+	nsamp = sh[0]
+	counters = list(map(lambda i: dict(), range(nsamp)))
+	itc = config.getIntConfig("analyze.recon.iter.count")[0]
+	for i in range(itc):
+		print "iteration ", i
+		recons = rbm.reconstruct()
+		for j in range(nsamp):
+			recon = recons[j]
+			inc = recon[5:8]
+			print "sample ", str(j), " income ", str(inc)
+			counter = counters[j]
+			sinc = toStrFromList(inc, 3)
+			incrKeyedCounter(counter, sinc)
+	print "predicted missing values"
+	for i in range(nsamp):
+		counter = counters[i]
+		rinc = max(counter, key=counter.get)	
+		print "sample ", i, " income ", rinc
+			

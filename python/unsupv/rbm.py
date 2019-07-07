@@ -52,10 +52,13 @@ class RestrictedBoltzmanMachine:
 		defValues["train.model.save"] = (False, None)
 		defValues["analyze.data.file"] = (None, None)
 		defValues["analyze.data.fields"] = (None, None)
+		defValues["analyze.use.saved.model"] = (True, None)
+		defValues["analyze.recon.iter.count"] = (10, None)
 		
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.analyzeData = None
+		self.model = None
 	
 	# get config object
 	def getConfig(self):
@@ -86,10 +89,14 @@ class RestrictedBoltzmanMachine:
 			self.saveModel()
 
 	# reconstruct
-	def reconstruc(self):
+	def reconstruct(self):
 		self.getModel()
 		self.getAnalyzeData()
-		return self.model.gibbs(self.analyzeData)
+		recon =  self.model.gibbs(self.analyzeData)
+		recNum = list()
+		for r in recon:
+			recNum.append(list(map(lambda b: 1 if b else 0, r)))
+		return recNum
 		
 	# analyze data
 	def getAnalyzeData(self):
@@ -121,14 +128,15 @@ class RestrictedBoltzmanMachine:
 	# gets model
 	def getModel(self):
 		useSavedModel = self.config.getBooleanConfig("analyze.use.saved.model")[0]
-		if useSavedModel:
-			# load saved model
-			print "...loading model"
-			modelFilePath = self.getModelFilePath()
-			self.model = joblib.load(modelFilePath)
-		else:
-			# train model
-			self.train()
+		if self.model is None:
+			if useSavedModel:
+				# load saved model
+				print "...loading model"
+				modelFilePath = self.getModelFilePath()
+				self.model = joblib.load(modelFilePath)
+			else:
+				# train model
+				self.train()
 	
 		
 	# builds model object
