@@ -175,6 +175,11 @@ def toStr(val, precision):
 		sVal = str(val)
 	return sVal
 
+# converts list of any type to delim separated string
+def toStrFromList(values, precision, delim=","):
+	sValues = list(map(lambda v: toStr(v, precision), values))
+	return delim.join(sValues)
+	
 # return typed value given string
 def typedValue(val):
 	tVal = None
@@ -397,8 +402,9 @@ class DummyVarGenerator:
 		self.delim = delim
 	
 	def processRow(self, row):	
+		#print row
 		rowArr = row.split(self.delim)
-		assert len(rowArr) == self.rowSize, "row does not have expected number of columns" + str(len(rowArr))
+		assert len(rowArr) == self.rowSize, "row does not have expected number of columns " + str(len(rowArr))
 		newRowArr = []
 		for i in range(len(rowArr)):
 			curVal = rowArr[i]
