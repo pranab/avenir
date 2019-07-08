@@ -211,4 +211,23 @@ def norm(values, po=2):
 	no = pow(no,1.0/po)
 	return list(map(lambda v: v/no, values))
 	
+# random one hot vector
+def createRandomOneHotVec(size):
+	vec = [0] * size
+	s = random.randint(0, size - 1)
+	vec[s] = 1
+	return vec
 
+# create all one hot vectors
+def createAllOneHotVec(size):
+	vecs = list()
+	for i in range(size):
+		vec = [0] * size
+		vec[i] = 1
+		vecs.append(vec)
+	return vecs
+	
+
+	
+	
+	

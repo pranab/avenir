@@ -19,7 +19,65 @@
 import os
 import sys
 sys.path.append(os.path.abspath("../unsupv"))
+sys.path.append(os.path.abspath("../lib"))
+from util import *
+from mlutil import *
 from rbm import *
+
+def missingValueBySampling(rbm, config):
+	data = rbm.getAnalyzeData()
+	sh = data.shape
+	nsamp = sh[0]
+	counters = list(map(lambda i: dict(), range(nsamp)))
+	
+	# random in initial value
+	size = 3
+	invc = config.getIntConfig("analyze.missing.initial.count")[0]
+	itc = config.getIntConfig("analyze.missing.iter.count")[0]
+	for inv in range(invc):
+		#randomly set initial
+		for d in data:
+			onh = createRandomOneHotVec(size)
+			for i in range(size):
+				d[5+i] = onh[i]	
+		
+		# multiple gibbs sampling	
+		for i in range(itc):
+			print "iteration ", i
+			recons = rbm.reconstruct()
+			for j in range(nsamp):
+				recon = recons[j]
+				inc = recon[5:8]
+				print "sample ", str(j), " income ", str(inc)
+				counter = counters[j]
+				sinc = toStrFromList(inc, 3)
+				incrKeyedCounter(counter, sinc)
+	
+		print "predicted missing values"
+		for i in range(nsamp):
+			counter = counters[i]
+			rinc = max(counter, key=counter.get)	
+			print "sample ", i, " income ", rinc
+	
+	
+	validate = config.getBooleanConfig("analyze.missing.validate")[0]
+	if validate:
+		predicted = list(map(lambda counter: max(counter, key=counter.get), counters))
+		
+		vaFilepath = config.getStringConfig("analyze.missing.validate.file.path")[0]
+		assert vaFilepath, "missing missing value validation file path"
+		actual = list()
+		for rec in fileRecGen(vaFilepath, ","):
+			inc = rec[5:8]
+			sinc = ",".join(inc)
+			print "actual ", sinc
+			actual.append(sinc)
+		assert (len(predicted) == len(actual)), "un equal size of predicted and validation"
+		zipped = zip(predicted, actual)
+		corCount = len(list(filter(lambda z: z[0] == z[1], zipped)))
+		accuracy = (corCount * 100.0) / nsamp
+		print "accuracy %.3f" %(accuracy)
+
 
 # classifier
 rbm = RestrictedBoltzmanMachine(sys.argv[1])
@@ -44,24 +102,6 @@ elif mode == "reconstruct":
 		print r
 
 elif mode == "missing":
-	data = rbm.getAnalyzeData()
-	sh = data.shape
-	nsamp = sh[0]
-	counters = list(map(lambda i: dict(), range(nsamp)))
-	itc = config.getIntConfig("analyze.recon.iter.count")[0]
-	for i in range(itc):
-		print "iteration ", i
-		recons = rbm.reconstruct()
-		for j in range(nsamp):
-			recon = recons[j]
-			inc = recon[5:8]
-			print "sample ", str(j), " income ", str(inc)
-			counter = counters[j]
-			sinc = toStrFromList(inc, 3)
-			incrKeyedCounter(counter, sinc)
-	print "predicted missing values"
-	for i in range(nsamp):
-		counter = counters[i]
-		rinc = max(counter, key=counter.get)	
-		print "sample ", i, " income ", rinc
+	missingValueBySampling(rbm, config)
+		 
 			

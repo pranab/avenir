@@ -53,7 +53,10 @@ class RestrictedBoltzmanMachine:
 		defValues["analyze.data.file"] = (None, None)
 		defValues["analyze.data.fields"] = (None, None)
 		defValues["analyze.use.saved.model"] = (True, None)
-		defValues["analyze.recon.iter.count"] = (10, None)
+		defValues["analyze.missing.initial.count"] = (10, None)
+		defValues["analyze.missing.iter.count"] = (100, None)
+		defValues["analyze.missing.validate"] = (False, None)
+		defValues["analyze.missing.validate.file.path"] = (None, None)
 		
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
