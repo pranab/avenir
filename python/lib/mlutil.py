@@ -212,9 +212,9 @@ def norm(values, po=2):
 	return list(map(lambda v: v/no, values))
 	
 # random one hot vector
-def createRandomOneHotVec(size):
+def createOneHotVec(size, indx = -1):
 	vec = [0] * size
-	s = random.randint(0, size - 1)
+	s = random.randint(0, size - 1) if indx < 0 else indx
 	vec[s] = 1
 	return vec
 

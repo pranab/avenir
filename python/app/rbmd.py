@@ -31,15 +31,29 @@ def missingValueBySampling(rbm, config):
 	counters = list(map(lambda i: dict(), range(nsamp)))
 	
 	# random in initial value
-	size = 3
+	mBeg = config.getIntConfig("analyze.missing.beg.col")[0]
+	mEnd = config.getIntConfig("analyze.missing.end.col")[0]
+	size = mEnd - mBeg
+	assert size > 0, "invalid missing columns"
 	invc = config.getIntConfig("analyze.missing.initial.count")[0]
 	itc = config.getIntConfig("analyze.missing.iter.count")[0]
+	allInitial = config.getBooleanConfig("analyze.missing.all.initial")[0]
+	if allInitial:
+		invc = size if size > 1 else 2
+	bValues = [[0], [1]]
 	for inv in range(invc):
-		#randomly set initial
+		#rset initial
+		indx = inv if allInitial else -1
 		for d in data:
-			onh = createRandomOneHotVec(size)
+			if size > 1:
+				onh = createOneHotVec(size, indx)
+			else:
+				if indx >= 0:
+					onh = bValues[inv]
+				else:
+					onh = selectRandomFromList(bValues)
 			for i in range(size):
-				d[5+i] = onh[i]	
+				d[mBeg+i] = onh[i]	
 		
 		# multiple gibbs sampling	
 		for i in range(itc):
@@ -47,8 +61,8 @@ def missingValueBySampling(rbm, config):
 			recons = rbm.reconstruct()
 			for j in range(nsamp):
 				recon = recons[j]
-				inc = recon[5:8]
-				print "sample ", str(j), " income ", str(inc)
+				inc = recon[mBeg:mEnd]
+				print "sample ", j, " income ", str(inc)
 				counter = counters[j]
 				sinc = toStrFromList(inc, 3)
 				incrKeyedCounter(counter, sinc)
@@ -68,7 +82,7 @@ def missingValueBySampling(rbm, config):
 		assert vaFilepath, "missing missing value validation file path"
 		actual = list()
 		for rec in fileRecGen(vaFilepath, ","):
-			inc = rec[5:8]
+			inc = rec[mBeg:mEnd]
 			sinc = ",".join(inc)
 			print "actual ", sinc
 			actual.append(sinc)
