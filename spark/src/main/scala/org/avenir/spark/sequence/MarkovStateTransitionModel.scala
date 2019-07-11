@@ -53,19 +53,18 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.field.ordinals"))
 	   val classAttrOrdinal = getOptionalIntParam(appConfig, "class.attr.ordinal")
+	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
 	   val seqStartOrdinal = getMandatoryIntParam(appConfig, "seq.start.ordinal")
 	   val states = getMandatoryStringListParam(appConfig, "state.list", "missing state list")
 	   val statesArr = BasicUtils.fromListToStringArray(states)
-	   val scale = getMandatoryIntParam(appConfig, "trans.prob.scale")
+	   val scale = getIntParamOrElse(appConfig, "trans.prob.scale", 1)
 	   val outputPrecision = getIntParamOrElse(appConfig, "output.precision", 3);
-	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
-	   val seqFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "seq.field.ordinal") else -1
-	   val stateFieldOrd = if (seqLongFormat) getMandatoryIntParam(appConfig, "state.field.ordinal") else -1
+	   val seqFieldOrd = getConditionalMandatoryIntParam(seqLongFormat, appConfig, "seq.field.ordinal", 
+	       "missing sequence field ordinal") 
+	   val stateFieldOrd = getConditionalMandatoryIntParam(seqLongFormat, appConfig, "state.field.ordinal", 
+	       "missing state field ordinal") 
 	   val mergeKeys = getBooleanParamOrElse(appConfig, "data.mergeKeysNeeded", false)
-	   val laplaceCorr = getBooleanParamOrElse(appConfig, "laplaceCorr.needed", false)
-	   val lapalcaeCorrFilePath = 
-	     if(laplaceCorr) getMandatoryStringParam(appConfig, "lapalcaeCorr.filePath", "missing laplace correction file path")
-	     else ""
+	   val laplaceCorr = getBooleanParamOrElse(appConfig, "data.laplaceCorrNeeded", false)
 	   val outputCompact = getBooleanParamOrElse(appConfig, "output.compact", true)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
@@ -73,6 +72,11 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
+	   //laplace correction
+	   val laplaceCorrKeyedStatePair = sparkCntxt.parallelize(getLaplaceCorr(data, fieldDelimIn, keyFieldOrdinals, 
+	       classAttrOrdinal, statesArr, mergeKeys))
+       laplaceCorrKeyedStatePair.cache
+      
 	   var keyedStatePairs = if (seqLongFormat) {
 	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd, mergeKeys)
 	   } else {
@@ -81,13 +85,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   
 	   //laplace correction
 	   keyedStatePairs = if (laplaceCorr) {
-	     val laplaceCorrData = sparkCntxt.textFile(lapalcaeCorrFilePath)
-	     val laplaceCorrkeyedStatePair = laplaceCorrData.map(line => {
-	       val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
-	       val key = Record(items, 0, items.length-1)
-	       (key, items(items.length-1).toInt)
-	     })
-	     (keyedStatePairs ++ laplaceCorrkeyedStatePair).reduceByKey((v1, v2) => if (v1 > v2) v1 else v2)
+	     (keyedStatePairs ++ laplaceCorrKeyedStatePair).reduceByKey((v1, v2) => if (v1 > v2) v1 else v2)
 	   } else {
 	     keyedStatePairs
 	   }
@@ -195,21 +193,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
        keyFieldOrdinals:Array[Int], seqFieldOrd:Int,  stateFieldOrd:Int, mergeKeys:Boolean) : RDD[(Record,Int)] = {
     data.map(line => {
     	 val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
-    	 val keyRec = classAttrOrdinal match {
-	   		case Some(classOrd:Int) => {
-	   			//with class attribute
-	   			val classVal = items(classOrd)
-	   			val keyRec = Record(keyFieldOrdinals.length + 1, items, keyFieldOrdinals)
-	   			keyRec.addString(classVal)
-	   			keyRec
-	   		}
-     
-	   		case None => {
-	   			//without class attribute
-	   			val keyRec = Record(keyFieldOrdinals.length, items, keyFieldOrdinals)
-	   			keyRec
-	   		}
-		  }
+    	 val keyRec =  getKey(classAttrOrdinal, items, keyFieldOrdinals)
     	 val valRec = Record(2)
     	 valRec.addLong(items(seqFieldOrd).toLong)
     	 valRec.addString(items(stateFieldOrd))
@@ -230,4 +214,68 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
        })
      }).reduceByKey((v1, v2) => v1 + v2)
    }
+  
+   /**
+   * @param config
+   * @param paramName
+   * @param defValue
+   * @param errorMsg
+   * @return
+   */  
+   def getKey(classAttrOrdinal:Option[Int], items:Array[String], keyFieldOrdinals:Array[Int]): Record =  {
+	 val keyRec = classAttrOrdinal match {
+   		case Some(classOrd:Int) => {
+   			//with class attribute
+   			val classVal = items(classOrd)
+   			val keyRec = Record(keyFieldOrdinals.length + 1, items, keyFieldOrdinals)
+   			keyRec.addString(classVal)
+   			keyRec
+   		}
+ 
+   		case None => {
+   			//without class attribute
+   			val keyRec = Record(keyFieldOrdinals.length, items, keyFieldOrdinals)
+   			keyRec
+   		}
+	  }
+	 keyRec
+  }
+  
+  /**
+  * @param config
+  * @param paramName
+  * @param errorMsg
+  * @return
+  */   
+  def getLaplaceCorr(data:RDD[String], fieldDelimIn:String, keyFieldOrdinals:Array[Int], 
+      classAttrOrdinal:Option[Int], statesArr:Array[String], mergeKeys:Boolean) :Array[(Record, Int)] = {
+    val stateTrans = ArrayBuffer[(Record, Int)]()
+    val keys = ArrayBuffer[Record]()
+    if (mergeKeys) {
+      val key = Record("all")
+      keys += key
+    } else {
+      val uniqueKeys = data.map(line => {
+    	 val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)   
+    	 val key = getKey(classAttrOrdinal, items, keyFieldOrdinals)
+    	 key
+      }).distinct.collect
+      uniqueKeys.foreach(k => keys += k)
+    }
+    
+    //laplace transition matrix
+    val keyArr = keys.toArray
+    keyArr.foreach(k => {
+      statesArr.foreach(s1 => {
+        statesArr.foreach(s2 => {
+          val trKey = Record(k.size + 2, k)
+          trKey.add(s1, s2)
+          val kv = (trKey, 1)
+          stateTrans += kv
+        })
+      })
+    })
+    stateTrans.toArray
+  }
+  
 }
