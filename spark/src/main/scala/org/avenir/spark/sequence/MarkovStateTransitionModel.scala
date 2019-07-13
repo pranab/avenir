@@ -54,7 +54,8 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.field.ordinals"))
 	   val classAttrOrdinal = getOptionalIntParam(appConfig, "class.attr.ordinal")
 	   val seqLongFormat = getBooleanParamOrElse(appConfig, "data.seqLongFormat", false)
-	   val seqStartOrdinal = getMandatoryIntParam(appConfig, "seq.start.ordinal")
+	   val seqStartOrdinal = getConditionalMandatoryIntParam(!seqLongFormat, appConfig, "seq.start.ordinal", 
+	       "missing sequence start ordinal for compact format")
 	   val states = getMandatoryStringListParam(appConfig, "state.list", "missing state list")
 	   val statesArr = BasicUtils.fromListToStringArray(states)
 	   val scale = getIntParamOrElse(appConfig, "trans.prob.scale", 1)
@@ -260,7 +261,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
     	 val key = getKey(classAttrOrdinal, items, keyFieldOrdinals)
     	 key
       }).distinct.collect
-      uniqueKeys.foreach(k => keys += k)
+      keys ++= uniqueKeys
     }
     
     //laplace transition matrix
