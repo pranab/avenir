@@ -73,18 +73,25 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
 	   
-	   //laplace correction
+	   //state transition with count 1
 	   val laplaceCorrKeyedStatePair = sparkCntxt.parallelize(getLaplaceCorr(data, fieldDelimIn, keyFieldOrdinals, 
 	       classAttrOrdinal, statesArr, mergeKeys))
+	   val keyLen = if (mergeKeys) 3 else keyFieldOrdinals.length + 2
+	   //laplaceCorrKeyedStatePair.foreach(r => r._1.check(keyLen))
        laplaceCorrKeyedStatePair.cache
-      
+       
+       if (debugOn)
+         print("state trans count")
 	   var keyedStatePairs = if (seqLongFormat) {
 	     keyedStatePairForLongFormat(data, fieldDelimIn, classAttrOrdinal, keyFieldOrdinals, seqFieldOrd,  stateFieldOrd, mergeKeys)
 	   } else {
 	     keyedStatePairForCompactFormat(data, fieldDelimIn, seqStartOrdinal,classAttrOrdinal, keyFieldOrdinals)
 	   }.cache
+	   //keyedStatePairs.foreach(r => r._1.check(keyLen))
 	   
 	   //laplace correction
+       if (debugOn)
+         print("laplace correction ")
 	   keyedStatePairs = if (laplaceCorr) {
 	     (keyedStatePairs ++ laplaceCorrKeyedStatePair).reduceByKey((v1, v2) => if (v1 > v2) v1 else v2)
 	   } else {
@@ -92,6 +99,8 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
 	   }
 	   
 	   //move state pairs from key to value
+       if (debugOn)
+         print("move state pair")
 	   val transData = keyedStatePairs.map(kv => {
 	     //key: id and optional class value
 	     val size = kv._1.size
@@ -235,7 +244,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
  
    		case None => {
    			//without class attribute
-   			val keyRec = Record(keyFieldOrdinals.length, items, keyFieldOrdinals)
+   			val keyRec = Record(items, keyFieldOrdinals)
    			keyRec
    		}
 	  }
@@ -267,10 +276,14 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
     //laplace transition matrix
     val keyArr = keys.toArray
     keyArr.foreach(k => {
+      //println("k " + k.toString())
       statesArr.foreach(s1 => {
+        //println("s1 " + s1)
         statesArr.foreach(s2 => {
+          //println("s2 " + s2)
           val trKey = Record(k.size + 2, k)
           trKey.add(s1, s2)
+          println("count one state trans " + trKey.toString)
           val kv = (trKey, 1)
           stateTrans += kv
         })
