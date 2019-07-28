@@ -93,7 +93,7 @@ object MarkovStateTransitionModel extends JobConfiguration with GeneralUtility {
        if (debugOn)
          print("laplace correction ")
 	   keyedStatePairs = if (laplaceCorr) {
-	     (keyedStatePairs ++ laplaceCorrKeyedStatePair).reduceByKey((v1, v2) => if (v1 > v2) v1 else v2)
+	     (keyedStatePairs ++ laplaceCorrKeyedStatePair).reduceByKey((v1, v2) => v1 + v2)
 	   } else {
 	     keyedStatePairs
 	   }
