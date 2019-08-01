@@ -63,7 +63,7 @@ object BinaryDummyVariableGenerator extends JobConfiguration {
 	   
 	   val data = sparkCntxt.textFile(inputPath)
 	   val transformedData = data.map(line => {
-		   val items = line.split(fieldDelimIn, -1)
+		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 		   if (items.length != rowSize) {
 		     throw new IllegalStateException("invalid row size")
 		   }
