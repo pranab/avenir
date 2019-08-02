@@ -45,6 +45,7 @@ def genID(len):
 		id = id + selectRandomFromList(tokens)
 	return id
 
+# generate list of IDs
 def genIdList(numId, idSize):
 	iDs = []
 	for i in range(numId):
@@ -57,6 +58,13 @@ def genNumID(len):
 	for i in range(len):
 		id = id + selectRandomFromList(numTokens)
 	return id
+
+# generate list of numeric IDs
+def genNumIdList(numId, idSize):
+	iDs = []
+	for i in range(numId):
+		iDs.append(genNumID(idSize))
+	return iDs
 
 #select an element randomly from a list		
 def selectRandomFromList(list):
