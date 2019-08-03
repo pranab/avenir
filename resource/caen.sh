@@ -21,12 +21,23 @@ case "$1" in
 "encodeLoo")	
 	echo "running CategoricalLeaveOneOutEncoding"
 	CLASS_NAME=org.avenir.spark.explore.CategoricalLeaveOneOutEncoding
-	INPUT=file:///Users/pranab/Projects/bin/avenir/input/caen/loan.txt
-	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/caen
-	rm -rf ./output/caen
+	INPUT=file:///Users/pranab/Projects/bin/avenir/input/caen/loo/loan.txt
+	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/caen/loo
+	rm -rf ./output/caen/loo
 	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
 	--conf spark.ui.killEnabled=true --master $MASTER $AVENIR_JAR_NAME  $INPUT $OUTPUT caen.conf
-	ls -l ./output/caen
+	ls -l ./output/caen/loo
+	;;
+
+"encodeFh")	
+	echo "running CategoricalFeatureHashingEncoding"
+	CLASS_NAME=org.avenir.spark.explore.CategoricalFeatureHashingEncoding
+	INPUT=file:///Users/pranab/Projects/bin/avenir/input/caen/fh/*
+	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/caen/fh
+	rm -rf ./output/caen/fh
+	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
+	--conf spark.ui.killEnabled=true --master $MASTER $AVENIR_JAR_NAME  $INPUT $OUTPUT caen.conf
+	ls -l ./output/caen/fh
 	;;
 
 *) 

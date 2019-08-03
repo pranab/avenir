@@ -46,10 +46,12 @@ object CategoricalFeatureHashingEncoding extends JobConfiguration with GeneralUt
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
 	   val catFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "cat.fieldOrdinals"))
 	   val encodingVecSize = getMandatoryIntParam(appConfig, "encoding.size", "missing encoding vector size")
-	   val indexHashingAlgo = this.getStringParamOrElse(appConfig, "index.hashingAlgo", "default")
+	   val indexHashingAlgo = getStringParamOrElse(appConfig, "index.hashingAlgo", "default")
 	   val signHashingAlgo = this.getStringParamOrElse(appConfig, "sign.hashingAlgo", "FNV")
 	   val rowSize = getMandatoryIntParam(appConfig, "row.size")
 	   val newRowSize = rowSize - catFieldOrdinals.length + encodingVecSize
+	   val remFieldCount = rowSize - catFieldOrdinals.length
+	   val encodedVecOffset = getIntParamOrElse(appConfig, "encoding.vecOffset", remFieldCount)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -62,9 +64,28 @@ object CategoricalFeatureHashingEncoding extends JobConfiguration with GeneralUt
 		   val catFields = BasicUtils.extractFieldsAsStringArray(items, catFieldOrdinals)
 		   val otherFields = BasicUtils.extractRemainingFieldsAsStringArray(items, catFieldOrdinals)
 		   val featureHash = getFeatureHash(catFields, encodingVecSize, indexHashingAlgo, signHashingAlgo)
-		   require(catFields.length + featureHash.length == newRowSize, "new row is not expected size")
-		   otherFields.mkString(fieldDelimOut) + fieldDelimOut + BasicUtils.join(featureHash, fieldDelimOut)
+		   val encRowSize = remFieldCount + featureHash.length
+		   require(encRowSize == newRowSize, "new enoded row size got " + encRowSize + " expected " + newRowSize)
 		   
+		   //place  within row
+		   encodedVecOffset match {
+		     case (0) => {
+		       BasicUtils.join(featureHash, fieldDelimOut) + fieldDelimOut + otherFields.mkString(fieldDelimOut)
+		     }
+		     case (offset) => {
+		       if (offset > remFieldCount) {
+		         throw new IllegalArgumentException("invalid offset for encoded vector")
+		       }
+		       if (offset == remFieldCount) {
+		           otherFields.mkString(fieldDelimOut) + fieldDelimOut + BasicUtils.join(featureHash, fieldDelimOut)
+		       } else {
+		    	   val begOtherFields = otherFields.slice(0, offset)
+		    	   val endOtherFields = otherFields.slice(offset, remFieldCount)
+		    	   begOtherFields.mkString(fieldDelimOut)  + fieldDelimOut + BasicUtils.join(featureHash, fieldDelimOut) +  
+		       		fieldDelimOut + endOtherFields.mkString(fieldDelimOut)
+		       }
+		     }
+		   }
 	   })
 	   
 	   if (debugOn) {
@@ -88,7 +109,7 @@ object CategoricalFeatureHashingEncoding extends JobConfiguration with GeneralUt
      val hashed = Array.fill[Int](encodingVecSize)(0)
      catFields.foreach(v => {
        val indxHash = BasicUtils.hashCode(v, indexHashingAlgo) % encodingVecSize
-       val signHash = BasicUtils.hashCode(v, signHashingAlgo) * 2
+       val signHash = BasicUtils.hashCode(v, signHashingAlgo) % 2
        if (signHash == 1)
          hashed(indxHash) += 1
        else 
