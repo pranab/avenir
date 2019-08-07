@@ -1,0 +1,42 @@
+This tutorial is for high cardinality categorical variable encoding using feature hashing as 
+implemented on Spark
+
+Environment
+===========
+Path etc in shell script and configuration file corresposnds to my environment. Please Change 
+them  as needed for your environment. Plase the python/lib directory in ../lib w.r.t where 
+caen.sh is located
+
+Build
+=====
+Follow instructions in spark_dependency.txt
+
+Create mobile advertisement data 
+================================
+./advt.py 20 10 50 50 3 > <output_file>
+
+where
+python advt.py  <num_appas> <num_models> <num_advt> <num_zc> <num_days> > <output_file>
+num_apps = num of apps e.g 20
+num_models = num of models e.g 10
+num_advt = num of advertisements e.g. 50
+num_zc = num of zip codes e.g. 50
+num_days = num of days e.g 5
+output_file = generated file name
+
+Copy the generated file to the input directory as specified in caen.sh
+
+Unique value combination count spark job
+========================================
+Run
+./caen.sh uniqueCount
+
+Encoding spark job
+==================
+Run
+./caen.sh encodeFh
+
+
+Configuration
+=============
+It's in caen.conf file. Make changes as necessary

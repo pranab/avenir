@@ -2,7 +2,7 @@
 #converts high cardinality categorical aatributes to numerical
 
 PROJECT_HOME=/Users/pranab/Projects
-CHOMBO_JAR_NAME=$PROJECT_HOME/bin/chombo/uber-avenir-spark-1.0.jar
+CHOMBO_JAR_NAME=$PROJECT_HOME/bin/chombo/uber-chombo-spark-1.0.jar
 AVENIR_JAR_NAME=$PROJECT_HOME/bin/avenir/uber-avenir-spark-1.0.jar
 MASTER=spark://akash:7077
 
@@ -27,6 +27,17 @@ case "$1" in
 	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
 	--conf spark.ui.killEnabled=true --master $MASTER $AVENIR_JAR_NAME  $INPUT $OUTPUT caen.conf
 	ls -l ./output/caen/loo
+	;;
+
+"uniqueCount")	
+	echo "running UniqueValueCounter"
+	CLASS_NAME=org.chombo.spark.explore.UniqueValueCounter
+	INPUT=file:///Users/pranab/Projects/bin/avenir/input/caen/fh/*
+	OUTPUT=file:///Users/pranab/Projects/bin/avenir/output/caen/unc
+	rm -rf ./output/caen/unc
+	$SPARK_HOME/bin/spark-submit --class $CLASS_NAME   \
+	--conf spark.ui.killEnabled=true --master $MASTER $CHOMBO_JAR_NAME  $INPUT $OUTPUT caen.conf
+	ls -l ./output/caen/unc
 	;;
 
 "encodeFh")	
