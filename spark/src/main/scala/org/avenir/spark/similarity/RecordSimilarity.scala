@@ -26,6 +26,7 @@ import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.chombo.distance.InterRecordDistance
 import scala.collection.mutable.ListBuffer
+import org.chombo.spark.common.GeneralUtility
 
 
 /**
@@ -33,7 +34,7 @@ import scala.collection.mutable.ListBuffer
  * @param args
  * @return
  */
-object RecordSimilarity extends JobConfiguration {
+object RecordSimilarity extends JobConfiguration with GeneralUtility {
    /**
     * @param args
     * @return
@@ -49,7 +50,8 @@ object RecordSimilarity extends JobConfiguration {
 	   //configurations
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
-	   val keyFieldOrdinals = getMandatoryIntListParam(appConfig, "id.field.ordinals").asScala.toArray
+	   val partionFieldOrdinals = toOptionalIntArray(getOptionalIntListParam(appConfig, "part.fieldOrdinals"))
+	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.field.ordinals"))
 	   val richAttrSchemaPath = getMandatoryStringParam(appConfig, "rich.attr.schema.path")
 	   val genAttrSchema = BasicUtils.getGenericAttributeSchema(richAttrSchemaPath)
 	   val distAttrSchemaPath = getMandatoryStringParam(appConfig, "dist.attr.schema.path")
@@ -62,9 +64,14 @@ object RecordSimilarity extends JobConfiguration {
 	   val otherInputPath = 
 	     if (interSetSimilarity) getMandatoryStringParam(appConfig, "other.input.path", "missing second input path") 
 	     else ""
-	   
+	   val precision = getIntParamOrElse(appConfig, "output.precision", 3)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
+	   
+	   val keyLen = partionFieldOrdinals match {
+	       case Some(partFields) => partFields.length + 1
+	       case None => 1
+	   }
 	   
 	   //read input
 	   val data = sparkCntxt.textFile(inputPath)
@@ -78,7 +85,13 @@ object RecordSimilarity extends JobConfiguration {
 			   var bucketId = 0
 			   val bucketedRec = buckets.map(b => {
 			     val bucketPairHash = thisBucket << 12 | b
-			     (bucketPairHash, (bucketId,line)) 
+			     val key = Record(keyLen)
+			     Record.populateFieldsWithIndex(items, partionFieldOrdinals, key)
+			     key.addInt(bucketPairHash)
+			     val value = Record(2)
+			     value.add(bucketId,line)
+			     //(bucketPairHash, (bucketId,line)) 
+			     (key, value)
 			   })
 			   
 			   bucketedRec
@@ -94,7 +107,13 @@ object RecordSimilarity extends JobConfiguration {
 			   var bucketId = 1
 			   val bucketedRec = buckets.map(b => {
 			     val bucketPairHash = b << 12 | thisBucket 
-			     (bucketPairHash, (bucketId,line)) 
+			     val key = Record(keyLen)
+			     Record.populateFieldsWithIndex(items, partionFieldOrdinals, key)
+			     key.addInt(bucketPairHash)
+			     val value = Record(2)
+			     value.add(bucketId,line)
+			     //(bucketPairHash, (bucketId,line)) 
+			     (key, value)
 			   })
 			   
 			   bucketedRec
@@ -118,7 +137,13 @@ object RecordSimilarity extends JobConfiguration {
 			        b << 12 | thisBucket  
 			     }
 			       
-			     (bucketPairHash, (bucketId,line)) 
+			     val key = Record(keyLen)
+			     Record.populateFieldsWithIndex(items, partionFieldOrdinals, key)
+			     key.addInt(bucketPairHash)
+			     val value = Record(2)
+			     value.add(bucketId,line)
+			     //(bucketPairHash, (bucketId,line)) 
+			     (key, value)
 			   })
 			   
 			   bucketedRec
@@ -126,47 +151,45 @@ object RecordSimilarity extends JobConfiguration {
    	   }
 	   
 	   //group by key and generate distances
-	   val bucketedDistances = bucketedData.groupByKey().flatMapValues(recs => {
-	     val firstBucket = recs.filter(r => r._1 == 0)
-	     val secondBucket = recs.filter(r => r._1 == 1)
+	   val distances = bucketedData.groupByKey().flatMapValues(recs => {
+	     val firstBucket = recs.filter(r => r.getInt(0) == 0)
+	     val secondBucket = recs.filter(r => r.getInt(0) == 1)
 	     val distances = new ListBuffer[(Record, Record, Double)]()
 	     
 	     //first bucket
 	     firstBucket.foreach(f => {
-	       val firstRecStr = f._2
+	       val firstRecStr = f.getString(1)
 	       val firstRecAr = firstRecStr.split(fieldDelimIn, -1)
 	       val firstKey = Record(firstRecAr, keyFieldOrdinals)
-	       val fistRec = if (outputKeyOnly) None else Some(Record(firstRecAr))
+	       //val fistRec = if (outputKeyOnly) None else Some(Record(firstRecAr))
 	       
 	       //second bucket
 	       secondBucket.foreach(s => {
-	    	   val secondRecStr = s._2
+	    	   val secondRecStr = s.getString(1)
 	    	   val secondRecAr = secondRecStr.split(fieldDelimIn, -1)
 	    	   val secondKey = Record(secondRecAr, keyFieldOrdinals)
 	    	   val dist = if (firstKey.equals(secondKey)) 0 else  distFinder.findDistance(firstRecStr, secondRecStr)
 	    	   distances +=  (if (outputKeyOnly) {
-	    		   ((firstKey, secondKey, dist))
+	    		 (firstKey, secondKey, dist)
 	    	   } else {
-	    	     val secondRec = Record(secondRecAr)
-	    	     val res = fistRec match {
-	    	       case (Some(rec : Record) ) => ((rec, secondRec, dist))
-	    	       case None => throw new IllegalStateException("missing whole record")
-	    	     }
-	    	     res
+	    	     (Record(firstRecStr), Record(secondRecStr), dist)
 	    	   })
 	       })
 	     })
 	     distances
+	   }).map(r => {
+	     val key = r._1
+	     val value = r._2
+	     val partStr = partionFieldOrdinals match {
+	       case Some(partFields) => key.toString(0, key.size -1)
+	       case None => ""
+	     }
+	     partStr + value._1.toString() + value._2.toString() + BasicUtils.formatDouble(value._3, precision)
 	   })
-	   
-	   //only distances, discard hash bucket keys
-	   val distances = bucketedDistances.values
 	   
 	   if (debugOn) {
 	     val distCol = distances.collect
-	     distCol.foreach(d => {
-	       println(d)
-	     })
+	     distCol.foreach(d => println(d))
 	   }	
 	   
 	   if (saveOutput) {
