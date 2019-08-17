@@ -1,0 +1,81 @@
+This tutorial is for detection model drift or non stationarity of data using Kolmogorov Smirnov  
+statistic  as implemented on Spark. We will use product sale data consisting of time since last
+transaction and quantity sold.
+
+Environment
+===========
+Path etc in shell script and configuration file corresposnds to my environment. Please Change 
+them  shell script ks.sh and configuration file ks.conf as per your environment and need . 
+Place the python/lib directory in ../lib w.r.t where  caen.sh is located
+
+Build
+=====
+Follow instructions in spark_dependency.txt
+
+Create stats for reference data
+===============================
+./prsale.py stat <num_prod min_mean_elapsed_sec> <max_mean_elapsed_sec> <min_stddev_elapsed_sec> <max_stddev_elapsed_sec> <min_mean_quant> <max_mean_quant> <min_stddev_quant> <max_stddev_quant> > pstat1.txt
+
+where
+num_prod = number of products e.g 10
+min_mean_elapsed_sec = minimum of mean of elapsed time since last transaction e.g 300
+max_mean_elapsed_sec = maximum of mean of elapsed time since last transaction e.g 600
+min_stddev_elapsed_sec = minimum of std deviation of elapsed time since last transaction e.g 30
+max_stddev_elapsed_sec = maximum of std deviation of elapsed time since last transactione.g 60
+min_mean_quant = minimum of mean of quantity e.g 1
+max_mean_quant = maximum of mean of quantity  e.g 3
+min_stddev_quant = minimum of std dev of quantity e.g 1
+max_stddev_quant = maximum of std dev of quantity e.g 2
+
+Create reference data and copy
+==============================
+./prsale.py gen pstat1.txt  <start_num_days_in_past> <end_num_days_in_past>  > psale1.txt
+
+where
+start_num_days_in_past = num of days in past for for start time e.g. 120
+end_num_days_in_past = num of days in past for for end time e.g 60
+
+copy
+./ks.sh cpInp psale1.txt
+
+Run Spark job to generate time interval in reference data
+=========================================================
+./ks.sh timeIntv
+
+Run Spark job for histogram of reference data
+=============================================
+./ks.sh numDistrStat
+
+Copy histogram
+==============
+./ks.sh cpModel nds1.txt
+
+Create stats for recent data
+============================
+Edit pstat1.txt. Select one record and make significant changes in all mean std deviation values
+and save as pstat2.txt
+
+Create reference data and copy
+==============================
+./prsale.py gen pstat2.txt  <start_num_days_in_past>   > psale2.txt
+
+Use 15 for start_num_days_in_past
+
+copy
+./ks.sh cpInp psale2.txt
+
+Run Spark job to generate time interval in recent data
+======================================================
+./ks.sh timeIntv
+
+Run Spark job for histogram of recent data
+==========================================
+./ks.sh numDistrStat
+
+Copy histogram
+==============
+./ks.sh cpModel nds2.txt
+
+Run Spark job for Kolmogorov Smirnov  statistic and drift detection
+===================================================================
+./ks.sh ksStat
