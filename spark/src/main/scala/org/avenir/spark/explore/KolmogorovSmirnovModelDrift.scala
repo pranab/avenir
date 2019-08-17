@@ -37,7 +37,7 @@ object KolmogorovSmirnovModelDrift extends JobConfiguration with GeneralUtility 
     * @return
     */
    def main(args: Array[String])  {
-	   val appName = "olmogorovSmirnovModelDrift"
+	   val appName = "kolmogorovSmirnovModelDrift"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -61,16 +61,19 @@ object KolmogorovSmirnovModelDrift extends JobConfiguration with GeneralUtility 
 		   (key, line)
 	   }).groupByKey.mapValues(v => {
 	     val histData = v.toArray
-	     require(histData.length == 2, "only 2 histogram data expected found " + histData.length)
-	     val histOne = HistogramStat.createHistogram(histData(0), keyLen)
-	     val histTwo = HistogramStat.createHistogram(histData(1), keyLen)
-	     val ksStat = histOne.getKolmogorovSmirnovStatistic(histTwo)
-	     val countOne = histOne.getCount().toDouble
-	     val countTwo = histTwo.getCount().toDouble
-	     val critVal = c * Math.sqrt((countOne + countTwo) / (countOne * countTwo))
-	     val deviated = ksStat > critVal
-	     (ksStat, deviated)
-	   }).map(r => {
+	     if (histData.length == 2) {
+	    	 val histOne = HistogramStat.createHistogram(histData(0), keyLen)
+	    	 val histTwo = HistogramStat.createHistogram(histData(1), keyLen)
+	    	 val ksStat = histOne.getKolmogorovSmirnovStatistic(histTwo)
+	    	 val countOne = histOne.getCount().toDouble
+	    	 val countTwo = histTwo.getCount().toDouble
+	    	 val critVal = c * Math.sqrt((countOne + countTwo) / (countOne * countTwo))
+	    	 val deviated = ksStat > critVal
+	    	 (ksStat, deviated, true)
+	     } else {
+	         (0.0, false, false)
+	     }
+	   }).filter(r => r._2._3).map(r => {
 	     r._1.toString + fieldDelimOut + BasicUtils.formatDouble(r._2._1, precision)  + fieldDelimOut + r._2._2
 	   })
 	   
