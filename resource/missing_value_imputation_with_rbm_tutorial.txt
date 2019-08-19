@@ -1,0 +1,62 @@
+This tutorial is for imputation of missing values using Restricted Boltzman Machine (RBM) 
+stochastic neural network. We will use customer survey data as an example, with missing income
+data.
+
+
+Setup
+=====
+Make sure you have ../lib  and ../unsupv directory from avenir python directory with all the python 
+files wrt where pat.py is. Feel free to change configuration in rbmd.properties according to your needs.
+
+Generate and encode training data
+=================================
+python pat.py <num_customers> > pa.txt
+
+where
+num_customers = number of customers e.g 2000
+
+python pat.py genDummyVar  pa.txt > <output_file_path>
+
+output_file_path = output file path
+Set train.data.file to this path in rbmd.properties
+
+Train RBM model
+===============
+Set 
+common.mode=train
+train.model.save=True
+
+Run
+python rbmd.py rbmd.properties
+
+Instead of editing rbmd.properties, you could provide an extra command line arg as below
+python rbmd.py rbmd.properties common.mode=train
+
+Generate and encode training data
+=================================
+Run
+python pat.py <num_customers> > pa.txt
+
+where
+num_customers = number of customers e.g 100
+
+Run
+python pat.py genDummyVar  pa.txt > <output_file_path>
+
+Set analyze.data.file and analyze.missing.validate.file.path to this path in rbmd.properties
+
+Impute missing values
+=====================
+Set 
+common.mode=missing
+
+Run
+python rbmd.py rbmd.properties
+
+Instead of editing rbmd.properties, you could provide an extra command line arg as below
+python rbmd.py rbmd.properties common.mode=missing
+
+It will also output the accuracy of prediction of the missing values
+
+
+
