@@ -31,7 +31,7 @@ from util import *
 from mlutil import *
 
 
-# gradient boosting classification
+# fbprophet based time series forecasting
 class ProphetForcaster(object):
 	def __init__(self, configFile, changepoints, holidays):
 		defValues = {}
@@ -64,6 +64,7 @@ class ProphetForcaster(object):
 		defValues["forecast.include.history"] = (False, None)
 		defValues["forecast.plot"] = (False, None)
 		defValues["forecast.output.file"] = (None, None)
+		defValues["forecast.validate.file"] = (None, None)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
@@ -131,7 +132,37 @@ class ProphetForcaster(object):
 
 		if (self.config.getBooleanConfig("forecast.plot")[0]):
 			self.model.plot(forecast)
-		return forecast		
+		return forecast	
+
+	# validate
+	def validate(self):
+		# validation values
+		validateFile = self.config.getStringConfig("forecast.validate.file")[0]
+		if validateFile is None:
+			raise ValueError("validation file not set ")
+		neededFormat = self.config.getStringConfig("train.data.new.dateformat")[0]
+		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
+		if fieldIndices:
+			fieldIndices = strToIntArray(fieldIndices, ",")
+		vdf = pd.read_csv(validateFile, header=None, usecols=fieldIndices, names=["ds", "y"])
+		vdf["ds"] = pd.to_datetime(vdf["ds"],format=neededFormat) 
+		vdf.set_index("ds")
+		rValues = vdf.loc[:,"y"].values
+		
+		# forecast values
+		fdf = self.forecast()
+		fValues = fdf.loc[:,"yhat"].values
+
+		assert len(rValues) == len(fValues), "validation data size does not match with forecast data size"
+
+		# get sse
+		sse = 0.0
+		for z in zip(fValues, rValues):
+			#print z
+			er = abs(z[0] - z[1])
+			sse += er * er
+		sse /= len(fValues)
+		print "SSE %.3f" %(sse)
 
 	# get model file path
 	def getModelFilePath(self):

@@ -43,6 +43,8 @@ if __name__ == "__main__":
 		forecaster.train()
 	elif mode == "forecast":
 		forecaster.forecast()
+	elif mode == "validate":
+		forecaster.validate()
 
 
 
