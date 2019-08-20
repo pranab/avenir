@@ -25,6 +25,7 @@ from dateutil.parser import parse
 import pandas as pd
 import numpy as np
 from fbprophet import Prophet
+from sklearn.externals import joblib
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -57,15 +58,30 @@ class ProphetForcaster(object):
 		defValues["train.mcmc.samples"] = (0 , None)
 		defValues["train.interval.width"] = (0.80 , None)
 		defValues["train.uncertainty.samples"] = (1000 , None)
+		defValues["forecast.use.saved.model"] = (True, None)
 		defValues["forecast.window"] = (None, "missing forecast window size")
 		defValues["forecast.unit"] = (None, "missing forecast window type")
 		defValues["forecast.include.history"] = (False, None)
+		defValues["forecast.plot"] = (False, None)
+		defValues["forecast.output.file"] = (None, None)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.changepoints = changepoints
 		self.holidays = holidays
 		self.model = None
+
+	# get config object
+	def getConfig(self):
+		return self.config
+	
+	#set config param
+	def setConfigParam(self, name, value):
+		self.config.setParam(name, value)
+	
+	#get mode
+	def getMode(self):
+		return self.config.getStringConfig("common.mode")[0]
 
 	# train model	
 	def train(self):
@@ -81,12 +97,16 @@ class ProphetForcaster(object):
 		#conver to extpected df and fit model
 		exFormat = self.config.getStringConfig("train.data.exist.dateformat")[0]
 		neededFormat = self.config.getStringConfig("train.data.new.dateformat")[0]
+		print neededFormat
 		if exFormat:
 			pass
 
 		df = pd.read_csv(dataFile, header=None, usecols=fieldIndices, names=["ds", "y"])
 		df["ds"] = pd.to_datetime(df["ds"],format=neededFormat) 
-		df.sel_index("ds", inplace=True)
+		df.set_index("ds")
+		print df.columns
+		print df.dtypes
+		print df.head(4)
 
 		self.model.fit(df)
 
@@ -102,6 +122,15 @@ class ProphetForcaster(object):
 		history = self.config.getBooleanConfig("forecast.include.history")[0]
 		future = self.model.make_future_dataframe(window, freq=unit, include_history=history)
 		forecast = self.model.predict(future)
+		print forecast.head(4)
+
+		# save
+		outFile = self.config.getStringConfig("forecast.output.file")[0]
+		if outFile:
+			forecast.to_csv(outFile)
+
+		if (self.config.getBooleanConfig("forecast.plot")[0]):
+			self.model.plot(forecast)
 		return forecast		
 
 	# get model file path
@@ -150,14 +179,14 @@ class ProphetForcaster(object):
 		changepointPriorScale = self.config.getFloatConfig("train.changepoint.prior.scale")[0]
 		mcmcSamples = self.config.getIntConfig("train.mcmc.samples")[0]
 		intervalWidth = self.config.getFloatConfig("train.interval.width")[0]
-		UncertaintySamples = self.config.getIntConfig("train.uncertainty.samples")[0]
+		uncertaintySamples = self.config.getIntConfig("train.uncertainty.samples")[0]
 
 		self.model = Prophet(growth=growth, changepoints=changepoints, n_changepoints=numChangepoints,\
 			changepoint_range=changepointRange, yearly_seasonality=yearlySeasonality, weekly_seasonality=weeklySeasonality,\
 			daily_seasonality=dailySeasonality, holidays=holidays, seasonality_mode=seasonalityMode,\
  			seasonality_prior_scale=seasonalityPriorScale, holidays_prior_scale=holidaysPriorScale,\
 			changepoint_prior_scale=changepointPriorScale,mcmc_samples=mcmcSamples,interval_width=intervalWidth,\
-			Uncertainty_samples=UncertaintySamples)
+			uncertainty_samples=uncertaintySamples)
 
 
 
