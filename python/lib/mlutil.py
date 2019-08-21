@@ -226,8 +226,20 @@ def createAllOneHotVec(size):
 		vec[i] = 1
 		vecs.append(vec)
 	return vecs
-	
 
-	
-	
+# block shuffle 	
+def blockShuffle(data, blockSize):
+	numBlock = len(data) / blockSize
+	remain = len(data) % blockSize
+	numBlock +=  (1 if remain > 0 else 0)
+	shuffled = list()
+	for i in range(numBlock):
+		b = random.randint(0, numBlock-1)
+		beg = b * blockSize
+		if (b < numBlock-1):
+			end = beg + blockSize
+			shuffled.extend(data[beg:end])		
+		else:
+			shuffled.extend(data[beg:])
+	return shuffled	
 	

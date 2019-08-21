@@ -45,6 +45,8 @@ if __name__ == "__main__":
 		forecaster.forecast()
 	elif mode == "validate":
 		forecaster.validate()
+	elif mode == "shuffle":
+		forecaster.shuffle()
 
 
 

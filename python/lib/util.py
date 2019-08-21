@@ -23,6 +23,7 @@ import time
 import uuid
 from datetime import datetime
 import logging
+from contextlib import contextmanager
 
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
 	"N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0","1","2","3","4","5","6","7","8","9"]
@@ -37,6 +38,7 @@ secInHour = 60 * 60
 secInDay = 24 * secInHour
 secInWeek = 7 * secInDay
 secInYear = 365 * secInDay
+secInMonth = secInYear / 12
 
 #generates ID
 def genID(len):
@@ -369,6 +371,16 @@ def createLogger(name, logFilePath, logLevName):
 	logger.addHandler(fHandler)
 	logger.setLevel(logLevel)
 	return logger
+
+@contextmanager
+def suppressStdout():
+	with open(os.devnull, "w") as devnull:
+		oldStdout = sys.stdout
+		sys.stdout = devnull
+		try:  
+			yield
+		finally:
+			sys.stdout = oldStdout
 		
 # step function
 class StepFunction:

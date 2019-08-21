@@ -65,6 +65,9 @@ class ProphetForcaster(object):
 		defValues["forecast.plot"] = (False, None)
 		defValues["forecast.output.file"] = (None, None)
 		defValues["forecast.validate.file"] = (None, None)
+		defValues["predictability.input.file"] = (None, None)
+		defValues["predictability.block.size"] = (8, None)
+		defValues["predictability.shuffled.file"] = (None, None)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
@@ -163,6 +166,26 @@ class ProphetForcaster(object):
 			sse += er * er
 		sse /= len(fValues)
 		print "SSE %.3f" %(sse)
+
+	# shuffle data
+	def shuffle(self):
+		dataFilePath = self.config.getStringConfig("predictability.input.file")[0]
+		assert dataFilePath, "missing input data file path"
+		df = pd.read_csv(dataFilePath, header=None, names=["ds", "y"])
+		df.set_index("ds")
+		dsValues = df.loc[:,"ds"].values		
+		yValues = df.loc[:,"y"].values	
+
+		# shuffle and write
+		bSize = self.config.getIntConfig("predictability.block.size")[0]
+		shValues = blockShuffle(yValues, bSize)	
+		shFilePath = self.config.getStringConfig("predictability.shuffled.file")[0]
+		assert shFilePath, "missing shuffled data file path"
+		with open(shFilePath, 'w') as shFile:
+			for z in zip(dsValues, shValues):
+				line = "%s,%.3f\n" %(z[0], z[1])
+				shFile.write(line)
+			
 
 	# get model file path
 	def getModelFilePath(self):
