@@ -58,6 +58,8 @@ class ProphetForcaster(object):
 		defValues["train.mcmc.samples"] = (0 , None)
 		defValues["train.interval.width"] = (0.80 , None)
 		defValues["train.uncertainty.samples"] = (1000 , None)
+		defValues["train.cap.value"] = (None , None)
+		defValues["train.floor.value"] = (None , None)
 		defValues["forecast.use.saved.model"] = (True, None)
 		defValues["forecast.window"] = (None, "missing forecast window size")
 		defValues["forecast.unit"] = (None, "missing forecast window type")
@@ -108,6 +110,8 @@ class ProphetForcaster(object):
 		df = pd.read_csv(dataFile, header=None, usecols=fieldIndices, names=["ds", "y"])
 		df["ds"] = pd.to_datetime(df["ds"],format=neededFormat) 
 		df.set_index("ds")
+		self.addCapFloor(df)
+
 		print df.columns
 		print df.dtypes
 		print df.head(4)
@@ -125,6 +129,7 @@ class ProphetForcaster(object):
 		unit = self.config.getStringConfig("forecast.unit")[0]
 		history = self.config.getBooleanConfig("forecast.include.history")[0]
 		future = self.model.make_future_dataframe(window, freq=unit, include_history=history)
+		self.addCapFloor(future)
 		forecast = self.model.predict(future)
 		print forecast.head(4)
 
@@ -185,7 +190,15 @@ class ProphetForcaster(object):
 			for z in zip(dsValues, shValues):
 				line = "%s,%.3f\n" %(z[0], z[1])
 				shFile.write(line)
-			
+
+	# add cap and floor
+	def addCapFloor(self, df):			
+		capValue = self.config.getFloatConfig("train.cap.value")[0]
+		floorValue = self.config.getFloatConfig("train.floor.value")[0]
+		if capValue:
+			df['cap'] = capVal
+		if floorValue:
+			df['floor'] = floorValue
 
 	# get model file path
 	def getModelFilePath(self):

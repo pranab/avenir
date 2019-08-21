@@ -1,0 +1,93 @@
+This tutorial is for measuring predictability of time series data with  
+We will use hourly power demand data for a country defined as MWH per capit  as an example.
+
+
+Setup
+=====
+Make sure you have ../lib  and ../unsupv directory from avenir python directory with all the python 
+files wrt where power.py is. Feel free to change configuration in profod.properties according to your needs.
+
+Generate input data
+===================
+./power.py gen <num_days_in_past> > pwuse.txt
+
+where
+num_days_in_past = number of days in past e.g 370
+
+Split into training and validation data
+=======================================
+Most recent 5 days data will be used for validation and the rest for training.
+
+validation data
+tail -120 pwuse.txt > puvalidate.txt
+Set path in forecast.validate.file
+
+training data
+head -n 8785  pwuse.txt > putrain.txt
+Set path in train.data.file
+
+
+Train model
+===========
+./profod.py profod.properties common.mode=train
+
+If the parameter is set in profod.properties, you don't need to provide it as the last argument
+Make sure the following parametrs are set appropriately in profod.properties, so that model is saved
+
+common.model.directory=model
+common.model.file=proph_model 
+train.model.save=True
+train.data.file=putrain.txt
+train.data.fields=0,1
+train.data.new.dateformat=%Y-%m-%d %H:%M:%S
+
+Validate model
+==============
+./profod.py profod.properties common.mode=validate
+
+Make sure the following parametrs are set appropriately in profod.properties
+
+forecast.use.saved.model=_  (default True)
+forecast.window=120
+forecast.unit=H
+forecast.include.history=False
+forecast.validate.file=puvalidate.txt
+
+At the end of the consolr output, you will see SSE
+
+Block Shuffle data
+==================
+./profod.py profod.properties common.mode=shuffle
+
+Make sure the following parametrs are set appropriately in profod.properties
+
+predictability.input.file=pwuse.txt
+predictability.block.size=4
+predictability.shuffled.file=sh_pwuse.txt
+
+Split shuffled data into training and validation data
+=====================================================
+validation data
+tail -120 sh_pwuse.txt > sh_puvalidate.txt
+Set path in forecast.validate.file
+
+training data
+head -n 8785  sh_pwuse.txt > sh_putrain.txt
+Set path in train.data.file
+
+Train model with shuffled data
+==============================
+./profod.py profod.properties common.mode=train
+
+Validate model with shuffled data
+=================================
+./profod.py profod.properties common.mode=validate
+
+At the end of the consolr output, you will see SSE for shuffled data. 
+
+Predictability
+==============
+Predictability = 1.0 - normal data SSE / shuffled data SSE
+
+
+
