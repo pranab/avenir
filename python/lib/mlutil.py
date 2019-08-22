@@ -25,6 +25,7 @@ from math import *
 from decimal import Decimal
 import jprops
 from util import *
+from sampler import *
 
 #configuration management
 class Configuration:
@@ -242,4 +243,12 @@ def blockShuffle(data, blockSize):
 		else:
 			shuffled.extend(data[beg:])
 	return shuffled	
-	
+
+# random walk	
+def randomWalk(size, start, lowStep, highStep):
+	cur = start
+	for i in range(size):
+		yield cur
+		cur += randomFloat(lowStep, highStep)
+		
+
