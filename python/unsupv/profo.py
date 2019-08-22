@@ -67,6 +67,7 @@ class ProphetForcaster(object):
 		defValues["forecast.plot"] = (False, None)
 		defValues["forecast.output.file"] = (None, None)
 		defValues["forecast.validate.file"] = (None, None)
+		defValues["forecast.validate.error.metric"] = ("MSE", None)
 		defValues["predictability.input.file"] = (None, None)
 		defValues["predictability.block.size"] = (8, None)
 		defValues["predictability.shuffled.file"] = (None, None)
@@ -163,14 +164,20 @@ class ProphetForcaster(object):
 
 		assert len(rValues) == len(fValues), "validation data size does not match with forecast data size"
 
-		# get sse
-		sse = 0.0
+		# get error
+		errorMetric = self.config.getStringConfig("forecast.validate.error.metric")[0]
+		error = 0.0
 		for z in zip(fValues, rValues):
 			#print z
 			er = abs(z[0] - z[1])
-			sse += er * er
-		sse /= len(fValues)
-		print "SSE %.3f" %(sse)
+			if errorMetric == "MSE":
+				error += er * er
+			elif errorMetric == "MAE":
+				error += er
+			else:
+				raise ValueError("invalid error metric")
+		error /= len(fValues)
+		print "Error (%s) %.3f" %(errorMetric, error)
 
 	# shuffle data
 	def shuffle(self):
