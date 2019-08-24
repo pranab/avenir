@@ -146,6 +146,15 @@ def rangeSample(val, minLim, maxLim):
 		val = randint(minLim, maxLim)
 	return val
 
+# random unique list of integers within range
+def genRandomIntListWithinRange(size, minLim, maxLim):
+	values = set()
+	for i in range(size):
+		val = randint(minLim, maxLim)
+		while val not in values:
+			values.add(val)
+	return list(values)
+	
 # breaks a line into fields and keeps only specified fileds and returns new line
 def extractFields(line, delim, keepIndices):
 	items = line.split(delim)
