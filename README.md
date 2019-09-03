@@ -53,6 +53,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2019/05/07/synthetic-training-data-generation-for-machine-learning-classification-problems-using-ancestral-sampling/
 * https://pkghosh.wordpress.com/2019/06/27/six-unsupervised-extractive-text-summarization-techniques-side-by-side/
 * https://pkghosh.wordpress.com/2019/08/07/encoding-high-cardinality-categorical-variables-with-feature-hashing-on-spark/
+* https://pkghosh.wordpress.com/2019/08/26/missing-value-imputation-with-restricted-boltzmann-machine-neural-network/
 
 
 ## Getting started
