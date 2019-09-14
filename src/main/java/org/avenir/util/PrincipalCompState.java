@@ -38,7 +38,6 @@ public class PrincipalCompState implements Serializable {
 	private double hiddenEnergy;
 	private double[] hiddenUnitEnergy;
 	private double[][] princComps;
-	private String delim;
 	
 	/**
 	 * 
@@ -56,16 +55,15 @@ public class PrincipalCompState implements Serializable {
 	 * @param weights
 	 * @param delim
 	 */
-	public PrincipalCompState(String key, int dimension, int numHiddenStates, double visibleEnergy, 
-			double hiddenEnergy, double[] hiddenUnitEnergy, double[][] princComps, String delim) {
+	public PrincipalCompState(String key, int dimension, int numHiddenStates, double[] energy, 
+			double[] hiddenUnitEnergy, double[][] princComps) {
 		this.key = key;
 		this.dimension = dimension;
 		this.numHiddenStates = numHiddenStates;
-		this.visibleEnergy = visibleEnergy;
-		this.hiddenEnergy = hiddenEnergy;
+		this.visibleEnergy = energy[0];
+		this.hiddenEnergy = energy[1];
 		this.hiddenUnitEnergy = hiddenUnitEnergy;
 		this.princComps = princComps;
-		this.delim = delim;
 	}
 
 	/**
@@ -86,6 +84,55 @@ public class PrincipalCompState implements Serializable {
 		}
 	}
 	
+	/**
+	 * @return
+	 */
+	public int getDimension() {
+		return dimension;
+	}
+
+	/**
+	 * @return
+	 */
+	public String getKey() {
+		return key;
+	}
+
+	/**
+	 * @return
+	 */
+	public int getNumHiddenStates() {
+		return numHiddenStates;
+	}
+
+	/**
+	 * @return
+	 */
+	public double getVisibleEnergy() {
+		return visibleEnergy;
+	}
+
+	/**
+	 * @return
+	 */
+	public double getHiddenEnergy() {
+		return hiddenEnergy;
+	}
+
+	/**
+	 * @return
+	 */
+	public double[] getHiddenUnitEnergy() {
+		return hiddenUnitEnergy;
+	}
+
+	/**
+	 * @return
+	 */
+	public double[][] getPrincComps() {
+		return princComps;
+	}
+
 	/**
 	 * @param lines
 	 * @param offset
