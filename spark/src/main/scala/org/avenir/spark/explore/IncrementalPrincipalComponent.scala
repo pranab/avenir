@@ -66,6 +66,8 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	       "missing number of hidden units")
 	   val precision = getIntParamOrElse(appConfig, "output.precision", 3)
 	   val lambda = getDoubleParamOrElse(appConfig, "forget.factor", 0.96)
+	   val lowEnergyThreshold = getDoubleParamOrElse(appConfig, "energy.lowThreshold", 0.95)
+	   val highEnergyThreshold = getDoubleParamOrElse(appConfig, "energy.highThreshold", 0.98)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 
@@ -85,8 +87,9 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	       case None => new PrincipalCompState(keyStr, dimension, hiddenDimension)
 	     }
 	     val numHiddenStates = state.getNumHiddenStates()
-	     val visibleEnergy = state.getVisibleEnergy()
-	     val hiddenEnergy = state.getHiddenEnergy()
+	     var count = state.getCount()
+	     var visibleEnergy = state.getVisibleEnergy()
+	     var hiddenEnergy = state.getHiddenEnergy()
 	     val hiddenUnitEnergy = state.getHiddenUnitEnergy()
 	     var princComps = state.getPrincComps()
 	     val pcMaRo = princComps.map(p => {
@@ -95,17 +98,20 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	     val pcMaCo = princComps.map(p => {
 	       MathUtils.createColMatrix(p)
 	     })
+	     val trInp = Array[Double](numHiddenStates)
 	     
 	     //all input
 	     values.foreach(v => {
 	       val vInp = v.getDoubleArray(1, v.size)
 	       var inpMaRo = MathUtils.createRowMatrix(vInp)
 	       var inpMaCo = MathUtils.createColMatrix(vInp)
+	       
 	       //all hidden units
 	       for (i <- 0 to numHiddenStates-1) {
 	         //hidden component
 	         val yMa = pcMaRo(i).times(inpMaCo)
 	         val y = MathUtils.scalarFromMatrix(yMa)
+	         trInp(i) = y
 	         
 	         //update hidden unit energy
 	         hiddenUnitEnergy(i) = lambda * hiddenUnitEnergy(i) + y * y
@@ -119,17 +125,27 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	         //update input
 	         inpMaCo.minusEquals(pcMaCo(i).times(y))
 	         inpMaRo = inpMaCo.transpose()
+	         
 	       }
-	       
+	         //check if number of hidden units need to change
+	         visibleEnergy = ((count * visibleEnergy)  + MathUtils.getNorm(vInp)) / (count +1)
+	         var totHiddenEnergy = 0.0
+	         hiddenEnergy = hiddenEnergy.zip(trInp).map(r => {
+	           ((count * r._1) + r._2 * r._2) / (count + 1)
+	         })
+	         hiddenEnergy.foreach(totHiddenEnergy += _ )
+	         
+	         count += 1
 	     })
 	     princComps = pcMaRo.map(m => {
 	       MathUtils.arrayFromRowMatrix(m)
 	     })
 	     
-	     val energy = Array[Double](2)
+	     val energy = Array[Double](1 + numHiddenStates)
 	     energy(0) = visibleEnergy
-	     energy(1) = hiddenEnergy
-	     val prCompState = new PrincipalCompState(keyStr, dimension, numHiddenStates, energy, 
+	     Array.copy(hiddenEnergy, 0, energy, 1, numHiddenStates)
+	     
+	     val prCompState = new PrincipalCompState(keyStr, dimension, numHiddenStates, count, energy, 
 	         hiddenUnitEnergy, princComps)
 	     prCompState.serialize(fieldDelimOut, precision).asScala
 	   })

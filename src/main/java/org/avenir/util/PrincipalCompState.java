@@ -34,8 +34,9 @@ public class PrincipalCompState implements Serializable {
 	private int dimension;
 	private String key;
 	private int numHiddenStates;
+	private int count;
 	private double visibleEnergy;
-	private double hiddenEnergy;
+	private double[] hiddenEnergy;
 	private double[] hiddenUnitEnergy;
 	private double[][] princComps;
 	
@@ -55,13 +56,15 @@ public class PrincipalCompState implements Serializable {
 	 * @param weights
 	 * @param delim
 	 */
-	public PrincipalCompState(String key, int dimension, int numHiddenStates, double[] energy, 
+	public PrincipalCompState(String key, int dimension, int numHiddenStates, int count , double[] energy, 
 			double[] hiddenUnitEnergy, double[][] princComps) {
 		this.key = key;
 		this.dimension = dimension;
 		this.numHiddenStates = numHiddenStates;
+		this.count = count;
 		this.visibleEnergy = energy[0];
-		this.hiddenEnergy = energy[1];
+		this.hiddenEnergy = new double[numHiddenStates];
+		System.arraycopy(energy, 1, hiddenEnergy, 0, numHiddenStates);
 		this.hiddenUnitEnergy = hiddenUnitEnergy;
 		this.princComps = princComps;
 	}
@@ -75,9 +78,10 @@ public class PrincipalCompState implements Serializable {
 		this.key = key;
 		this.dimension = dimension;
 		this.numHiddenStates = numHiddenStates;
+		count = 0;
 		visibleEnergy = 0;
-		hiddenEnergy = 0;
-		hiddenUnitEnergy = BasicUtils.createDoubleArrayWithRandomValues(numHiddenStates, -1, 1);
+		hiddenEnergy = BasicUtils.createZeroFilledDoubleArray(numHiddenStates);
+		hiddenUnitEnergy = BasicUtils.createZeroFilledDoubleArray(numHiddenStates);
 		princComps = new double[numHiddenStates][dimension];
 		for (int i = 0; i < numHiddenStates; ++i) {
 			princComps[i] = BasicUtils.createOneHotDoubleArray(dimension, i);
@@ -105,6 +109,10 @@ public class PrincipalCompState implements Serializable {
 		return numHiddenStates;
 	}
 
+	public int getCount() {
+		return count;
+	}
+
 	/**
 	 * @return
 	 */
@@ -115,7 +123,7 @@ public class PrincipalCompState implements Serializable {
 	/**
 	 * @return
 	 */
-	public double getHiddenEnergy() {
+	public double[] getHiddenEnergy() {
 		return hiddenEnergy;
 	}
 
@@ -144,9 +152,11 @@ public class PrincipalCompState implements Serializable {
 		int j = 0;
 		key = items[j++];
 		numHiddenStates = Integer.parseInt(items[j++]);
+		count = Integer.parseInt(items[j++]);
 		visibleEnergy = Double.parseDouble(items[j++]);
-		hiddenEnergy = Double.parseDouble(items[j++]);
-		
+		for (int k = 0; k < numHiddenStates; ++k) {
+			hiddenEnergy[k] = Double.parseDouble(items[j++]);
+		}
 		items = BasicUtils.getTrimmedFields(lines.get(i++), delim);
 		hiddenUnitEnergy = BasicUtils.toDoubleArray(items);
 		
@@ -167,12 +177,12 @@ public class PrincipalCompState implements Serializable {
 		List<String> serialized = new ArrayList<String>();
 		
 		StringBuilder stBld = new StringBuilder();
-		stBld.append(key).append(delim).append(numHiddenStates).append(delim).
+		stBld.append(key).append(delim).append(numHiddenStates).append(delim).append(count).append(delim).
 			append(BasicUtils.formatDouble(visibleEnergy, precision)).append(delim).
-			append(BasicUtils.formatDouble(visibleEnergy, precision)).append(delim);
+			append(BasicUtils.join(hiddenEnergy, delim, precision));
 		serialized.add(stBld.toString());
 		
-		serialized.add(BasicUtils.join(hiddenUnitEnergy, delim));
+		serialized.add(BasicUtils.join(hiddenUnitEnergy, delim, precision));
 		
 		for (double[] prComp : princComps) {
 			serialized.add(BasicUtils.join(prComp, delim));
