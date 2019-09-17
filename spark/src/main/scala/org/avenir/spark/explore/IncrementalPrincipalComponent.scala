@@ -26,6 +26,7 @@ import org.chombo.util.BasicUtils
 import org.chombo.spark.common.GeneralUtility
 import org.chombo.math.MathUtils
 import org.avenir.util.PrincipalCompState
+import org.apache.commons.lang3.ArrayUtils
 
 /**
 * Online PCA with Spirit algorithm
@@ -86,18 +87,15 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	       case Some(state) => state
 	       case None => new PrincipalCompState(keyStr, dimension, hiddenDimension)
 	     }
-	     val numHiddenStates = state.getNumHiddenStates()
+	     var numHiddenStates = state.getNumHiddenStates()
 	     var count = state.getCount()
 	     var visibleEnergy = state.getVisibleEnergy()
 	     var hiddenEnergy = state.getHiddenEnergy()
-	     val hiddenUnitEnergy = state.getHiddenUnitEnergy()
+	     var hiddenUnitEnergy = state.getHiddenUnitEnergy()
 	     var princComps = state.getPrincComps()
-	     val pcMaRo = princComps.map(p => {
-	       MathUtils.createRowMatrix(p)
-	     })
-	     val pcMaCo = princComps.map(p => {
-	       MathUtils.createColMatrix(p)
-	     })
+	     var pc = getPrinCompVectors(princComps)
+	     var pcMaRo = pc._1
+	     var pcMaCo = pc._2
 	     val trInp = Array[Double](numHiddenStates)
 	     
 	     //all input
@@ -135,11 +133,31 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	         })
 	         hiddenEnergy.foreach(totHiddenEnergy += _ )
 	         
+	         if (totHiddenEnergy < lowEnergyThreshold * visibleEnergy) {
+	           //add hidden unit
+	           hiddenUnitEnergy = ArrayUtils.add(hiddenUnitEnergy, BasicUtils.sampleUniform(0, 1))
+	           hiddenEnergy = ArrayUtils.add(hiddenEnergy, 0)
+	           princComps = toPrincCompArray(pcMaRo)
+	           princComps = extendPrinComp(princComps, dimension, numHiddenStates)
+	           val pc = getPrinCompVectors(princComps)
+	           pcMaRo = pc._1
+	           pcMaCo = pc._2
+	           numHiddenStates += 1
+	         } else if (totHiddenEnergy > highEnergyThreshold * visibleEnergy) {
+	           //remove last hidden unit
+	           hiddenUnitEnergy = hiddenUnitEnergy.slice(0, numHiddenStates-2)
+	           hiddenEnergy = hiddenEnergy.slice(0, numHiddenStates-2)
+	           princComps = toPrincCompArray(pcMaRo)
+	           princComps = princComps.slice(0, numHiddenStates-2)
+	           val pc = getPrinCompVectors(princComps)
+	           pcMaRo = pc._1
+	           pcMaCo = pc._2
+	           numHiddenStates -= 1
+	         }
+	         
 	         count += 1
 	     })
-	     princComps = pcMaRo.map(m => {
-	       MathUtils.arrayFromRowMatrix(m)
-	     })
+	     princComps = toPrincCompArray(pcMaRo)
 	     
 	     val energy = Array[Double](1 + numHiddenStates)
 	     energy(0) = visibleEnergy
@@ -156,10 +174,42 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
        }
 	   
 	   if(saveOutput) {	   
-	     modelData.saveAsTextFile(outputPath) 
+	    
+	    modelData.saveAsTextFile(outputPath) 
 	   }	 
 	   
-   }
+    }
    
+    /**
+	* @param pcMaRo
+    */   
+    def toPrincCompArray(pcMaRo: Array[Jama.Matrix]) : Array[Array[Double]] =  {
+      pcMaRo.map(m => MathUtils.arrayFromRowMatrix(m))
+    }
    
+    /**
+	* @param princComps
+    */   
+    def getPrinCompVectors(princComps:Array[Array[Double]]): (Array[Jama.Matrix], Array[Jama.Matrix]) = {
+      val pcMaRo = princComps.map(p => {
+       MathUtils.createRowMatrix(p)
+      })
+      val pcMaCo = princComps.map(p => {
+       MathUtils.createColMatrix(p)
+      })
+	  (pcMaRo, pcMaCo)   
+    }
+   
+    /**
+	* @param princComps
+    */   
+    def extendPrinComp(princComps:Array[Array[Double]], dimension:Int, numHiddenStates:Int) :Array[Array[Double]] =  {
+      val newprincComps = Array.ofDim[Array[Double]](princComps.length+1)
+      for (i <- 0 to princComps.length) {
+        newprincComps(i) = princComps(i)
+      }
+      newprincComps(princComps.length) = BasicUtils.createOneHotDoubleArray(dimension, numHiddenStates)
+      newprincComps
+    }
+    
 }

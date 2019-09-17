@@ -81,7 +81,7 @@ public class PrincipalCompState implements Serializable {
 		count = 0;
 		visibleEnergy = 0;
 		hiddenEnergy = BasicUtils.createZeroFilledDoubleArray(numHiddenStates);
-		hiddenUnitEnergy = BasicUtils.createZeroFilledDoubleArray(numHiddenStates);
+		hiddenUnitEnergy = BasicUtils.createDoubleArrayWithRandomValues(numHiddenStates, 0, 1);
 		princComps = new double[numHiddenStates][dimension];
 		for (int i = 0; i < numHiddenStates; ++i) {
 			princComps[i] = BasicUtils.createOneHotDoubleArray(dimension, i);
