@@ -93,9 +93,7 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	     var hiddenEnergy = state.getHiddenEnergy()
 	     var hiddenUnitEnergy = state.getHiddenUnitEnergy()
 	     var princComps = state.getPrincComps()
-	     var pc = getPrinCompVectors(princComps)
-	     var pcMaRo = pc._1
-	     var pcMaCo = pc._2
+	     var (pcMaRo, pcMaCo) = getPrinCompVectors(princComps)
 	     val trInp = Array[Double](numHiddenStates)
 	     
 	     //all input
@@ -123,17 +121,18 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	         //update input
 	         inpMaCo.minusEquals(pcMaCo(i).times(y))
 	         inpMaRo = inpMaCo.transpose()
-	         
 	       }
-	         //check if number of hidden units need to change
-	         visibleEnergy = ((count * visibleEnergy)  + MathUtils.getNorm(vInp)) / (count +1)
-	         var totHiddenEnergy = 0.0
-	         hiddenEnergy = hiddenEnergy.zip(trInp).map(r => {
+	       
+	       //check if number of hidden units need to change
+	       val viNorm = MathUtils.getNorm(vInp)
+	       visibleEnergy = ((count * visibleEnergy)  + viNorm * viNorm) / (count +1)
+	       var totHiddenEnergy = 0.0
+	       hiddenEnergy = hiddenEnergy.zip(trInp).map(r => {
 	           ((count * r._1) + r._2 * r._2) / (count + 1)
-	         })
-	         hiddenEnergy.foreach(totHiddenEnergy += _ )
+	       })
+	       hiddenEnergy.foreach(totHiddenEnergy += _ )
 	         
-	         if (totHiddenEnergy < lowEnergyThreshold * visibleEnergy) {
+	       if (totHiddenEnergy < lowEnergyThreshold * visibleEnergy) {
 	           //add hidden unit
 	           hiddenUnitEnergy = ArrayUtils.add(hiddenUnitEnergy, BasicUtils.sampleUniform(0, 1))
 	           hiddenEnergy = ArrayUtils.add(hiddenEnergy, 0)
@@ -143,7 +142,7 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	           pcMaRo = pc._1
 	           pcMaCo = pc._2
 	           numHiddenStates += 1
-	         } else if (totHiddenEnergy > highEnergyThreshold * visibleEnergy) {
+	       } else if (totHiddenEnergy > highEnergyThreshold * visibleEnergy) {
 	           //remove last hidden unit
 	           hiddenUnitEnergy = hiddenUnitEnergy.slice(0, numHiddenStates-2)
 	           hiddenEnergy = hiddenEnergy.slice(0, numHiddenStates-2)
@@ -153,9 +152,8 @@ object IncrementalPrincipalComponent extends JobConfiguration with GeneralUtilit
 	           pcMaRo = pc._1
 	           pcMaCo = pc._2
 	           numHiddenStates -= 1
-	         }
-	         
-	         count += 1
+	       }
+	       count += 1
 	     })
 	     princComps = toPrincCompArray(pcMaRo)
 	     

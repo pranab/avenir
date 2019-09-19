@@ -64,11 +64,12 @@ public class Cluster implements Serializable {
 	 * @param id
 	 * @param centroid
 	 */
-	public Cluster(int numClusterInGroup, int groupId, int id, String centroid) {
+	public Cluster(int numClusterInGroup, int groupId, int id, String centroid, String delim) {
 		this.numClusterInGroup = numClusterInGroup;
 		this.groupId = groupId;
 		this.id = id;
 		this.centroid = centroid;
+		this.items = centroid.split(delim, -1);
 	} 
 	
 	/**

@@ -27,15 +27,16 @@ import org.chombo.spark.common.Record
 import scala.collection.mutable.ArrayBuffer
 import org.chombo.distance.InterRecordDistance
 import org.avenir.cluster.Cluster
+import org.chombo.spark.common.GeneralUtility
 
-object KmeansCluster extends JobConfiguration {
+object KmeansCluster extends JobConfiguration with GeneralUtility {
   
    /**
     * @param args
     * @return
     */
    def main(args: Array[String]) {
-	   val appName = "contTimeStateTransitionStats"
+	   val appName = "kmeansCluster"
 	   val Array(inputPath: String, outputPath: String, configFile: String) = getCommandLineArgs(args, 3)
 	   val config = createConfig(configFile)
 	   val sparkConf = createSparkConf(appName, config, false)
@@ -94,7 +95,7 @@ object KmeansCluster extends JobConfiguration {
 	     for (cg  <- 0 to numClustGroup - 1) {
 	    	 val initClusters = data.takeSample(false, nc, 1).zipWithIndex
 	    	 initClusters.foreach(cc => {
-	    		 val cls = new Cluster(nc, cg, cc._2, cc._1) 
+	    		 val cls = new Cluster(nc, cg, cc._2, cc._1, fieldDelimIn) 
 	    	     clusters += cls
 	    	 })
 	    	 allClusters += ((nc, cg) -> clusters)
