@@ -154,7 +154,17 @@ def genRandomIntListWithinRange(size, minLim, maxLim):
 		while val not in values:
 			values.add(val)
 	return list(values)
+
+#preturbs a value within range
+def preturbScalar(value, range):
+	scale = 1.0 - range + 2 * range * random.random() 
+	return value * scale
 	
+#preturbs a list within range
+def preturbVector(values, range):
+	nValues = list(map(lambda va: preturbScalar(va, range), values))
+	return nValues
+		
 # breaks a line into fields and keeps only specified fileds and returns new line
 def extractFields(line, delim, keepIndices):
 	items = line.split(delim)
@@ -198,7 +208,15 @@ def toStr(val, precision):
 def toStrFromList(values, precision, delim=","):
 	sValues = list(map(lambda v: toStr(v, precision), values))
 	return delim.join(sValues)
-	
+
+# convert to int list
+def toIntList(values):
+	return list(map(lambda va: int(va), values))
+		
+# convert to float list
+def toFloatList(values):
+	return list(map(lambda va: float(va), values))
+
 # return typed value given string
 def typedValue(val):
 	tVal = None
@@ -312,6 +330,32 @@ def asIntList(items):
 def asFloatList(items):
 	return [float(i) for i in items]
 
+# current and past time
+def pastTime(numDays):
+	curTime = int(time.time())
+	pastTime = curTime - numDays * secInDay
+	return (curTime, pastTime)
+
+# hour aligned time	
+def hourAlign(ts):
+	return (ts / secInHour) * secInHour
+	
+# hour aligned time	
+def dayAlign(ts):
+	return (ts / secInDay) * secInDay
+	
+# day of week
+def dayOfWeek(ts):
+	rem = ts % secInWeek
+	dow = rem / secInDay
+	return dow
+
+# hour of day	
+def hourOfDay(ts):
+	rem = ts % secInDay
+	hod = rem / secInHour
+	return hod
+	
 # process command line args and returns args as typed values
 def processCmdLineArgs(expectedTypes, usage):
 	args = []
