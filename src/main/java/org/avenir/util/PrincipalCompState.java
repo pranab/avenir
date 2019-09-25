@@ -203,6 +203,7 @@ public class PrincipalCompState implements Serializable {
 			while (offset < lines.size()) {
 				PrincipalCompState pcState = new PrincipalCompState();
 				offset = pcState.deserialize(lines, offset, delim);
+				pcStates.put(pcState.getKey(), pcState);
 			}
 		} catch (IOException e) {
 			BasicUtils.assertFail("Failed to load PCA state " + e.getMessage());
