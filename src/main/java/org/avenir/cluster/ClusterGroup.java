@@ -1,5 +1,5 @@
 /*
- * avenir: Predictive analytic based on Hadoop Map Reduce
+ * avenir: Predictive analytic on Spark and Hadoop
  * Author: Pranab Ghosh
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -14,7 +14,6 @@
  * implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-
 
 package org.avenir.cluster;
 

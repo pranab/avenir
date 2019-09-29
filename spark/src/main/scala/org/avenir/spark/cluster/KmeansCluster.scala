@@ -26,7 +26,7 @@ import org.chombo.util.BasicUtils
 import org.chombo.spark.common.Record
 import scala.collection.mutable.ArrayBuffer
 import org.chombo.distance.InterRecordDistance
-import org.avenir.cluster.Cluster
+import org.avenir.cluster.ClusterData
 import org.chombo.spark.common.GeneralUtility
 
 object KmeansCluster extends JobConfiguration with GeneralUtility {
@@ -86,16 +86,16 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 	   val data = sparkCntxt.textFile(inputPath).cache
 	   
 	   //initilalize clusters
-	   var allClusters = Map[(Int, Int), ArrayBuffer[Cluster]]()
+	   var allClusters = Map[(Int, Int), ArrayBuffer[ClusterData]]()
 	   
 	   //each cluster count
 	   nClusters.foreach(nc => {
 	     //each initial position
-	     val clusters = ArrayBuffer[Cluster]()
+	     val clusters = ArrayBuffer[ClusterData]()
 	     for (cg  <- 0 to numClustGroup - 1) {
 	    	 val initClusters = data.takeSample(false, nc, 1).zipWithIndex
 	    	 initClusters.foreach(cc => {
-	    		 val cls = new Cluster(nc, cg, cc._2, cc._1, fieldDelimIn) 
+	    		 val cls = new ClusterData(nc, cg, cc._2, cc._1, fieldDelimIn) 
 	    	     clusters += cls
 	    	 })
 	    	 allClusters += ((nc, cg) -> clusters)
@@ -108,7 +108,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 		   //within each cluster group, assign record to the nearest cluster
 		   val clMemebers = data.flatMap(line => {
 		     val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
-		     val clMembers = ArrayBuffer[(Cluster, Record)]()
+		     val clMembers = ArrayBuffer[(ClusterData, Record)]()
 		     allClusters.foreach(v => {
 		       val (nc, cg) = v._1
 		       val clusters = v._2
@@ -159,7 +159,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 		   
 		   //adjust cluster centers
 		   val createCluster = (value:Record) => {
-		     val cl = new Cluster()
+		     val cl = new ClusterData()
 		     cl.initMembership(attrOrdinals, schema)
 		     val record = value.getString(0)
 		     val distance = value.getDouble(1)
@@ -169,7 +169,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 		   }
 		   
 		   //add to cluster
-		   val addToCluster = (cl: Cluster, value: Record) => {
+		   val addToCluster = (cl: ClusterData, value: Record) => {
 		     val record = value.getString(0)
 		     val distance = value.getDouble(1)
 		     val fields = BasicUtils.getTrimmedFields(record, fieldDelimIn)
@@ -178,7 +178,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 		   }
 		   
 		   //merge cluster
-		   val mergeCluster = (clOne: Cluster, clTwo: Cluster) => {
+		   val mergeCluster = (clOne: ClusterData, clTwo: ClusterData) => {
 			   clOne.merge(clTwo)
 		   }
 		   
@@ -200,7 +200,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 		   newClustersCol.foreach(cl => {
 		     val numClusterInGroup = cl.getNumClusterInGroup()
 		     val groupId = cl.getGroupId()
-		     val clusters = allClusters.getOrElse((numClusterInGroup, groupId), ArrayBuffer[Cluster]())
+		     val clusters = allClusters.getOrElse((numClusterInGroup, groupId), ArrayBuffer[ClusterData]())
 		     clusters += cl
 		     if (cl.isActive())
 		       activeCount += 1
