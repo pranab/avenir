@@ -34,6 +34,11 @@ import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer
 import org.apache.commons.math3.ml.clustering.DoublePoint
 import org.avenir.cluster.ClusterUtility
 
+/**
+* KMeans plus plus clustering
+* @author pranab
+*
+*/
 object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with SeasonalUtility {
   
    /**
@@ -54,7 +59,6 @@ object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with S
 	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.fieldOrdinals", ""))
 	   val attrOrdinals = toIntArray(getMandatoryIntListParam(config, "attr.ordinals", "missing attribute field"))
 	   val seqFieldOrd = getMandatoryIntParam(appConfig, "seq.field.ordinal","missing sequence field ordinal") 
-
 	   val numClustGroup = getIntParamOrElse(appConfig, "num.clustGroup", 10)
 	   val numClusters = toIntArray(getMandatoryIntListParam(appConfig, "num.clusters",  "missing cluster count list"))
 	   val outputPrecision = getIntParamOrElse(appConfig, "output.precision", 3)	   
@@ -66,6 +70,7 @@ object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with S
 	   
 	   val seasonalAnalyzers = creatOptionalSeasonalAnalyzerArray(this, appConfig, seasonalAnalysis)
 	   val keyLen = keyFieldOrdinals.length + 2 
+	   val dimension = attrOrdinals.length
 	   
 	   //input
 	   val data = sparkCntxt.textFile(inputPath).cache
@@ -94,8 +99,45 @@ object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with S
 	         (clusters, avSse)
 	       }).toArray.sortWith((v1, v2) => v1._2 < v2._2)
 	       
-	       clusters(0)
+	       (keyRec,clusters(0))
 	   })
+	   
+	   //move cluster count from key to value and find optimum number of clusters
+	   val serClustData = clustData.map(r => {
+	     val keyRec = Record(r._1, 0, r._1.size - 1)
+	     (keyRec, r._2)
+	   }).groupByKey.map(r => {
+	     val keyRec = r._1
+	     
+	     //find knuckle point i.e max second difference
+	     val sortedClusterLists = r._2.toArray.sortWith((v1, v2) => v1._1.length < v2._1.length)
+	     var knucklePt = 0
+	     var maxSecDiff = 0.0
+	     for (i <- 1 to sortedClusterLists.size - 1) {
+	       val secDiff = Math.abs(sortedClusterLists(i+1)._2 - 2 * sortedClusterLists(i)._2 + sortedClusterLists(i-1)._2)
+	       if (secDiff > maxSecDiff) {
+	         maxSecDiff = secDiff
+	         knucklePt = i
+	       }
+	     }
+	     
+	     val selClusterList = sortedClusterLists(knucklePt)
+	     val stBld = new StringBuilder(keyRec.toString(fieldDelimOut))
+	     	stBld.append(fieldDelimOut).append(dimension)
+	     selClusterList._1.foreach(c => {
+	       stBld.append(fieldDelimOut).append(c.withFieldDelim(fieldDelimOut).withOutputPrecision(outputPrecision).toString())
+	     })
+	     stBld.toString
+	   })
+	   
+	   if (debugOn) {
+	     val colSerClustData = serClustData.collect.slice(0, 50)
+	     colSerClustData.foreach(s => println("state trans probability:" + s))
+	   }
+
+	   if (saveOutput) {
+	     serClustData.saveAsTextFile(outputPath)
+	   }
 
    }
 

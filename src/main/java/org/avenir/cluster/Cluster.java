@@ -15,10 +15,11 @@
  * permissions and limitations under the License.
  */
 
-
 package org.avenir.cluster;
 
 import java.io.Serializable;
+
+import org.chombo.util.BasicUtils;
 
 /**
  * @author pranab
@@ -29,6 +30,8 @@ public class Cluster implements Serializable {
 	private double avDistance;
 	public double sse;
 	private int count;
+    private int outputPrecision = 3;
+    private String fieldDelim;
 
 	/**
 	 * 
@@ -83,4 +86,32 @@ public class Cluster implements Serializable {
 		this.sse = sse;
 	}
 
+	/**
+	 * @param fieldDelim
+	 * @return
+	 */
+	public Cluster withFieldDelim(String fieldDelim) {
+		this.fieldDelim = fieldDelim;
+		return this;
+	}
+
+	/**
+	 * @param outputPrecision
+	 * @return
+	 */
+	public Cluster withOutputPrecision(int outputPrecision) {
+		this.outputPrecision = outputPrecision;
+		return this;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		StringBuilder stBld = new StringBuilder(BasicUtils.join(centroid, fieldDelim, outputPrecision));
+			stBld.append(fieldDelim).append(count).append(BasicUtils.formatDouble(avDistance, outputPrecision)).
+			append(count).append(BasicUtils.formatDouble(sse, outputPrecision));
+		
+		return stBld.toString();
+	}
 }

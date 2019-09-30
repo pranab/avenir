@@ -309,6 +309,11 @@ public class ClusterData implements Serializable {
 		active = movement > centroidShiftThreshold;
 	}
 	
+	/**
+	 * @param previous
+	 * @param distanceFinder
+	 * @throws IOException
+	 */
 	public void makeCurrent(ClusterData previous, InterRecordDistance distanceFinder) throws IOException {
 		numClusterInGroup = previous.numClusterInGroup;
 		groupId = previous.groupId;
