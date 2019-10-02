@@ -69,14 +69,14 @@ object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with S
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
 	   
 	   val seasonalAnalyzers = creatOptionalSeasonalAnalyzerArray(this, appConfig, seasonalAnalysis)
-	   val keyLen = keyFieldOrdinals.length + 2 
+	   val keyLen = keyFieldOrdinals.length + (if (seasonalAnalysis) 2 else 0) + 1
 	   val dimension = attrOrdinals.length
 	   
 	   //input
 	   val data = sparkCntxt.textFile(inputPath).cache
 	   val clustData = data.flatMap(line => {
 		   val items = BasicUtils.getTrimmedFields(line, fieldDelimIn)
-		   val keyRec = Record(keyLen + 1, items, keyFieldOrdinals)
+		   val keyRec = Record(keyLen, items, keyFieldOrdinals)
 		   addSeasonalKeys(seasonalAnalyzers, items, keyRec)
 		   numClusters.map(v => {
 		     keyRec.addInt(v)

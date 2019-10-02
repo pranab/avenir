@@ -55,6 +55,10 @@ public class ClusterData implements Serializable {
     private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
     private int outputPrecision = 3;
     private String fieldDelim;
+    private GenericAttributeSchema schema;
+    private AttributeDistanceSchema attrDistSchema;
+    private InterRecordDistance distanceFinder;
+    private double centroidShiftThreshold;
 
     public ClusterData() {
     }
@@ -64,12 +68,18 @@ public class ClusterData implements Serializable {
 	 * @param id
 	 * @param centroid
 	 */
-	public ClusterData(int numClusterInGroup, int groupId, int id, String centroid, String delim) {
+	public ClusterData(int numClusterInGroup, int groupId, int id, String centroid, String delim, 
+			GenericAttributeSchema schema, AttributeDistanceSchema attrDistSchema, InterRecordDistance distanceFinder,
+			double centroidShiftThreshold) {
 		this.numClusterInGroup = numClusterInGroup;
 		this.groupId = groupId;
 		this.id = id;
 		this.centroid = centroid;
 		this.items = centroid.split(delim, -1);
+		this.schema = schema;
+		this.attrDistSchema = attrDistSchema;
+		this.distanceFinder = distanceFinder;
+		this.centroidShiftThreshold = centroidShiftThreshold;
 	} 
 	
 	/**
@@ -195,7 +205,7 @@ public class ClusterData implements Serializable {
 	 * @param attrOrdinals
 	 * @param schema
 	 */
-	public void initMembership(int[] attrOrdinals, GenericAttributeSchema schema) {
+	public void initMembership(int[] attrOrdinals) {
 		numSums.clear();
 		catHist.clear();
        	for (int attr : attrOrdinals) {
@@ -220,8 +230,7 @@ public class ClusterData implements Serializable {
 	 * @param distanceFinder
 	 * @throws IOException
 	 */
-	public void addMember(String[] record, double distance, GenericAttributeSchema schema, AttributeDistanceSchema attrDistSchema, 
-			InterRecordDistance distanceFinder) throws IOException {
+	public void addMember(String[] record, double distance) throws IOException {
 
 		for (int i = 0 ; i < record.length; ++i) {
 			Double sum = numSums.get(i);
@@ -323,6 +332,39 @@ public class ClusterData implements Serializable {
 		String[] fields = BasicUtils.getTrimmedFields(centroid, ",");
 		String[] pFields = BasicUtils.getTrimmedFields(previous.centroid, ",");
 		movement =  distanceFinder.findDistance(fields, pFields);
+	}
+	
+	/**
+	 * 
+	 */
+	public void updateCentroid() {
+		//new centroid
+		String[] fields = BasicUtils.getTrimmedFields(centroid, fieldDelim);
+		
+		int recSize = fields.length;
+		String[] newCentroid = new String[recSize];
+		for (int i = 0; i < recSize; ++i) {
+			Double sum = numSums.get(i);
+			CategoricalHistogramStat hist = catHist.get(i);
+			if (null != sum) {
+				newCentroid[i] = BasicUtils.formatDouble(sum,outputPrecision);
+			} else if (null != hist) {
+				newCentroid[i] = hist.getMode();
+			} else {
+				//attribute not included
+				newCentroid[i] = null;
+			}
+		}
+		centroid = BasicUtils.join(newCentroid, fieldDelim);
+
+		//movement
+		try {
+			movement =  distanceFinder.findDistance(newCentroid, fields);
+		} catch (IOException e) {
+			BasicUtils.assertFail("failed to find centroid shift " + e.getMessage());;
+		}
+		active = movement > centroidShiftThreshold;
+
 	}
 	
 	/**

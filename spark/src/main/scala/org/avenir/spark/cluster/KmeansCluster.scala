@@ -28,8 +28,14 @@ import scala.collection.mutable.ArrayBuffer
 import org.chombo.distance.InterRecordDistance
 import org.avenir.cluster.ClusterData
 import org.chombo.spark.common.GeneralUtility
+import org.chombo.spark.common.SeasonalUtility
 
-object KmeansCluster extends JobConfiguration with GeneralUtility {
+/**
+* KMeans  clustering supporting categorical data type
+* @author pranab
+*
+*/
+object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalUtility {
   
    /**
     * @param args
@@ -46,8 +52,9 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 	   //config params
 	   val fieldDelimIn = getStringParamOrElse(appConfig, "field.delim.in", ",")
 	   val fieldDelimOut = getStringParamOrElse(appConfig, "field.delim.out", ",")
-	   val attrOrdinals = getMandatoryIntListParam(config, "attr.ordinals", "missing attribute field").
-	   	asScala.toArray.map(v => v.toInt)
+	   val keyFieldOrdinals = toIntArray(getMandatoryIntListParam(appConfig, "id.fieldOrdinals", ""))
+	   val attrOrdinals = toIntArray(getMandatoryIntListParam(config, "attr.ordinals", "missing attribute field"))
+	   val seqFieldOrd = getMandatoryIntParam(appConfig, "seq.field.ordinal","missing sequence field ordinal") 
 	   val numClustGroup = getIntParamOrElse(appConfig, "num.clustGroup", 10)
 	   val numClusters = getMandatoryIntListParam(appConfig, "num.clusters",  "missing cluster count list").asScala.toList
 	   val useDistRatio = getBooleanParamOrElse(appConfig, "use.distRatio", true)
@@ -62,9 +69,12 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
        val numIter = getIntParamOrElse(appConfig, "num.iter", 10)	
        val centroidShiftThreshold = getDoubleParamOrElse(appConfig, "centroid.shiftThreshold", .05)
        val clusterOutputPath = getMandatoryStringParam(appConfig, "cluster.outputPath", "missing cluster output path")
-       
+       val seasonalAnalysis = getBooleanParamOrElse(appConfig, "seasonal.analysis", false)
 	   val debugOn = getBooleanParamOrElse(appConfig, "debug.on", false)
 	   val saveOutput = getBooleanParamOrElse(appConfig, "save.output", true)
+	   
+	   val seasonalAnalyzers = creatOptionalSeasonalAnalyzerArray(this, appConfig, seasonalAnalysis)
+	   val keyLen = keyFieldOrdinals.length + (if (seasonalAnalysis) 2 else 0) + 2
 	   var activeCount = 0
 	   var outlierTracking = false
        
@@ -85,156 +95,72 @@ object KmeansCluster extends JobConfiguration with GeneralUtility {
 	   //input
 	   val data = sparkCntxt.textFile(inputPath).cache
 	   
-	   //initilalize clusters
-	   var allClusters = Map[(Int, Int), ArrayBuffer[ClusterData]]()
+	   //initilalize clusters keyed by number of clusters and initial positions
+	   val allKeys = ArrayBuffer[Record]()
 	   
 	   //each cluster count
 	   nClusters.foreach(nc => {
-	     //each initial position
 	     val clusters = ArrayBuffer[ClusterData]()
+	     
+	     //each initial cluster  position
 	     for (cg  <- 0 to numClustGroup - 1) {
-	    	 val initClusters = data.takeSample(false, nc, 1).zipWithIndex
-	    	 initClusters.foreach(cc => {
-	    		 val cls = new ClusterData(nc, cg, cc._2, cc._1, fieldDelimIn) 
-	    	     clusters += cls
-	    	 })
-	    	 allClusters += ((nc, cg) -> clusters)
-	    	 activeCount += nc
+	    	 val initClusters = data.takeSample(false, nc, 1)
+	    	 val size = 2 + initClusters.length
+	    	 val keyRec = Record(size, initClusters, 2)
+	    	 keyRec.addInt(0, nc)
+	    	 keyRec.addInt(1, cg)
+	    	 allKeys += keyRec
 	     }
 	   })
 	   
-	   //iterate
-	   for (i <- 1 to numIter if activeCount > 0) {
-		   //within each cluster group, assign record to the nearest cluster
-		   val clMemebers = data.flatMap(line => {
-		     val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
-		     val clMembers = ArrayBuffer[(ClusterData, Record)]()
-		     allClusters.foreach(v => {
-		       val (nc, cg) = v._1
-		       val clusters = v._2
-		       val allClusters = clusters.sortBy(c => c.getId()).toArray
-		       
-		       //real clusters
-		       val realClusters = maxDist match {
-		         case Some(mDist : Double) => {
-		           //outlier tracking
-		           allClusters.slice(0, allClusters.length-1)
-		       	 }
-		       	 case None => {
-		       	   //normal case
-		       	   allClusters
-		       	 }
-		       }
-		     
-		       //closest cluster
-		       var clDist = realClusters.map(cl => {
-		         var dist = cl.findDistaneToCentroid(fields, distanceFinder)
-		         if (useDistRatio && i > 1) {
+	   
+	   val x = data.flatMap(line => {
+		 val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
+	     allKeys.map(k => {
+	       val size = keyFieldOrdinals.length +  k.size
+	       val keyRec = Record(size, k, keyFieldOrdinals.length)
+	       keyRec.initialize
+	       Record.populateFields(fields, keyFieldOrdinals, keyRec)
+	       (keyRec, line)
+	     })
+	   }).groupByKey.map(r => {
+	     val keyRec = r._1
+	     val values = r._2.toArray
+	     var offset = keyFieldOrdinals.length
+	     val nc = keyRec.getInt(offset)
+	     offset += 1
+	     val cg = keyRec.getInt(offset)
+	     offset += 1
+	     val clCenters = Record.extractFields(keyRec, offset, keyRec.size)
+	     val clusters = clCenters.zipWithIndex.map(cc => {
+	       val cl = new ClusterData(nc, cg, cc._2, cc._1, fieldDelimIn,  schema,  distSchema,  distanceFinder,
+			 centroidShiftThreshold) 
+	       cl.initMembership(attrOrdinals)
+	       cl
+	     })
+	     
+	     values.foreach(line => {
+	       val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
+	       
+	       //closest cluster for a record
+		   val clDist = clusters.map(cl => {
+		     var dist = cl.findDistaneToCentroid(fields, distanceFinder)
+		     if (useDistRatio) {
 		           dist /= cl.getAvDistance()
-		         }
-		         (cl, line, dist)
-		       }).sortBy(r => r._3).head
-		       
-		       clDist =  maxDist match {
-		         case Some(mDist : Double) => {
-		           //max dist and outlier tracking
-		           if (i > 1 && clDist._3 > mDist)
-		        	   (realClusters.last, clDist._2, clDist._3)
-		           else
-		             clDist
-		       	 }
-		       	 case None => {
-		       	   //normal case
-		       	   clDist
-		       	 }
-		       }
-		       
-		       val value = Record(2)
-		       value.add(clDist._2, clDist._3)
-		       clMembers += ((clDist._1, value))
-		     })
-		     
-		     clMembers
-		   })
+		     }
+		     (cl, line, dist)
+		   }).sortBy(r => r._3).head
 		   
-		   //adjust cluster centers
-		   val createCluster = (value:Record) => {
-		     val cl = new ClusterData()
-		     cl.initMembership(attrOrdinals, schema)
-		     val record = value.getString(0)
-		     val distance = value.getDouble(1)
-		     val fields = BasicUtils.getTrimmedFields(record, fieldDelimIn)
-		     cl.addMember(fields, distance, schema, distSchema, distanceFinder)
-		     cl
-		   }
+		   //add member
+		   clDist._1.addMember(fields, clDist._3)
 		   
-		   //add to cluster
-		   val addToCluster = (cl: ClusterData, value: Record) => {
-		     val record = value.getString(0)
-		     val distance = value.getDouble(1)
-		     val fields = BasicUtils.getTrimmedFields(record, fieldDelimIn)
-		     cl.addMember(fields, distance, schema, distSchema, distanceFinder)
-		     cl
-		   }
-		   
-		   //merge cluster
-		   val mergeCluster = (clOne: ClusterData, clTwo: ClusterData) => {
-			   clOne.merge(clTwo)
-		   }
-		   
-		   //adjusted clusters
-		   val adjustedClusters = clMemebers.combineByKey(createCluster, addToCluster, mergeCluster)
-		   
-		   //replace previous with current
-		   val newClusters = adjustedClusters.map(r => {
-		     val pClust = r._1
-		     val cClust =  r._2
-		     cClust.finishMemebership(pClust, distanceFinder, centroidShiftThreshold, outputPrecision,fieldDelimIn)
-		     cClust
-		   }).sortBy(c => (c.getNumClusterInGroup(), c.getGroupId())).cache
-		   
-		   //process results
-		   allClusters = allClusters.empty
-		   
-		   val newClustersCol = newClusters.collect
-		   newClustersCol.foreach(cl => {
-		     val numClusterInGroup = cl.getNumClusterInGroup()
-		     val groupId = cl.getGroupId()
-		     val clusters = allClusters.getOrElse((numClusterInGroup, groupId), ArrayBuffer[ClusterData]())
-		     clusters += cl
-		     if (cl.isActive())
-		       activeCount += 1
-		   })
-		   
-		   //termination
-		   if (i == numIter || activeCount == 0) {
-			   //find best i.e group with the lowest average sse
-			   val bestClusters = newClusters.map(c => {
-			     ((c.getNumClusterInGroup(), c.getGroupId()), (c.getSse(), 1))
-			   }).reduceByKey((v1, v2) => {
-			     (v1._1 + v2._1, v1._2 + v2._2)
-			   }).mapValues(v => {
-			     v._1 / v._2
-			   }).sortBy(r => r._2, true, 1).cache
-			   
-			   //detailed cluster output
-			   val serClusters = newClusters.map(c => {
-				   c.withFieldDelim(fieldDelimOut).withOutputPrecision(outputPrecision).toString
-			   }).cache
-			   
-			   if (debugOn) {
-			       bestClusters.foreach(r => println(r))
-			       serClusters.foreach(r => println(r))
-			   }
-			     
-			   if (saveOutput) {
-			     bestClusters.saveAsTextFile(outputPath) 
-				 serClusters.saveAsTextFile(clusterOutputPath) 
-			   }
-		   } else {
-		     newClusters.unpersist(false)
-		   }
-	   }
+	     })
+	     
+	     
+	     
+	   })
+	   
+	   
 	   
    }
 }
