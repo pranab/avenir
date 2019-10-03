@@ -58,7 +58,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalU
 	   val attrOrdinals = toIntArray(getMandatoryIntListParam(config, "attr.ordinals", "missing attribute field"))
 	   val seqFieldOrd = getMandatoryIntParam(appConfig, "seq.field.ordinal","missing sequence field ordinal") 
 	   val numClustGroup = getIntParamOrElse(appConfig, "num.clustGroup", 10)
-	   val numClusters = getMandatoryIntListParam(appConfig, "num.clusters",  "missing cluster count list").asScala.toList
+	   val numClusters = toIntArray(getMandatoryIntListParam(appConfig, "num.clusters",  "missing cluster count list"))
 	   val useDistRatio = getBooleanParamOrElse(appConfig, "use.distRatio", true)
 	   val maxDist = getOptionalDoubleParam(appConfig, "max.dist")
 	   val schemaPath = getMandatoryStringParam(appConfig, "schema.path", "missing schema file path")
@@ -80,28 +80,14 @@ object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalU
 	   var activeCount = 0
 	   var outlierTracking = false
        
-	   val nClusters = maxDist match {
-	     case Some(mDist : Double) => {
-	       //extra cluster for collecting outliers
-	       outlierTracking =  true
-	       val nClusters = numClusters.map(v => v + 1)
-	       nClusters
-	     }
-	     case None => {
-	       //normal 
-	       val nClusters = numClusters.map(v => v.toInt)
-	       nClusters
-	     }
-	   }
-	   
 	   //input
-	   val data = sparkCntxt.textFile(inputPath).cache
+	   val data = sparkCntxt.textFile(inputPath)
 	   
-	   //initilalize clusters keyed by number of clusters and initial positions
+	   //initialize clusters keyed by number of clusters and initial positions
 	   val allKeys = ArrayBuffer[Record]()
 	   
 	   //each cluster count
-	   nClusters.foreach(nc => {
+	   numClusters.foreach(nc => {
 	     val clusters = ArrayBuffer[ClusterData]()
 	     
 	     //each initial cluster set  initial position
@@ -117,10 +103,10 @@ object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalU
 	   val clusterSets = data.flatMap(line => {
 		 val fields = BasicUtils.getTrimmedFields(line, fieldDelimIn)
 	     allKeys.map(k => {
-	       val size = keyFieldOrdinals.length +  k.size
-	       val keyRec = Record(size, k, keyFieldOrdinals.length)
+	       val keyRec = Record(keyLen, k, keyLen-2)
 	       keyRec.initialize
 	       Record.populateFields(fields, keyFieldOrdinals, keyRec)
+	       addSeasonalKeys(seasonalAnalyzers, fields, keyRec)
 	       (keyRec, line)
 	     })
 	   }).groupByKey.map(r => {
@@ -172,7 +158,7 @@ object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalU
 	     val newRecKey = Record(keyRec, 0, keyRec.size-1)
 	     (newRecKey, clSse)
 	   }).groupByKey.map(r => {
-	     //key is base key and num of clusters get the set of clusters with minimum average sse
+	     //get the set of clusters with minimum average sse with key as base key and number of clusters 
 	     val values = r._2.toArray.sortBy(cs => cs._2)
 	     (r._1, values(0))
 	   }).map(r => {
@@ -180,14 +166,15 @@ object KmeansCluster extends JobConfiguration with GeneralUtility with SeasonalU
 	     val recKey = Record(r._1, 0, r._1.size-1)
 	     (recKey, r._2)
 	   }).groupByKey.map(r => {
+	     //cluster set at knuckle point
 	     val values = r._2.toArray.sortBy(cs => cs._1.length)
 	     val sses = values.map(v => v._2)
 	     val index = MathUtils.getMaxSecondDiff(sses).getLeft()
 	     val clusterSet = values(index)._1
 	     (r._1, clusterSet)
 	   }).map(r => {
+	     //serialize
 	     val stBld = new StringBuilder(r._1.toString())
-	     //stBld.append()
 	     r._2.foreach(cl => {
 	       stBld.append(fieldDelimOut).append(cl.toString())
 	     })
