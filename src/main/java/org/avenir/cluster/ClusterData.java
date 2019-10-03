@@ -35,7 +35,7 @@ import org.chombo.util.GenericAttributeSchema;
  * @author pranab
  *
  */
-public class ClusterData implements Serializable {
+public class ClusterData extends Cluster {
 	//private static final long serialVersionUID = 1L;
 	private int numClusterInGroup;
 	private int groupId;
@@ -46,15 +46,11 @@ public class ClusterData implements Serializable {
 	private boolean active; 
 	private String[] items;
 	private double distance;
-	private double avDistance;
 	private double sumDist;
 	private double sumDistSq;
 	private int count;
-	public double sse;
     private Map<Integer, Double> numSums = new HashMap<Integer, Double>();
     private Map<Integer, CategoricalHistogramStat> catHist = new HashMap<Integer, CategoricalHistogramStat>();
-    private int outputPrecision = 3;
-    private String fieldDelim;
     private GenericAttributeSchema schema;
     private AttributeDistanceSchema attrDistSchema;
     private InterRecordDistance distanceFinder;
@@ -157,37 +153,6 @@ public class ClusterData implements Serializable {
 		return id;
 	}
 
-	/**
-	 * @return
-	 */
-	public double getAvDistance() {
-		return avDistance;
-	}
-
-	/**
-	 * @return
-	 */
-	public double getSse() {
-		return sse;
-	}
-
-	/**
-	 * @param outputPrecision
-	 * @return
-	 */
-	public ClusterData withOutputPrecision(int outputPrecision) {
-		this.outputPrecision = outputPrecision;
-		return this;
-	}
-
-	/**
-	 * @param fieldDelim
-	 * @return
-	 */
-	public ClusterData withFieldDelim(String fieldDelim) {
-		this.fieldDelim = fieldDelim;
-		return this;
-	}
 
 	/**
 	 * @param record
@@ -404,7 +369,7 @@ public class ClusterData implements Serializable {
 		String sseStr = BasicUtils.formatDouble(sse, outputPrecision);
 		String avDistanceStr = BasicUtils.formatDouble(avDistance, outputPrecision);
 		stBld.append(numClusterInGroup).append(fieldDelim).append(groupId).
-			append(fieldDelim).append(sseStr).append(fieldDelim).append(avDistanceStr).
+			append(fieldDelim).append(count).append(fieldDelim).append(sseStr).append(fieldDelim).append(avDistanceStr).
 			append(fieldDelim).append(centroid);
 		return stBld.toString();
 	}

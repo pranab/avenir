@@ -132,7 +132,7 @@ object KMeansPlusPlusCluster extends JobConfiguration with GeneralUtility with S
 	   
 	   if (debugOn) {
 	     val colSerClustData = serClustData.collect.slice(0, 50)
-	     colSerClustData.foreach(s => println("state trans probability:" + s))
+	     colSerClustData.foreach(s => println(s))
 	   }
 
 	   if (saveOutput) {

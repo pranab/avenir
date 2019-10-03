@@ -73,6 +73,16 @@ public class ClusterUtility {
 		return sum / clusters.length;
 	}
 	
-	
+	/**
+	 * @param clusters
+	 * @return
+	 */
+	public static double getAverageSse(ClusterData[] clusters) {
+		double sum = 0;
+		for (Cluster cl : clusters) {
+			sum += cl.getSse();
+		}
+		return sum / clusters.length;
+	}
 
 }

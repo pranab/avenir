@@ -26,12 +26,12 @@ import org.chombo.util.BasicUtils;
  *
  */
 public class Cluster implements Serializable {
-	private double[] centroid;
-	private double avDistance;
-	public double sse;
-	private int count;
-    private int outputPrecision = 3;
-    private String fieldDelim;
+	protected double[] numCentroid;
+	protected double avDistance;
+	protected double sse;
+	protected int count;
+	protected int outputPrecision = 3;
+	protected String fieldDelim;
 
 	/**
 	 * 
@@ -46,20 +46,20 @@ public class Cluster implements Serializable {
 	 * @param count
 	 * @param sse
 	 */
-	public Cluster(double[] centroid, double avDistance, double sse, int count) {
+	public Cluster(double[] numCentroid, double avDistance, double sse, int count) {
 		super();
-		this.centroid = centroid;
+		this.numCentroid = numCentroid;
 		this.avDistance = avDistance;
 		this.sse = sse;
 		this.count = count;
 	}
 
-	public double[] getCentroid() {
-		return centroid;
+	public double[] getNumCentroid() {
+		return numCentroid;
 	}
 
-	public void setCentroid(double[] centroid) {
-		this.centroid = centroid;
+	public void setNumCentroid(double[] numCentroid) {
+		this.numCentroid = numCentroid;
 	}
 
 	public double getAvDistance() {
@@ -108,7 +108,7 @@ public class Cluster implements Serializable {
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
-		StringBuilder stBld = new StringBuilder(BasicUtils.join(centroid, fieldDelim, outputPrecision));
+		StringBuilder stBld = new StringBuilder(BasicUtils.join(numCentroid, fieldDelim, outputPrecision));
 			stBld.append(fieldDelim).append(count).append(BasicUtils.formatDouble(avDistance, outputPrecision)).
 			append(count).append(BasicUtils.formatDouble(sse, outputPrecision));
 		
