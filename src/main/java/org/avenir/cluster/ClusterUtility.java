@@ -19,6 +19,7 @@ package org.avenir.cluster;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -130,11 +131,28 @@ public class ClusterUtility {
 	 * @param largeClusterSizeMultilier
 	 * @return
 	 */
-	public static List<ClusterData> labelSize(List<ClusterData> clusters, double largeClusterSizeFraction,
+	public static void labelSize(List<ClusterData> clusters, double largeClusterSizeFraction,
 			double largeClusterSizeMultilier) {
 		List<ClusterData> labeledClusters = new ArrayList<ClusterData>();
+		Collections.sort(clusters);
+		int totalCount = 0;
+		for (ClusterData cl : clusters) {
+			totalCount += cl.getCount();
+		}
 		
-		return labeledClusters;
+		int cumCount = 0;
+		boolean isLarge = true;
+		for (int i = 0; i < clusters.size(); ++i) {
+			clusters.get(i).setLarge(isLarge);
+			
+			int curCount = clusters.get(i).getCount();
+			cumCount += curCount;
+			if (cumCount >= largeClusterSizeFraction * totalCount && i < clusters.size()-1 && 
+				curCount >= largeClusterSizeMultilier * clusters.get(i+1).getCount()) {
+				isLarge = false;
+			}
+		}
+		
 	}
 
 }

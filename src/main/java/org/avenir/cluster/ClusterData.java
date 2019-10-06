@@ -35,7 +35,7 @@ import org.chombo.util.GenericAttributeSchema;
  * @author pranab
  *
  */
-public class ClusterData extends Cluster {
+public class ClusterData extends Cluster implements Comparable<ClusterData>   {
 	//private static final long serialVersionUID = 1L;
 	private int numClusterInGroup;
 	private int groupId;
@@ -400,5 +400,11 @@ public class ClusterData extends Cluster {
 		stBld.append(centroid.replaceAll(fieldDelim, centroidDelim)).append(fieldDelim).append(count).
 			append(fieldDelim).append(avDistanceStr).append(fieldDelim).append(sseStr);
 		return stBld.toString();
+	}
+
+	@Override
+	public int compareTo(ClusterData that) {
+		//descending
+		return  that.count - this.count;
 	}
 }
