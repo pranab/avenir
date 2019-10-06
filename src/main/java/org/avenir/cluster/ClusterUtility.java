@@ -17,12 +17,17 @@
 
 package org.avenir.cluster;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.math3.ml.clustering.CentroidCluster;
 import org.apache.commons.math3.ml.clustering.DoublePoint;
 import org.apache.commons.math3.ml.distance.DistanceMeasure;
+import org.chombo.util.BasicUtils;
+import org.chombo.util.Record;
 
 public class ClusterUtility {
 	
@@ -83,6 +88,53 @@ public class ClusterUtility {
 			sum += cl.getSse();
 		}
 		return sum / clusters.length;
+	}
+	
+	/**
+	 * @param filePath
+	 * @param delim
+	 * @param key Len
+	 * @return
+	 */
+	public static Map<String, List<ClusterData>> load(String filePath, String delim, int keyLen) {
+		Map<String, List<ClusterData>> keyedClusters = new HashMap<String, List<ClusterData>>();
+		try {
+			List<String> lines = BasicUtils.getFileLines(filePath);
+			for (String line : lines) {
+				List<ClusterData> clusters = new ArrayList<ClusterData>();
+	    		int pos = BasicUtils.findOccurencePosition(line, delim, keyLen, true);
+	    		String key = line.substring(0, pos);
+	    		
+	    		Record rec = new Record(line.substring(pos), delim);
+	    		while (rec.hasNext()) {
+		    		String centroid = rec.getString();
+		    		centroid.replaceAll(" ", delim);
+		    		int count = rec.getInt();
+		    		double avDist = rec.getDouble();
+		    		double sse = rec.getDouble();;
+		    		ClusterData clData = new ClusterData(centroid,  count, avDist, sse, delim); 
+		    		clusters.add(clData);
+	    		}
+	    		keyedClusters.put(key, clusters);
+			}
+		} catch (IOException e) {
+			BasicUtils.assertFail("failed to open cluster definition file " + e.getMessage());
+		}
+		
+		return keyedClusters;
+	}
+	
+	/**
+	 * @param clusters
+	 * @param largeClusterSizeFraction
+	 * @param largeClusterSizeMultilier
+	 * @return
+	 */
+	public static List<ClusterData> labelSize(List<ClusterData> clusters, double largeClusterSizeFraction,
+			double largeClusterSizeMultilier) {
+		List<ClusterData> labeledClusters = new ArrayList<ClusterData>();
+		
+		return labeledClusters;
 	}
 
 }

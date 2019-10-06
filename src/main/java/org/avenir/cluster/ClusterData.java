@@ -55,7 +55,9 @@ public class ClusterData extends Cluster {
     private AttributeDistanceSchema attrDistSchema;
     private InterRecordDistance distanceFinder;
     private double centroidShiftThreshold;
-
+    private boolean completeOutput;
+    private boolean large;
+    
     public ClusterData() {
     }
     
@@ -89,6 +91,21 @@ public class ClusterData extends Cluster {
         this.movement = movement;
         this.active = active;
         this.items = centroid.split(delim, -1);
+	}
+
+	/**
+	 * @param centroid
+	 * @param count
+	 * @param avDistance
+	 * @param sse
+	 */
+	public ClusterData(String centroid,  int count, double avDistance, double sse, String fieldDelim) {
+		this.centroid = centroid;
+        this.count = count;
+        this.avDistance = avDistance;
+        this.sse = sse;
+        this.fieldDelim = fieldDelim;
+        this.items = centroid.split(fieldDelim, -1);
 	}
 
 	/**
@@ -153,6 +170,14 @@ public class ClusterData extends Cluster {
 		return id;
 	}
 
+
+	public boolean isLarge() {
+		return large;
+	}
+
+	public void setLarge(boolean large) {
+		this.large = large;
+	}
 
 	/**
 	 * @param record
@@ -368,9 +393,12 @@ public class ClusterData extends Cluster {
 		StringBuilder stBld = new StringBuilder();
 		String sseStr = BasicUtils.formatDouble(sse, outputPrecision);
 		String avDistanceStr = BasicUtils.formatDouble(avDistance, outputPrecision);
-		stBld.append(numClusterInGroup).append(fieldDelim).append(groupId).
-			append(fieldDelim).append(count).append(fieldDelim).append(sseStr).append(fieldDelim).append(avDistanceStr).
-			append(fieldDelim).append(centroid);
+		if (completeOutput) {
+			stBld.append(numClusterInGroup).append(fieldDelim).append(groupId).append(fieldDelim);
+		}
+		
+		stBld.append(centroid.replaceAll(fieldDelim, centroidDelim)).append(fieldDelim).append(count).
+			append(fieldDelim).append(avDistanceStr).append(fieldDelim).append(sseStr);
 		return stBld.toString();
 	}
 }

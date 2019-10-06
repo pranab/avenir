@@ -32,6 +32,7 @@ public class Cluster implements Serializable {
 	protected int count;
 	protected int outputPrecision = 3;
 	protected String fieldDelim;
+	protected String centroidDelim = " ";
 
 	/**
 	 * 
@@ -108,9 +109,9 @@ public class Cluster implements Serializable {
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
-		StringBuilder stBld = new StringBuilder(BasicUtils.join(numCentroid, fieldDelim, outputPrecision));
+		StringBuilder stBld = new StringBuilder(BasicUtils.join(numCentroid, centroidDelim, outputPrecision));
 			stBld.append(fieldDelim).append(count).append(BasicUtils.formatDouble(avDistance, outputPrecision)).
-			append(count).append(BasicUtils.formatDouble(sse, outputPrecision));
+			append(fieldDelim).append(BasicUtils.formatDouble(sse, outputPrecision));
 		
 		return stBld.toString();
 	}
