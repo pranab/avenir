@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -45,6 +45,7 @@ class GradientBoostedTrees(object):
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
+		defValues["common.preprocessing"] = (None, None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")

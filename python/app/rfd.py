@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 # Package imports
 import os

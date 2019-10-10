@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -226,11 +226,11 @@ class BaseClassifier(object):
 		#print clsData
 		scoreMethod = self.config.getStringConfig("validate.score.method")[0]
 		if scoreMethod == "accuracy":
-			accuracy = accuracy_score(clsDataActual, clsDataPred) 
+			accuracy = sk.metrics.accuracy_score(clsDataActual, clsDataPred) 
 			print "accuracy:"
 			print accuracy
 		elif scoreMethod == "confusionMatrix":
-			confMatrx = confusion_matrix(clsDataActual, clsDataPred)
+			confMatrx = sk.metrics.confusion_matrix(clsDataActual, clsDataPred)
 			print "confusion matrix:"
 			print confMatrx
 
@@ -298,6 +298,8 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+			featData = sk.preprocessing.scale(featData)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = np.array([int(a) for a in clsData])
 		return (featData, clsData)
@@ -316,6 +318,8 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+			featData = sk.preprocessing.scale(featData)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = [int(a) for a in clsData]
 		return (featData, clsData)
@@ -335,6 +339,8 @@ class BaseClassifier(object):
 
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+			featData = sk.preprocessing.scale(featData)
 		
 		return featData
 	

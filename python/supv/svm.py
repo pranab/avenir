@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -43,7 +43,7 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
 		defValues["common.scale.file.path"] = (None, "missing scale file path")
-		defValues["common.preprocessing"] = ("scale", None)
+		defValues["common.preprocessing"] = (None, None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -101,7 +101,7 @@ class SupportVectorMachine(BaseClassifier):
 			if kernelFun == "poly":
 				model = sk.svm.SVC(C=penalty,kernel=kernelFun,degree=polyDegree,gamma=kernelCoeff, shrinking=shrinkHeuristic, \
 				probability=predictProb)
-			elif kernelFun == "rbf" or kernel_fun == "sigmoid":
+			elif kernelFun == "rbf" or kernelFun == "sigmoid":
 				model = sk.svm.SVC(C=penalty,kernel=kernelFun,gamma=kernelCoeff, shrinking=shrinkHeuristic, probability=predictProb)
 			else:
 				model = sk.svm.SVC(C=penalty, kernel=kernelFun, shrinking=shrinkHeuristic, probability=predictProb)
