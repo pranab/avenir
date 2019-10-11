@@ -1,0 +1,50 @@
+This tutorial is for autoML with Hyperopt and Scikit learn. The 3 classifiers used are SVM, Random Foest and
+Gradient Boosted Trees. The Hypoeropt optimizer will tell the the best algorith and the assiciated parameters.
+The use case is for predicting escalation for a customer service ticketing syste.
+
+Setup
+=====
+Make sure you have ../lib and ../text directories with all the python files wrt where autosupv.py
+is. The onfiguration for the 3 classifiers are es_svm.properties, esc_rf.properties  and esc_gbt.properties.
+Since your python installation may  be different, please run all python scripts starting with 
+python abc.py ...
+
+Create training data file
+=========================
+./cs_escalate.py generate <num_records> <noise> <key_len> > <training_data_file_path>
+
+num_records = number of records e.g 5000
+noise = added noise in the data e.g. .05
+key_len = length of unique key
+training_data_file_path = training data file path
+
+Set train.data.file in all 3 properties file with the training data file path
+
+Test all the classifiers independently
+======================================
+Make sure you have this setting in all 3 properties file
+common.mode=trainValidate
+
+Train and validate each classifier
+./svmd.py esc_svm.properties
+./rfd.py esc_rf.properties
+./gb.py esc_gbt.properties
+
+Search space
+============
+I have used a small search space. You can expand it by adding parameters to train.search.params
+and then defining the range of values for the parameters added using the the current search parameters as 
+examples
+
+Run Hyperopt
+============
+./autosupv.py <num_iter> svm:esc_svm.properties rf:esc_rf.properties gbt:esc_gbt.properties
+num_iter = number of iteration  e.g 100
+
+At the end of the output you will see the best classifiers along with parameters.
+
+
+
+
+
+
