@@ -83,7 +83,7 @@ class SupportVectorMachine(BaseClassifier):
 
 	# builds model object
 	def buildModel(self):
-		print "...building model"
+		print "...building svm model"
 		algo = self.config.getStringConfig("train.algorithm")[0]
 		kernelFun = self.config.getStringConfig("train.kernel.function")[0]
 		penalty = self.config.getFloatConfig("train.penalty")[0]

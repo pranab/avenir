@@ -30,10 +30,11 @@ from svm import *
 from gbt import *
 
 def clfEvaluator(args):
+	print "next evaluation"
 	clf = classifiers[args["model"]]
 	config = clf.getConfig()
 	modelParam = args["param"]
-	for paName, paValue in modelParam.items:
+	for paName, paValue in modelParam.items():
 		clf.setConfigParam(paName, str(paValue))
 		
 	return clf.trainValidate()
@@ -44,9 +45,10 @@ if __name__ == "__main__":
 	maxEvals = int(sys.argv[1])
 	classifiers = dict()
 	for i in range(2, len(sys.argv)):
-		items = sys.argv[i].split("=")
+		items = sys.argv[i].split(":")
 		clfName = items[0]
 		clfConfigFile = items[1]
+		print clfName + "  " + clfConfigFile
 		if clfName == "rf":
 			clf = RandomForest(clfConfigFile)
 		elif clfName == "gbt":
@@ -57,52 +59,55 @@ if __name__ == "__main__":
 			raise valueError("unsupported classifier")
 		classifiers[clfName] = clf	
 
-		# create space
-		params = list()
-		for clName, clf in classifiers.items:
-			# search space parameters
-			config = clf.getConfig()
-			searchParams = config.getStringConfig("train.search.params")[0].split(",")
-			assert searchParams, "missing search parameter list"
-			searchParamDetals = list()
-			for searchParam in searchParams:
-				paramItems = searchParam.split(":")
-				extSearchParamName = str(paramItems[0])
+	# create space
+	params = list()
+	for clName, clf in classifiers.items():
+		print "building search space for classifier " + clName
+		# search space parameters
+		config = clf.getConfig()
+		searchParams = config.getStringConfig("train.search.params")[0].split(",")
+		assert searchParams, "missing search parameter list"
 
-				#get rid name component search
-				paramNameItems = paramItems[0].split(".")
-				del paramNameItems[1]
-				searchParamName = ".".join(paramNameItems)
-				searchParamType = paramItems[1]
-				searchParam = (extSearchParamName, searchParamName, searchParamType)
-				searchParamDetals.apend(searchParam)
+		# process search params
+		searchParamDetals = list()
+		for searchParam in searchParams:
+			paramItems = searchParam.split(":")
+			extSearchParamName = str(paramItems[0])
 
-			# param space
-			param = dict()
-			param["model"] = clName
-			modelParam = dict()
-			for extSearchParamName, searchParamName, searchParamType in searchParamDetals:
-				searchParamValues = config.getStringConfig(extSearchParamName)[0].split(",")	
-				if (searchParamType == "string"):
-					modelParam[searchParamName] = hp.choice(searchParamName,searchParamValues)
-				elif (searchParamType == "int"):
-					assert len(searchParamValues) == 2, "only 2 values needed for parameter range space"
-					iSearchParamValues = list(map(lambda v: int(v), searchParamValues))	
-					modelParam[searchParamName] = hp.choice(searchParamName,range(iSearchParamValues[0], iSearchParamValues[1]))
-				elif (searchParamType == "float"):
-					assert len(searchParamValues) == 2, "only 2 values needed for parameter range space"
-					fSearchParamValues = list(map(lambda v: float(v), searchParamValues))	
-					modelParam[searchParamName] = hp.uniform(searchParamName, fSearchParamValues[0],fSearchParamValues[1])
-				else:
-					raise ValueError("invalid paramter type")
-			param["param"] = modelParam
-			params.append(param)
+			#get rid name component search
+			paramNameItems = paramItems[0].split(".")
+			del paramNameItems[1]
+			searchParamName = ".".join(paramNameItems)
+			searchParamType = paramItems[1]
+			searchParam = (extSearchParamName, searchParamName, searchParamType)
+			searchParamDetals.append(searchParam)
+
+		# create param space for the classifier
+		param = dict()
+		param["model"] = clName
+		modelParam = dict()
+		for extSearchParamName, searchParamName, searchParamType in searchParamDetals:
+			searchParamValues = config.getStringConfig(extSearchParamName)[0].split(",")	
+			if (searchParamType == "string"):
+				modelParam[searchParamName] = hp.choice(searchParamName,searchParamValues)
+			elif (searchParamType == "int"):
+				assert len(searchParamValues) == 2, "only 2 values needed for parameter range space"
+				iSearchParamValues = list(map(lambda v: int(v), searchParamValues))	
+				modelParam[searchParamName] = hp.choice(searchParamName,range(iSearchParamValues[0], iSearchParamValues[1]))
+			elif (searchParamType == "float"):
+				assert len(searchParamValues) == 2, "only 2 values needed for parameter uniform space"
+				fSearchParamValues = list(map(lambda v: float(v), searchParamValues))	
+				modelParam[searchParamName] = hp.uniform(searchParamName, fSearchParamValues[0],fSearchParamValues[1])
+			else:
+				raise ValueError("invalid paramter type")
+		param["param"] = modelParam
+		params.append(param)
 
 
-		# optimize
-		space = hp.choice("classifier", params)
-		trials = Trials()
-		best = fmin(clfEvaluator,space, algo=tpe.suggest, trials=trials,max_evals=maxEvals)
-		print best
+	# optimize
+	space = hp.choice("classifier", params)
+	trials = Trials()
+	best = fmin(clfEvaluator,space, algo=tpe.suggest, trials=trials, max_evals=maxEvals)
+	print best
 
 		

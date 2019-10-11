@@ -59,7 +59,7 @@ class GradientBoostedTrees(object):
 		defValues["train.max.leaf.nodes"] = (None, None)
 		defValues["train.max.features"] = (None, None)
 		defValues["train.learning.rate"] = (0.1, None)
-		defValues["train.num.estimators"] = (100, None)
+		defValues["train.num.estimatorsgb"] = (100, None)
 		defValues["train.subsample"] = (1.0, None)
 		defValues["train.loss"] = ("deviance", None)
 		defValues["train.random.state"] = (None, None)
@@ -439,7 +439,7 @@ class GradientBoostedTrees(object):
 	
 	# builds model object
 	def buildModel(self):
-		print "...building model"
+		print "...building gradient boosted tree model"
 		# parameters
 		minSamplesSplit = self.config.getStringConfig("train.min.samples.split")[0]
 		minSamplesSplit = typedValue(minSamplesSplit)
@@ -450,7 +450,7 @@ class GradientBoostedTrees(object):
 		maxFeatures = self.config.getStringConfig("train.max.features")[0]
 		maxFeatures = typedValue(maxFeatures)
 		learningRate = self.config.getFloatConfig("train.learning.rate")[0]
-		numEstimators = self.config.getIntConfig("train.num.estimators")[0]
+		numEstimators = self.config.getIntConfig("train.num.estimatorsgb")[0]
 		subsampleFraction = self.config.getFloatConfig("train.subsample")[0]	
 		lossFun = self.config.getStringConfig("train.loss")[0]
 		randomState = self.config.getIntConfig("train.random.state")[0]
