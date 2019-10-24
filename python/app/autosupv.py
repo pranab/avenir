@@ -44,6 +44,7 @@ if __name__ == "__main__":
 	assert len(sys.argv) > 2, "missing classifier name and config files"
 	maxEvals = int(sys.argv[1])
 	classifiers = dict()
+	clfNames = list()
 	for i in range(2, len(sys.argv)):
 		items = sys.argv[i].split(":")
 		clfName = items[0]
@@ -58,10 +59,12 @@ if __name__ == "__main__":
 		else:
 			raise valueError("unsupported classifier")
 		classifiers[clfName] = clf	
+		clfNames.append(clfName)
 
 	# create space
 	params = list()
-	for clName, clf in classifiers.items():
+	for clName in clfNames:
+		clf = classifiers[clName]
 		print "building search space for classifier " + clName
 		# search space parameters
 		config = clf.getConfig()
@@ -87,17 +90,25 @@ if __name__ == "__main__":
 		param["model"] = clName
 		modelParam = dict()
 		for extSearchParamName, searchParamName, searchParamType in searchParamDetals:
-			searchParamValues = config.getStringConfig(extSearchParamName)[0].split(",")	
+			searchParamValues = config.getStringConfig(extSearchParamName)[0].split(",")
+
+			#make feature fields coma separated
+			if (extSearchParamName == "train.search.data.feature.fields"):
+				searchParamValues = list(map(lambda v:v.replace(":", ",") , searchParamValues))	
+					
 			if (searchParamType == "string"):
 				modelParam[searchParamName] = hp.choice(searchParamName,searchParamValues)
+				print "string param ", searchParamName, searchParamValues
 			elif (searchParamType == "int"):
 				assert len(searchParamValues) == 2, "only 2 values needed for parameter range space"
 				iSearchParamValues = list(map(lambda v: int(v), searchParamValues))	
 				modelParam[searchParamName] = hp.choice(searchParamName,range(iSearchParamValues[0], iSearchParamValues[1]))
+				print ("int param  %s %d %d") %(searchParamName, iSearchParamValues[0], iSearchParamValues[1])
 			elif (searchParamType == "float"):
 				assert len(searchParamValues) == 2, "only 2 values needed for parameter uniform space"
 				fSearchParamValues = list(map(lambda v: float(v), searchParamValues))	
 				modelParam[searchParamName] = hp.uniform(searchParamName, fSearchParamValues[0],fSearchParamValues[1])
+				print ("float param  %s %.3f %.3f") %(searchParamName, fSearchParamValues[0], fSearchParamValues[1])
 			else:
 				raise ValueError("invalid paramter type")
 		param["param"] = modelParam
