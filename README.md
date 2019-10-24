@@ -54,6 +54,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2019/06/27/six-unsupervised-extractive-text-summarization-techniques-side-by-side/
 * https://pkghosh.wordpress.com/2019/08/07/encoding-high-cardinality-categorical-variables-with-feature-hashing-on-spark/
 * https://pkghosh.wordpress.com/2019/08/26/missing-value-imputation-with-restricted-boltzmann-machine-neural-network/
+* https://pkghosh.wordpress.com/2019/10/23/automated-machine-learning-with-hyperopt-and-scikitlearn-without-writing-python-code/
+
 
 
 ## Getting started

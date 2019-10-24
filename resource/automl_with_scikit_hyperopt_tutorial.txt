@@ -43,6 +43,44 @@ num_iter = number of iteration  e.g 100
 
 At the end of the output you will see the best classifiers along with parameters.
 
+Train the optimal model
+=======================
+For the classifier found optimum  in the Hyperopt output, edit the corresponding config for that 
+classifier as below
+
+common.mode=train
+common.model.directory=<directory where model will be saved>
+common.model.file=<file where model will be saved>
+train.model.save=True
+param1_name=param1_value
+param2_name=param2_value
+......
+
+The last set of changes correspond to the parameters that were optimized by Hyperopt. Use the values 
+that Hyperop found.
+
+
+Run one of the following depending on the classifier
+
+./svmd.py esc_svm.properties
+./rfd.py esc_rf.properties
+./gb.py esc_gbt.properties
+
+Deployment and Prediction
+=========================
+Use one of the following scripts to deploy as REST service
+
+gbtsvc.py
+rfsvc.py
+svmsvc.py
+
+You could look at one of the following
+
+gbtclnt.py
+rfclnt.py
+svmclnt.py
+
+
 
 
 
