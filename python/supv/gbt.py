@@ -54,12 +54,12 @@ class GradientBoostedTrees(object):
 		defValues["train.validation"] = ("kfold", None)
 		defValues["train.num.folds"] = (5, None)
 		defValues["train.min.samples.split"] = ("4", None)
-		defValues["train.min.samples.leaf"] = ("2", None)
-		defValues["train.max.depth"] = (3, None)
-		defValues["train.max.leaf.nodes"] = (None, None)
-		defValues["train.max.features"] = (None, None)
+		defValues["train.min.samples.leaf.gb"] = ("2", None)
+		defValues["train.max.depth.gb"] = (3, None)
+		defValues["train.max.leaf.nodes.gb"] = (None, None)
+		defValues["train.max.features.gb"] = (None, None)
 		defValues["train.learning.rate"] = (0.1, None)
-		defValues["train.num.estimatorsgb"] = (100, None)
+		defValues["train.num.estimators.gb"] = (100, None)
 		defValues["train.subsample"] = (1.0, None)
 		defValues["train.loss"] = ("deviance", None)
 		defValues["train.random.state"] = (None, None)
@@ -443,14 +443,14 @@ class GradientBoostedTrees(object):
 		# parameters
 		minSamplesSplit = self.config.getStringConfig("train.min.samples.split")[0]
 		minSamplesSplit = typedValue(minSamplesSplit)
-		minSamplesLeaf = self.config.getStringConfig("train.min.samples.leaf")[0]
+		minSamplesLeaf = self.config.getStringConfig("train.min.samples.leaf.gb")[0]
 		minSamplesLeaf = typedValue(minSamplesLeaf)
-		#minWeightFractionLeaf = self.config.getFloatConfig("train.min.weight.fraction.leaf")[0]
-		(maxDepth, maxLeafNodes) = self.config.eitherOrIntConfig("train.max.depth", "train.max.leaf.nodes")
-		maxFeatures = self.config.getStringConfig("train.max.features")[0]
+		#minWeightFractionLeaf = self.config.getFloatConfig("train.min.weight.fraction.leaf.gb")[0]
+		(maxDepth, maxLeafNodes) = self.config.eitherOrIntConfig("train.max.depth.gb", "train.max.leaf.nodes.gb")
+		maxFeatures = self.config.getStringConfig("train.max.features.gb")[0]
 		maxFeatures = typedValue(maxFeatures)
 		learningRate = self.config.getFloatConfig("train.learning.rate")[0]
-		numEstimators = self.config.getIntConfig("train.num.estimatorsgb")[0]
+		numEstimators = self.config.getIntConfig("train.num.estimators.gb")[0]
 		subsampleFraction = self.config.getFloatConfig("train.subsample")[0]	
 		lossFun = self.config.getStringConfig("train.loss")[0]
 		randomState = self.config.getIntConfig("train.random.state")[0]

@@ -45,11 +45,14 @@ if __name__ == "__main__":
 	maxEvals = int(sys.argv[1])
 	classifiers = dict()
 	clfNames = list()
+	clfProb = list()
 	for i in range(2, len(sys.argv)):
 		items = sys.argv[i].split(":")
 		clfName = items[0]
 		clfConfigFile = items[1]
 		print clfName + "  " + clfConfigFile
+
+		#build classifiers
 		if clfName == "rf":
 			clf = RandomForest(clfConfigFile)
 		elif clfName == "gbt":
@@ -60,6 +63,10 @@ if __name__ == "__main__":
 			raise valueError("unsupported classifier")
 		classifiers[clfName] = clf	
 		clfNames.append(clfName)
+
+		#class specific probability
+		if (len(items) == 3):
+			clfProb.append(float(items[2]))
 
 	# create space
 	params = list()
@@ -116,7 +123,13 @@ if __name__ == "__main__":
 
 
 	# optimize
-	space = hp.choice("classifier", params)
+	if (len(clfProb) == 0):
+		print "unbiased classifier sampling"
+		space = hp.choice("classifier", params)
+	else:
+		print "biased classifier sampling with given probabilities"
+		prParams = zip(clfProb, params)
+		space = hp.pchoice("classifier", prParams)
 	trials = Trials()
 	best = fmin(clfEvaluator,space, algo=tpe.suggest, trials=trials, max_evals=maxEvals)
 	print best
