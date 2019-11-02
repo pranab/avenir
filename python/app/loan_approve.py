@@ -1,5 +1,20 @@
 #!/usr/bin/python
 
+# avenir-python: Machine Learning
+# Author: Pranab Ghosh
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License. You may
+# obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0 
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
 import os
 import sys
 from random import randint
@@ -12,6 +27,8 @@ from sampler import *
 class LoanApprove:
 	def __init__(self, numLoans):
 		self.numLoans = numLoans
+		
+	def initOne(self):
 		self.threshold = 118
 		self.margin = 5
 
@@ -50,7 +67,9 @@ class LoanApprove:
 		(800, 850, 31))
 		self.zipRateScore = {"high" : 17, "average" : 15, "low" : 11}
 
-	def generate(self):
+	# ad hoc
+	def generateOne(self):
+		self.initOne()
 		posCount = 0
 		for i in range(self.numLoans):
 			id = genID(10)
@@ -115,14 +134,121 @@ class LoanApprove:
 			numYearsExp, outstandingLoan, loanAm, loanTerm, credScore, zipCode, approved)
 
 		#print "positive count " + str(posCount)
+		
+	def initTwo(self):
+		self.approvDistr = CategoricalRejectSampler(("1", 60), ("0", 40))
+		self.featCondDister = {}
+		
+		#marital status
+		key = ("1", 0)
+		distr = CategoricalRejectSampler(("married", 100), ("single", 60), ("divorced", 40))
+		self.featCondDister[key] = distr
+		key = ("0", 0)
+		distr = CategoricalRejectSampler(("married", 40), ("single", 80), ("divorced", 40))
+		self.featCondDister[key] = distr
+		
+		# num of children
+		key = ("1", 1)
+		distr = CategoricalRejectSampler(("1", 100), ("2", 90), ("3", 40))
+		self.featCondDister[key] = distr
+		key = ("0", 1)
+		distr = CategoricalRejectSampler(("1", 50), ("2", 60), ("3", 100))
+		self.featCondDister[key] = distr
+
+		# education
+		key = ("1", 2)
+		distr = CategoricalRejectSampler(("1", 30), ("2", 80), ("3", 100))
+		self.featCondDister[key] = distr
+		key = ("0", 2)
+		distr = CategoricalRejectSampler(("1", 100), ("2", 40), ("3", 30))
+		self.featCondDister[key] = distr
+
+		#self employed
+		key = ("1", 3)
+		distr = CategoricalRejectSampler(("1", 40), ("0", 100))
+		self.featCondDister[key] = distr
+		key = ("0", 3)
+		distr = CategoricalRejectSampler(("1", 100), ("0", 30))
+		self.featCondDister[key] = distr
+		
+		# income
+		key = ("1", 4)
+		distr = GaussianRejectSampler(120,15)
+		self.featCondDister[key] = distr
+		key = ("0", 4)
+		distr = GaussianRejectSampler(50,20)
+		self.featCondDister[key] = distr
+
+		# years of experience
+		key = ("1", 5)
+		distr = GaussianRejectSampler(12,3)
+		self.featCondDister[key] = distr
+		key = ("0", 5)
+		distr = GaussianRejectSampler(5,2)
+		self.featCondDister[key] = distr
+
+		# outstanding debt
+		key = ("1", 6)
+		distr = GaussianRejectSampler(20,5)
+		self.featCondDister[key] = distr
+		key = ("0", 6)
+		distr = GaussianRejectSampler(60,10)
+		self.featCondDister[key] = distr
+		
+		# loan amount
+		key = ("1", 7)
+		distr = GaussianRejectSampler(300,50)
+		self.featCondDister[key] = distr
+		key = ("0", 7)
+		distr = GaussianRejectSampler(600,70)
+		self.featCondDister[key] = distr
+		
+		# loan term 
+		key = ("1", 8)
+		distr = CategoricalRejectSampler(("7", 100), ("15", 40), ("30", 60))
+		self.featCondDister[key] = distr
+		key = ("0", 8)
+		distr = CategoricalRejectSampler(("7", 30), ("15", 100), ("30", 60))
+		self.featCondDister[key] = distr
+		
+		# credit score
+		key = ("1", 9)
+		distr = GaussianRejectSampler(700,20)
+		self.featCondDister[key] = distr
+		key = ("0", 9)
+		distr = GaussianRejectSampler(500,50)
+		self.featCondDister[key] = distr
+		
+		# zip
+		zipClusters = {\
+		"high" : ["95061", "95062", "95064", "95065", "95067"], \
+		"average" : ["95103", "95104", "95106", "95107", "95109", "95113", "95115", "95118", "95121" ], \
+		"low" : ["95376", "95377", "95378", "95353", "95354", "95356"]}
+		key = ("1", 10)
+		distr = ClusterSampler(zipClusters, ("high", 100), ("average", 80), ("low", 50))
+		self.featCondDister[key] = distr
+		key = ("0", 10)
+		distr =ClusterSampler(zipClusters, ("high", 30), ("average", 50), ("low", 100))
+		self.featCondDister[key] = distr
+		
+	#ancestral sampling
+	def generateTwo(self, noise, keyLen):
+		self.initTwo()
+		for i in range(self.numLoans):
+			pass
 
 
 ##########################################################################################
-op = sys.argv[1]
-numLoans = int(sys.argv[2])
-loan = LoanApprove(numLoans)
+if __name__ == "__main__":
+	op = sys.argv[1]
+	numLoans = int(sys.argv[2])
+	loan = LoanApprove(numLoans)
 
-if op == "generate":
-	loan.generate()
+	if op == "generate" or op == "genOne" :
+		loan.generateOne()
+	elif op == "genTwo":
+		noise = float(sys.argv[3])
+		keyLen = int(sys.argv[4])
+		loan.generateTwo(noise, keyLen)
 
 

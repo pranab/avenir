@@ -49,6 +49,7 @@ class Prescriptor(object):
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		self.initialize()
 	
 	# do all the initializations	
 	def initialize(self):
@@ -114,17 +115,30 @@ class Prescriptor(object):
 			lowVal = refVal - rangeVal
 			step = 2 * rangeVal / self.numGrids
 			numGrids = self.numGrids
+		elif fType == "categorical":
+			catValues = self.catFeatValues[feature]
+			lowVal = 0
+			step = 1
+			numGrids = len(catValues)
 		else:
 			raise ValueError("unsupported data type")
 			
 		results = list()
+		
+		# scan grid
 		curVal = lowVal	
 		for i in range(numGrids):
 			if fType == "int":
 				fields[feature] = str(curVal)
 			elif fType == "float":
 				curValStr = "%.3f" %(curVal)
-				fields[feature] = str(curValStr)
+				fields[feature] = curValStr
+			elif fType == "categorical":
+				cVal = catValues[i]
+				vec = binaryEcodeCategorical(catValues, cVal)
+				for j in range(numGrids):
+					fields[feature + j] = str(vec[j])
+				
 				
 			modRec = ",".join(fields)	
 			clp = self.classifier.predictProb(modRec)

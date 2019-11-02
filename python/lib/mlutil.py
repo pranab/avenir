@@ -250,5 +250,14 @@ def randomWalk(size, start, lowStep, highStep):
 	for i in range(size):
 		yield cur
 		cur += randomFloat(lowStep, highStep)
+
+# one hot binary encoding		
+def binaryEcodeCategorical(values, value):
+	size = len(values)
+	vec = [0] * size
+	for i in range(size):
+		if (values[i] == value):
+			vec[i] = 1
+	return vec		
 		
 
