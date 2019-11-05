@@ -27,6 +27,8 @@ from sampler import *
 class LoanApprove:
 	def __init__(self, numLoans):
 		self.numLoans = numLoans
+		self.marStatus = ["married", "single", "divorced"]
+		self.loanTerm = ["7", "15", "30"]
 		
 	def initOne(self):
 		self.threshold = 118
@@ -144,15 +146,16 @@ class LoanApprove:
 		distr = CategoricalRejectSampler(("married", 100), ("single", 60), ("divorced", 40))
 		self.featCondDister[key] = distr
 		key = ("0", 0)
-		distr = CategoricalRejectSampler(("married", 40), ("single", 80), ("divorced", 40))
+		distr = CategoricalRejectSampler(("married", 40), ("single", 100), ("divorced", 40))
 		self.featCondDister[key] = distr
+	
 		
 		# num of children
 		key = ("1", 1)
 		distr = CategoricalRejectSampler(("1", 100), ("2", 90), ("3", 40))
 		self.featCondDister[key] = distr
 		key = ("0", 1)
-		distr = CategoricalRejectSampler(("1", 50), ("2", 60), ("3", 100))
+		distr = CategoricalRejectSampler(("1", 50), ("2", 70), ("3", 100))
 		self.featCondDister[key] = distr
 
 		# education
@@ -176,15 +179,15 @@ class LoanApprove:
 		distr = GaussianRejectSampler(120,15)
 		self.featCondDister[key] = distr
 		key = ("0", 4)
-		distr = GaussianRejectSampler(50,20)
+		distr = GaussianRejectSampler(50,10)
 		self.featCondDister[key] = distr
 
 		# years of experience
 		key = ("1", 5)
-		distr = GaussianRejectSampler(12,3)
+		distr = GaussianRejectSampler(15,3)
 		self.featCondDister[key] = distr
 		key = ("0", 5)
-		distr = GaussianRejectSampler(5,2)
+		distr = GaussianRejectSampler(5,1)
 		self.featCondDister[key] = distr
 
 		# outstanding debt
@@ -200,7 +203,7 @@ class LoanApprove:
 		distr = GaussianRejectSampler(300,50)
 		self.featCondDister[key] = distr
 		key = ("0", 7)
-		distr = GaussianRejectSampler(600,70)
+		distr = GaussianRejectSampler(600,50)
 		self.featCondDister[key] = distr
 		
 		# loan term 
@@ -219,24 +222,47 @@ class LoanApprove:
 		distr = GaussianRejectSampler(500,50)
 		self.featCondDister[key] = distr
 		
-		# zip
-		zipClusters = {\
-		"high" : ["95061", "95062", "95064", "95065", "95067"], \
-		"average" : ["95103", "95104", "95106", "95107", "95109", "95113", "95115", "95118", "95121" ], \
-		"low" : ["95376", "95377", "95378", "95353", "95354", "95356"]}
-		key = ("1", 10)
-		distr = ClusterSampler(zipClusters, ("high", 100), ("average", 80), ("low", 50))
-		self.featCondDister[key] = distr
-		key = ("0", 10)
-		distr =ClusterSampler(zipClusters, ("high", 30), ("average", 50), ("low", 100))
-		self.featCondDister[key] = distr
 		
 	#ancestral sampling
 	def generateTwo(self, noise, keyLen):
 		self.initTwo()
-		for i in range(self.numLoans):
-			pass
+		
+		#error
+		erDistr = GaussianRejectSampler(0, noise)
+	
+		#sampler
+		sampler = AncestralSampler(self.approvDistr, self.featCondDister, 10)
 
+		for i in range(self.numLoans):
+			(claz, features) = sampler.sample()
+		
+			# add noise
+			features[0] = addNoiseCat(features[0], self.marStatus, noise)
+			features[1] = addNoiseCat(features[1], ["1", "2", "3"], noise)
+			features[2] = addNoiseCat(features[2], ["1", "2", "3"], noise)
+			features[3] = addNoiseCat(features[3], ["0", "1"], noise)
+			features[4] = int(addNoiseNum(features[4], erDistr))
+			features[5] = int(addNoiseNum(features[5], erDistr))
+			features[6] = int(addNoiseNum(features[6], erDistr))
+			features[7] = int(addNoiseNum(features[7], erDistr))
+			features[8] = addNoiseCat(features[8], self.loanTerm, noise)
+			features[9] = int(addNoiseNum(features[9], erDistr))
+
+			claz = addNoiseCat(claz, ["0", "1"], noise)
+
+			strFeatures = list(map(lambda f: toStr(f, 3), features))
+			rec =  genID(keyLen) + "," + ",".join(strFeatures) + "," + claz
+			print rec
+
+	def encode(self, fileName):
+		catVars = {}
+		catVars[1] = self.marStatus
+		catVars[9] = self.loanTerm
+		rSize = 12
+		dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0", ",")
+		for row in fileRecGen(fileName):
+			newRow = dummyVarGen.processRow(row)
+			print newRow
 
 ##########################################################################################
 if __name__ == "__main__":
@@ -250,5 +276,7 @@ if __name__ == "__main__":
 		noise = float(sys.argv[3])
 		keyLen = int(sys.argv[4])
 		loan.generateTwo(noise, keyLen)
-
+	elif op == "enc":
+		fileName = sys.argv[3]
+		loan.encode(fileName)
 
