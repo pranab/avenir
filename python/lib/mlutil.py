@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/bin/python
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -20,6 +20,7 @@ import os
 import sys
 import numpy as np
 import sklearn as sk
+from sklearn import preprocessing
 import random
 from math import *
 from decimal import Decimal
@@ -143,6 +144,34 @@ class Configuration:
 				raise ValueError("at least one of the two parameters should be set " + firstName + "  " + secondName)
 		return (first, second)
 	
+# label generator for categorical variables
+class CatLabelGenerator:
+	def __init__(self,  catValues, delim):
+		self.encoders = {}
+		self.catValues = catValues
+		self.delim = delim
+		for k in self.catValues.keys():	
+			le = sk.preprocessing.LabelEncoder()	
+			le.fit(self.catValues[k])
+			self.encoders[k] = le
+
+	# encode row
+	def processRow(self, row):	
+		#print row
+		rowArr = row.split(self.delim)
+		for i in range(len(rowArr)):
+			if (i in self.catValues):
+				curVal = rowArr[i]
+				assert curVal in self.catValues[i], "categorival value invalid"
+				encVal = self.encoders[i].transform([curVal])
+				rowArr[i] = str(encVal[0])
+		return self.delim.join(rowArr)		
+
+	# get original labels
+	def getOrigLabels(self, indx):
+		return self.encoders[indx].classes_	
+
+
 #loads delim separated file and extracts columns
 def loadDataFile(file, delim, cols, colIndices):
 	data = np.loadtxt(file, delimiter=delim, usecols=cols)
@@ -260,4 +289,5 @@ def binaryEcodeCategorical(values, value):
 			vec[i] = 1
 	return vec		
 		
+
 
