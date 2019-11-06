@@ -79,6 +79,7 @@ class LimeInterpreter(object):
 		numSamples = self.config.getIntConfig("explain.num.samples")[0]
 
 		exp = self.explainer.explain_instance(row,predFun,num_features=numFeatures,num_samples=numSamples)
+		return exp
 
 
 

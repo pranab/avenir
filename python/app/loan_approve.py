@@ -21,6 +21,7 @@ from random import randint
 import time
 from array import *
 sys.path.append(os.path.abspath("../lib"))
+from mlutil import *
 from util import *
 from sampler import *
 
@@ -190,35 +191,43 @@ class LoanApprove:
 		distr = GaussianRejectSampler(5,1)
 		self.featCondDister[key] = distr
 
-		# outstanding debt
+		# number of years in current job
 		key = ("1", 6)
-		distr = GaussianRejectSampler(20,5)
+		distr = GaussianRejectSampler(3,.5)
 		self.featCondDister[key] = distr
 		key = ("0", 6)
+		distr = GaussianRejectSampler(1,.2)
+		self.featCondDister[key] = distr
+
+		# outstanding debt
+		key = ("1", 7)
+		distr = GaussianRejectSampler(20,5)
+		self.featCondDister[key] = distr
+		key = ("0", 7)
 		distr = GaussianRejectSampler(60,10)
 		self.featCondDister[key] = distr
 		
 		# loan amount
-		key = ("1", 7)
+		key = ("1", 8)
 		distr = GaussianRejectSampler(300,50)
 		self.featCondDister[key] = distr
-		key = ("0", 7)
+		key = ("0", 8)
 		distr = GaussianRejectSampler(600,50)
 		self.featCondDister[key] = distr
 		
 		# loan term 
-		key = ("1", 8)
+		key = ("1", 9)
 		distr = CategoricalRejectSampler(("7", 100), ("15", 40), ("30", 60))
 		self.featCondDister[key] = distr
-		key = ("0", 8)
+		key = ("0", 9)
 		distr = CategoricalRejectSampler(("7", 30), ("15", 100), ("30", 60))
 		self.featCondDister[key] = distr
 		
 		# credit score
-		key = ("1", 9)
+		key = ("1", 10)
 		distr = GaussianRejectSampler(700,20)
 		self.featCondDister[key] = distr
-		key = ("0", 9)
+		key = ("0", 10)
 		distr = GaussianRejectSampler(500,50)
 		self.featCondDister[key] = distr
 		
@@ -231,7 +240,7 @@ class LoanApprove:
 		erDistr = GaussianRejectSampler(0, noise)
 	
 		#sampler
-		sampler = AncestralSampler(self.approvDistr, self.featCondDister, 10)
+		sampler = AncestralSampler(self.approvDistr, self.featCondDister, 11)
 
 		for i in range(self.numLoans):
 			(claz, features) = sampler.sample()
@@ -242,26 +251,38 @@ class LoanApprove:
 			features[2] = addNoiseCat(features[2], ["1", "2", "3"], noise)
 			features[3] = addNoiseCat(features[3], ["0", "1"], noise)
 			features[4] = int(addNoiseNum(features[4], erDistr))
-			features[5] = int(addNoiseNum(features[5], erDistr))
-			features[6] = int(addNoiseNum(features[6], erDistr))
+			features[5] = float(addNoiseNum(features[5], erDistr))
+			features[6] = float(addNoiseNum(features[6], erDistr))
 			features[7] = int(addNoiseNum(features[7], erDistr))
-			features[8] = addNoiseCat(features[8], self.loanTerm, noise)
-			features[9] = int(addNoiseNum(features[9], erDistr))
+			features[8] = int(addNoiseNum(features[8], erDistr))
+			features[9] = addNoiseCat(features[9], self.loanTerm, noise)
+			features[10] = int(addNoiseNum(features[10], erDistr))
 
 			claz = addNoiseCat(claz, ["0", "1"], noise)
 
-			strFeatures = list(map(lambda f: toStr(f, 3), features))
+			strFeatures = list(map(lambda f: toStr(f, 2), features))
 			rec =  genID(keyLen) + "," + ",".join(strFeatures) + "," + claz
 			print rec
 
-	def encode(self, fileName):
+	# dummy var encoding
+	def encodeDummy(self, fileName):
 		catVars = {}
 		catVars[1] = self.marStatus
-		catVars[9] = self.loanTerm
-		rSize = 12
+		catVars[10] = self.loanTerm
+		rSize = 13
 		dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0", ",")
 		for row in fileRecGen(fileName):
 			newRow = dummyVarGen.processRow(row)
+			print newRow
+
+	# label encoding
+	def encodeLabel(self, fileName):
+		catVars = {}
+		catVars[1] = self.marStatus
+		catVars[10] = self.loanTerm
+		encoder = CatLabelGenerator(catVars, ",")
+		for row in fileRecGen(fileName):
+			newRow = encoder.processRow(row)
 			print newRow
 
 ##########################################################################################
@@ -276,7 +297,14 @@ if __name__ == "__main__":
 		noise = float(sys.argv[3])
 		keyLen = int(sys.argv[4])
 		loan.generateTwo(noise, keyLen)
-	elif op == "enc":
+	elif op == "encDummy":
 		fileName = sys.argv[3]
-		loan.encode(fileName)
+		loan.encodeDummy(fileName)
+	elif op == "encLabel":
+		fileName = sys.argv[3]
+		loan.encodeLabel(fileName)
+	else:
+		print "unknow operation"
+
+
 
