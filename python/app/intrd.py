@@ -20,12 +20,18 @@ import os
 import sys
 sys.path.append(os.path.abspath("../supv"))
 sys.path.append(os.path.abspath("../mlextra"))
+import interpret
 from rf import *
 from interpret import *
 
-# classifier
+#print '\n'.join(sys.path)
+#print interpret.__file__
 
-rfClass = RandomForest(sys.argv[1])
+# classifier
+mode = sys.argv[1]
+rfClass = RandomForest(sys.argv[2])
+
+predFun = lambda x: rfClass.predictProb(x)
 
 def processParams():
 	# override config param
@@ -36,7 +42,7 @@ def processParams():
 			rfClass.setConfigParam(items[0], items[1])
 
 # execute		
-mode = sys.argv[2]
+
 print "running mode: " + mode
 if mode == "train":
 	rfClass.train()
@@ -53,7 +59,11 @@ elif mode == "validate":
 elif mode == "explain":
 	intr = LimeInterpreter(sys.argv[3])
 	rec = sys.argv[4]
+	rec = rfClass.prepStringPredictData(rec.decode('utf-8'))
 	featData = rfClass.prepTrainingData()[0]
+	intr.buildExplainer(featData)
+	expp = intr.explain(rec, predFun)
+	print exp
 else:
 	print "invalid running mode " + mode 
 

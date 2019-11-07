@@ -41,17 +41,17 @@ class LimeInterpreter(object):
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
 		defValues["common.verbose"] = (False, None)
+		defValues["data.cat.values"] = (None, None)
 		defValues["inter.feature.names"] = (None, "missing feature names")
-		defValues["inter.cat.feature.names"] = (None, None)
 		defValues["inter.kernel.width"] = (None, None)
 		defValues["inter.kernel"] = (None, None)
 		defValues["inter.verbose"] = (False, None)
-		defValues["inter.class.names"] = (False, None)
+		defValues["inter.class.names"] = (None, None)
 		defValues["inter.feature.selection"] = ("auto", None)
 		defValues["inter.discretize.continuous"] = (True, None)
 		defValues["inter.discretizer"] = ("quartile", None)
 		defValues["inter.sample.around.instance"] = (True, None)
-		defValues["inter.random.state"] = (True, None)
+		defValues["inter.random.state"] = (100, None)
 		defValues["explain.num.features"] = (10, None)
 		defValues["explain.num.samples"] = (1000, None)
 
@@ -59,18 +59,37 @@ class LimeInterpreter(object):
 
 
 	# build explainer model
-	def buildModel(self, trainFeatures, catNames):
+	def buildExplainer(self, trainFeatData):
 		featNames = self.config.getStringConfig("inter.feature.names")[0].split(",")
-		catFeatIndices = self.config.getStringConfig("inter.cat.feature.names")[0].split(",")	
-		catFeatIndices = toIntList(catFeatIndices)
 		kernelWidth = self.config.getFloatConfig("inter.kernel.width")[0]
-		classNames = self.config.getStringConfig("inter.class.names")[0].split(",")
+		classNames = self.config.getStringConfig("inter.class.names")[0]
+		if classNames:
+			classNames = classNames.split(",")
 		featSelection = self.config.getStringConfig("inter.feature.selection")[0]
 		sampLocal = self.config.getBooleanConfig("inter.sample.around.instance")[0]
 		verbose = self.config.getBooleanConfig("common.verbose")[0]
+		
+		# categorical values
+		catValues = self.config.getStringConfig("data.cat.values")[0]
+		catFeatValues = None
+		catFeatIndices = None
+		if catValues:
+			catFeatValues = dict()
+			catFeatIndices = list()
+			items = catValues.split(",")
+			for item in items:
+				parts = item.split(":")
+				col = int(parts[0])
+				catFeatValues[col] = parts[1:]
+				catFeatIndices.append(col)
+			
+			encoder = CatLabelGenerator(catFeatValues, ",")
+			for c in catFeatIndices:
+				values = encoder.getOrigLabels(c)
+				catFeatValues[c] = values
 
-		self.explainer =  lime.lime_tabular.LimeTabularExplainer(trainFeatures, feature_names=featNames,\
-			categorical_features=catFeatIndices, categorical_names=catNames, kernel_width=kernelWidth,\
+		self.explainer =  lime.lime_tabular.LimeTabularExplainer(trainFeatData, feature_names=featNames,\
+			categorical_features=catFeatIndices, categorical_names=catFeatValues, kernel_width=kernelWidth,\
 			verbose=verbose,class_names=classNames,feature_selection=featSelection,sample_around_instance=sampLocal)
 
 	# explain
