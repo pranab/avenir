@@ -43,6 +43,7 @@ def processParams():
 
 # execute		
 
+verbose = rfClass.getConfig().getBooleanConfig("common.verbose")[0]
 print "running mode: " + mode
 if mode == "train":
 	rfClass.train()
@@ -61,9 +62,13 @@ elif mode == "explain":
 	rec = sys.argv[4]
 	rec = rfClass.prepStringPredictData(rec.decode('utf-8'))
 	featData = rfClass.prepTrainingData()[0]
+	if verbose:
+		print "feature shape ",featData.shape
 	intr.buildExplainer(featData)
-	expp = intr.explain(rec, predFun)
-	print exp
+	exp = intr.explain(rec, predFun)
+	print(exp.as_list())
+	#fig = exp.as_pyplot_figure()
+	#fig.show()
 else:
 	print "invalid running mode " + mode 
 

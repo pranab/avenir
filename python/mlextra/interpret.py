@@ -56,11 +56,17 @@ class LimeInterpreter(object):
 		defValues["explain.num.samples"] = (1000, None)
 
 		self.config = Configuration(configFile, defValues)
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 
+	# get config object
+	def getConfig(self):
+		return self.config
 
 	# build explainer model
 	def buildExplainer(self, trainFeatData):
 		featNames = self.config.getStringConfig("inter.feature.names")[0].split(",")
+		if self.verbose:
+			print featNames
 		kernelWidth = self.config.getFloatConfig("inter.kernel.width")[0]
 		classNames = self.config.getStringConfig("inter.class.names")[0]
 		if classNames:
