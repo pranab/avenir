@@ -1,0 +1,57 @@
+This tutorial is for model interpretation with Lime and ScikitLearn. The 3 classifiers supported  are SVM, 
+Random Foest and Gradient Boosted Trees. Lime will tell the the most influential features for the chosen record.
+The use case is for predicting mortagage loan approval. In this tutorial we will use Random Forest
+
+Setup
+=====
+Make sure you have ../lib and ../text directories with all the python files wrt where loan_approve.py
+is.  Since your python installation may  be different, please run all python scripts starting with 
+python abc.py ...
+
+Create training data
+====================
+./loan_approve.py genTwo <num_loans> <error> <key_len> > loan.txt
+
+where
+num_loans = number of loans e.g. 5000
+error = error rate in generated data e.g 0.1
+key_len = record key length e.g. 10
+
+Encode categorical features
+===========================
+./loan_approve.py encLabel  <num_loans>  loan.txt > loan_5000.txt 
+
+Make sure the the following is set in loan_rf.properties
+train.data.file=loan_5000.txt
+
+Train and validate classifier
+=============================
+./intrd.py trainValidate rf loan_rf.properties
+
+The file loan_rf.properties contains all the configuration parameters for Random Forest.Change classifier 
+parameter values in loan_rf.properties and keep repeating until you get test error within reasonable bounds.
+
+The other option is to use autoML for parameter tuning. Please refer to the tutorial automl_with_scikit_hyperopt_tutorial.txt
+
+Train and save classifier
+=========================
+./intrd.py train rf loan_rf.properties
+
+Make sure the parameters in loan_rf.properties are set to the optimum values found in previous step
+Make sure the following is set loan_rf.properties
+train.model.save=True
+Make sure the directory defined by the following exists. You are free to change the directory
+common.model.directory=model/loan
+
+Explain model
+=============
+./intrd.py explain rf loan_rf.properties loan_intr.properties <rec>
+
+where 
+The file loan_intr.properties contains all the configuration parameters for  Lime explainer.
+rec = a record from loan_5000.txt without the first and last column, where the last column value is 1
+
+In the output you will see the explainer output
+
+
+
