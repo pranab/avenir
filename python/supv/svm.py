@@ -127,7 +127,10 @@ class SupportVectorMachine(BaseClassifier):
 		self.prepModel()
 		
 		#input record
-		featData = self.prepStringPredictData(recs)
+		if type(recs) is str:
+			featData = self.prepStringPredictData(recs)
+		else:
+			featData = recs
 		if (featData.ndim == 1):
 			featData = featData.reshape(1, -1)
 		

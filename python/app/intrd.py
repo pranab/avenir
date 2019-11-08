@@ -22,55 +22,70 @@ sys.path.append(os.path.abspath("../supv"))
 sys.path.append(os.path.abspath("../mlextra"))
 import interpret
 from rf import *
+from svm import *
+from gbt import *
 from interpret import *
 
 #print '\n'.join(sys.path)
 #print interpret.__file__
 
 # classifier
-mode = sys.argv[1]
-rfClass = RandomForest(sys.argv[2])
+if __name__ == "__main__":
+	i = 1
+	mode = sys.argv[i]
+	i += 1
 
-predFun = lambda x: rfClass.predictProb(x)
+	clfName = sys.argv[i]
+	i += 1
 
-def processParams():
-	# override config param
-	if len(sys.argv) > 2:
-		#parameters over riiding config file
-		for i in range(2, len(sys.argv)):
-			items = sys.argv[i].split("=")
-			rfClass.setConfigParam(items[0], items[1])
-
-# execute		
-
-verbose = rfClass.getConfig().getBooleanConfig("common.verbose")[0]
-print "running mode: " + mode
-if mode == "train":
-	rfClass.train()
-elif mode == "trainValidate":
-	if rfClass.getSearchParamStrategy() is None:
-		rfClass.trainValidate()
+	clfConfigFile = sys.argv[i]
+	i += 1
+	if clfName == "rf":
+		clf = RandomForest(clfConfigFile)
+	elif clfName == "gbt":
+		clf = GradientBoostedTrees(clfConfigFile)
+	elif clfName == "svm":
+		clf = SupportVectorMachine(clfConfigFile)
 	else:
-		rfClass.trainValidateSearch()
-elif mode == "predict":
-	clsData = rfClass.predict()
-	print clsData
-elif mode == "validate":
-	rfClass.validate()
-elif mode == "explain":
-	intr = LimeInterpreter(sys.argv[3])
-	rec = sys.argv[4]
-	rec = rfClass.prepStringPredictData(rec.decode('utf-8'))
-	featData = rfClass.prepTrainingData()[0]
-	if verbose:
-		print "feature shape ",featData.shape
-	intr.buildExplainer(featData)
-	exp = intr.explain(rec, predFun)
-	print(exp.as_list())
-	#fig = exp.as_pyplot_figure()
-	#fig.show()
-else:
-	print "invalid running mode " + mode 
+		raise valueError("unsupported classifier")
+	
+
+	predFun = lambda x: clf.predictProb(x)
+
+
+	# execute		
+	verbose = clf.getConfig().getBooleanConfig("common.verbose")[0]
+	print "running mode: " + mode
+	if mode == "train":
+		clf.train()
+	elif mode == "trainValidate":
+		if clf.getSearchParamStrategy() is None:
+			clf.trainValidate()
+		else:
+			clf.trainValidateSearch()
+	elif mode == "predict":
+		clsData = clf.predict()
+		print clsData
+	elif mode == "validate":
+		clf.validate()
+	elif mode == "explain":
+		intr = LimeInterpreter(sys.argv[i])
+		i += 1
+		rec = sys.argv[i]
+		i += 1
+
+		rec = clf.prepStringPredictData(rec.decode('utf-8'))
+		featData = clf.prepTrainingData()[0]
+		if verbose:
+			print "feature shape ",featData.shape
+		intr.buildExplainer(featData)
+		exp = intr.explain(rec, predFun)
+		print "model explanation"
+		print(exp.as_list())
+		#fig = exp.as_pyplot_figure()
+		#fig.show()
+	else:
+		print "invalid running mode " + mode 
 
 	
 	
