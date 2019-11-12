@@ -59,7 +59,7 @@ class Histogram:
 	def add(self, value):
 		bin = (value - self.xmin) / self.binWidth
 		if (bin < 0 or  bin > self.numBin - 1):
-			print bin
+			print (bin)
 			raise ValueError("outside histogram range")
 		self.bins[bin] += 1.0
 	

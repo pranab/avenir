@@ -119,14 +119,14 @@ def stripFileLines(filePath, offset):
 	fp = open(filePath, "r")
 	for line in fp:
 		stripped = line[offset:len(line) - 1 - offset]
-		print stripped
+		print (stripped)
 	fp.close()
 
 # generate lat log within limits
 def genLatLong(lat1, long1, lat2, long2):
- 	lat = lat1 + (lat2 - lat1) * random.random()
-	long = long1 + (long2 - long1) * random.random()
-	return (lat, long)
+	lat = lat1 + (lat2 - lat1) * random.random()
+	longg = long1 + (long2 - long1) * random.random()
+	return (lat, longg)
 
 #min limit
 def minLimit(val, limit):
@@ -164,7 +164,13 @@ def preturbScalar(value, range):
 def preturbVector(values, range):
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
-		
+
+#multiplies a list within range
+def multVector(values, range):
+	scale = 1.0 - range + 2 * range * random.random()
+	nValues = list(map(lambda va: va * scale, values))
+	return nValues
+			
 # breaks a line into fields and keeps only specified fileds and returns new line
 def extractFields(line, delim, keepIndices):
 	items = line.split(delim)
@@ -216,6 +222,10 @@ def toIntList(values):
 # convert to float list
 def toFloatList(values):
 	return list(map(lambda va: float(va), values))
+
+# convert to string list
+def toStrList(values, precision):
+	return list(map(lambda va: toStr(va, precision), values))
 
 # return typed value given string
 def typedValue(val):
@@ -276,7 +286,7 @@ def getFileContent(path, verbose):
 	# read files
 	for filePath in filePaths:
 		if verbose:
-			print "next file " + filePath
+			print("next file " + filePath)
 		with open(filePath, 'r') as contentFile:
 			content = contentFile.read()
 			docComplete.append(content)
@@ -331,9 +341,14 @@ def asFloatList(items):
 	return [float(i) for i in items]
 
 # current and past time
-def pastTime(numDays):
+def pastTime(interval, unit):
 	curTime = int(time.time())
-	pastTime = curTime - numDays * secInDay
+	if unit == "d":
+		pastTime = curTime - interval * secInDay
+	elif unit == "h":
+		pastTime = curTime - interval * secInHour
+	else:
+		raise ValueError("invalid time unit")
 	return (curTime, pastTime)
 
 # hour aligned time	
@@ -371,11 +386,11 @@ def processCmdLineArgs(expectedTypes, usage):
 				elif (expectedTypes[i] == typeString):
 					args.append(sys.argv[i+1])
 		except ValueError:
-			print "expected number of command line arguments found but there is type mis match"
+			print ("expected number of command line arguments found but there is type mis match")
 			sys.exit(1)
 	else:
-		print "expected number of command line arguments not found"
-		print usage
+		print ("expected number of command line arguments not found")
+		print (usage)
 		sys.exit(1)
 	return args
 	
@@ -469,13 +484,13 @@ class DummyVarGenerator:
 		for v in self.catValues.values():
 			colCount += len(v)
 		self.newRowSize = rowSize - numCatVar + colCount
-		#print "new row size %d" %(self.newRowSize)
+		#print ("new row size {}".format(self.newRowSize))
 		self.trueVal = trueVal
 		self.falseVal = falseVal
 		self.delim = delim
 	
 	def processRow(self, row):	
-		#print row
+		#print (row)
 		rowArr = row.split(self.delim)
 		assert len(rowArr) == self.rowSize, "row does not have expected number of columns " + str(len(rowArr))
 		newRowArr = []

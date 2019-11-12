@@ -34,7 +34,7 @@ class Configuration:
 		configs = {}
 		with open(configFile) as fp:
   			for key, value in jprops.iter_properties(fp):
-				configs[key] = value
+  				configs[key] = value
 		self.configs = configs
 		self.defValues = defValues
 		self.verbose = verbose
@@ -52,7 +52,7 @@ class Configuration:
 		else:
 			val = (self.configs[name], False)
 		if self.verbose:
-			print "%s %s %s" %(name, self.configs[name], val[0])
+			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 
 	# get int param
@@ -65,7 +65,7 @@ class Configuration:
 		else:
 			val = (int(self.configs[name]), False)
 		if self.verbose:
-			print "%s %s %d" %(name, self.configs[name], val[0])
+			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 		
 	# get float param
@@ -78,7 +78,7 @@ class Configuration:
 		else:
 			val = (float(self.configs[name]), False)
 		if self.verbose:
-			print "%s %s %.3f" %(name, self.configs[name], val[0])
+			print( "{} {} {:06.3f}".format(name, self.configs[name], val[0]))
 		return val
 
 	# get boolean param
@@ -91,7 +91,7 @@ class Configuration:
 			bVal = self.configs[name].lower() == "true"
 			val = (bVal, False)
 		if self.verbose:
-			print "%s %s %s" %(name, self.configs[name], val[0])
+			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 		
 	# get int list param
@@ -223,7 +223,7 @@ def minkowskiDistance(x,y,pValue):
 def jaccardSimilarityX(x,y):
 	intersectionCardinality = len(set.intersection(*[set(x), set(y)]))
 	unionCardinality = len(set.union(*[set(x), set(y)]))
- 	return intersectionCardinality/float(unionCardinality)
+	return intersectionCardinality/float(unionCardinality)
 
 def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
 	sx = set(x)
@@ -233,7 +233,7 @@ def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
 	sxIntDiff = sx.difference(sxyInt)
 	syIntDiff = sy.difference(sxyInt)
 	unionCardinality = len(sx.union(sy))
- 	return intCardinality/float(intCardinality + wx * len(sxIntDiff) + wy * len(syIntDiff))
+	return intCardinality/float(intCardinality + wx * len(sxIntDiff) + wy * len(syIntDiff))
 
 # norm
 def norm(values, po=2):

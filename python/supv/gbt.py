@@ -126,29 +126,29 @@ class GradientBoostedTrees(object):
 			(featData, clsData) = (self.featData, self.clsData)
 		if self.subSampleRate is not None:
 			(featData, clsData) = subSample(featData, clsData, self.subSampleRate, False)
-			print "subsample size  " + str(featData.shape[0])
+			print ("subsample size  " + str(featData.shape[0]))
 		
 		# parameters
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		
 		#train
-		print "...training model"
+		print ("...training model")
 		self.gbcClassifier.fit(featData, clsData) 
 		score = self.gbcClassifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
 		result = None
 		if successCriterion == "accuracy":
-			print "accuracy with training data %.3f" %(score)
+			print ("accuracy with training data {:06.3f}".format(score))
 			result = score
 		elif successCriterion == "error":
 			error = 1.0 - score
-			print "error with training data %.3f" %(error)
+			print ("error with training data {:06.3f}".format(error))
 			result = error
 		else:
 			raise ValueError("invalid success criterion")
 			
 		if modelSave:
-			print "...saving model"
+			print ("...saving model")
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.gbcClassifier, modelFilePath) 
 		return result
@@ -168,7 +168,7 @@ class GradientBoostedTrees(object):
 		scoreMethod = self.config.getStringConfig("train.score.method")[0]
 		
 		#train with validation
-		print "...training and kfold cross validating model"
+		print ("...training and kfold cross validating model")
 		scores = cross_val_score(self.gbcClassifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
@@ -176,7 +176,7 @@ class GradientBoostedTrees(object):
 		
 	#train with k fold validation and search parameter space for optimum
 	def trainValidateSearch(self):
-		print "...starting train validate with parameter search"
+		print ("...starting train validate with parameter search")
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
 			if searchStrategyName == "grid":
@@ -227,7 +227,7 @@ class GradientBoostedTrees(object):
 		paramValues = searchStrategy.nextParamValues()
 		searchResults = []
 		while paramValues is not None:
-			print "...next parameter set"
+			print ("...next parameter set")
 			paramStr = ""
 			for paramValue in paramValues:
 				self.setConfigParam(paramValue[0], str(paramValue[1]))
@@ -238,16 +238,16 @@ class GradientBoostedTrees(object):
 			paramValues = searchStrategy.nextParamValues()
 			
 		# output
-		print "all parameter search results"
+		print ("all parameter search results")
 		for searchResult in searchResults:
-			print "%s\t%.3f" %(searchResult[0], searchResult[1])
+			print ("{}\t{:06.3f}".format(searchResult[0], searchResult[1]))
 		
-		print "best parameter search result"
+		print ("best parameter search result")
 		bestSolution = searchStrategy.getBestSolution()
 		paramStr = ""
 		for paramValue in bestSolution[0]:
 			paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
-		print "%s\t%.3f" %(paramStr, bestSolution[1])
+		print ("{}\t{:06.3f}".format(paramStr, bestSolution[1]))
 		return bestSolution
 			
 	#predict
@@ -256,7 +256,7 @@ class GradientBoostedTrees(object):
 		useSavedModel = self.config.getBooleanConfig("validate.use.saved.model")[0]
 		if useSavedModel:
 			# load saved model
-			print "...loading model"
+			print ("...loading model")
 			modelFilePath = self.getModelFilePath()
 			self.gbcClassifier = joblib.load(modelFilePath)
 		else:
@@ -267,20 +267,20 @@ class GradientBoostedTrees(object):
 		(featData, clsDataActual) = self.prepValidationData()
 		
 		#predict
-		print "...predicting"
+		print ("...predicting")
 		clsDataPred = self.gbcClassifier.predict(featData) 
 		
-		print "...validating"
-		#print clsData
+		print ("...validating")
+		#print (clsData)
 		scoreMethod = self.config.getStringConfig("validate.score.method")[0]
 		if scoreMethod == "accuracy":
 			accuracy = accuracy_score(clsDataActual, clsDataPred) 
-			print "accuracy:"
-			print accuracy
+			print ("accuracy:")
+			print (accuracy)
 		elif scoreMethod == "confusionMatrix":
 			confMatrx = confusion_matrix(clsDataActual, clsDataPred)
-			print "confusion matrix:"
-			print confMatrx
+			print ("confusion matrix:")
+			print (confMatrx)
 
 	 
 	#predict
@@ -289,7 +289,7 @@ class GradientBoostedTrees(object):
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if useSavedModel:
 			# load saved model
-			print "...loading model"
+			print ("...loading model")
 			modelFilePath = self.getModelFilePath()
 			self.gbcClassifier = joblib.load(modelFilePath)
 		else:
@@ -300,9 +300,9 @@ class GradientBoostedTrees(object):
 		featData = self.prepPredictData()
 		
 		#predict
-		print "...predicting"
+		print ("...predicting")
 		clsData = self.gbcClassifier.predict(featData) 
-		print clsData
+		print (clsData)
 
 	#predict with in memory data
 	def predict(self, recs=None):
@@ -321,7 +321,7 @@ class GradientBoostedTrees(object):
 			featData = self.prepPredictData()
 		
 		#predict
-		print "...predicting"
+		print ("...predicting")
 		clsData = self.gbcClassifier.predict(featData) 
 		return clsData
 
@@ -335,12 +335,12 @@ class GradientBoostedTrees(object):
 			featData = self.prepStringPredictData(recs)
 		else:
 			featData = recs
-		#print featData.shape
+		#print (featData.shape)
 		if (featData.ndim == 1):
 			featData = featData.reshape(1, -1)
 		
 		#predict
-		print "...predicting class probability"
+		print ("...predicting class probability")
 		clsData = self.gbcClassifier.predict_proba(featData) 
 		return clsData
 	
@@ -349,7 +349,7 @@ class GradientBoostedTrees(object):
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if (useSavedModel and not self.gbcClassifier):
 			# load saved model
-			print "...loading saved model"
+			print ("...loading saved model")
 			modelFilePath = self.getModelFilePath()
 			self.gbcClassifier = joblib.load(modelFilePath)
 		else:
@@ -361,7 +361,7 @@ class GradientBoostedTrees(object):
 	def prepStringPredictData(self, recs):
 		frecs = StringIO(recs)
 		featData = np.loadtxt(frecs, delimiter=',')
-		#print featData
+		#print (featData)
 		return featData
 	
 	#loads and prepares training data
@@ -430,11 +430,11 @@ class GradientBoostedTrees(object):
 	# report result
 	def reportResult(self, score, successCriterion, scoreMethod):
 		if successCriterion == "accuracy":
-			print "average " + scoreMethod + " with k fold cross validation %.3f" %(score)
+			print ("average " + scoreMethod + " with k fold cross validation {:06.3f}".format(score))
 			result = score
 		elif successCriterion == "error":
 			error = 1.0 - score
-			print "average error with k fold cross validation %.3f" %(error)
+			print ("average error with k fold cross validation {:06.3f}".format(error))
 			result = error
 		else:
 			raise ValueError("invalid success criterion")
@@ -442,7 +442,7 @@ class GradientBoostedTrees(object):
 	
 	# builds model object
 	def buildModel(self):
-		print "...building gradient boosted tree model"
+		print ("...building gradient boosted tree model")
 		# parameters
 		minSamplesSplit = self.config.getStringConfig("train.min.samples.split")[0]
 		minSamplesSplit = typedValue(minSamplesSplit)

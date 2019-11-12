@@ -83,7 +83,7 @@ class SupportVectorMachine(BaseClassifier):
 
 	# builds model object
 	def buildModel(self):
-		print "...building svm model"
+		print ("...building svm model")
 		algo = self.config.getStringConfig("train.algorithm")[0]
 		kernelFun = self.config.getStringConfig("train.kernel.function")[0]
 		penalty = self.config.getFloatConfig("train.penalty")[0]
@@ -116,7 +116,7 @@ class SupportVectorMachine(BaseClassifier):
 		elif (algo == "linearsvc"):
 			model = sk.svm.LinearSVC(penalty=penaltyNorm, loss=trainLoss, dual=dualOpt)
 		else:
-			print "invalid svm algorithm"
+			print ("invalid svm algorithm")
 			sys.exit()
 		self.classifier = model
 		return self.classifier
@@ -135,7 +135,7 @@ class SupportVectorMachine(BaseClassifier):
 			featData = featData.reshape(1, -1)
 		
 		#predict
-		print "...predicting class probability"
+		print ("...predicting class probability")
 		clsData = self.classifier.predict_proba(featData) 
 		return clsData
 

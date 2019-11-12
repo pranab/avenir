@@ -111,7 +111,7 @@ class GuidedParameterSearch:
 		if self.curParamValueCombIndx < len(self.paramValueCombList):
 			retParamNameValue = []
 			curParams = self.paramValueCombList[self.curParamValueCombIndx]
-			print curParams
+			print (curParams)
 			for i in range(len(curParams)):
 				paramName = self.parameters[i][0]
 				paramValue = self.paramData[paramName][curParams[i]]
@@ -220,23 +220,23 @@ class SimulatedAnnealingParameterSearch(BaseParameterSearch):
 			self.nextSolution = (self.currentParams, cost)
 			if (self.nextSolution[1] < self.curSolution[1]):
 				if (self.verbose):
-					print "next soln better"
+					print ("next soln better")
 				self.curSolution = self.nextSolution
 				if (self.nextSolution[1] < self.bestSolution[1]):
 					if (self.verbose):
-						print "next soln better than best"
+						print ("next soln better than best")
 					self.bestSolution = self.nextSolution
 			else:
 				if (self.verbose):
-					print "next soln worst"
+					print ("next soln worst")
 				pr = math.exp((self.curSolution[1] - self.nextSolution[1]) / self.temp)
 				if (pr > random.random()):
 					self.curSolution = self.nextSolution
 					if (self.verbose):
-						print "next soln worst but accepted"
+						print ("next soln worst but accepted")
 				else:
 					if (self.verbose):
-						print "next soln worst and rejected"
+						print ("next soln worst and rejected")
 				
 			self.temp = self.temp * self.tempRedRate
 				

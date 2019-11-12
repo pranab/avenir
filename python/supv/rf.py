@@ -88,7 +88,7 @@ class RandomForest(BaseClassifier):
 
 	# builds model object
 	def buildModel(self):
-		print "...building random forest model"
+		print ("...building random forest model")
 		numTrees = self.config.getIntConfig("train.num.trees")[0]
 		splitCriterion = self.config.getStringConfig("train.split.criterion")[0]
 		maxDepth = self.config.getStringConfig("train.max.depth")[0]
@@ -132,7 +132,7 @@ class RandomForest(BaseClassifier):
 			featData = featData.reshape(1, -1)
 		
 		#predict
-		print "...predicting class probability"
+		print ("...predicting class probability")
 		clsData = self.classifier.predict_proba(featData) 
 		return clsData
 

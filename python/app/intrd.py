@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 	# execute		
 	verbose = clf.getConfig().getBooleanConfig("common.verbose")[0]
-	print "running mode: " + mode
+	print ("running mode: " + mode)
 	if mode == "train":
 		clf.train()
 	elif mode == "trainValidate":
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 			clf.trainValidateSearch()
 	elif mode == "predict":
 		clsData = clf.predict()
-		print clsData
+		print (clsData)
 	elif mode == "validate":
 		clf.validate()
 	elif mode == "explain":
@@ -77,15 +77,15 @@ if __name__ == "__main__":
 		rec = clf.prepStringPredictData(rec.decode('utf-8'))
 		featData = clf.prepTrainingData()[0]
 		if verbose:
-			print "feature shape ",featData.shape
+			print ("feature shape ",featData.shape)
 		intr.buildExplainer(featData)
 		exp = intr.explain(rec, predFun)
-		print "model explanation"
+		print ("model explanation")
 		print(exp.as_list())
 		#fig = exp.as_pyplot_figure()
 		#fig.show()
 	else:
-		print "invalid running mode " + mode 
+		print ("invalid running mode " + mode)
 
 	
 	
