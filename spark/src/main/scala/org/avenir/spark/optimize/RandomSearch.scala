@@ -25,6 +25,7 @@ import scala.collection.JavaConverters._
 import com.typesafe.config.Config
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
+import org.chombo.util.Pair
 import org.avenir.optimize.BasicSearchDomain
 import org.avenir.optimize.OptUtility
 
@@ -150,7 +151,7 @@ object RandomSearch extends JobConfiguration {
 	       if (saveOutput) {
 	    	   //only local file system
 	    	   sortedGlobalSoutions.saveAsTextFile(localSolnOutputFile)
-	    	   scala.tools.nsc.io.File(localSolnOutputFile).writeAll("local solutions " + bestLocalSoution._1)
+	    	   reflect.io.File(localSolnOutputFile).writeAll("local solutions " + bestLocalSoution._1)
 	       }
 	     }
 	   } 
@@ -233,7 +234,7 @@ object RandomSearch extends JobConfiguration {
     				val curSoln = OptUtility.localTrajectorySearch(soln._1, soln._2, domanCallback, iterCountPerSeed)
     				(curSoln.getLeft(), curSoln.getRight().toDouble)
     			})
-	            solnCosts
+	        solnCosts
 	        })
 	        val sortedLocalSoutions = localSolutions.sortBy(s => s._2, true)
 	        val colSortedSoutions = sortedLocalSoutions.collect

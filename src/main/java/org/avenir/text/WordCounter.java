@@ -91,7 +91,7 @@ public class WordCounter extends Configured implements Tool {
         protected void setup(Context context) throws IOException, InterruptedException {
         	fieldDelimRegex = context.getConfiguration().get("field.delim.regex", ",");
         	textFieldOrdinal = Integer.parseInt(context.getConfiguration().get("text.field.ordinal"));
-            analyzer = new StandardAnalyzer(Version.LUCENE_35);
+            analyzer = new StandardAnalyzer();
             System.out.println("textFieldOrdinal:" + textFieldOrdinal);
         }
         @Override

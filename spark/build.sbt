@@ -1,19 +1,16 @@
-import sbtassembly.{Plugin},Plugin.AssemblyKeys._
-import sbtassembly.Plugin._
-
 name := "avenir-spark"
 
 organization := "org.avenir"
 
 version := "1.0"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.12.0"
 
 libraryDependencies ++=Seq(
-  "org.apache.spark" %% "spark-core" % "1.6.1" % "provided",
+  "org.apache.spark" %% "spark-core" % "3.0.0-preview" % "provided",
   "org.apache.commons" % "commons-lang3" % "3.0",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.3.3",
-  "com.fasterxml.jackson.module" % "jackson-module-scala_2.10" % "2.3.3",
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.9.4",
   "junit" % "junit" % "4.7" % "test",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
   "org.chombo" %% "chombo-spark" % "1.0",
@@ -22,7 +19,3 @@ libraryDependencies ++=Seq(
   "mawazo" %% "hoidla" % "1.0",
   "gov.nist.math" % "jama" % "1.0.3"
 )
-
-net.virtualvoid.sbt.graph.Plugin.graphSettings
-
-assemblySettings

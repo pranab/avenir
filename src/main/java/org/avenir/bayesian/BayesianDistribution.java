@@ -123,7 +123,7 @@ public class BayesianDistribution extends Configured implements Tool {
 	        	fields = schema.getFields();
         	} else {
         		//text input
-                analyzer = new StandardAnalyzer(Version.LUCENE_44);
+                analyzer = new StandardAnalyzer();
                 featureAttrOrdinal = 1;
                 outVal.initialize();
 				outVal.add(ONE);

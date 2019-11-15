@@ -21,6 +21,8 @@ package org.avenir.spark.optimize
 import org.chombo.spark.common.JobConfiguration
 import org.apache.spark.SparkContext
 import scala.collection.JavaConverters._
+import org.apache.spark.util.LongAccumulator
+import org.apache.spark.util.DoubleAccumulator
 import org.chombo.spark.common.Record
 import org.chombo.util.BasicUtils
 import org.avenir.optimize.BasicSearchDomain
@@ -85,11 +87,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	   val brDomainCallback = sparkCntxt.broadcast(domainCallback)
 	   
 	   //accululators
-	   val costIncreaseAcum = sparkCntxt.accumulator[Double](0.0, "costIncrease")
-	   val betterSolnCount = sparkCntxt.accumulator[Long](0, "betterSolnCount")
-	   val bestSolnCount = sparkCntxt.accumulator[Long](0, "bestSolnCount")
-	   val worseSolnCount = sparkCntxt.accumulator[Long](0, "worseSolnCount")
-	   val worseSolnAcceptCount = sparkCntxt.accumulator[Long](0, "worseSolnAcceptCount")
+	   val costIncreaseAcum = new DoubleAccumulator()
+	   val betterSolnCount = new LongAccumulator()
+	   val bestSolnCount = new LongAccumulator()
+	   val worseSolnCount = new LongAccumulator()
+	   val worseSolnAcceptCount = new LongAccumulator()
 	   
 	   
 	   //starting solutions are either auto generated user provided through an input file
@@ -137,11 +139,11 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	     " current solution: " + current + " cost: " + curCost)
 	         }
 	         if (nextCost < curCost) {
-	        	 betterSolnCount += 1
+	        	 betterSolnCount.add(1)
 	        	 
 	        	 //check with best so far
 	        	 if (nextCost < bestCost) {
-	        		 bestSolnCount += 1
+	        		 bestSolnCount.add(1)
 	        		 bestCost = nextCost
 	        		 best = next
 	        		 if (debugOn) {
@@ -154,12 +156,12 @@ object SimulatedAnnealing extends JobConfiguration {
 	        	 curCost = nextCost
 	        	 domanCallback.withCurrentSolution(current)
 	         } else {
-	            costIncreaseAcum +=  nextCost - curCost
-	            worseSolnCount += 1
+	            costIncreaseAcum.add(nextCost - curCost)
+	            worseSolnCount.add(1)
 	            
 	        	if (Math.exp((curCost - nextCost) / temp) > Math.random()) {
 	        		//set current to a worse one probabilistically with higher probability at higher temp
-	        		worseSolnAcceptCount += 1        		
+	        		worseSolnAcceptCount.add(1)       		
 	        		if (debugOn) {
 	        		  println("accepted higher cost solution")
 	        		}

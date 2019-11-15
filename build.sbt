@@ -4,7 +4,9 @@ name := "avenir"
 
 version := "1.0"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.12.0"
+
+isSnapshot := true
 
 sources in (Compile, doc) ~= (_ filter (_.getName endsWith ".scala"))
 
