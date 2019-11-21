@@ -25,8 +25,6 @@ import sklearn.linear_model
 import matplotlib
 import random
 import jprops
-from sklearn.externals import joblib
-from sklearn.ensemble import BaggingClassifier
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *

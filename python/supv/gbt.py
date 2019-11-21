@@ -25,8 +25,7 @@ import matplotlib
 import random
 import jprops
 from sklearn.ensemble import GradientBoostingClassifier 
-from sklearn.externals import joblib
-from sklearn.ensemble import BaggingClassifier
+import joblib
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import cross_val_score

@@ -25,10 +25,6 @@ import matplotlib
 import random
 import jprops
 from sklearn.ensemble import RandomForestClassifier 
-from sklearn.externals import joblib
-from sklearn.ensemble import BaggingClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *

@@ -26,7 +26,7 @@ import random
 import jprops
 from io import StringIO
 from sklearn.model_selection import cross_val_score
-from sklearn.externals import joblib
+import joblib
 from random import randint
 from io import StringIO
 sys.path.append(os.path.abspath("../lib"))
