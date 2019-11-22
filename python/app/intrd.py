@@ -74,14 +74,15 @@ if __name__ == "__main__":
 		rec = sys.argv[i]
 		i += 1
 
-		rec = clf.prepStringPredictData(rec.decode('utf-8'))
+		rec = clf.prepStringPredictData(rec)
 		featData = clf.prepTrainingData()[0]
 		if verbose:
 			print ("feature shape ",featData.shape)
 		intr.buildExplainer(featData)
 		exp = intr.explain(rec, predFun)
 		print ("model explanation")
-		print(exp.as_list())
+		exList = list(map(lambda e: str(e), exp.as_list()))	
+		print('\n'.join(exList))
 		#fig = exp.as_pyplot_figure()
 		#fig.show()
 	else:

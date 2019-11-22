@@ -66,7 +66,7 @@ class LimeInterpreter(object):
 	def buildExplainer(self, trainFeatData):
 		featNames = self.config.getStringConfig("inter.feature.names")[0].split(",")
 		if self.verbose:
-			print featNames
+			print (featNames)
 		kernelWidth = self.config.getFloatConfig("inter.kernel.width")[0]
 		classNames = self.config.getStringConfig("inter.class.names")[0]
 		if classNames:

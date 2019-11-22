@@ -133,8 +133,8 @@ class LoanApprove:
 			if approved == 1:
 				posCount += 1
 
-			print "%s,%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%s,%d" %(id, married, numChild, edu, selfEmployed, income,\
-			numYearsExp, outstandingLoan, loanAm, loanTerm, credScore, zipCode, approved)
+			print ("{},{},{},{},{},{},{},{},{},{},{},{},{}".format(id, married, numChild, edu, selfEmployed, income,\
+			numYearsExp, outstandingLoan, loanAm, loanTerm, credScore, zipCode, approved))
 
 		#print "positive count " + str(posCount)
 		
@@ -262,7 +262,7 @@ class LoanApprove:
 
 			strFeatures = list(map(lambda f: toStr(f, 2), features))
 			rec =  genID(keyLen) + "," + ",".join(strFeatures) + "," + claz
-			print rec
+			print (rec)
 
 	# dummy var encoding
 	def encodeDummy(self, fileName):
@@ -273,7 +273,7 @@ class LoanApprove:
 		dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0", ",")
 		for row in fileRecGen(fileName):
 			newRow = dummyVarGen.processRow(row)
-			print newRow
+			print (newRow)
 
 	# label encoding
 	def encodeLabel(self, fileName):
@@ -283,7 +283,7 @@ class LoanApprove:
 		encoder = CatLabelGenerator(catVars, ",")
 		for row in fileRecGen(fileName):
 			newRow = encoder.processRow(row)
-			print newRow
+			print (newRow)
 
 ##########################################################################################
 if __name__ == "__main__":
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 		fileName = sys.argv[3]
 		loan.encodeLabel(fileName)
 	else:
-		print "unknow operation"
+		print ("unknow operation")
 
 
 
