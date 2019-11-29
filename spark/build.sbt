@@ -6,6 +6,8 @@ version := "1.0"
 
 scalaVersion := "2.12.0"
 
+scalacOptions := Seq("-unchecked", "-deprecation")
+
 libraryDependencies ++=Seq(
   "org.apache.spark" %% "spark-core" % "3.0.0-preview" % "provided",
   "org.apache.commons" % "commons-lang3" % "3.0",

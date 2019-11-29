@@ -164,54 +164,54 @@ object MultiArmBandit extends JobConfiguration {
 	   val curDecRound = getMandatoryIntParam(appConfig, "current.decision.round")
 	   val rewardScale = getIntParamOrElse(appConfig, "reward.scale", 1)
 	   val minTrial = getIntParamOrElse(appConfig, "min.trial", 1)
-	   configParams.put("current.decision.round", new Integer(curDecRound))
-	   configParams.put("decision.batch.size", new Integer(batchSize))
-	   configParams.put("reward.scale", new Integer(rewardScale))
-	   configParams.put("min.trial", new Integer(minTrial))
+	   configParams.put("current.decision.round", Integer.valueOf(curDecRound))
+	   configParams.put("decision.batch.size", Integer.valueOf(batchSize))
+	   configParams.put("reward.scale", Integer.valueOf(rewardScale))
+	   configParams.put("min.trial", Integer.valueOf(minTrial))
 	   
 	   //algorithm specific configurations
 	   learnAlgo match {
 	       case MultiArmBanditLearnerFactory.RANDOM_GREEDY => {
-	         configParams.put("random.selection.prob", new java.lang.Double(appAlgoConfig.getDouble("random.selection.prob")))
+	         configParams.put("random.selection.prob", java.lang.Double.valueOf(appAlgoConfig.getDouble("random.selection.prob")))
 	         configParams.put("prob.reduction.algorithm", appAlgoConfig.getString("prob.reduction.algorithm"))
-	         configParams.put("prob.reduction.constant", new java.lang.Double(appAlgoConfig.getDouble("prob.reduction.constant")))
-	         configParams.put("auer.greedy.constant", new Integer(appAlgoConfig.getInt("auer.greedy.constant")))
+	         configParams.put("prob.reduction.constant", java.lang.Double.valueOf(appAlgoConfig.getDouble("prob.reduction.constant")))
+	         configParams.put("auer.greedy.constant", Integer.valueOf(appAlgoConfig.getInt("auer.greedy.constant")))
 	       }
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_ONE => {
 	       }
 	       case MultiArmBanditLearnerFactory.UPPER_CONFIDENCE_BOUND_TWO => {
-	         configParams.put("alpha", new java.lang.Double(appAlgoConfig.getDouble("alpha")))
+	         configParams.put("alpha", java.lang.Double.valueOf(appAlgoConfig.getDouble("alpha")))
 	       }
 	       case MultiArmBanditLearnerFactory.THOMPSON_SAMPLER => {
-	         configParams.put("min.sample.size", new java.lang.Integer(getIntParamOrElse(appAlgoConfig, "min.sample.size", 8)))
-	         configParams.put("max.reward", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "max.reward")))
-	         configParams.put("bin.width", new java.lang.Integer(getMandatoryIntParam(appAlgoConfig, "bin.width")))
+	         configParams.put("min.sample.size", java.lang.Integer.valueOf(getIntParamOrElse(appAlgoConfig, "min.sample.size", 8)))
+	         configParams.put("max.reward", java.lang.Integer.valueOf(getMandatoryIntParam(appAlgoConfig, "max.reward")))
+	         configParams.put("bin.width", java.lang.Integer.valueOf(getMandatoryIntParam(appAlgoConfig, "bin.width")))
 	       }
 	       case MultiArmBanditLearnerFactory.OPTIMISTIC_THOMPSON_SAMPLER => {
 	       }
 	       case MultiArmBanditLearnerFactory.SOFT_MAX => {
-	         configParams.put("temp.constant", new java.lang.Double(appAlgoConfig.getDouble("temp.constant")))
-	         configParams.put("min.temp.constant", new java.lang.Double(appAlgoConfig.getDouble("min.temp.constant")))
+	         configParams.put("temp.constant", java.lang.Double.valueOf(appAlgoConfig.getDouble("temp.constant")))
+	         configParams.put("min.temp.constant", java.lang.Double.valueOf(appAlgoConfig.getDouble("min.temp.constant")))
 	         configParams.put("temp.reduction.algorithm", appAlgoConfig.getString("temp.reduction.algorithm"))
 	       }
 	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT => {
-	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
+	         configParams.put("distr.constant", java.lang.Double.valueOf(appAlgoConfig.getDouble("distr.constant")))
 	       }
 	       case MultiArmBanditLearnerFactory.EXPONENTIAL_WEIGHT_EXPERT => {
-	         configParams.put("distr.constant", new java.lang.Double(appAlgoConfig.getDouble("distr.constant")))
-	         configParams.put("num.experts", new Integer(appAlgoConfig.getInt("num.experts")))
+	         configParams.put("distr.constant", java.lang.Double.valueOf(appAlgoConfig.getDouble("distr.constant")))
+	         configParams.put("num.experts", Integer.valueOf(appAlgoConfig.getInt("num.experts")))
 	         configParams.put("experts",BasicUtils.intArrayFromString(appAlgoConfig.getString("experts"), 
 	             BasicUtils.configDelim))
 	       }
 	       case MultiArmBanditLearnerFactory.INTERVAL_ESTIMATOR => {
-	         configParams.put("bin.width", new java.lang.Double(appAlgoConfig.getDouble("bin.width")))
-	         configParams.put("confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("confidence.limit")))
-	         configParams.put("min.confidence.limit", new java.lang.Double(appAlgoConfig.getDouble("min.confidence.limit")))
-	         configParams.put("confidence.limit.reduction.step", new java.lang.Double(
+	         configParams.put("bin.width", java.lang.Double.valueOf(appAlgoConfig.getDouble("bin.width")))
+	         configParams.put("confidence.limit", java.lang.Double.valueOf(appAlgoConfig.getDouble("confidence.limit")))
+	         configParams.put("min.confidence.limit", java.lang.Double.valueOf(appAlgoConfig.getDouble("min.confidence.limit")))
+	         configParams.put("confidence.limit.reduction.step", java.lang.Double.valueOf(
 	             appAlgoConfig.getDouble("confidence.limit.reduction.step")))
-	         configParams.put("confidence.limit.reduction.round.interval", new java.lang.Double(
+	         configParams.put("confidence.limit.reduction.round.interval", java.lang.Double.valueOf(
 	             appAlgoConfig.getDouble("confidence.limit.reduction.round.interval")))
-	         configParams.put("min.reward.distr.sample", new Integer(appAlgoConfig.getInt("min.reward.distr.sample")))
+	         configParams.put("min.reward.distr.sample", Integer.valueOf(appAlgoConfig.getInt("min.reward.distr.sample")))
 	       }
 	       case _ => throw new IllegalStateException("invalid MAB algorithm")
 	   }
