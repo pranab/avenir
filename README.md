@@ -55,6 +55,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2019/08/07/encoding-high-cardinality-categorical-variables-with-feature-hashing-on-spark/
 * https://pkghosh.wordpress.com/2019/08/26/missing-value-imputation-with-restricted-boltzmann-machine-neural-network/
 * https://pkghosh.wordpress.com/2019/10/23/automated-machine-learning-with-hyperopt-and-scikitlearn-without-writing-python-code/
+* https://pkghosh.wordpress.com/2019/11/22/machine-learning-model-interpretation-and-prescriptive-analytic-with-lime/
+
 
 
 
