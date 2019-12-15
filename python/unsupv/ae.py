@@ -46,6 +46,7 @@ class AutoEncoder(nn.Module):
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
 		defValues["common.verbose"] = (False, None)
+		defValues["common.device"] = ("cpu", None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
@@ -59,8 +60,11 @@ class AutoEncoder(nn.Module):
 		defValues["train.dampening"] = (0, None)
 		defValues["train.batch.size"] = (128, None)
 		defValues["train.momentum.nesterov"] = (False, None)
+		defValues["train.noise.scale"] = (1.0, None)
 		defValues["train.num.iterations"] = (500, None) 
 		defValues["train.optimizer"] = ("adam", None) 
+		defValues["train.model.save"] = (False, None)
+		defValues["encode.use.saved.model"] = (True, None)
 
 		super(AutoEncoder, self).__init__()
         
@@ -68,6 +72,7 @@ class AutoEncoder(nn.Module):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
+		self.device = self.config.getStringConfig("common.device")[0]
 		self.numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
 		self.numHidden = self.config.getStringConfig("train.num.hidden.units")[0].split(",")
 		self.numHidden = strToIntArray(self.numHidden, ",")
@@ -81,8 +86,11 @@ class AutoEncoder(nn.Module):
 		self.momentum = self.config.getFloatConfig("train.momentum")[0]
 		self.dampening = self.config.getFloatConfig("train.dampening")[0]
 		self.momentumNesterov = self.config.getBooleanConfig("train.momentum.nesterov")[0]
+		self.noiseScale = self.config.getFloatConfig("train.noise.scale")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		self.optimizer = self.config.getStringConfig("train.optimizer")[0]
+		self.modelSave = self.config.getBooleanConfig("train.model.save")[0]
+		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
 		
 		featData = self.prepTrainingData()
 		self.featData = torch.from_numpy(featData)
@@ -114,9 +122,12 @@ class AutoEncoder(nn.Module):
 		"""
 		forward pass
 		"""
-		x = self.encoder(x)
-		x = self.decoder(x)
-		return x
+		y = x
+		for em in self.encoder:
+			y = em(y)
+		for dm in self.decoder:
+			y = dm(y)
+		return y
 
 	def prepTrainingData(self):
 		"""
@@ -134,30 +145,61 @@ class AutoEncoder(nn.Module):
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
 			featData = sk.preprocessing.scale(featData)
 		return featData
+
+	def encode(self, x):
+		"""
+		encode
+		"""
+		if (self.useSavedModel):
+			# load saved model
+			print ("...loading saved model")
+			modelFilePath = self.getModelFilePath()
+			torch.load(modelFilePath)
+		else:
+			self.train()
+		return self.encoder(x)
 		
-	@staticmethod
-	def train(model):
+	def getModelFilePath(self):
+		""" 
+		get model file path 
+		"""
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		if modelFile is None:
+			raise ValueError("missing model file name")
+		modelFilePath = modelDirectory + "/" + modelFile
+		return modelFilePath
+		
+	def train(self):
 		"""
 		train model
 		"""
+		if sef.device == "cpu":
+			model = self.cpu()
+			
 		# optimizer
-		if self.optimizer == "adam":
-			betas = (self.betas[0], self.betas[1]) 
-			optimizer = torch.optim.Adam(model.parameters(), lr=model.learnRate, betas=betas, eps = self.eps,\
+		if model.optimizer == "adam":
+			betas = (model.betas[0], model.betas[1]) 
+			optimizer = torch.optim.Adam(model.parameters(), lr=model.learnRate, betas=betas, eps = model.eps,\
 				weight_decay=model.weightDecay)
-		elif self.optimizer == "sgd":
-			optimizer = torch.optim.SGD(model.parameters(), momentum=self.momentum, dampening=self.dampening,\
-				weight_decay=model.weightDecay, nesterov=self.momentumNesterov)
+		elif model.optimizer == "sgd":
+			optimizer = torch.optim.SGD(model.parameters(), momentum=model.momentum, dampening=model.dampening,\
+				weight_decay=model.weightDecay, nesterov=model.momentumNesterov)
 		else:
 			raise ValueError("invalid optimizer type")
 			
 		criterion = nn.MSELoss()
 		for it in range(model.numIter):
 			for data in self.dataloader:
-				output = model(data)
+				noisyData = data + model.noiseScale * torch.randn(*data.shape)
+				output = model(noisyData)
 				loss = criterion(output, data)
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
 			print('epoch [{}/{}], loss {:.4f}'.format(it + 1, model.numIter, loss.data[0]))
 
+		if model.modelSave:
+			modelFilePath = model.getModelFilePath()
+			torch.save(model.state_dict(), modelFilePath)
+		
