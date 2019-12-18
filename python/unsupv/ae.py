@@ -63,6 +63,7 @@ class AutoEncoder(nn.Module):
 		defValues["train.noise.scale"] = (1.0, None)
 		defValues["train.num.iterations"] = (500, None) 
 		defValues["train.optimizer"] = ("adam", None) 
+		defValues["train.loss"] = ("mse", None) 
 		defValues["train.model.save"] = (False, None)
 		defValues["encode.use.saved.model"] = (True, None)
 
@@ -77,6 +78,8 @@ class AutoEncoder(nn.Module):
 		self.numHidden = self.config.getStringConfig("train.num.hidden.units")[0].split(",")
 		self.numHidden = strToIntArray(self.numHidden, ",")
 		numLayers = len(self.numHidden)
+		self.encActivations = self.config.getStringConfig("train.encoder.activations")[0].split(",")
+		self.decActivations = self.config.getStringConfig("train.decoder.activations")[0].split(",")
 		self.learnRate = self.config.getFloatConfig("train.learnig.rate")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		self.weightDecay = self.config.getFloatConfig("train.weight.decay")[0]
@@ -89,6 +92,7 @@ class AutoEncoder(nn.Module):
 		self.noiseScale = self.config.getFloatConfig("train.noise.scale")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		self.optimizer = self.config.getStringConfig("train.optimizer")[0]
+		self.loss = self.config.getStringConfig("train.loss")[0]
 		self.modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
 		
@@ -98,24 +102,34 @@ class AutoEncoder(nn.Module):
 		
 		#encoder
 		inSize = self.numinp
-		outSize = self.numHidden[0]
 		enModules = list()
-		for i in range(numLayers-1):
+		for i in range(numLayers):
+			outSize = self.numHidden[i]
 			enModules.append(nn.Linear(inSize, outSize))
-			enModules.append(nn.ReLU(True))
+			act = self.encActivations[i]
+			if act == "relu":
+				enModules.append(nn.ReLU())
+			elif act == "sigmoid":
+				enModules.append(nn.Sigmoid())
 			inSize = outSize
-			outSize = self.numHidden[i+1]
-		enModules.append(nn.Linear(inSize, outSize))
 		self.encoder = nn.ModuleList(enModules)
 			
         #decoder
 		deModules = list()
-		for i in reversed(range(1, numLayers)):
-			inSize = self.numHidden[i]
-			outSize = self.numHidden[i-1]
+		j = 0
+		for i in reversed(range(1, numLayers+1)):
+			inSize = self.numHidden[i-1]
+			if i < numLayers:
+				outSize = self.numHidden[i]
+			else:
+				outSize = self.numinp
 			deModules.append(nn.Linear(inSize, outSize))
-			deModules.append(nn.ReLU(True))
-		deModules.append(nn.Linear(self.numHidden[0], self.numinp))
+			act = self.decActivations[j]
+			j = j + 1
+			if act == "relu":
+				deModules.append(nn.ReLU())
+			elif act == "sigmoid":
+				deModules.append(nn.Sigmoid())
 		self.decoder = nn.ModuleList(deModules)
 
 	def forward(self, x):
@@ -154,11 +168,15 @@ class AutoEncoder(nn.Module):
 			# load saved model
 			print ("...loading saved model")
 			modelFilePath = self.getModelFilePath()
-			torch.load(modelFilePath)
+			self.load_state_dict(torch.load(modelFilePath))
+			self.eval()
 		else:
 			self.train()
-		return self.encoder(x)
-		
+		y = x
+		for em in self.encoder:
+			y = em(y)
+		return y
+				
 	def getModelFilePath(self):
 		""" 
 		get model file path 
@@ -188,7 +206,14 @@ class AutoEncoder(nn.Module):
 		else:
 			raise ValueError("invalid optimizer type")
 			
-		criterion = nn.MSELoss()
+		# loss function
+		if self.loss == "mse":
+			criterion = nn.MSELoss()
+		elif self.loss == "ce":
+			criterion = nn.CrossEntropyLoss()
+		else:
+			raise ValueError("invalid loss function")
+		
 		for it in range(model.numIter):
 			for data in self.dataloader:
 				noisyData = data + model.noiseScale * torch.randn(*data.shape)
