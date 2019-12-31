@@ -13,7 +13,7 @@ import sys
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 
-# parses amazon product review data
+# parses amazon product review data and extracts various components from it
 # data source http://jmcauley.ucsd.edu/data/amazon/
 
 def parse(path):
@@ -23,6 +23,13 @@ def parse(path):
 	f = open(path, 'r')
 	for l in f:
 		yield eval(l)
+		
+def prAll(revFile, comp):
+	"""
+	extracts review component
+	"""
+	for review in parse(revFile):
+		print(review["asin"] + "," + str(review[comp]))
 
 def prSpecific(revFile, prod, comp):
 	"""
@@ -38,8 +45,13 @@ if __name__ == "__main__":
 	op  = sys.argv[1]
 	if op == "review":
 		# all review text
-		for review in parse(revFile):
-			print(review['asin'] + "," + review['reviewText'])
+		prAll(revFile, "reviewText")
+	elif op == "summary":
+		# all review summary
+		prAll(revFile, "summary")
+	elif op == "overall":
+		# all review overall
+		prAll(revFile, "overall")
 	elif op == "revCount":
 		# review count for all products			
 		revCount = dict()
@@ -61,11 +73,11 @@ if __name__ == "__main__":
 		prod = sys.argv[2]
 		prSpecific(revFile, prod, "reviewText")
 	elif op == "prSummary":
-		# all review for a product
+		# all summary for a product
 		prod = sys.argv[2]
 		prSpecific(revFile, prod, "summary")
 	elif op == "prOverall":
-		# all review for a product
+		# all overall for a product
 		prod = sys.argv[2]
 		prSpecific(revFile, prod, "overall")
 	else:
