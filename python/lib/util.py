@@ -165,6 +165,27 @@ def preturbVector(values, range):
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
 
+# splits a list into sub lists
+def splitList(itms, numGr):
+	tcount = len(itms)
+	cItems = list(itms)
+	sz = int(len(cItems) / numGr)
+	groups = list()
+	count = 0
+	for i in range(numGr):
+		if (i == numGr - 1):
+			csz = tcount - count
+		else:
+			csz = sz + randint(-2, 2)
+			count += csz
+		gr = list()
+		for  j in range(csz):
+			it = selectRandomFromList(cItems)
+			gr.append(it)	
+			cItems.remove(it)	
+		groups.append(gr)
+	return groups	
+
 #multiplies a list within range
 def multVector(values, range):
 	scale = 1.0 - range + 2 * range * random.random()
@@ -201,6 +222,26 @@ def strToIntArray(line, delim):
 	arr = line.split(delim)
 	return [int(a) for a in arr]
 
+# float array from delim separated string
+def strToFloatArray(line, delim):	
+	arr = line.split(delim)
+	return [float(a) for a in arr]
+
+# int array from delim separated string or range
+def strToIntArray(line):	
+	varr = line.split(",")
+	if (len(varr) > 1):
+		iarr =  list(map(lambda v: int(v), varr))
+	else:
+		vrange = line.split(":")
+		if (len(vrange) == 2):
+			lo = int(varr[0])
+			hi = int(varr[1])
+			iarr = list(range(lo, hi+1))
+		else:
+			raise ValueError("failed to generate list")
+	return iarr
+				
 #converts any type to string	
 def toStr(val, precision):
 	if type(val) is float:
@@ -276,7 +317,7 @@ def getAllFiles(dirPath):
 	filePaths.sort()
 	return filePaths
 
-# get file content
+# get file contents in directory
 def getFileContent(path, verbose):
 	# dcument list
 	docComplete  = []
@@ -292,6 +333,13 @@ def getFileContent(path, verbose):
 			docComplete.append(content)
 	return (docComplete, filePaths)
 
+# het lines from a file
+def getFileLines(dirPath):
+	lines = list()
+	for li in fileRecGen(dirPath):
+		lines.append(li)		
+	return lines
+	
 # soring
 def takeFirst(elem):
     return elem[0]

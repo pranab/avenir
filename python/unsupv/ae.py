@@ -36,7 +36,7 @@ from util import *
 from mlutil import *
 
 class AutoEncoder(nn.Module):
-	def __init__(self):
+	def __init__(self, configFile):
 		"""
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
@@ -66,8 +66,13 @@ class AutoEncoder(nn.Module):
 		defValues["train.loss"] = ("mse", None) 
 		defValues["train.model.save"] = (False, None)
 		defValues["encode.use.saved.model"] = (True, None)
+		self.config = Configuration(configFile, defValues)
 
 		super(AutoEncoder, self).__init__()
+
+	# get config object
+	def getConfig(self):
+		return self.config
         
 	def buildModel(self):
 		"""

@@ -56,8 +56,8 @@ class TextPreProcessor:
 
 	def denoiseText(self, text):
 		text = stripHtml(text)
- 		text = removeBetweenSquareBrackets(text)
- 		return text
+		text = removeBetweenSquareBrackets(text)
+		return text
 
 	def replaceContractions(self, text):
 		"""Replace contractions in string of text"""
@@ -197,7 +197,128 @@ class TextPreProcessor:
 		for word in wordFeatures:
 			features[word] = (word in documentWords)
 		return features
+#NGram
+class NGram:
+	# initialize
+	def __init__(self, vocFilt, verbose=False):
+		self.vocFilt = vocFilt
+		self.nGramCounter = dict()
+		self.nGramFreq = dict()
+		self.corpSize = 0
+		self.vocabulary = set()
+		self.freqDone = False
+		self.verbose = verbose
+		self.vecWords = None
+		self.nonZeroCount = 0
+		
+	# count words in a doc
+	def countDocNGrams(self, words):
+		if self.verbose:
+			print ("doc size " + str(len(words)))
+		nGrams = self.toNGram(words)
+		for nGram in nGrams:
+			count = self.nGramCounter.get(nGram, 0)
+			self.nGramCounter[nGram] = count + 1
+			self.corpSize += 1
+		self.vocabulary.update(words)	
 
+	def remLowCount(self, minCount):
+		"""
+		removes items with count below threshold
+		"""
+		self.nGramCounter = dict(filter(lambda item: item[1] >= minCount, self.nGramCounter.items()))
+		
+	# get freq distr
+	def getNGramFreq(self):
+		if self.verbose:
+			print ("counter size " + str(len(self.nGramCounter)))
+		if not self.freqDone:
+			for item in self.nGramCounter.items():
+				self.nGramFreq[item[0]] = float(item[1]) / self.corpSize					
+			self.freqDone = True
+		return self.nGramFreq
+			
+	# get vector
+	def getVector(self, words, byCount, normalized):
+		if self.vecWords is None:
+			self.vecWords = list(self.nGramCounter)
+		
+		nGrams = self.toNGram(words)
+		if self.verbose:
+			print("vocabulary size {}".format(len(self.vecWords)))
+			print("ngrams")
+			print(nGrams)
+		self.nonZeroCount = 0
+		vec = list(map(lambda vw: self.getVecElem(vw, nGrams, byCount, normalized), self.vecWords))
+		return vec
+	
+	# vector element
+	def getVecElem(self, vw, nGrams, byCount, normalized):
+		"""
+		"""
+		if vw in nGrams:
+			if byCount:
+				if normalized:
+					el = self.nGramFreq[vw]
+				else:
+					el = self.nGramCounter[vw]
+			else:
+				el = 1
+			self.nonZeroCount += 1
+		else:
+			if (byCount and normalized):
+				el = 0.0
+			else:
+				el = 0
+		return el
+	
+	def getNonZeroCount(self):
+		"""
+		get non zero vector element count
+		"""
+		return self.nonZeroCount
+		
+	# to bigrams
+	def toBiGram(self, words):
+		if self.verbose:
+			print ("doc size " + str(len(words)))
+		biGrams = list()
+		for i in range(len(words)-1):
+			w1 = words[i]
+			w2 = words[i+1]
+			if self.vocFilt is None or (w1 in self.vocFilt and w2 in self.vocFilt):
+				nGram = (w1, w2)
+				biGrams.append(nGram)
+		return biGrams
+
+	# to trigrams
+	def toTriGram(self, words):
+		if self.verbose:
+			print ("doc size " + str(len(words)))
+		triGrams = list()
+		for i in range(len(words)-2):
+			w1 = words[i]
+			w2 = words[i+1]
+			w3 = words[i+2]
+			if self.vocFilt is None or (w1 in self.vocFilt and w2 in self.vocFilt and w3 in self.vocFilt):
+				nGram = (w1, w2, w3)
+				triGrams.append(nGram)
+		return triGrams
+
+	# save 
+	def save(self, saveFile):
+		sf = open(saveFile, "wb")
+		pickle.dump(self, sf)
+		sf.close()
+
+	# load 
+	@staticmethod
+	def load(saveFile):
+		sf = open(saveFile, "rb")
+		nGrams = pickle.load(sf)
+		sf.close()
+		return nGrams
+		
 # TF IDF 
 class TfIdf:
 	# initialize
@@ -218,7 +339,7 @@ class TfIdf:
 	# count words in a doc
 	def countDocWords(self, words):
 		if self.verbose:
-			print "doc size " + str(len(words))
+			print ("doc size " + str(len(words)))
 		for word in words:
 			if self.vocFilt is None or word in self.vocFilt:
 				count = self.wordCounter.get(word, 0)
@@ -237,7 +358,7 @@ class TfIdf:
 	# get tfidf for corpus
 	def getWordFreq(self):
 		if self.verbose:
-			print "counter size " + str(len(self.wordCounter))
+			print ("counter size " + str(len(self.wordCounter)))
 		if not self.freqDone:
 			for item in self.wordCounter.items():
 				self.wordFreq[item[0]] = float(item[1]) / self.corpSize					
@@ -313,6 +434,27 @@ class TfIdf:
 		sf.close()
 		return tfidf
 
+# bigram
+class BiGram(NGram):
+	# initialize
+	def __init__(self, vocFilt, verbose=False):
+		super(BiGram, self).__init__(vocFilt, verbose)
+
+	# convert to Ngrams
+	def toNGram(self, words):
+		return self.toBiGram(words)
+
+# trigram
+class TriGram(NGram):
+	# initialize
+	def __init__(self, vocFilt, verbose=False):
+		super(TriGram, self).__init__(vocFilt, verbose)
+
+	# convert to Ngrams
+	def toNGram(self, words):
+		return self.toTriGram(words)
+	
+
 # sentence processor
 class DocSentences:
 	# initialize
@@ -333,7 +475,7 @@ class DocSentences:
 		sentences = sent_tokenize(content)
 		self.sentences = list(filter(lambda s: len(nltk.word_tokenize(s)) >= minLength, sentences))
 		if self.verbose:
-			print "num of senteces after length filter " + str(len(self.sentences))
+			print ("num of senteces after length filter " + str(len(self.sentences)))
 		self.sentencesAsTokens = [clean(s, tp, verbose) for s in self.sentences]	
 	
 	# get sentence tokens
@@ -462,8 +604,8 @@ class WordVectorContainer:
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
 	if verbose:
-		print "--raw doc"
-		print doc
+		print ("--raw doc")
+		print (doc)
 	#print "next clean"
 	doc = preprocessor.removeNonAsciiFromText(doc)
 	words = preprocessor.tokenize(doc)
@@ -473,10 +615,10 @@ def clean(doc, preprocessor, verbose):
 	words = preprocessor.removeShortWords(words, 3)
 	words = preprocessor.removePunctuation(words)
 	words = preprocessor.lemmatizeWords(words)
-	words = preprocessor.removeNonAscii(words)
+	#words = preprocessor.removeNonAscii(words)
 	if verbose:
-		print "--after pre processing"
-		print words
+		print ("--after pre processing")
+		print (words)
 	return words
 
 # get sentences
