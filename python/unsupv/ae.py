@@ -41,6 +41,7 @@ class AutoEncoder(nn.Module):
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
 		"""
+		defValues = dict()
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
@@ -50,8 +51,11 @@ class AutoEncoder(nn.Module):
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
-		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
+		defValues["train.data.out.fields"] = (None, "missing training data output field ordinals")
+		defValues["train.num.input"] = (None, "missing number of input")
 		defValues["train.num.hidden.units"] = (None, "missing number of hidden units for each layer")
+		defValues["train.encoder.activations"] = (None, "missing encoder activation")
+		defValues["train.decoder.activations"] = (None, "missing encoder activation")
 		defValues["train.learning.rate"] = (.0001, None)
 		defValues["train.weight.decay"] = (.00001, None)
 		defValues["train.betas"] = ("0.9, 0.999", None)
@@ -79,16 +83,16 @@ class AutoEncoder(nn.Module):
     	Loads configuration and builds the various piecess necessary for the model
 		"""
 		self.device = self.config.getStringConfig("common.device")[0]
-		self.numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
+		self.numinp = self.config.getIntConfig("train.num.input")[0]
 		self.numHidden = self.config.getStringConfig("train.num.hidden.units")[0].split(",")
-		self.numHidden = strToIntArray(self.numHidden, ",")
+		self.numHidden = toIntList(self.numHidden)
 		numLayers = len(self.numHidden)
 		self.encActivations = self.config.getStringConfig("train.encoder.activations")[0].split(",")
 		self.decActivations = self.config.getStringConfig("train.decoder.activations")[0].split(",")
-		self.learnRate = self.config.getFloatConfig("train.learnig.rate")[0]
+		self.learnRate = self.config.getFloatConfig("train.learning.rate")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		self.weightDecay = self.config.getFloatConfig("train.weight.decay")[0]
-		self.betas = self.config.getStringConfig("train.betas")[0].split(",")
+		self.betas = self.config.getStringConfig("train.betas")[0]
 		self.betas = strToFloatArray(self.betas, ",")
 		self.eps = self.config.getFloatConfig("train.eps")[0]
 		self.momentum = self.config.getFloatConfig("train.momentum")[0]
@@ -112,31 +116,43 @@ class AutoEncoder(nn.Module):
 			outSize = self.numHidden[i]
 			enModules.append(nn.Linear(inSize, outSize))
 			act = self.encActivations[i]
-			if act == "relu":
-				enModules.append(nn.ReLU())
-			elif act == "sigmoid":
-				enModules.append(nn.Sigmoid())
+			activation = self.createActivation(act)
+			if activation:
+				enModules.append(activation)
 			inSize = outSize
 		self.encoder = nn.ModuleList(enModules)
 			
         #decoder
 		deModules = list()
 		j = 0
-		for i in reversed(range(1, numLayers+1)):
-			inSize = self.numHidden[i-1]
-			if i < numLayers:
-				outSize = self.numHidden[i]
+		for i in reversed(range(numLayers)):
+			inSize = self.numHidden[i]
+			if i > 0:
+				outSize = self.numHidden[i-1]
 			else:
 				outSize = self.numinp
 			deModules.append(nn.Linear(inSize, outSize))
 			act = self.decActivations[j]
 			j = j + 1
-			if act == "relu":
-				deModules.append(nn.ReLU())
-			elif act == "sigmoid":
-				deModules.append(nn.Sigmoid())
+			activation = self.createActivation(act)
+			if activation:
+				deModules.append(activation)
 		self.decoder = nn.ModuleList(deModules)
 
+	def createActivation(self, act):
+		"""
+		create activation
+		"""
+		activation = None
+		if act == "relu":
+			activation = nn.ReLU()
+		elif act == "sigmoid":
+			activation = nn.Sigmoid()
+		elif act == "none":
+			activation = None
+		else:
+			raise ValueError("invalid activation type")
+	
 	def forward(self, x):
 		"""
 		forward pass
@@ -150,19 +166,15 @@ class AutoEncoder(nn.Module):
 
 	def prepTrainingData(self):
 		"""
+		
 		loads and prepares training data
 		"""
-		# parameters
-		dataFile = self.config.getStringConfig("train.data.file")[0]
-		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
-		fieldIndices = strToIntArray(fieldIndices, ",")
-		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
-		featFieldIndices = strToIntArray(featFieldIndices, ",")
-
 		#training data
-		featData = loadFeatDataFile(dataFile, ",", fieldIndices)
+		dataFile = self.config.getStringConfig("train.data.file")[0]
+		featData = np.loadtxt(dataFile, delimiter=",",dtype=np.float32)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
 			featData = sk.preprocessing.scale(featData)
+		print(type(featData))
 		return featData
 
 	def encode(self, x):
@@ -197,7 +209,7 @@ class AutoEncoder(nn.Module):
 		"""
 		train model
 		"""
-		if sef.device == "cpu":
+		if self.device == "cpu":
 			model = self.cpu()
 			
 		# optimizer
@@ -227,7 +239,7 @@ class AutoEncoder(nn.Module):
 				optimizer.zero_grad()
 				loss.backward()
 				optimizer.step()
-			print('epoch [{}/{}], loss {:.4f}'.format(it + 1, model.numIter, loss.data[0]))
+			print('epoch [{}/{}], loss {:.4f}'.format(it + 1, model.numIter, loss.data))
 
 		if model.modelSave:
 			modelFilePath = model.getModelFilePath()

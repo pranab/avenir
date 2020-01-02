@@ -41,12 +41,11 @@ if __name__ == "__main__":
 	ae = AutoEncoder(configFile)
 	config = ae.getConfig()
 	verbose = config.getBooleanConfig("common.verbose")[0]
-	print(verbose)
 	
-	if mode == "vectorise":
+	if mode == "distr" or mode == "vectorise":
 		preprocessor = TextPreProcessor()
 		# document list
-		dirPath = config.getStringConfig("train.data.dir")[0]
+		dirPath = sys.argv[2] 
 		if os.path.isdir(dirPath):
 			#one doc per file
 			docComplete, filePaths  = getFileContent(dirPath, verbose)
@@ -61,18 +60,20 @@ if __name__ == "__main__":
 		biGram = BiGram(None, verbose)
 		for words in docClean:
 			biGram.countDocNGrams(words)
-		biGram.remLowCount(2)
+		#print("vocab size before {}".format(biGram.getVocabSize()))
+		biGram.remLowCount(3)
+		#print("vocab size after {}".format(biGram.getVocabSize()))
 		biGram.getNGramFreq()
 
 		# vectorise
-		for words in docClean:
-			vec = biGram.getVector(words, True, True)
-			if (biGram.getNonZeroCount() > 0):
-				vec = toStrList(vec, 6)
-				print(",".join(vec))
+		if mode == "vectorise":
+			for words in docClean:
+				vec = biGram.getVector(words, True, True)
+				if (biGram.getNonZeroCount() > 0):
+					vec = toStrList(vec, 6)
+					print(",".join(vec))
 	
 	elif mode == "train":
-		verbose = config.getBooleanConfig("common.verbose")[0]
 		ae.buildModel()
 		ae.train()
 		
