@@ -199,8 +199,10 @@ class TextPreProcessor:
 		return features
 #NGram
 class NGram:
-	# initialize
 	def __init__(self, vocFilt, verbose=False):
+		"""
+		initialize
+		"""
 		self.vocFilt = vocFilt
 		self.nGramCounter = dict()
 		self.nGramFreq = dict()
@@ -211,8 +213,10 @@ class NGram:
 		self.vecWords = None
 		self.nonZeroCount = 0
 		
-	# count words in a doc
 	def countDocNGrams(self, words):
+		"""
+		count words in a doc
+		"""
 		if self.verbose:
 			print ("doc size " + str(len(words)))
 		nGrams = self.toNGram(words)
@@ -228,8 +232,16 @@ class NGram:
 		"""
 		self.nGramCounter = dict(filter(lambda item: item[1] >= minCount, self.nGramCounter.items()))
 		
-	# get freq distr
+	def getVocabSize(self):
+		"""
+		get vocabulary size
+		"""
+		return len(self.nGramCounter)
+		
 	def getNGramFreq(self):
+		"""
+		get normalized count
+		"""
 		if self.verbose:
 			print ("counter size " + str(len(self.nGramCounter)))
 		if not self.freqDone:
@@ -237,9 +249,21 @@ class NGram:
 				self.nGramFreq[item[0]] = float(item[1]) / self.corpSize					
 			self.freqDone = True
 		return self.nGramFreq
+	
+	def getNGramIndex(self, show):
+		"""
+		convert to list
+		"""
+		if self.vecWords is None:
+			self.vecWords = list(self.nGramCounter)
+			if show:
+				for vw in enumerate(self.vecWords):
+					print(vw)
 			
-	# get vector
 	def getVector(self, words, byCount, normalized):
+		"""
+		convert to vector
+		"""
 		if self.vecWords is None:
 			self.vecWords = list(self.nGramCounter)
 		
@@ -252,9 +276,9 @@ class NGram:
 		vec = list(map(lambda vw: self.getVecElem(vw, nGrams, byCount, normalized), self.vecWords))
 		return vec
 	
-	# vector element
 	def getVecElem(self, vw, nGrams, byCount, normalized):
 		"""
+		get vector element
 		"""
 		if vw in nGrams:
 			if byCount:
@@ -278,8 +302,10 @@ class NGram:
 		"""
 		return self.nonZeroCount
 		
-	# to bigrams
 	def toBiGram(self, words):
+		"""
+		convert to bigram
+		"""
 		if self.verbose:
 			print ("doc size " + str(len(words)))
 		biGrams = list()
@@ -291,8 +317,10 @@ class NGram:
 				biGrams.append(nGram)
 		return biGrams
 
-	# to trigrams
 	def toTriGram(self, words):
+		"""
+		convert to trigram
+		"""
 		if self.verbose:
 			print ("doc size " + str(len(words)))
 		triGrams = list()
@@ -305,15 +333,19 @@ class NGram:
 				triGrams.append(nGram)
 		return triGrams
 
-	# save 
 	def save(self, saveFile):
+		"""
+		save 
+		"""
 		sf = open(saveFile, "wb")
 		pickle.dump(self, sf)
 		sf.close()
 
-	# load 
 	@staticmethod
 	def load(saveFile):
+		"""
+		load
+		"""
 		sf = open(saveFile, "rb")
 		nGrams = pickle.load(sf)
 		sf.close()
@@ -321,8 +353,10 @@ class NGram:
 		
 # TF IDF 
 class TfIdf:
-	# initialize
 	def __init__(self, vocFilt, doIdf, verbose=False):
+		"""
+		initialize
+		"""
 		self.vocFilt = vocFilt
 		self.doIdf = doIdf
 		self.wordCounter = {}
@@ -336,8 +370,10 @@ class TfIdf:
 		self.verbose = verbose
 		self.vecWords = None
 	
-	# count words in a doc
 	def countDocWords(self, words):
+		"""
+		count words in a doc
+		"""
 		if self.verbose:
 			print ("doc size " + str(len(words)))
 		for word in words:
@@ -355,8 +391,10 @@ class TfIdf:
 		self.freqDone = False
 	
 	
-	# get tfidf for corpus
 	def getWordFreq(self):
+		"""
+		get tfidf for corpus
+		"""
 		if self.verbose:
 			print ("counter size " + str(len(self.wordCounter)))
 		if not self.freqDone:
@@ -368,47 +406,63 @@ class TfIdf:
 			self.freqDone = True
 		return self.wordFreq
 	
-	# get counter
 	def getCount(self, word):
+		"""
+		get counter
+		"""
 		if word in self.wordCounter:
 			count = self.wordCounter[word]
 		else:
 			raise ValueError("word not found in count table " + word)
 		return count
 		
-	# get normalized frequency
 	def getFreq(self, word):
+		"""
+		get normalized frequency
+		"""
 		if word in self.wordFreq:
 			freq = self.wordFreq[word]
 		else:
 			raise ValueError("word not found in count table " + word)
 		return freq
 
-	# reset counter
 	def resetCounter(self):
+		"""
+		reset counter
+		"""
 		self.wordCounter = {}
 
-	# build vocbulary
 	def buildVocabulary(self, words):
+		"""
+		build vocbulary
+		"""
 		self.vocabulary.update(words)
 
-	# return vocabulary
 	def getVocabulary(self):
+		"""
+		return vocabulary
+		"""
 		return self.vocabulary
 	
-	# index for all words in vcabulary
 	def creatWordIndex(self):
+		"""
+		index for all words in vcabulary
+		"""
 		self.wordIndex = {word : idx for idx, word in enumerate(list(self.vocabulary))}
 
-	# get vector
 	def getVector(self, words, byCount, normalized):
+		"""
+		get vector
+		"""
 		if self.vecWords is None:
 			self.vecWords = list(self.wordCounter)
 		vec = list(map(lambda vw: self.getVecElem(vw, words, byCount, normalized), self.vecWords))
 		return vec
 	
-	# vector element
 	def getVecElem(self, vw, words, byCount, normalized):
+		"""
+		vector element
+		"""
 		el = 0
 		if vw in words:
 			if byCount:
@@ -420,8 +474,10 @@ class TfIdf:
 				el = 1
 		return el
 				
-	# save 
 	def save(self, saveFile):
+		"""
+		save
+		"""
 		sf = open(saveFile, "wb")
 		pickle.dump(self, sf)
 		sf.close()
@@ -429,6 +485,9 @@ class TfIdf:
 	# load 
 	@staticmethod
 	def load(saveFile):
+		"""
+		load
+		"""
 		sf = open(saveFile, "rb")
 		tfidf = pickle.load(sf)
 		sf.close()
@@ -436,22 +495,30 @@ class TfIdf:
 
 # bigram
 class BiGram(NGram):
-	# initialize
 	def __init__(self, vocFilt, verbose=False):
+		"""
+		initialize
+		"""
 		super(BiGram, self).__init__(vocFilt, verbose)
 
-	# convert to Ngrams
 	def toNGram(self, words):
+		"""
+		convert to Ngrams
+		"""
 		return self.toBiGram(words)
 
 # trigram
 class TriGram(NGram):
-	# initialize
 	def __init__(self, vocFilt, verbose=False):
+		"""
+		initialize
+		"""
 		super(TriGram, self).__init__(vocFilt, verbose)
 
-	# convert to Ngrams
 	def toNGram(self, words):
+		"""
+		convert to Ngrams
+		"""
 		return self.toTriGram(words)
 	
 
@@ -497,8 +564,10 @@ class DocSentences:
 
 # sentence processor
 class WordVectorContainer:
-	# initialize
 	def __init__(self, dirPath, verbose):
+		"""
+		initialize
+		"""
 		self.docs = list()
 		self.wordVectors = list()
 		self.tp = TextPreProcessor()
@@ -507,47 +576,67 @@ class WordVectorContainer:
 		self.termTable = None
 
 
-	# all files in a dir
 	def addDir(self, dirPath):
+		"""
+		add content of all files ina directory
+		"""
 		docs, filePaths  = getFileContent(dirPath, verbose)
 		self.docs.extend(docs)
 		self.wordVectors.extend([clean(doc, self.tp, verbose) for doc in docs])
 	
-	# one file
 	def addFile(self, filePath):
+		"""
+		add file content
+		"""
 		with open(filePath, 'r') as contentFile:
 			content = contentFile.read()
 		self.wordVectors.append(clean(content, self.tp, verbose))
 	
-	# text
 	def addText(self, text):
+		"""
+		add text
+		"""
 		self.wordVectors.append(clean(text, self.tp, verbose))
 
-	# words
 	def addWords(self, words):
+		"""
+		add words
+		"""
 		self.wordVectors.append(words)
 
-	# set similarity algo
 	def withSimilarityAlgo(self, algo, normalizer=None):
+		"""
+		set similarity algo
+		"""
 		self.similarityAlgo = algo
 		self.simAlgoNormalizer = normalizer
 		
 	def getDocsWords(self):
+		"""
+		get word vectors
+		"""
 		return self.wordVectors
 
 	def getDocs(self):
+		"""
+		get docs
+		"""
 		return self.docs
 	
-	# term count table for all words
 	def getTermFreqTable(self):
+		"""
+		term count table for all words
+		"""
 		self.termTable = TfIdf(None, False)
 		for words in self.wordVectors:
 			self.termTable.countDocWords(words)
 		self.termTable.getWordFreq()
 		return self.termTable
 
-	# pair wise similarity
 	def getPairWiseSimilarity(self, byCount, normalized):
+		"""
+		pair wise similarity
+		"""
 		self.getNumWordVectors()
 		
 		size = len(self.wordVectors)
@@ -568,8 +657,10 @@ class WordVectorContainer:
 				simArray[j][i] = sim
 		return simArray
 
-	# inter set pair wise  similarity
 	def getInterSetSimilarity(self, byCount, normalized, split):
+		"""
+		inter set pair wise  similarity
+		"""
 		self.getNumWordVectors()
 		size = len(self.wordVectors)
 		if not self.similarityAlgo == "jaccard":
@@ -597,6 +688,9 @@ class WordVectorContainer:
 		return simArray
 
 	def getNumWordVectors(self):
+		"""
+		get vectors
+		"""
 		if not self.similarityAlgo == "jaccard":
 			if self.numWordVectors is None:
 				self.numWordVectors = list(map(lambda wv: self.termTable.getVector(wv, byCount, normalized), self.wordVectors))

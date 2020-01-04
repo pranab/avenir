@@ -70,6 +70,7 @@ class AutoEncoder(nn.Module):
 		defValues["train.loss"] = ("mse", None) 
 		defValues["train.model.save"] = (False, None)
 		defValues["encode.use.saved.model"] = (True, None)
+		defValues["encode.data.file"] = (None, "missing enoding data file")
 		self.config = Configuration(configFile, defValues)
 
 		super(AutoEncoder, self).__init__()
@@ -105,9 +106,9 @@ class AutoEncoder(nn.Module):
 		self.modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
 		
-		featData = self.prepTrainingData()
-		self.featData = torch.from_numpy(featData)
-		self.dataloader = DataLoader(self.featData, batch_size=self.batchSize, shuffle=True)
+		#featData = self.prepTrainingData()
+		#self.featData = torch.from_numpy(featData)
+		#self.dataloader = DataLoader(self.featData, batch_size=self.batchSize, shuffle=True)
 		
 		#encoder
 		inSize = self.numinp
@@ -148,7 +149,7 @@ class AutoEncoder(nn.Module):
 			activation = nn.ReLU()
 		elif act == "sigmoid":
 			activation = nn.Sigmoid()
-		elif act == "none":
+		elif act == "noact":
 			activation = None
 		else:
 			raise ValueError("invalid activation type")
@@ -166,7 +167,6 @@ class AutoEncoder(nn.Module):
 
 	def prepTrainingData(self):
 		"""
-		
 		loads and prepares training data
 		"""
 		#training data
@@ -174,10 +174,10 @@ class AutoEncoder(nn.Module):
 		featData = np.loadtxt(dataFile, delimiter=",",dtype=np.float32)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
 			featData = sk.preprocessing.scale(featData)
-		print(type(featData))
+		#print(type(featData))
 		return featData
 
-	def encode(self, x):
+	def encode(self):
 		"""
 		encode
 		"""
@@ -188,11 +188,36 @@ class AutoEncoder(nn.Module):
 			self.load_state_dict(torch.load(modelFilePath))
 			self.eval()
 		else:
-			self.train()
-		y = x
-		for em in self.encoder:
-			y = em(y)
-		return y
+			self.trainAe()
+			
+		dataFile = self.config.getStringConfig("encode.data.file")[0]
+		enData = np.loadtxt(dataFile, delimiter=",", dtype=np.float32)
+		enData = torch.from_numpy(enData)
+		for x in enData:
+			y = x
+			for em in self.encoder:
+				y = em(y)
+			print(y)
+	
+	def getParams(self):
+		"""
+		get model parameters
+		"""
+		if (self.useSavedModel):
+			# load saved model
+			print ("...loading saved model")
+			modelFilePath = self.getModelFilePath()
+			self.load_state_dict(torch.load(modelFilePath))
+			self.eval()
+		else:
+			self.trainAe()
+	
+	
+		print("Model's state dict:")
+		for paramTensor in self.state_dict():
+			print(paramTensor)
+			for te in self.state_dict()[paramTensor]:
+				print(te)
 				
 	def getModelFilePath(self):
 		""" 
@@ -205,10 +230,14 @@ class AutoEncoder(nn.Module):
 		modelFilePath = modelDirectory + "/" + modelFile
 		return modelFilePath
 		
-	def train(self):
+	def trainAe(self):
 		"""
 		train model
 		"""
+		featData = self.prepTrainingData()
+		self.featData = torch.from_numpy(featData)
+		self.dataloader = DataLoader(self.featData, batch_size=self.batchSize, shuffle=True)
+
 		if self.device == "cpu":
 			model = self.cpu()
 			

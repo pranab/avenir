@@ -34,6 +34,27 @@ from sampler import *
 from ae import *
 from preprocess import *
 
+def buildNGram(docClean, nGram):
+	"""
+	build ngram
+	"""
+	for words in docClean:
+		nGram.countDocNGrams(words)
+	#print("vocab size before {}".format(biGram.getVocabSize()))
+	nGram.remLowCount(3)
+	#print("vocab size after {}".format(biGram.getVocabSize()))
+	nGram.getNGramFreq()
+
+def vectorise(docClean, nGram):
+	"""
+	vectorise
+	"""
+	for words in docClean:
+		vec = nGram.getVector(words, True, True)
+		if (nGram.getNonZeroCount() > 0):
+			vec = toStrList(vec, 6)
+			print(",".join(vec))
+	
 
 if __name__ == "__main__":
 	configFile  = sys.argv[1]
@@ -43,9 +64,10 @@ if __name__ == "__main__":
 	verbose = config.getBooleanConfig("common.verbose")[0]
 	
 	if mode == "distr" or mode == "vectorise":
+		dirPath = sys.argv[3] 
+		ngramType = sys.argv[4] 
 		preprocessor = TextPreProcessor()
 		# document list
-		dirPath = sys.argv[2] 
 		if os.path.isdir(dirPath):
 			#one doc per file
 			docComplete, filePaths  = getFileContent(dirPath, verbose)
@@ -57,24 +79,56 @@ if __name__ == "__main__":
 		docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]
 		
 		# convert to bigrams
-		biGram = BiGram(None, verbose)
+		if ngramType == "bi":
+			nGram = BiGram(None, verbose)
+		elif ngramType == "tri":
+			nGram = TriGram(None, verbose)
+		else:
+			raise ValueError("invalid ngram type")	
+			
 		for words in docClean:
-			biGram.countDocNGrams(words)
+			nGram.countDocNGrams(words)
 		#print("vocab size before {}".format(biGram.getVocabSize()))
-		biGram.remLowCount(3)
+		nGram.remLowCount(3)
 		#print("vocab size after {}".format(biGram.getVocabSize()))
-		biGram.getNGramFreq()
+		nGram.getNGramFreq()
 
+		# word counts as list
+		nGram.getNGramIndex(True)
+		
 		# vectorise
 		if mode == "vectorise":
 			for words in docClean:
-				vec = biGram.getVector(words, True, True)
-				if (biGram.getNonZeroCount() > 0):
+				vec = nGram.getVector(words, True, True)
+				if (nGram.getNonZeroCount() > 0):
 					vec = toStrList(vec, 6)
 					print(",".join(vec))
 	
 	elif mode == "train":
 		ae.buildModel()
-		ae.train()
+		ae.trainAe()
+
+	elif mode == "params":
+		ae.buildModel()
+		ae.getParams()
+
+	elif mode == "numEncode":
+		ngramFilePath = sys.argv[3] 
+		textFilePath = sys.argv[3] 
+		
+		#load ngram
+		nGram = NGram.load(ngramFilengramFilePath)
+		
+		# pre process and vectorise
+		docComplete = getFileLines(textFilePath)
+		docClean = [clean(doc, preprocessor, verbose) for doc in docComplete]
+		vectorise(docClean, nGram)		
+		
+	elif mode == "encode":
+		ae.buildModel()
+		ae.encode()
+		
+	else:
+		raise ValueError("invalid command")
 		
 			
