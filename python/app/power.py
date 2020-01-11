@@ -51,19 +51,19 @@ if __name__ == "__main__":
 			usage = mean + cureTrend 
 
 			secIntoYear = sampTime % secInYear
-			month = secIntoYear / secInMonth
-			#print "month ", month
+			month = int(secIntoYear / secInMonth)
+			#print("month {}".format(month))
 			usage += yearCycle[month]
 
-			hourIntoDay = (sampTime % secInDay) / secInHour
-			print "hour ", hourIntoDay
+			hourIntoDay = int((sampTime % secInDay) / secInHour)
+			#print("hour {}".format(hourIntoDay))
 			usage += dayCycle[hourIntoDay]
 
 			usage += noiseDistr.sample()
 
 			dt = datetime.fromtimestamp(sampTime)
 			dt = dt.strftime("%Y-%m-%d %H:%M:%S")
-			#print "%s, %.3f" %(dt, usage)
+			print ("{},{:.3f}".format(dt, usage))
 
 			cureTrend += trend
 			sampTime += secInHour

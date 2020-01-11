@@ -104,7 +104,7 @@ class ProphetForcaster(object):
 		#conver to extpected df and fit model
 		exFormat = self.config.getStringConfig("train.data.exist.dateformat")[0]
 		neededFormat = self.config.getStringConfig("train.data.new.dateformat")[0]
-		print neededFormat
+		print (neededFormat)
 		if exFormat:
 			pass
 
@@ -113,9 +113,9 @@ class ProphetForcaster(object):
 		df.set_index("ds")
 		self.addCapFloor(df)
 
-		print df.columns
-		print df.dtypes
-		print df.head(4)
+		print (df.columns)
+		print (df.dtypes)
+		print (df.head(4))
 
 		self.model.fit(df)
 
@@ -132,7 +132,7 @@ class ProphetForcaster(object):
 		future = self.model.make_future_dataframe(window, freq=unit, include_history=history)
 		self.addCapFloor(future)
 		forecast = self.model.predict(future)
-		print forecast.head(4)
+		print (forecast.head(4))
 
 		# save
 		outFile = self.config.getStringConfig("forecast.output.file")[0]
@@ -177,7 +177,7 @@ class ProphetForcaster(object):
 			else:
 				raise ValueError("invalid error metric")
 		error /= len(fValues)
-		print "Error (%s) %.3f" %(errorMetric, error)
+		print ("Error {} {:.3f}".format(errorMetric, error))
 
 	# shuffle data
 	def shuffle(self):
@@ -220,7 +220,7 @@ class ProphetForcaster(object):
 	def saveModel(self):
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		if modelSave:
-			print "...saving model"
+			print ("...saving model")
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.model, modelFilePath) 
 	
@@ -230,7 +230,7 @@ class ProphetForcaster(object):
 		if self.model is None:
 			if useSavedModel:
 				# load saved model
-				print "...loading model"
+				print ("...loading model")
 				modelFilePath = self.getModelFilePath()
 				self.model = joblib.load(modelFilePath)
 			else:

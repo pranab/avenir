@@ -38,7 +38,7 @@ if __name__ == "__main__":
 	# execute	
 	config = forecaster.getConfig()	
 	mode = forecaster.getMode()
-	print "running mode: " + mode
+	print ("running mode: " + mode)
 	if mode == "train":
 		forecaster.train()
 	elif mode == "forecast":

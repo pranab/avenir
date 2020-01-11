@@ -228,7 +228,7 @@ def strToFloatArray(line, delim):
 	return [float(a) for a in arr]
 
 # int array from delim separated string or range
-def strToIntArray(line):	
+def strListOrRangeToIntArray(line):	
 	varr = line.split(",")
 	if (len(varr) > 1):
 		iarr =  list(map(lambda v: int(v), varr))
@@ -333,13 +333,30 @@ def getFileContent(path, verbose):
 			docComplete.append(content)
 	return (docComplete, filePaths)
 
-# het lines from a file
+# get lines from a file
 def getFileLines(dirPath):
 	lines = list()
 	for li in fileRecGen(dirPath):
 		lines.append(li)		
 	return lines
+
+# get string fileds from a file
+def getFileColumnAsString(dirPath, delim, index):
+	fields = list()
+	for rec in fileRecGen(dirPath, delim):
+		fields.append(rec[index])		
+	return fields
+
+# get float fileds from a file
+def getFileColumnAsFloat(dirPath, delim, index):
+	flields = getFileColumnAsString(dirPath, delim, index)
+	return list(map(lambda v:float(v), fields))
 	
+# get float fileds from a file
+def getFileColumnAsInt(dirPath, delim, index):
+	flields = getFileColumnAsString(dirPath, delim, index)
+	return list(map(lambda v:int(v), fields))
+
 # soring
 def takeFirst(elem):
     return elem[0]

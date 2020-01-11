@@ -178,6 +178,11 @@ def loadDataFile(file, delim, cols, colIndices):
 	extrData = data[:,colIndices]
 	return (data, extrData)
 
+#loads delim separated file and extracts columns
+def loadFeatDataFile(file, delim, cols):
+	data = np.loadtxt(file, delimiter=delim, usecols=cols)
+	return data
+
 #extracts columns
 def extrColumns(arr, columns):
 	return arr[:, columns]
@@ -288,6 +293,20 @@ def binaryEcodeCategorical(values, value):
 		if (values[i] == value):
 			vec[i] = 1
 	return vec		
-		
 
+# Creates feature, label pair from sequence data	
+def createLabeledSeq(inputData, tw):
+	features = list()
+	labels = list()
+	l = len(inputDta)
+	for i in range(l - tw):
+		trainSeq = inputData[i:i+tw]
+		trainLabel = inputData[i+tw]
+		features.append(trainSeq)
+		labels.append(trainLabel)
+	return (features, labels)
 
+# Creates feature, label pair from sequence data in file	
+def createLabeledSeq(filePath, delim, index, tw):
+	seqData = getFileColumnAsFloat(filePath, delim, index)
+	return createLabeledSeq(seqData, tw)
