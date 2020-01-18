@@ -92,7 +92,18 @@ def addNoiseCat(value, values, noise):
 	if (isEventSampled(threshold)):
 		newValue = selectRandomFromList(values)
 	return newValue
-		
+
+#sample with replacement
+def sampleWithReplace(data, sampSize):
+	sampled = list()
+	le = len(data)
+	if sampSize is None:
+		sampSize = le
+	for i in range(sampSize):
+		j = random.randint(0, le - 1)
+		sampled.append(data[j])
+	return sampled
+			
 # gaussian sampling based on rejection sampling	
 class GaussianRejectSampler:
 	def __init__(self, mean, stdDev):

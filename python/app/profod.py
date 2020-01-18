@@ -46,7 +46,11 @@ if __name__ == "__main__":
 	elif mode == "validate":
 		forecaster.validate()
 	elif mode == "shuffle":
-		forecaster.shuffle()
+		forecaster.shuffleBlocks()
+	elif mode == "randomize":
+		forecaster.randomizeRecs()
+	else:
+		raise ValueError("invalid command")
 
 
 

@@ -264,7 +264,7 @@ def createAllOneHotVec(size):
 
 # block shuffle 	
 def blockShuffle(data, blockSize):
-	numBlock = len(data) / blockSize
+	numBlock = int(len(data) / blockSize)
 	remain = len(data) % blockSize
 	numBlock +=  (1 if remain > 0 else 0)
 	shuffled = list()
@@ -277,6 +277,18 @@ def blockShuffle(data, blockSize):
 		else:
 			shuffled.extend(data[beg:])
 	return shuffled	
+
+# shuffle data
+def shuffle(data, numShuffle):
+	sz = len(data)
+	if numShuffle is None:
+		numShuffle = int(sz / 2)
+	for i in range(numShuffle):
+		fi = random.randint(0, sz -1)
+		se = random.randint(0, sz -1)
+		tmp = data[fi]
+		data[fi] = data[se]
+		data[se] = tmp	
 
 # random walk	
 def randomWalk(size, start, lowStep, highStep):

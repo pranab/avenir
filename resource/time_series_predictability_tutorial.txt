@@ -9,7 +9,7 @@ files wrt where power.py is. Feel free to change configuration in profod.propert
 
 Generate input data
 ===================
-./power.py gen <num_days_in_past> > pwuse.txt
+python power.py gen <num_days_in_past> > pwuse.txt
 
 where
 num_days_in_past = number of days in past e.g 370
@@ -29,7 +29,7 @@ Set path in train.data.file
 
 Train model
 ===========
-./profod.py profod.properties common.mode=train
+python profod.py profod.properties common.mode=train
 
 If the parameter is set in profod.properties, you don't need to provide it as the last argument
 Make sure the following parametrs are set appropriately in profod.properties, so that model is saved
@@ -43,7 +43,7 @@ train.data.new.dateformat=%Y-%m-%d %H:%M:%S
 
 Validate model
 ==============
-./profod.py profod.properties common.mode=validate
+python profod.py profod.properties common.mode=validate
 
 Make sure the following parametrs are set appropriately in profod.properties
 
@@ -57,7 +57,7 @@ At the end of the consolr output, you will see SSE
 
 Block Shuffle data
 ==================
-./profod.py profod.properties common.mode=shuffle
+python profod.py profod.properties common.mode=shuffle
 
 Make sure the following parametrs are set appropriately in profod.properties
 
@@ -73,21 +73,97 @@ Set path in forecast.validate.file
 
 training data
 head -n 8785  sh_pwuse.txt > sh_putrain.txt
-Set path in train.data.file
+
+Set path in 
+train.data.file=sh_putrain.txt
 
 Train model with shuffled data
 ==============================
-./profod.py profod.properties common.mode=train
+python profod.py profod.properties common.mode=train
 
 Validate model with shuffled data
 =================================
-./profod.py profod.properties common.mode=validate
+Set path as
+forecast.validate.file=sh_puvalidate.txt
+
+python profod.py profod.properties common.mode=validate
 
 At the end of the consolr output, you will see SSE for shuffled data. 
 
 Predictability
 ==============
-Predictability = 1.0 - normal data SSE / shuffled data SSE
+Predictability = min(0, 1.0 - normal data SSE / shuffled data SSE)
+
+Randomize data
+==============
+python profod.py profod.properties common.mode=randomize
+
+Make sure the following parametrs are set appropriately in profod.properties
+rand.input.file=pwuse.txt
+rand.shuffled.file=rpwuse.txt
+
+Split into training and validation data
+=======================================
+Most recent 5 days data will be used for validation and the rest for training.
+
+validation data
+tail -120 rpwuse.txt > rpuvalidate.txt
+Set path in forecast.validate.file
+
+training data
+head -n 8785  rpwuse.txt > rputrain.txt
+Set path in train.data.file
+
+Train model
+===========
+As before. Set the following parameter
+
+train.data.file=rputrain.txt
+
+Validate model
+==============
+As before. Set the following parameter
+
+forecast.validate.file=rpuvalidate.txt
+
+Block Shuffle data
+==================
+As before. Set the following parameter
+
+predictability.shuffled.file=sh_rpwuse.txt
+
+Split shuffled data into training and validation data
+=====================================================
+validation data
+tail -120 sh_rpwuse.txt > sh_rpuvalidate.txt
+Set path in forecast.validate.file
+
+training data
+head -n 8785  sh_rpwuse.txt > sh_rputrain.txt
+
+Set path in 
+train.data.file=sh_putrain.txt
+
+Train model
+===========
+As before. Set the following parameter
+
+train.data.file=sh_rputrain.txt
+
+Validate model
+==============
+As before. Set the following parameter
+
+forecast.validate.file=sh_rpuvalidate.txt
+
+Predictability
+==============
+As before
+
+Compare predictability
+======================
+Compare predictability between normal data and randomized data
+
 
 
 

@@ -25,7 +25,7 @@ from dateutil.parser import parse
 import pandas as pd
 import numpy as np
 from fbprophet import Prophet
-from sklearn.externals import joblib
+import joblib
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -71,6 +71,8 @@ class ProphetForcaster(object):
 		defValues["predictability.input.file"] = (None, None)
 		defValues["predictability.block.size"] = (8, None)
 		defValues["predictability.shuffled.file"] = (None, None)
+		defValues["rand.input.file"] = (None, None)
+		defValues["rand.shuffled.file"] = (None, None)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
@@ -180,7 +182,7 @@ class ProphetForcaster(object):
 		print ("Error {} {:.3f}".format(errorMetric, error))
 
 	# shuffle data
-	def shuffle(self):
+	def shuffleBlocks(self):
 		dataFilePath = self.config.getStringConfig("predictability.input.file")[0]
 		assert dataFilePath, "missing input data file path"
 		df = pd.read_csv(dataFilePath, header=None, names=["ds", "y"])
@@ -192,6 +194,24 @@ class ProphetForcaster(object):
 		bSize = self.config.getIntConfig("predictability.block.size")[0]
 		shValues = blockShuffle(yValues, bSize)	
 		shFilePath = self.config.getStringConfig("predictability.shuffled.file")[0]
+		assert shFilePath, "missing shuffled data file path"
+		with open(shFilePath, 'w') as shFile:
+			for z in zip(dsValues, shValues):
+				line = "%s,%.3f\n" %(z[0], z[1])
+				shFile.write(line)
+
+	# shuffle data
+	def randomizeRecs(self):
+		dataFilePath = self.config.getStringConfig("rand.input.file")[0]
+		assert dataFilePath, "missing input data file path"
+		df = pd.read_csv(dataFilePath, header=None, names=["ds", "y"])
+		df.set_index("ds")
+		dsValues = df.loc[:,"ds"].values		
+		yValues = df.loc[:,"y"].values	
+
+		# shuffle and write
+		shValues = sampleWithReplace(yValues, None)	
+		shFilePath = self.config.getStringConfig("rand.shuffled.file")[0]
 		assert shFilePath, "missing shuffled data file path"
 		with open(shFilePath, 'w') as shFile:
 			for z in zip(dsValues, shValues):
