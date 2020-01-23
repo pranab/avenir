@@ -21,6 +21,8 @@ from random import randint
 import time
 from datetime import datetime
 from statsmodels.graphics import tsaplots
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
 from matplotlib import pyplot
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -77,6 +79,26 @@ if __name__ == "__main__":
 		alpha =config.getFloatConfig("acf.alpha")[0]
 		tsaplots.plot_acf(np.array(data), lags = lags, alpha = alpha)
 		pyplot.show()
+	
+	elif op == "adf":
+		result = adfuller(data, autolag='AIC')
+		print(f'ADF Statistic: {result[0]}')
+		print(f'p value: {result[1]}')
+		print(f'num lags: {result[2]}')
+		print(f'num observation for regression: {result[3]}')
+		for key, value in result[4].items():
+			print('Critial Values:')
+			print(f'   {key}, {value}')    
+			
+	elif op =="kpss":
+		statistic, pvalue, nLags, criticalValues = kpss(data)
+		print(f'KPSS Statistic: {statistic}')
+		print(f'pvalue: {pvalue}')
+		print(f'num lags: {nLags}')
+		print('Critial Values:')
+		for key, value in criticalValues.items():
+			print(f'   {key} : {value}')		
+		
 		
 	else:
 		raise ValueError("unknown command")

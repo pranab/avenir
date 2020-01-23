@@ -341,20 +341,22 @@ def getFileLines(dirPath):
 	return lines
 
 # get string fileds from a file
-def getFileColumnAsString(dirPath, delim, index):
+def getFileColumnAsString(dirPath, index, delim=","):
 	fields = list()
 	for rec in fileRecGen(dirPath, delim):
-		fields.append(rec[index])		
+		fields.append(rec[index])	
+	#print(fields)	
 	return fields
 
 # get float fileds from a file
-def getFileColumnAsFloat(dirPath, delim, index):
-	flields = getFileColumnAsString(dirPath, delim, index)
+def getFileColumnAsFloat(dirPath, index, delim=","):
+	#print("{}  {}".format(dirPath, index))
+	fields = getFileColumnAsString(dirPath, index, delim=",")
 	return list(map(lambda v:float(v), fields))
 	
 # get float fileds from a file
-def getFileColumnAsInt(dirPath, delim, index):
-	flields = getFileColumnAsString(dirPath, delim, index)
+def getFileColumnAsInt(dirPath, index, delim=","):
+	fields = getFileColumnAsString(dirPath, delim, index)
 	return list(map(lambda v:int(v), fields))
 
 # soring

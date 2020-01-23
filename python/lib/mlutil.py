@@ -172,65 +172,95 @@ class CatLabelGenerator:
 		return self.encoders[indx].classes_	
 
 
-#loads delim separated file and extracts columns
 def loadDataFile(file, delim, cols, colIndices):
+	"""
+	loads delim separated file and extracts columns
+	"""
 	data = np.loadtxt(file, delimiter=delim, usecols=cols)
 	extrData = data[:,colIndices]
 	return (data, extrData)
 
-#loads delim separated file and extracts columns
 def loadFeatDataFile(file, delim, cols):
+	"""
+	loads delim separated file and extracts columns
+	"""
 	data = np.loadtxt(file, delimiter=delim, usecols=cols)
 	return data
 
-#extracts columns
 def extrColumns(arr, columns):
+	"""
+	extracts columns
+	"""
 	return arr[:, columns]
 
-# subsample feature and class label data	
 def subSample(featData, clsData, subSampleRate, withReplacement):
+	"""
+	subsample feature and class label data	
+	"""
 	sampSize = int(featData.shape[0] * subSampleRate)
 	sampledIndx = np.random.choice(featData.shape[0],sampSize, replace=withReplacement)
 	sampFeat = featData[sampledIndx]
 	sampCls = clsData[sampledIndx]
 	return(sampFeat, sampCls)
 
-#euclidean distance
 def euclideanDistance(x,y):
+	"""
+	euclidean distance
+	"""
 	return sqrt(sum(pow(a-b, 2) for a, b in zip(x, y)))
 
 def squareRooted(x):
+	"""
+	square root of sum square
+	"""
 	return round(sqrt(sum([a*a for a in x])),3)
 
-#cosine similarity
 def cosineSimilarity(x,y):
+	"""
+	cosine similarity
+	"""
 	numerator = sum(a*b for a,b in zip(x,y))
 	denominator = squareRooted(x) * squareRooted(y)
 	return round(numerator / float(denominator), 3)
 
 #cosine distance
 def cosineDistance(x,y):
+	"""
+	cosine distance
+	"""
 	return 1.0 - cosineSimilarity(x,y)
 
-# manhattan distance
 def manhattanDistance(x,y):
+	"""
+	manhattan distance
+	"""
 	return sum(abs(a-b) for a,b in zip(x,y))
 
 def nthRoot(value, nRoot):
+	"""
+	nth root
+	"""
 	rootValue = 1/float(nRoot)
 	return round (Decimal(value) ** Decimal(rootValue),3)
 
-# minkowski distance 
 def minkowskiDistance(x,y,pValue):
+	"""
+	minkowski distance
+	"""
 	return nthRoot(sum(pow(abs(a-b),pValue) for a,b in zip(x, y)), pValue)
 
-#jaccard similarity
 def jaccardSimilarityX(x,y):
+	"""
+	jaccard similarity
+	"""
 	intersectionCardinality = len(set.intersection(*[set(x), set(y)]))
 	unionCardinality = len(set.union(*[set(x), set(y)]))
 	return intersectionCardinality/float(unionCardinality)
 
 def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
+	"""
+	jaccard similarity
+	"""
 	sx = set(x)
 	sy = set(y)
 	sxyInt = sx.intersection(sy)
@@ -240,21 +270,27 @@ def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
 	unionCardinality = len(sx.union(sy))
 	return intCardinality/float(intCardinality + wx * len(sxIntDiff) + wy * len(syIntDiff))
 
-# norm
 def norm(values, po=2):
+	"""
+	norm
+	"""
 	no = sum(list(map(lambda v: pow(v,po), values)))
 	no = pow(no,1.0/po)
 	return list(map(lambda v: v/no, values))
 	
-# random one hot vector
 def createOneHotVec(size, indx = -1):
+	"""
+	random one hot vector
+	"""
 	vec = [0] * size
 	s = random.randint(0, size - 1) if indx < 0 else indx
 	vec[s] = 1
 	return vec
 
-# create all one hot vectors
 def createAllOneHotVec(size):
+	"""
+	create all one hot vectors
+	"""
 	vecs = list()
 	for i in range(size):
 		vec = [0] * size
@@ -262,8 +298,10 @@ def createAllOneHotVec(size):
 		vecs.append(vec)
 	return vecs
 
-# block shuffle 	
 def blockShuffle(data, blockSize):
+	"""
+	block shuffle 	
+	"""
 	numBlock = int(len(data) / blockSize)
 	remain = len(data) % blockSize
 	numBlock +=  (1 if remain > 0 else 0)
@@ -278,8 +316,10 @@ def blockShuffle(data, blockSize):
 			shuffled.extend(data[beg:])
 	return shuffled	
 
-# shuffle data
 def shuffle(data, numShuffle):
+	"""
+	shuffle data
+	"""
 	sz = len(data)
 	if numShuffle is None:
 		numShuffle = int(sz / 2)
@@ -290,15 +330,19 @@ def shuffle(data, numShuffle):
 		data[fi] = data[se]
 		data[se] = tmp	
 
-# random walk	
 def randomWalk(size, start, lowStep, highStep):
+	"""
+	random walk	
+	"""
 	cur = start
 	for i in range(size):
 		yield cur
 		cur += randomFloat(lowStep, highStep)
 
-# one hot binary encoding		
 def binaryEcodeCategorical(values, value):
+	"""
+	one hot binary encoding	
+	"""
 	size = len(values)
 	vec = [0] * size
 	for i in range(size):
@@ -306,8 +350,10 @@ def binaryEcodeCategorical(values, value):
 			vec[i] = 1
 	return vec		
 
-# Creates feature, label pair from sequence data	
 def createLabeledSeq(inputData, tw):
+	"""
+	Creates feature, label pair from sequence data	
+	"""
 	features = list()
 	labels = list()
 	l = len(inputDta)
@@ -318,7 +364,19 @@ def createLabeledSeq(inputData, tw):
 		labels.append(trainLabel)
 	return (features, labels)
 
-# Creates feature, label pair from sequence data in file	
 def createLabeledSeq(filePath, delim, index, tw):
+	"""
+	Creates feature, label pair from sequence data in file	
+	"""
 	seqData = getFileColumnAsFloat(filePath, delim, index)
 	return createLabeledSeq(seqData, tw)
+	
+def difference(data, interval=1):
+	"""
+	takes difference in time series data
+	"""
+	diff = list()
+	for i in range(interval, len(data)):
+		value = data[i] - data[i - interval]
+		diff.append(value)
+	return diff
