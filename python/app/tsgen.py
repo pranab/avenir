@@ -38,6 +38,9 @@ def loadConfig(configFile):
 	defValues["window.samp.interval"] = ("fixed", None)
 	defValues["window.samp.interval.params"] = (None, "missing time interval parameters")
 	defValues["window.samp.align.unit"] = (None, None)
+	defValues["output.value.type"] = ("float", None)
+	defValues["output.value.precision"] = (3, None)
+	defValues["output.time.format"] = ("epoch", None)
 	defValues["ts.base"] = ("mean", None)
 	defValues["ts.base.params"] = (None, "missing time series base parameters")
 	defValues["ts.trend"] = ("nothing", None)
@@ -48,17 +51,28 @@ def loadConfig(configFile):
 	defValues["ts.cycle.day.params"] = (None, None)
 	defValues["ts.random"] = (True, None)
 	defValues["ts.random.params"] = (None, None)
-	defValues["ts.value.type"] = ("float", None)
-	defValues["ts.value.precision"] = (3, None)
-	defValues["ts.time.format"] = ("epoch", None)
+	defValues["rw.init.value"] = (5.0, None)
+	defValues["rw.range"] = (1.0, None)
 	
 
 	config = Configuration(configFile, defValues)
 	return config
 
+def getDateTime(tm, tmFormat):
+	"""
+	returns either epoch time for formatted date time
+	"""
+	if tmFormat == "epoch":
+		dt = tm
+	else:
+		dt = datetime.fromtimestamp(tm)
+		dt = dt.strftime("%Y-%m-%d %H:%M:%S")
+	return dt
+
 
 if __name__ == "__main__":
-	confFile = sys.argv[1]
+	op = sys.argv[1]
+	confFile = sys.argv[2]
 	config = loadConfig(confFile)
 	delim = ","
 	
@@ -80,117 +94,150 @@ if __name__ == "__main__":
 		
 	sampAlignUnit = config.getStringConfig("window.samp.align.unit")[0]
 	
-	tsBaseType = config.getStringConfig("ts.base")[0]
-	items = config.getStringConfig("ts.base.params")[0].split(delim)
-	if tsBaseType == "mean":
-		tsMean = float(items[0])
-	elif tsBaseType == "exp":
-		tsAlpha = float(items[0])
-		tsHist = toFloatList(items[1:])
-	else:
-		raise ValueError("invalid base type")
-		
-	tsTrendType = config.getStringConfig("ts.trend")[0]
-	items = config.getStringConfig("ts.trend.params")[0].split(delim)
-	if tsTrendType == "linear":
-		tsTrendSlope = float(items[0])
-	elif tsTrendType == "quadratic":
-		tsTrendQuadParams = toFloatList(items)
-	else:
-		raise ValueError("invalid trend type")
-		
-	cycles = config.getStringConfig("ts.cycles")[0].split(delim)
-	yearCycle = weekCycle = dayCycle = None
-	for c in cycles:
-		key = "ts.cycle." + c + ".params"
-		cycleValues = config.getStringConfig(key)[0].split(delim)
-		if c == "year":
-			yearCycle = toFloatList(cycleValues)
-		elif c == "week":
-			weekCycle = toFloatList(cycleValues)
-		elif c == "day":
-			dayCycle = toFloatList(cycleValues)
-			
-		
-	tsRandom = config.getBooleanConfig("ts.random")[0]
-	if tsRandom:
-		items = config.getStringConfig("ts.random.params")[0].split(delim)
-		tsRandMean = float(items[0])
-		tsRandStdDev = float(items[1])
-		tsRandDistr = GaussianRejectSampler(tsRandMean,tsRandStdDev)
-		
-	tsValType = config.getStringConfig("ts.value.type")[0]
-	valPrecision = config.getIntConfig("ts.value.precision")[0]
-	tsTimeFormat = config.getStringConfig("ts.time.format")[0]
-	
-	if sampAlignUnit:
-		pastTm = timeAlign(pastTm, sampAlignUnit)	
-	
-	if intvDistr:
-		sampIntv = int(intvDistr.sample())
-	
-	sampTm = pastTm
-	counter = 0
+	#output
+	tsValType = config.getStringConfig("output.value.type")[0]
+	valPrecision = config.getIntConfig("output.value.precision")[0]
+	tsTimeFormat = config.getStringConfig("output.time.format")[0]
 	if tsValType == "int":
 		ouForm = "{},{}"
 	else:
 		ouForm = "{},{:."  + str(valPrecision) + "f}"
-
-	while (sampTm < curTm):
-		curVal = 0
-		
-		#base
-		if tsBaseType == "mean":
-			curVal = tsMean
-		else:
-			alphaInv = 1
-			for i in reversed(range(lenn(tsHist))):
-				curVal = tsAplha * alphaInv * tsHist[i] 
-				alphaInv *= (1.0 - tsAplha)
-		
-		#trend
-		if tsTrendType == "linear":
-			curVal += counter * tsTrendSlope
-		elif tsTrendType == "quadratic":
-			curVal = tsTrendQuadParams[0] * counter + tsTrendQuadParams[1] * counter * counter
-		counter += 1
-		
-		#cycle
-		if yearCycle:
-			month = monthOfYear(sampTm)
-			curVal += yearCycle[month]
-		if weekCycle:
-			day = dayOfWeek(sampTm)
-			curVal += weekCycle[day]
-		if dayCycle:
-			hour = hourOfDay(sampTm)
-			curVal += dayCycle[hour]
-
-		#random remainder
-		if tsRandStdDev:
-			curVal += tsRandDistr.sample()
 	
-		#date time
-		if tsTimeFormat == "epoch":
-			dt = sampTm
+	
+	#generic time series 
+	if op == "gen":
+		tsBaseType = config.getStringConfig("ts.base")[0]
+		items = config.getStringConfig("ts.base.params")[0].split(delim)
+		if tsBaseType == "mean":
+			tsMean = float(items[0])
+		elif tsBaseType == "exp":
+			tsAlpha = float(items[0])
+			tsHist = toFloatList(items[1:])
 		else:
-			dt = datetime.fromtimestamp(sampTm)
-			dt = dt.strftime("%Y-%m-%d %H:%M:%S")
+			raise ValueError("invalid base type")
 		
-		#update history
-		if tsBaseType == "exp":
-			tsHist.append(curVal)
-			tsHist.pop(0)
+		tsTrendType = config.getStringConfig("ts.trend")[0]
+		items = config.getStringConfig("ts.trend.params")[0].split(delim)
+		if tsTrendType == "linear":
+			tsTrendSlope = float(items[0])
+		elif tsTrendType == "quadratic":
+			tsTrendQuadParams = toFloatList(items)
+		else:
+			raise ValueError("invalid trend type")
 		
-		#value
-		if tsValType == "int":
-			curVal = int(curVal)
-
-		print(ouForm.format(dt, curVal))
+		cycles = config.getStringConfig("ts.cycles")[0].split(delim)
+		yearCycle = weekCycle = dayCycle = None
+		for c in cycles:
+			key = "ts.cycle." + c + ".params"
+			cycleValues = config.getStringConfig(key)[0].split(delim)
+			if c == "year":
+				yearCycle = toFloatList(cycleValues)
+			elif c == "week":
+				weekCycle = toFloatList(cycleValues)
+			elif c == "day":
+				dayCycle = toFloatList(cycleValues)
+			
+		
+		tsRandom = config.getBooleanConfig("ts.random")[0]
+		if tsRandom:
+			items = config.getStringConfig("ts.random.params")[0].split(delim)
+			tsRandMean = float(items[0])
+			tsRandStdDev = float(items[1])
+			tsRandDistr = GaussianRejectSampler(tsRandMean,tsRandStdDev)
+		
+	
+		if sampAlignUnit:
+			pastTm = timeAlign(pastTm, sampAlignUnit)	
 	
 		if intvDistr:
 			sampIntv = int(intvDistr.sample())
-		sampTm += sampIntv
+	
+		sampTm = pastTm
+		counter = 0
+
+		while (sampTm < curTm):
+			curVal = 0
 		
+			#base
+			if tsBaseType == "mean":
+				curVal = tsMean
+			else:
+				alphaInv = 1
+				for i in reversed(range(lenn(tsHist))):
+					curVal = tsAplha * alphaInv * tsHist[i] 
+					alphaInv *= (1.0 - tsAplha)
+		
+			#trend
+			if tsTrendType == "linear":
+				curVal += counter * tsTrendSlope
+			elif tsTrendType == "quadratic":
+				curVal = tsTrendQuadParams[0] * counter + tsTrendQuadParams[1] * counter * counter
+			counter += 1
+		
+			#cycle
+			if yearCycle:
+				month = monthOfYear(sampTm)
+				curVal += yearCycle[month]
+			if weekCycle:
+				day = dayOfWeek(sampTm)
+				curVal += weekCycle[day]
+			if dayCycle:
+				hour = hourOfDay(sampTm)
+				curVal += dayCycle[hour]
+
+			#random remainder
+			if tsRandStdDev:
+				curVal += tsRandDistr.sample()
+	
+			#date time
+			if tsTimeFormat == "epoch":
+				dt = sampTm
+			else:
+				dt = datetime.fromtimestamp(sampTm)
+				dt = dt.strftime("%Y-%m-%d %H:%M:%S")
+		
+			#update history
+			if tsBaseType == "exp":
+				tsHist.append(curVal)
+				tsHist.pop(0)
+		
+			#value
+			if tsValType == "int":
+				curVal = int(curVal)
+
+			print(ouForm.format(dt, curVal))
+	
+			#next
+			if intvDistr:
+				sampIntv = int(intvDistr.sample())
+			sampTm += sampIntv
+	
+	#random walk time series		
+	elif op == "rw":
+		initVal = config.getFloatConfig("rw.init.value")[0]
+		ranRange = config.getFloatConfig("rw.range")[0]
+		sampTm = pastTm
+		curVal = initVal
+		
+		while (sampTm < curTm):
+			#value
+			if tsValType == "int":
+				curVal = int(curVal)
+				
+			#date time
+			dt = getDateTime(sampTm, tsTimeFormat)
+			
+			print(ouForm.format(dt, curVal))
+			
+			#next
+			curVal += randomFloat(-ranRange, ranRange)
+			
+			if intvDistr:
+				sampIntv = int(intvDistr.sample())
+			sampTm += sampIntv
+	
+	else:
+		raise ValueError("ivalid time series type")
+			
 	
 

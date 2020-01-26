@@ -34,46 +34,59 @@ typeInt = "int"
 typeFloat = "float"
 typeString = "string"
 
+secInMinute = 60
 secInHour = 60 * 60
 secInDay = 24 * secInHour
 secInWeek = 7 * secInDay
 secInYear = 365 * secInDay
 secInMonth = secInYear / 12
 
-#generates ID
 def genID(len):
+	"""
+	generates ID
+	"""
 	id = ""
 	for i in range(len):
 		id = id + selectRandomFromList(tokens)
 	return id
 
-# generate list of IDs
 def genIdList(numId, idSize):
+	"""
+	generate list of IDs
+	"""
 	iDs = []
 	for i in range(numId):
 		iDs.append(genID(idSize))
 	return iDs
 	
-#generates ID consisting of digits only		
 def genNumID(len):
+	"""
+	generates ID consisting of digits onl
+	"""
 	id = ""
 	for i in range(len):
 		id = id + selectRandomFromList(numTokens)
 	return id
 
-# generate list of numeric IDs
 def genNumIdList(numId, idSize):
+	"""
+	generate list of numeric IDs
+	"""
 	iDs = []
 	for i in range(numId):
 		iDs.append(genNumID(idSize))
 	return iDs
 
-#select an element randomly from a list		
 def selectRandomFromList(list):
+	"""
+	select an element randomly from a lis
+	"""
 	return list[randint(0, len(list)-1)]
 
-#generates random sublist from a list	
 def selectRandomSubListFromList(list, num):
+	"""
+	generates random sublist from a list
+	"""
 	sel = selectRandomFromList(list)
 	selSet = {sel}
 	selList = [sel]
@@ -84,8 +97,10 @@ def selectRandomSubListFromList(list, num):
 			selList.append(sel)		
 	return selList
 
-#generates IP address	
 def genIpAddress():
+	"""
+	generates IP address
+	"""
 	i1 = randint(0,256)
 	i2 = randint(0,256)
 	i3 = randint(0,256)
@@ -93,12 +108,16 @@ def genIpAddress():
 	ip = "%d.%d.%d.%d" %(i1,i2,i3,i4)
 	return ip
 
-#current time in ms	
 def curTimeMs():
+	"""
+	current time in ms
+	"""
 	return int((datetime.utcnow() - datetime(1970,1,1)).total_seconds() * 1000)
 
-#second deg polynomial 	
 def secDegPolyFit(x1, y1, x2, y2, x3, y3):
+	"""
+	second deg polynomial 	
+	"""
 	t = (y1 - y2) / (x1 - x2)
 	a = t - (y2 - y3) / (x2 - x3)
 	a = a / (x1 - x3)
@@ -106,48 +125,62 @@ def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	c = y1 - a * x1 * x1 - b * x1
 	return (a, b, c)
 
-#range limit
 def range_limit(val, min, max):
+	"""
+	range limit
+	"""
 	if (val < min):
 		val = min
 	elif (val > max):
 		val = max
 	return val	
 
-#strips number of chars from both ends	
 def stripFileLines(filePath, offset):
+	"""
+	strips number of chars from both ends
+	"""
 	fp = open(filePath, "r")
 	for line in fp:
 		stripped = line[offset:len(line) - 1 - offset]
 		print (stripped)
 	fp.close()
 
-# generate lat log within limits
 def genLatLong(lat1, long1, lat2, long2):
+	"""
+	generate lat log within limits
+	"""
 	lat = lat1 + (lat2 - lat1) * random.random()
 	longg = long1 + (long2 - long1) * random.random()
 	return (lat, longg)
 
-#min limit
 def minLimit(val, limit):
+	"""
+	min limit
+	"""
 	if (val < limit):
 		val = limit
 	return val;
 
-# max limit
 def maxLimit(val, limit):
+	"""
+	max limit
+	"""
 	if (val > limit):
 		val = limit
 	return val;
 
-# if out side range sample within range
 def rangeSample(val, minLim, maxLim):
+	"""
+	if out side range sample within range
+	"""
 	if val < minLim or val > maxLim:
 		val = randint(minLim, maxLim)
 	return val
 
-# random unique list of integers within range
 def genRandomIntListWithinRange(size, minLim, maxLim):
+	"""
+	random unique list of integers within range
+	"""
 	values = set()
 	for i in range(size):
 		val = randint(minLim, maxLim)
@@ -155,18 +188,24 @@ def genRandomIntListWithinRange(size, minLim, maxLim):
 			values.add(val)
 	return list(values)
 
-#preturbs a value within range
 def preturbScalar(value, range):
+	"""
+	preturbs a value within range
+	"""
 	scale = 1.0 - range + 2 * range * random.random() 
 	return value * scale
 	
-#preturbs a list within range
 def preturbVector(values, range):
+	"""
+	preturbs a list within range
+	"""
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
 
-# splits a list into sub lists
 def splitList(itms, numGr):
+	"""
+	splits a list into sub lists
+	"""
 	tcount = len(itms)
 	cItems = list(itms)
 	sz = int(len(cItems) / numGr)
@@ -186,14 +225,18 @@ def splitList(itms, numGr):
 		groups.append(gr)
 	return groups	
 
-#multiplies a list within range
 def multVector(values, range):
+	"""
+	multiplies a list within range
+	"""
 	scale = 1.0 - range + 2 * range * random.random()
 	nValues = list(map(lambda va: va * scale, values))
 	return nValues
 			
-# breaks a line into fields and keeps only specified fileds and returns new line
 def extractFields(line, delim, keepIndices):
+	"""
+	breaks a line into fields and keeps only specified fileds and returns new line
+	"""
 	items = line.split(delim)
 	newLine = []
 	for i in keepIndices:
@@ -201,6 +244,9 @@ def extractFields(line, delim, keepIndices):
 	return delim.join(newLine)
 
 def remFields(line, delim, remIndices):
+	"""
+	removes fields from delim separated string
+	"""
 	items = line.split(delim)
 	newLine = []
 	for i in range(len(items)):
@@ -208,8 +254,10 @@ def remFields(line, delim, remIndices):
 			newLine.append(line[i])
 	return delim.join(newLine)
 
-# checks if array contains an item 	
 def arrayContains(arr, item):
+	"""
+	checks if array contains an item 
+	"""
 	contains = True
 	try:
 		arr.index(item)
@@ -217,18 +265,24 @@ def arrayContains(arr, item):
 		contains = False
 	return contains
 
-# int array from delim separated string
 def strToIntArray(line, delim):	
+	"""
+	int array from delim separated string
+	"""
 	arr = line.split(delim)
 	return [int(a) for a in arr]
 
-# float array from delim separated string
 def strToFloatArray(line, delim):	
+	"""
+	float array from delim separated string
+	"""
 	arr = line.split(delim)
 	return [float(a) for a in arr]
 
-# int array from delim separated string or range
 def strListOrRangeToIntArray(line):	
+	"""
+	int array from delim separated string or range
+	"""
 	varr = line.split(",")
 	if (len(varr) > 1):
 		iarr =  list(map(lambda v: int(v), varr))
@@ -242,8 +296,10 @@ def strListOrRangeToIntArray(line):
 			raise ValueError("failed to generate list")
 	return iarr
 				
-#converts any type to string	
 def toStr(val, precision):
+	"""
+	converts any type to string	
+	"""
 	if type(val) is float:
 		format = "%" + ".%df" %(precision)
 		sVal = format %(val)
@@ -251,25 +307,35 @@ def toStr(val, precision):
 		sVal = str(val)
 	return sVal
 
-# converts list of any type to delim separated string
 def toStrFromList(values, precision, delim=","):
+	"""
+	converts list of any type to delim separated string
+	"""
 	sValues = list(map(lambda v: toStr(v, precision), values))
 	return delim.join(sValues)
 
-# convert to int list
 def toIntList(values):
+	"""
+	convert to int list
+	"""
 	return list(map(lambda va: int(va), values))
 		
-# convert to float list
 def toFloatList(values):
+	"""
+	convert to float list
+	"""
 	return list(map(lambda va: float(va), values))
 
-# convert to string list
 def toStrList(values, precision):
+	"""
+	convert to string lis
+	"""
 	return list(map(lambda va: toStr(va, precision), values))
 
-# return typed value given string
 def typedValue(val):
+	"""
+	return typed value given string
+	"""
 	tVal = None
 	if type(val) == str:
 		lVal = val.lower()
@@ -308,8 +374,10 @@ def typedValue(val):
 		tVal = val		
 	return tVal
 	
-#get all files recursively
 def getAllFiles(dirPath):
+	"""
+	get all files recursively
+	"""
 	filePaths = []
 	for (thisDir, subDirs, fileNames) in os.walk(dirPath):
 		for fileName in fileNames:
@@ -317,8 +385,10 @@ def getAllFiles(dirPath):
 	filePaths.sort()
 	return filePaths
 
-# get file contents in directory
 def getFileContent(path, verbose):
+	"""
+	get file contents in directory
+	"""
 	# dcument list
 	docComplete  = []
 	filePaths = getAllFiles(path)
@@ -333,65 +403,89 @@ def getFileContent(path, verbose):
 			docComplete.append(content)
 	return (docComplete, filePaths)
 
-# get lines from a file
 def getFileLines(dirPath):
+	"""
+	get lines from a file
+	"""
 	lines = list()
 	for li in fileRecGen(dirPath):
 		lines.append(li)		
 	return lines
 
-# get string fileds from a file
 def getFileColumnAsString(dirPath, index, delim=","):
+	"""
+	get string fileds from a file
+	"""
 	fields = list()
 	for rec in fileRecGen(dirPath, delim):
 		fields.append(rec[index])	
 	#print(fields)	
 	return fields
 
-# get float fileds from a file
 def getFileColumnAsFloat(dirPath, index, delim=","):
+	"""
+	get float fileds from a file
+	"""
 	#print("{}  {}".format(dirPath, index))
 	fields = getFileColumnAsString(dirPath, index, delim=",")
 	return list(map(lambda v:float(v), fields))
 	
-# get float fileds from a file
 def getFileColumnAsInt(dirPath, index, delim=","):
+	"""
+	get float fileds from a file
+	"""
 	fields = getFileColumnAsString(dirPath, delim, index)
 	return list(map(lambda v:int(v), fields))
 
-# soring
 def takeFirst(elem):
-    return elem[0]
+	"""
+	sorting
+	"""
+	return elem[0]
 
-# soring
 def takeSecond(elem):
-    return elem[1]
+	"""
+	sorting
+	"""
+	return elem[1]
 
-# soring
 def takeThird(elem):
-    return elem[2]
+	"""
+	sorting
+	"""
+	return elem[2]
 
-# keyed counter
 def addToKeyedCounter(dCounter, key, count):
+	"""
+	keyed counter
+	"""
 	curCount = dCounter.get(key, 0)
 	dCounter[key] = curCount + count
 
-# keyed counter
 def incrKeyedCounter(dCounter, key):
+	"""
+	keyed counter
+	"""
 	addToKeyedCounter(dCounter, key, 1)
 
-# keyed list
 def appendKeyedList(dList, key, elem):
+	"""
+	keyed list
+	"""
 	curList = dList.get(key, [])
 	curList.append(elem)
 	dList[key] = curList
 
-# Returns True is string is a number
 def isNumber(st):
-    return st.replace('.','',1).isdigit()
+	"""
+	Returns True is string is a number
+	"""
+	return st.replace('.','',1).isdigit()
 
-# file record generator
 def fileRecGen(filePath, delim = None):
+	"""
+	file record generator
+	"""
 	with open(filePath, "r") as fp:
 		for line in fp:	
 			line = line[:-1]
@@ -399,47 +493,94 @@ def fileRecGen(filePath, delim = None):
 				line = line.split(delim)
 			yield line
 
-# returns int list
 def asIntList(items):
+	"""
+	returns int list
+	"""
 	return [int(i) for i in items]
 			
-# returns float list
 def asFloatList(items):
+	"""
+	returns float list
+	"""
 	return [float(i) for i in items]
 
-# current and past time
 def pastTime(interval, unit):
+	"""
+	current and past time
+	"""
 	curTime = int(time.time())
 	if unit == "d":
 		pastTime = curTime - interval * secInDay
 	elif unit == "h":
 		pastTime = curTime - interval * secInHour
+	elif unit == "m":
+		pastTime = curTime - interval * secInMinute
 	else:
 		raise ValueError("invalid time unit")
 	return (curTime, pastTime)
 
-# hour aligned time	
+def minuteAlign(ts):
+	"""
+	minute aligned time	
+	"""
+	return int((ts / secInMinute)) * secInMinute
+
 def hourAlign(ts):
-	return (ts / secInHour) * secInHour
+	"""
+	hour aligned time	
+	"""
+	return int((ts / secInHour)) * secInHour
 	
-# hour aligned time	
 def dayAlign(ts):
-	return (ts / secInDay) * secInDay
-	
-# day of week
+	"""
+	day aligned time	
+	"""
+	return int((ts / secInDay)) * secInDay
+
+def timeAlign(ts, unit):
+	"""
+	boundary alignment of time
+	"""
+	alignedTs = 0
+	if unit == "m":
+		alignedTs = minuteAlign(ts)
+	elif unit == "h":
+		alignedTs = hourAlign(ts)
+	elif unit == "d":
+		alignedTs = dayAlign(ts)
+	else:
+		raise ValueError("invalid time unit")
+	return 	alignedTs
+
+def monthOfYear(ts):
+	"""
+	month of year
+	"""
+	rem = ts % secInYear
+	dow = int(rem / secInMonth)
+	return dow
+		
 def dayOfWeek(ts):
+	"""
+	day of week
+	"""
 	rem = ts % secInWeek
-	dow = rem / secInDay
+	dow = int(rem / secInDay)
 	return dow
 
-# hour of day	
 def hourOfDay(ts):
+	"""
+	hour of day
+	"""
 	rem = ts % secInDay
-	hod = rem / secInHour
+	hod = int(rem / secInHour)
 	return hod
 	
-# process command line args and returns args as typed values
 def processCmdLineArgs(expectedTypes, usage):
+	"""
+	process command line args and returns args as typed values
+	"""
 	args = []
 	numComLineArgs = len(sys.argv)
 	numExpected = len(expectedTypes)
@@ -461,8 +602,10 @@ def processCmdLineArgs(expectedTypes, usage):
 		sys.exit(1)
 	return args
 	
-# mutate string multiple times
 def mutateString(val, numMutate, ctype):
+	"""
+	mutate string multiple times
+	"""
 	mutations = set()
 	for i in range(numMutate):
 		j = randint(0, len(val)-1)
@@ -477,14 +620,18 @@ def mutateString(val, numMutate, ctype):
 			mutations.add(j)
 	return val
 
-#swap two elements
 def swap(values, first, second):
+	"""
+	swap two elements
+	"""
 	t = values[first]
 	values[first] = values[second]	
 	values[second] = t
 
-# creates logger
 def createLogger(name, logFilePath, logLevName):
+	"""
+	creates logger
+	"""
 	logger = logging.getLogger(name)
 	fHandler = logging.FileHandler(logFilePath)
 	logLev = logLevName.lower()
@@ -509,6 +656,9 @@ def createLogger(name, logFilePath, logLevName):
 
 @contextmanager
 def suppressStdout():
+	"""
+	suppress stdout
+	"""
 	with open(os.devnull, "w") as devnull:
 		oldStdout = sys.stdout
 		sys.stdout = devnull
@@ -517,8 +667,10 @@ def suppressStdout():
 		finally:
 			sys.stdout = oldStdout
 		
-# step function
 class StepFunction:
+	"""
+	step function
+	"""
 	def __init__(self,  *values):
 		self.points = values
 	
@@ -541,8 +693,10 @@ class StepFunction:
 		
 	
 
-# dummy variable generator for categorical variables
 class DummyVarGenerator:
+	"""
+	dummy variable generator for categorical variable
+	"""
 	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim):
 		self.rowSize = rowSize
 		self.catValues = catValues

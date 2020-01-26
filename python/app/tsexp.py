@@ -30,6 +30,10 @@ from util import *
 from mlutil import *
 from sampler import *
 
+"""
+Various data exploration functions. Some are applicable for time series only.
+"""
+
 def loadConfig(configFile):
 	"""
 	load config file
@@ -38,12 +42,17 @@ def loadConfig(configFile):
 	defValues["data.filePath"] = (None, "missing file path")
 	defValues["data.col.index"] = (None, "missing col index")
 	defValues["data.row.range"] = ("all", None)
+	defValues["data.filePath.extra"] = (None, None)
+	defValues["data.col.index.extra"] = (None, None)
+	defValues["data.row.range.extra"] = ("all", None)
 	defValues["diff.order"] = (1, None)
 	defValues["acf.lags"] = (40, None)
 	defValues["acf.alpha"] = (None, None)
 	defValues["acf.diff"] = (False, None)
 	defValues["pacf.lags"] = (40, None)
 	defValues["pacf.alpha"] = (None, None)
+	defValues["ccf.normed"] = (True, None)
+	defValues["ccf.maxlags"] = (10, None)
 	defValues["adf.regression"] = ("c", None)
 	defValues["adf.autolag"] = ("AIC", None)
 	defValues["kpss.regression"] = ("c", None)
@@ -53,15 +62,32 @@ def loadConfig(configFile):
 	config = Configuration(configFile, defValues)
 	return config
 
-def loadData(config):
+def appendKey(key, extra):
+	"""
+	appends config key
+	"""
+	if extra:
+		key = key + ".extra"
+	return key	
+
+def loadData(config, extra=False):
 	"""
 	loads a column
 	"""
-	filePath = config.getStringConfig("data.filePath")[0]
-	col = config.getIntConfig("data.col.index")[0]
+	key = "data.filePath"
+	key = appendKey(key, extra)
+	filePath = config.getStringConfig(key)[0]
+	
+	key = "data.col.index"
+	key = appendKey(key, extra)
+	col = config.getIntConfig(key)[0]
 	data = getFileColumnAsFloat(filePath ,col,  ",")
-	if not config.getStringConfig("data.row.range")[0] == "all":
-		ra = config.getIntListConfig("data.row.range", ",")[0]
+	
+	
+	key = "data.row.range"
+	key = appendKey(key, extra)
+	if not config.getStringConfig(key)[0] == "all":
+		ra = config.getIntListConfig(key, ",")[0]
 		data = data[ra[0]:ra[1]]
 	return np.array(data)
 
@@ -105,7 +131,16 @@ if __name__ == "__main__":
 		alpha =config.getFloatConfig("pacf.alpha")[0]
 		tsaplots.plot_pacf(data, lags = lags, alpha = alpha)
 		pyplot.show()
-	
+
+	#cross correlation
+	elif op == "ccf":
+		dataSec = loadData(config, True)
+		normed = config.getBooleanConfig("ccf.normed")[0]
+		maxlags = config.getIntConfig("ccf.maxlags")[0]
+		pyplot.xcorr(data, dataSec, normed=normed, maxlags=maxlags)
+		pyplot.show()
+		
+		
 	#stationarity test
 	elif op == "adf":
 		regression = config.getStringConfig("adf.regression")[0]
