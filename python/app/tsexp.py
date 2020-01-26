@@ -24,6 +24,7 @@ from statsmodels.graphics import tsaplots
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
 from statsmodels.stats.stattools import jarque_bera
+from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -46,6 +47,7 @@ def loadConfig(configFile):
 	defValues["data.col.index.extra"] = (None, None)
 	defValues["data.row.range.extra"] = ("all", None)
 	defValues["diff.order"] = (1, None)
+	defValues["trend.remove"] = (False, None)
 	defValues["acf.lags"] = (40, None)
 	defValues["acf.alpha"] = (None, None)
 	defValues["acf.diff"] = (False, None)
@@ -110,6 +112,29 @@ if __name__ == "__main__":
 			data = difference(data)
 		pyplot.plot(data)
 		pyplot.show()
+
+	#trend with linear regression
+	elif op == "trend":
+		sz = len(data)
+		X = list(range(0, sz))
+		X = np.reshape(X, (sz, 1))
+		model = LinearRegression()
+		model.fit(X, data)
+		trend = model.predict(X)
+		sc = model.score(X, data)
+		coef = model.coef_
+		intc = model.intercept_
+		print("R square {:.6f}".format(sc))
+		print("intercept  {:.6f} coeffficient {:.6f} ".format(intc, coef[0]))
+		pyplot.plot(data)
+		pyplot.plot(trend)
+		pyplot.show()
+		
+		remTrend = config.getBooleanConfig("trend.remove")[0]
+		if remTrend:
+			detrended = [data[i]-trend[i] for i in range(0, sz)]
+			pyplot.plot(detrended)
+			pyplot.show()
 
 	#auto correlation
 	elif op == "acf":
