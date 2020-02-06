@@ -19,6 +19,7 @@ import os
 import sys
 from random import randint
 import time
+import math
 from datetime import datetime
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -26,7 +27,8 @@ from mlutil import *
 from sampler import *
 
 """
-Time series generation with optional trend, cycles and random remainder components
+Time series generation for general time series with optional trend, cycles and random remainder 
+components and random walk time series 
 """
 
 def loadConfig(configFile):
@@ -53,6 +55,9 @@ def loadConfig(configFile):
 	defValues["ts.random.params"] = (None, None)
 	defValues["rw.init.value"] = (5.0, None)
 	defValues["rw.range"] = (1.0, None)
+	defValues["corr.file.path"] = (None, None)
+	defValues["corr.file.col"] = (None, None)
+	defValues["corr.noise.stddev"] = (None, None)
 	
 
 	config = Configuration(configFile, defValues)
@@ -122,6 +127,8 @@ if __name__ == "__main__":
 			tsTrendSlope = float(items[0])
 		elif tsTrendType == "quadratic":
 			tsTrendQuadParams = toFloatList(items)
+		elif tsTrendType == "logistic":
+			tsTrendLogParams = toFloatList(items)
 		else:
 			raise ValueError("invalid trend type")
 		
@@ -171,7 +178,10 @@ if __name__ == "__main__":
 			if tsTrendType == "linear":
 				curVal += counter * tsTrendSlope
 			elif tsTrendType == "quadratic":
-				curVal = tsTrendQuadParams[0] * counter + tsTrendQuadParams[1] * counter * counter
+				curVal += tsTrendQuadParams[0] * counter + tsTrendQuadParams[1] * counter * counter
+			elif tsTrendType == "logistic":
+				ex = math.exp(-tsTrendLogParams[0] * counter)
+				curVal += tsTrendLogParams[0] * (1.0 - ex) / (1.0 + ex)
 			counter += 1
 		
 			#cycle
@@ -236,6 +246,20 @@ if __name__ == "__main__":
 				sampIntv = int(intvDistr.sample())
 			sampTm += sampIntv
 	
+	# generates correlated time seriec
+	elif op == "corr":
+		refFile = config.getStringConfig("corr.file.path")[0]
+		refCol = config.getIntConfig("corr.file.col")[0]
+		noiseSd = config.getFloatConfig("corr.noise.stddev")[0]
+		noiseDistr = GaussianRejectSampler(0,noiseSd)
+		for rec in fileRecGen(refFile, ","):
+			val = float(rec[refCol]) + noiseDistr.sample()
+			val = "%.3f" %(val)
+			rec[refCol] = val
+			nRec = ",".join(rec)
+			print(nRec)
+
+		
 	else:
 		raise ValueError("ivalid time series type")
 			
