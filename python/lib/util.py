@@ -254,6 +254,15 @@ def remFields(line, delim, remIndices):
 			newLine.append(line[i])
 	return delim.join(newLine)
 
+def extractList(data, indices):
+	"""
+	extracts list from another list, given indices
+	"""
+	exList = list()
+	for i in indices:
+		exList.append(data[i])
+	return exList
+	
 def arrayContains(arr, item):
 	"""
 	checks if array contains an item 
@@ -328,7 +337,7 @@ def toFloatList(values):
 
 def toStrList(values, precision):
 	"""
-	convert to string lis
+	convert to string list
 	"""
 	return list(map(lambda va: toStr(va, precision), values))
 
@@ -437,6 +446,60 @@ def getFileColumnAsInt(dirPath, index, delim=","):
 	fields = getFileColumnAsString(dirPath, delim, index)
 	return list(map(lambda v:int(v), fields))
 
+def getFileAsIntMatrix(dirPath, columns, delim=","):
+	"""
+	extracts int matrix from csv file given column indices with each row being  concatenation of 
+	extracted column values row size = num of columns
+	"""
+	mat = list()
+	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
+		mat.append(asIntList(rec))
+	return mat
+
+def getFileAsFloatMatrix(dirPath, columns, delim=","):
+	"""
+	extracts float matrix from csv file given column indices with each row being concatenation of  
+	extracted column values row size = num of columns
+	"""
+	mat = list()
+	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
+		mat.append(asFloatList(rec))
+	return mat
+		
+def getMultipleFileAsInttMatrix(dirPathWithCol,  delim=","):
+	"""
+	extracts float matrix from from csv files given column index for each file. 
+	num of columns  = number of rows in each file and num of rows = number of files
+	"""
+	mat = list()
+	minLen = -1
+	for path, col in dirPathWithCol:
+		colVals = getFileColumnAsInt(path, col, delim)
+		if minLen < 0 or len(colVals) < minLen:
+			minLen = len(colVals)
+		mat.append(colVals)
+
+	#make all same length
+	mat = list(map(lambda li:li[:minLen], mat))	
+	return mat
+
+def getMultipleFileAsFloatMatrix(dirPathWithCol,  delim=","):
+	"""
+	extracts float matrix from from csv files given column index for each file. 
+	num of columns  = number of rows in each file and num of rows = number of files
+	"""
+	mat = list()
+	minLen = -1
+	for path, col in dirPathWithCol:
+		colVals = getFileColumnAsFloat(path, col, delim)
+		if minLen < 0 or len(colVals) < minLen:
+			minLen = len(colVals)
+		mat.append(colVals)
+	
+	#make all same length
+	mat = list(map(lambda li:li[:minLen], mat))	
+	return mat
+
 def takeFirst(elem):
 	"""
 	sorting
@@ -492,6 +555,15 @@ def fileRecGen(filePath, delim = None):
 			if delim is not None:
 				line = line.split(delim)
 			yield line
+
+def fileSelFieldsRecGen(dirPath, columns, delim=","):
+	"""
+	file record generator given column indices 
+	"""
+	columns = strToIntArray(columns, delim)
+	for rec in fileRecGen(dirPath, delim):
+		extracted = extractList(rec, columns)
+		yield extracted
 
 def asIntList(items):
 	"""

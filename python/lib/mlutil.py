@@ -28,8 +28,10 @@ import jprops
 from util import *
 from sampler import *
 
-#configuration management
 class Configuration:
+	"""
+	Configuration management. Supports default value, mandatory value and typed value.
+	"""
 	def __init__(self, configFile, defValues, verbose=False):
 		configs = {}
 		with open(configFile) as fp:
@@ -99,7 +101,8 @@ class Configuration:
 		delSepStr = self.getStringConfig(name)
 		intList = strToIntArray(delSepStr[0], delim)
 		return (intList, delSepStr[1])
-
+	
+	# handles default
 	def handleDefault(self, name):
 		dVal = self.defValues[name]
 		if (dVal[1] is None):
@@ -107,15 +110,18 @@ class Configuration:
 		else:
 			raise ValueError(dVal[1])
 		return val
-		
+	
+	# true is value is None	
 	def isNone(self, name):
 		return self.configs[name].lower() == "none"
-		
+	
+	# true if the value is default	
 	def isDefault(self, name):
 		de = self.configs[name] == "_"
 		#print de
 		return de
-		
+	
+	# returns one of two string parameters	
 	def eitherOrStringConfig(self, firstName, secondName):
 		if not self.isNone(firstName):
 			first = self.getStringConfig(firstName)[0]
@@ -130,6 +136,7 @@ class Configuration:
 				raise ValueError("at least one of the two parameters should be set " + firstName + "  " + secondName)
 		return (first, second)
 
+	# returns one of two int parameters	
 	def eitherOrIntConfig(self, firstName, secondName):
 		if not self.isNone(firstName):
 			first = self.getIntConfig(firstName)[0]
@@ -144,8 +151,11 @@ class Configuration:
 				raise ValueError("at least one of the two parameters should be set " + firstName + "  " + secondName)
 		return (first, second)
 	
-# label generator for categorical variables
+
 class CatLabelGenerator:
+	"""
+	label generator for categorical variables
+	"""
 	def __init__(self,  catValues, delim):
 		self.encoders = {}
 		self.catValues = catValues
@@ -223,7 +233,6 @@ def cosineSimilarity(x,y):
 	denominator = squareRooted(x) * squareRooted(y)
 	return round(numerator / float(denominator), 3)
 
-#cosine distance
 def cosineDistance(x,y):
 	"""
 	cosine distance
@@ -380,3 +389,23 @@ def difference(data, interval=1):
 		value = data[i] - data[i - interval]
 		diff.append(value)
 	return diff
+	
+def normalizeMatrix(data, norm, axis=1):
+	"""
+	normalized each row of the matrix
+	"""
+	normalized = preprocessing.normalize(data,norm=norm, axis=axis)
+	return normalized
+	
+def standardizeMatrix(data, axis=0):
+	"""
+	standardizes each column of the matrix with mean and std deviation
+	"""
+	standardized = preprocessing.scale(data, axis=axis)
+	return standardized
+
+def asNumpyArray(data):
+	"""
+	converts to numpy array
+	"""
+	return np.array(data)

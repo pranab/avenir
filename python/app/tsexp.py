@@ -60,6 +60,7 @@ def loadConfig(configFile):
 	defValues["kpss.regression"] = ("c", None)
 	defValues["hist.cumulative"] = (False, None)
 	defValues["hist.density"] = (False, None)
+	defValues["cov.file.paths"] = (None, "missing list of file path and column index")
 	
 	config = Configuration(configFile, defValues)
 	return config
@@ -98,7 +99,8 @@ if __name__ == "__main__":
 	op = sys.argv[1]
 	confFile = sys.argv[2]
 	config = loadConfig(confFile)
-	data = loadData(config)
+	if not op == "cov":
+		data = loadData(config)
 	
 	#plot data
 	if op == "draw":
@@ -204,6 +206,19 @@ if __name__ == "__main__":
 		pyplot.hist(data, cumulative=cumulative, density=density)
 		pyplot.show()
 
+	#co variance
+	elif op == "cov":
+		pcListStr = config.getStringConfig("cov.file.paths")[0].split(",")
+		pathColList = list()
+		for pc in pcListStr:
+			items = pc.split(":")
+			pathCol = (items[0], int(items[1]))
+			pathColList.append(pathCol)
+		values = asNumpyArray(getMultipleFileAsFloatMatrix(pathColList))
+		print(values)
+		cov = np.cov(values)
+		print("co variance matrix")
+		print(cov)
 		
 	else:
 		raise ValueError("unknown command")
