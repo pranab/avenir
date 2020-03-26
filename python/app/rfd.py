@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/Users/pranab/Tools/anaconda/bin/python
 
 # Package imports
 import os
@@ -18,7 +18,7 @@ if len(sys.argv) > 2:
 
 # execute		
 mode = rfClass.getMode()
-print "running mode: " + mode
+print("running mode: " + mode)
 if mode == "train":
 	rfClass.train()
 elif mode == "trainValidate":
@@ -28,13 +28,13 @@ elif mode == "trainValidate":
 		rfClass.trainValidateSearch()
 elif mode == "predict":
 	clsData = rfClass.predict()
-	print clsData
+	print(clsData)
 elif mode == "validate":
 	rfClass.validate()
 elif mode == "autoTrain":
 	rfClass.autoTrain()
 else:
-	print "invalid running mode" 
+	print("invalid running mode")
 
 	
 	

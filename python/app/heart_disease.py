@@ -145,7 +145,7 @@ if op == "generate":
 		rec =  ",".join(strFeatures) + "," + claz
 		if keyLen:
 			rec = genID(keyLen) + "," + rec
-		print rec
+		print(rec)
 		
 elif op == "genDummyVar":		
 	file = sys.argv[2]
@@ -169,7 +169,7 @@ elif op == "genDummyVar":
 	fp = open(file, "r")
 	for row in fp:
 		newRow = dummyVarGen.processRow(row)
-		print newRow.strip()
+		print(newRow.strip())
 	fp.close()
 	
 	

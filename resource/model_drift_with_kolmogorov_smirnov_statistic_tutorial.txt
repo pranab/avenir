@@ -14,7 +14,7 @@ Follow instructions in spark_dependency.txt
 
 Create stats for reference data
 ===============================
-./prsale.py stat <num_prod min_mean_elapsed_sec> <max_mean_elapsed_sec> <min_stddev_elapsed_sec> <max_stddev_elapsed_sec> <min_mean_quant> <max_mean_quant> <min_stddev_quant> <max_stddev_quant> > pstat1.txt
+./prsale.py stat <num_prod> <min_mean_elapsed_sec> <max_mean_elapsed_sec> <min_stddev_elapsed_sec> <max_stddev_elapsed_sec> <min_mean_quant> <max_mean_quant> <min_stddev_quant> <max_stddev_quant> > pstat1.txt
 
 where
 num_prod = number of products e.g 10
@@ -35,7 +35,7 @@ where
 start_num_days_in_past = num of days in past for for start time e.g. 120
 end_num_days_in_past = num of days in past for for end time e.g 60
 
-copy
+copy to input dir
 ./ks.sh cpInp psale1.txt
 
 Run Spark job to generate time interval in reference data

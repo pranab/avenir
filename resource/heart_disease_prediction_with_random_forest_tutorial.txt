@@ -1,0 +1,98 @@
+This tutorial is for predicting heart disease with random proest as implemented in scikit learn
+python library. 
+
+Setup
+=====
+Make sure you have ../lib  and ../supv directory with all the python files wrt where heart_disease.py
+and rfd.py are
+
+
+Generate data
+=============
+./heart_disease.py generate <num_samples> <noise_level> <key_len> > <output_file>
+
+num_samples = number of samples e.g 5000
+noise_level = noise level e.g. 0.1
+key_len = unique key length (otional) e.g 10
+output_file = output file e.g hd.txt
+
+If key_len parameter is provided, then unique key of specified is pre pended to each generated
+record.
+
+Replace categorical variables with dummy binary variables
+./heart_disease.py genDummyVar hd.txt > hd_5000.txt
+
+Train and validate
+==================
+Set the following 
+common.mode=trainValidate
+train.model.save=False
+
+Train and validate the model
+./rfd.py rfd.properties
+
+Parameter tuning
+================
+There are 3 options
+
+Option 1
+Manually try different parameter values until you get lowest error rate
+
+Option 2
+Set the following 
+common.mode=predict=trainValidateSearch
+train.search.param.strategy=simuan
+train.search.params=train.search.learning.rate:float,train.search.num.estimators:int
+train.search.learning.rate=0.14,0.16
+train.search.num.estimators=140,160
+
+Actual number of parameters will depend on the the list of parameters you want to tune. In this e
+example 2 parameters are being tuned learning rate and number of estimator. For search strategy 
+simulated annealing has been selected.
+
+For search strategy, the choices are
+- grid
+- random
+- simuan (simulated annealing)
+
+Option 3
+Use Hyperopt which is based on Bayesian Optimazation
+
+Final training
+==============
+Once the optimum parameter values have been found, the corresponding training
+parameters should be set to those values. The following should aslo be set
+common.mode=predict=train
+train.model.save=True
+
+The trained model is saved because we have set the save flag to True
+
+Run
+./rfd.py rfd.properties
+
+Prediction
+==========
+Generate data as before for 100 samples
+
+./heart_disease.py generate 100 0.1 10 > hd.txt
+./heart_disease.py genDummyVar hd.txt > hd_100.txt
+
+Set
+common.mode=predict
+predict.use.saved.model=True
+
+Run
+./rfd.py rfd.properties
+
+
+
+
+
+
+
+
+
+
+
+
+
