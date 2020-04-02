@@ -22,6 +22,7 @@ import random
 import time
 import uuid
 from datetime import datetime
+import math
 import logging
 from contextlib import contextmanager
 
@@ -76,6 +77,13 @@ def genNumIdList(numId, idSize):
 	for i in range(numId):
 		iDs.append(genNumID(idSize))
 	return iDs
+
+def genPhoneNum(arCode):
+	"""
+	generates phone number
+	"""
+	phNum = genNumID(7)
+	return arCode + str(phNum)
 
 def selectRandomFromList(list):
 	"""
@@ -153,6 +161,23 @@ def genLatLong(lat1, long1, lat2, long2):
 	longg = long1 + (long2 - long1) * random.random()
 	return (lat, longg)
 
+def geoDistance(lat1, long1, lat2, long2):
+	"""
+	find geo distance
+	"""
+	latDiff = math.radians(lat1 - lat2)
+	longDiff = math.radians(long1 - long2)
+	l1 = math.sin(latDiff/2.0)
+	l2 = math.sin(longDiff/2.0)
+	l3 = math.cos(math.radians(lat1))
+	l4 = math.cos(math.radians(lat2))
+	a = l1 * l1 + l3 * l4 * l2 * l2
+	l5 = math.sqrt(a)
+	l6 = math.sqrt(1.0 - a)
+	c = 2.0 * math.atan2(l5, l6)
+	r = 6371008.8 * 3.280840
+	return c * r
+
 def minLimit(val, limit):
 	"""
 	min limit
@@ -190,11 +215,18 @@ def genRandomIntListWithinRange(size, minLim, maxLim):
 
 def preturbScalar(value, range):
 	"""
-	preturbs a value within range
+	preturbs a mutiplicative value within range
 	"""
 	scale = 1.0 - range + 2 * range * random.random() 
 	return value * scale
 	
+def preturbScalarAbs(value, range):
+	"""
+	preturbs an absolute value within range
+	"""
+	delta = - range + 2.0 * range * random.random() 
+	return value + delta
+
 def preturbVector(values, range):
 	"""
 	preturbs a list within range
@@ -597,6 +629,13 @@ def minuteAlign(ts):
 	minute aligned time	
 	"""
 	return int((ts / secInMinute)) * secInMinute
+
+def multMinuteAlign(ts, min):
+	"""
+	multi minute aligned time	
+	"""
+	intv = secInMinute * min
+	return int((ts / intv)) * intv
 
 def hourAlign(ts):
 	"""

@@ -57,7 +57,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2019/10/23/automated-machine-learning-with-hyperopt-and-scikitlearn-without-writing-python-code/
 * https://pkghosh.wordpress.com/2019/11/22/machine-learning-model-interpretation-and-prescriptive-analytic-with-lime/
 * https://pkghosh.wordpress.com/2020/01/21/evaluation-of-time-series-predictability-with-kaboudan-metric-using-prophet/
-
+* https://pkghosh.wordpress.com/2020/02/24/model-drift-detection-with-kolmogorov-smirnov-statistic-on-spark/
+* https://pkghosh.wordpress.com/2020/03/26/building-scikitlearn-random-forest-model-and-tuning-parameters-without-writing-python-code/
 
 
 

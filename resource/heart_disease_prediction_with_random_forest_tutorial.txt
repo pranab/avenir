@@ -35,10 +35,13 @@ Parameter tuning
 ================
 There are 3 options
 
-Option 1
+**Option 1
+Set the following 
+common.mode=predict=trainValidate
+
 Manually try different parameter values until you get lowest error rate
 
-Option 2
+**Option 2
 Set the following 
 common.mode=predict=trainValidateSearch
 train.search.param.strategy=simuan
@@ -55,8 +58,11 @@ For search strategy, the choices are
 - random
 - simuan (simulated annealing)
 
-Option 3
-Use Hyperopt which is based on Bayesian Optimazation
+**Option 3
+Set the following 
+common.mode=predict=trainValidate
+
+Use Hyperopt which is based on Bayesian Optimization
 
 Final training
 ==============
