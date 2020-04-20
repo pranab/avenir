@@ -42,6 +42,13 @@ secInWeek = 7 * secInDay
 secInYear = 365 * secInDay
 secInMonth = secInYear / 12
 
+minInHour = 60
+minInDay = 24 * minInHour
+
+ftPerYard = 3
+ftPerMile = ftPerYard * 1760
+
+
 def genID(len):
 	"""
 	generates ID
@@ -163,7 +170,7 @@ def genLatLong(lat1, long1, lat2, long2):
 
 def geoDistance(lat1, long1, lat2, long2):
 	"""
-	find geo distance
+	find geo distance in ft
 	"""
 	latDiff = math.radians(lat1 - lat2)
 	longDiff = math.radians(long1 - long2)
@@ -643,6 +650,13 @@ def hourAlign(ts):
 	"""
 	return int((ts / secInHour)) * secInHour
 	
+def hourOfDayAlign(ts, hour):
+	"""
+	hour of day aligned time	
+	"""
+	day = int(ts / secInDay)
+	return (24 * day + hour) * secInHour
+
 def dayAlign(ts):
 	"""
 	day aligned time	

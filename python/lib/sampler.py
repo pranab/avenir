@@ -25,38 +25,58 @@ from util import *
 
 from stats import Histogram
 
-# sample float within range
 def randomFloat(low, high):
+	"""
+	sample float within range
+	"""
 	return random.random() * (high-low) + low
 
-# min limit
+
 def minLimit(val, min):
+	"""
+	min limit
+	"""
 	if (val < min):
 		val = min
 	return val
 
-#range limit	
+	
 def rangeLimit(val, min, max):
+	"""
+	range limit
+	"""
 	if (val < min):
 		val = min
 	elif (val > max):
 		val = max
 	return val
 
-# sample int within range
+
 def sampleUniform(min, max):
+	"""
+	sample int within range
+	"""
 	return randint(min, max)
 
-# sample int wrt base
+
 def sampleFromBase(value, dev):
+	"""
+	sample int wrt base
+	"""
 	return randint(value - dev, value + dev)
 
-# sample float wrt base
+
 def sampleFloatFromBase(value, dev):
+	"""
+	sample float wrt base
+	"""
 	return randomFloat(value - dev, value + dev)
 
-# uniformly distribute with some randomness
+
 def distrUniformWithRanndom(total, numItems, noiseLevel):
+	"""
+	uniformly distribute with some randomness
+	"""
 	perItem = total / numItems
 	var = perItem * noiseLevel
 	items = []
@@ -69,32 +89,47 @@ def distrUniformWithRanndom(total, numItems, noiseLevel):
 	items[-1] = total - sm
 	return items
 
-# sample event
+
 def isEventSampled(threshold, max=100):
+	"""
+	sample event
+	"""
 	return randint(0, max) < threshold
 
-#sample binary events
+
 def sampleBinaryEvents(events, probPercent):
+	"""
+	sample binary events
+	"""
 	if (randint(0, 100) < probPercent):
 		event = events[0]
 	else:
 		event = events[1]
 	return event
 
-# add noise to numeric value
+
 def addNoiseNum(value, sampler):
+	"""
+	add noise to numeric value
+	"""
 	return value * (1 + sampler.sample())
 
-#add noise to categorical value	
+	
 def addNoiseCat(value, values, noise):	
+	"""
+	add noise to categorical value
+	"""
 	newValue = value
 	threshold = int(noise * 100)
 	if (isEventSampled(threshold)):
 		newValue = selectRandomFromList(values)
 	return newValue
 
-#sample with replacement
+
 def sampleWithReplace(data, sampSize):
+	"""
+	sample with replacement
+	"""
 	sampled = list()
 	le = len(data)
 	if sampSize is None:
@@ -103,9 +138,33 @@ def sampleWithReplace(data, sampSize):
 		j = random.randint(0, le - 1)
 		sampled.append(data[j])
 	return sampled
-			
-# gaussian sampling based on rejection sampling	
+	
+class UniformNumericSampler:
+	"""
+	uniform sampler for numerical values
+	"""
+	def __init__(self, min, max):
+		self.min = min
+		self.max = max
+	
+	def sample(self):
+		samp =	sampleUniform(sel.min, self.max) if isinstance(self.min, int) else randomFloat(sel.min, self.max)
+		return samp	
+
+class UniformCategoricalSampler:
+	"""
+	uniform sampler for categorical values
+	"""
+	def __init__(self, values):
+		self.values = values
+	
+	def sample(self):
+		return selectRandomFromList(self.values)	
+				
 class GaussianRejectSampler:
+	"""
+	gaussian sampling based on rejection sampling
+	"""
 	def __init__(self, mean, stdDev):
 		self.mean = mean
 		self.stdDev = stdDev
@@ -128,9 +187,10 @@ class GaussianRejectSampler:
 				samp = x
 		return samp
 
-
-# non parametric sampling using given distribution based on rejection sampling	
 class NonParamRejectSampler:
+	"""
+	non parametric sampling using given distribution based on rejection sampling	
+	"""
 	def __init__(self, min, binWidth, *values):
 		self.values = values
 		if (len(self.values) == 1):
@@ -146,7 +206,7 @@ class NonParamRejectSampler:
 		self.ymax = self.fmax
 		self.sampleAsInt = True
 		
-	def sampleAsFloat():
+	def sampleAsFloat(self):
 		self.sampleAsInt = False
 	
 	def sample(self):
@@ -166,9 +226,11 @@ class NonParamRejectSampler:
 				samp = x
 		return samp
 
-# non parametric sampling for categorical attributes using given distribution based 
-# on rejection sampling	
 class CategoricalRejectSampler:
+	"""
+	non parametric sampling for categorical attributes using given distribution based 
+	on rejection sampling	
+	"""
 	def __init__(self,  *values):
 		self.distr = values
 		if (len(self.distr) == 1):
@@ -190,8 +252,11 @@ class CategoricalRejectSampler:
 				samp = t[0]
 		return samp
 
-#distr mixture sampler
+
 class DistrMixtureSampler:
+	"""
+	distr mixture sampler
+	"""
 	def __init__(self,  mixtureWtDistr, *compDistr):
 		self.mixtureWtDistr = mixtureWtDistr
 		self.compDistr = compDistr
@@ -205,8 +270,10 @@ class DistrMixtureSampler:
 		#sample  sampled comp distr
 		return self.compDistr[comp].sample()
 
-#ancestral sampler
 class AncestralSampler:
+	"""
+	ancestral sampler using conditional distribution
+	"""
 	def __init__(self,  parentDistr, childDistr, numChildren):
 		self.parentDistr = parentDistr
 		self.childDistr = childDistr
@@ -224,8 +291,10 @@ class AncestralSampler:
 			children.append(child)
 		return (parent, children)
 		
-# sample cluster and then sample member of sampled cluster
 class ClusterSampler:
+	"""
+	sample cluster and then sample member of sampled cluster
+	"""
 	def __init__(self,  clusters, *clustDistr):
 		self.sampler = CategoricalRejectSampler(*clustDistr)
 		self.clusters = clusters
@@ -235,8 +304,11 @@ class ClusterSampler:
 		member = random.choice(self.clusters[cluster])
 		return (cluster, member)
 		
-# metropolitan sampler		
+	
 class MetropolitanSampler:
+	"""
+	metropolitan sampler	
+	"""
 	def __init__(self, propStdDev, min, binWidth, values):
 		self.targetDistr = Histogram.createInitialized(min, binWidth, values)
 		self.propsalDistr = GaussianRejectSampler(0, propStdDev)
