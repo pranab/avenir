@@ -24,12 +24,6 @@ import sklearn as sk
 import matplotlib
 import random
 import jprops
-import lime
-import lime.lime_tabular
-sys.path.append(os.path.abspath("../supv"))
-import svm
-import rf
-import gbt
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -40,34 +34,75 @@ class Candidate(object):
 	candidate solution
 	"""
 	counter = 0
-	def __init__(self, uniqueComp):
+	ops = ["insert", "delete", "replace"]
+	solnSize = None
+	fixedSz = True
+	uniqueComp = False
+	
+	@classmethod
+	def initialize(cls, solnSize):
+		"""
+		class intialization
+		"""
+		cls.solnSize = solnSize
+		if (len(solnSize) == 1):
+			cls.fixedSz = True
+			cls.uniqueComp = False
+		else:
+			cls.fixedSz = False
+			cls.uniqueComp = True
+    		
+    	
+	def __init__(self):
+		"""
+		constructor
+		"""
 		self.soln = list()
 		self.score = None
-		self.uniqueComp = uniqueComp
-		self.seq = counter
-		counter += 1
+		self.seq = Candidate.counter
+		Candidate.counter += 1
 	
+	def __init__(self, other):
+		"""
+		constructor
+		"""
+		self.soln = other.soln
+		self.score = other.score
+		self.seq = Candidate.counter
+		Candidate.counter += 1
+
 	def build(self, comp):
+		"""
+		add component
+		"""
 		status = True
-		if self.uniqueComp and self.soln.index(comp):
+		if Candidate.uniqueComp and self.soln.index(comp):
 			status = False
 		else:
 			self.soln.append(comp)
 		return status
 		
-	def mutate(self, op, value = None):
-		status = True
-		pos = sampleUniform(0, len(soln))
-		if op == "delete":
-			soln.pop(pos)
+	def mutate(self, pos, value):
+		"""
+		mutate to create new  soln
+		"""
+		if Candidate.fixedSz:
+			op = "replace"
 		else:
-			if self.uniqueComp and self.soln.index(value):
-				status = False
+			op = selectRandomFromList(Candidate.ops)
+		status = True
+		if op == "delete":
+			if not Candidate.fixedSz and len(self.soln) > Candidate.solnSize[0]:
+				self.soln.pop(pos)
 			else:
-				if op == "insert":
-					soln.append(value)
-				else:
-					soln[pos] = value
+				status = False
+		elif op == "insert":
+			if not Candidate.fixedSz and len(self.soln) < Candidate.solnSize[1]:
+				self.soln.append(value)
+			else:
+				status = False
+		else:
+			self.soln[pos] = value
 		return status	
 		
 		
@@ -76,41 +111,110 @@ class EvolutionaryOptimizer(object):
 	optimize with evolutionary search
 	"""
 	def __init__(self, configFile, domain):
+		"""
+		intialize
+		"""
 		defValues = {}
-		defValues["common.mode"] = ("training", None)
+		defValues["common.verbose"] = (False, None)
 		defValues["opti.solution.size"] = (None, "missing solution size")
 		defValues["opti.solution.data.distr"] = (None, "missing solution data distribution")
 		defValues["opti.pool.size"] = (5, none)
-		defValues["opti.rand.select.size"] = (3, none)
+		defValues["opti.pool.select.size"] = (3, none)
 		defValues["opti.num.iter"] = (100, none)
-		
+		defValues["opti.purge.score.weight"] = (0.7, none)
+		defValues["opti.purge.age.scale"] = (1.0, none)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
-		self.domain = dpmain
-		self.best = None
+		self.domain = domain
+		self.bestSoln = None
 		
 	def run(self):
-		pool = list()
-		poolSize = self.config.getIntConfig("opti.pool.size")[0]
-		solnSizes = self.config.getIntListConfig("opti.solution.size", ",")[0]
+		"""
+		run optimizer
+		"""
+		self.pool = list()
+		self.poolSize = self.config.getIntConfig("opti.pool.size")[0]
+		poolSelSize = self.config.getIntConfig("opti.pool.select.size")[0]
+		self.solnSizes = self.config.getIntListConfig("opti.solution.size", ",")[0]
+		Candidate.initialize(self.solnSizes)
 		uniqComp = len(solnSizes) == 2
-		varSize = uniqComp
+		self.varSize = uniqComp
 		compDataDistr = self.config.getStringListConfig("opti.solution.data.distr", ",")[0]
-		compDataDistr = list(map(lambda d: createSampler(d), compDataDistr))
+		self.compDataDistr = list(map(lambda d: createSampler(d), compDataDistr))
+		self.purgeScoreWt = self.config.getFloatConfig("opti.purge.score.weight")[0]
+		self.purgeAgeScale = self.config.getFloatConfig("opti.purge.age.scale")[0]
 		
 		#initialize solution pool
-		for i in range(poolSize):
-			cand = Candidate(uniqComp)
-			size = sampleUniform(solnSizes[0], solnSizes[1]) if varSize else solnSizes[0]
+		for i in range(self.poolSize):
+			cand = Candidate()
+			size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
 			for j in range(size):
-				value = compDataDistr[0].sample() if varSize else compDataDistr[j].sample()
+				value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
 				while not cand.build(value):
-					value = compDataDistr[0].sample() if varSize else compDataDistr[j].sample()
-			pool.append(cand)
+					value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
+			self.pool.append(cand)
 			score = self.domain.evaluate(cand.soln)
 			cand.score = score
+		self.bestSoln = self.findBest(self.pool)
 		
+		#iterate
 		numIter = self.config.getIntConfig("opti.num.iter")[0]
 		for i in range(numIter):
-			pass
+			#best from a random sub set
+			selected = selectRandomSubListFromList(pool, poolSelSize)
+			bestInSel = self.findBest(selected)
+			
+			#clone and mutate
+			clone = Candidate(bestInSel)
+			clone.mutate()
+			score = self.domain.evaluate(clone.soln)
+			clone.score = score
+			
+			#purge and add new
+			self.purge()
+			pool.append(clone)
+			self.bestSoln = self.findBest(self.pool)
+
+	def findBest(self, candList):
+		"""
+		find best in candidate list
+		"""
+		bestScore = 1000000.0
+		bestSoln = None
+		for cand in candList:
+			if cand.score < bestScore:
+				bestScore = score
+				bestSoln = cand
+		return bestSoln
+		
+	def mutate(self, cand):
+		"""
+		mutate by insert, delete(for var size solution only) or replace
+		"""
+		pos = sampleUniform(0, len(cand.soln))
+		value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
+		while not cand.mutate(pos, value):
+			pos = sampleUniform(0, len(cand.soln))
+			value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
+		
+	def purge(self): 
+		"""
+		purge soln based on age and cost
+		"""
+		worstScore = 0.0
+		worst = None
+		for i, cand in enumerate(self.pool):
+			score = cand.score
+			age = (self.poolSize - i) * self.purgeAgeScale / self.poolSize
+			aggrScore = self.purgeScoreWt * score + (1.0 - self.purgeScoreWt) * age
+			if aggrScore > worstScore:
+				worstScore = aggrScore
+				worst = i
+		self.pool.pop(i)
+		
+	def getBest(self):
+		return 	self.bestSoln		
+		
+		
+		
