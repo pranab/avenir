@@ -148,7 +148,7 @@ class UniformNumericSampler:
 		self.max = max
 	
 	def sample(self):
-		samp =	sampleUniform(sel.min, self.max) if isinstance(self.min, int) else randomFloat(sel.min, self.max)
+		samp =	sampleUniform(self.min, self.max) if isinstance(self.min, int) else randomFloat(self.min, self.max)
 		return samp	
 
 class UniformCategoricalSampler:
@@ -173,8 +173,12 @@ class GaussianRejectSampler:
 		self.ymin = 0.0
 		self.fmax = 1.0 / (math.sqrt(2.0 * 3.14) * stdDev)
 		self.ymax = 1.05 * self.fmax
+		self.sampleAsInt = False
 		
 		
+	def sampleAsInt(self):
+		self.sampleAsInt = True
+
 	def sample(self):
 		done = False
 		samp = 0
@@ -185,6 +189,8 @@ class GaussianRejectSampler:
 			if (y < f):
 				done = True
 				samp = x
+		if self.sampleAsInt:
+			samp = int(samp)
 		return samp
 
 class NonParamRejectSampler:
@@ -400,3 +406,54 @@ class MetropolitanSampler:
 				proposal = self.globalProposalDistr.sample()
 
 		return proposal
+		
+def createSampler(data):
+	"""
+	create sampler
+	"""
+	items = data.split(":")
+	size = len(items)
+	dtype = items[size  - 1]
+	stype = items[size  - 2]
+	if stype == "uniform":
+		if dtype == "int":
+			min = int(items[0])
+			max = int(items[1])
+			sampler = UniformNumericSampler(min, max)
+		elif dtype == "float":
+			min = float(items[0])
+			max = float(items[1])
+			sampler = UniformNumericSampler(min, max)
+		elif dtype == "categorical":
+			values = items[:-2]
+			sampler = UniformCategoricalSampler(values)
+	elif stype == "normal":
+			mean = float(items[0])
+			sd = float(items[1])
+			sampler = GaussianRejectSampler(mean, sd)
+			if dtype == "int":
+				sampler.sampleAsInt()
+	elif stype == "nonparam":
+		if dtype == "int" or dtype == "float":
+			min = int(items[0])
+			binWidth = int(items[1])
+			values = items[2:-2]
+			values = list(map(lambda v: int(v), values))
+			sampler = NonParamRejectSampler(min, binWidth, values)
+			if dtype == "float":
+				sampler.sampleAsFloat()
+		elif dtype == "categorical":
+			values = list()
+			for i in range(0, size-2, 2):
+				cval = items[i]
+				dist = int(items[i+1])
+				pair = (cval, dist)
+				values.append(pair)
+			sampler = CategoricalRejectSampler(values)
+			
+	return sampler
+				 
+				
+			
+				
+				

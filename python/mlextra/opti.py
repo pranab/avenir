@@ -20,7 +20,6 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
-import sklearn as sk
 import matplotlib
 import random
 import jprops
@@ -62,7 +61,7 @@ class Candidate(object):
 		self.seq = Candidate.counter
 		Candidate.counter += 1
 	
-	def __init__(self, other):
+	def clone(self, other):
 		"""
 		constructor
 		"""
@@ -76,7 +75,7 @@ class Candidate(object):
 		add component
 		"""
 		status = True
-		if Candidate.uniqueComp and self.soln.index(comp):
+		if Candidate.uniqueComp and comp in self.soln:
 			status = False
 		else:
 			self.soln.append(comp)
@@ -105,7 +104,11 @@ class Candidate(object):
 			self.soln[pos] = value
 		return status	
 		
-		
+	def __str__(self):
+		strDesc = "soln: " + str(self.soln) + '\n'
+		strDesc = strDesc + "score: {:.3f}".format(self.score)
+		return strDesc
+	
 class EvolutionaryOptimizer(object):
 	"""
 	optimize with evolutionary search
@@ -118,11 +121,11 @@ class EvolutionaryOptimizer(object):
 		defValues["common.verbose"] = (False, None)
 		defValues["opti.solution.size"] = (None, "missing solution size")
 		defValues["opti.solution.data.distr"] = (None, "missing solution data distribution")
-		defValues["opti.pool.size"] = (5, none)
-		defValues["opti.pool.select.size"] = (3, none)
-		defValues["opti.num.iter"] = (100, none)
-		defValues["opti.purge.score.weight"] = (0.7, none)
-		defValues["opti.purge.age.scale"] = (1.0, none)
+		defValues["opti.pool.size"] = (5, None)
+		defValues["opti.pool.select.size"] = (3, None)
+		defValues["opti.num.iter"] = (100, None)
+		defValues["opti.purge.score.weight"] = (0.7, None)
+		defValues["opti.purge.age.scale"] = (1.0, None)
 
 		self.config = Configuration(configFile, defValues)
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
@@ -136,11 +139,11 @@ class EvolutionaryOptimizer(object):
 		self.pool = list()
 		self.poolSize = self.config.getIntConfig("opti.pool.size")[0]
 		poolSelSize = self.config.getIntConfig("opti.pool.select.size")[0]
-		self.solnSizes = self.config.getIntListConfig("opti.solution.size", ",")[0]
+		self.solnSizes = self.config.getIntListConfig("opti.solution.size")[0]
 		Candidate.initialize(self.solnSizes)
-		uniqComp = len(solnSizes) == 2
+		uniqComp = len(self.solnSizes) == 2
 		self.varSize = uniqComp
-		compDataDistr = self.config.getStringListConfig("opti.solution.data.distr", ",")[0]
+		compDataDistr = self.config.getStringListConfig("opti.solution.data.distr")[0]
 		self.compDataDistr = list(map(lambda d: createSampler(d), compDataDistr))
 		self.purgeScoreWt = self.config.getFloatConfig("opti.purge.score.weight")[0]
 		self.purgeAgeScale = self.config.getFloatConfig("opti.purge.age.scale")[0]
@@ -162,19 +165,22 @@ class EvolutionaryOptimizer(object):
 		numIter = self.config.getIntConfig("opti.num.iter")[0]
 		for i in range(numIter):
 			#best from a random sub set
-			selected = selectRandomSubListFromList(pool, poolSelSize)
+			selected = selectRandomSubListFromList(self.pool, poolSelSize)
 			bestInSel = self.findBest(selected)
 			
 			#clone and mutate
-			clone = Candidate(bestInSel)
-			clone.mutate()
-			score = self.domain.evaluate(clone.soln)
-			clone.score = score
+			cloneSoln = Candidate()
+			cloneSoln.clone(bestInSel)
+			self.mutate(cloneSoln)
+			cloneSoln.score = self.domain.evaluate(cloneSoln.soln)
 			
 			#purge and add new
 			self.purge()
-			pool.append(clone)
-			self.bestSoln = self.findBest(self.pool)
+			self.pool.append(cloneSoln)
+			if self.bestSoln is None:
+				 self.bestSoln = self.findBest(self.pool)
+			elif cloneSoln.score < self.bestSoln.score:
+				self.bestSoln = cloneSoln
 
 	def findBest(self, candList):
 		"""
@@ -184,7 +190,7 @@ class EvolutionaryOptimizer(object):
 		bestSoln = None
 		for cand in candList:
 			if cand.score < bestScore:
-				bestScore = score
+				bestScore = cand.score
 				bestSoln = cand
 		return bestSoln
 		
@@ -211,10 +217,35 @@ class EvolutionaryOptimizer(object):
 			if aggrScore > worstScore:
 				worstScore = aggrScore
 				worst = i
-		self.pool.pop(i)
+		if self.pool[worst] == self.bestSoln:
+			self.bestSoln = None
+		self.pool.pop(worst)
 		
 	def getBest(self):
 		return 	self.bestSoln		
 		
+
+class SimulatedAnnealing(object):
+	"""
+	optimize with simulated annealing
+	"""
+	def __init__(self, configFile, domain):
+		"""
+		intialize
+		"""
+		pass
 		
+def createOptimizer(name, configFile, domain):
+	"""
+	creates optimizer
+	"""
+	if name == "eo":
+		optimizer = EvolutionaryOptimizer(configFile, domain)
+	elif name == "sa":
+		optimizer = SimulatedAnnealing(configFile, domain)
+	else:
+		raise ValueError("invalid optimizer name")
+	return optimizer
+	
+	
 		

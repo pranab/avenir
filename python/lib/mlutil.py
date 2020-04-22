@@ -97,11 +97,17 @@ class Configuration:
 		return val
 		
 	# get int list param
-	def getIntListConfig(self, name, delim):
+	def getIntListConfig(self, name, delim=","):
 		delSepStr = self.getStringConfig(name)
 		intList = strToIntArray(delSepStr[0], delim)
 		return (intList, delSepStr[1])
 	
+	# get string list param
+	def getStringListConfig(self, name, delim=","):
+		delSepStr = self.getStringConfig(name)
+		strList = delSepStr[0].split(delim)
+		return (strList, delSepStr[1])
+
 	# handles default
 	def handleDefault(self, name):
 		dVal = self.defValues[name]
