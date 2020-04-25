@@ -47,11 +47,19 @@ class FeatureSelector(object):
 		else:
 			raise valueError("unsupported classifier")
 	
+	def isValid(self, args):
+		return True
 
 	def evaluate(self, args):
 		"""
 		"""
-		return randomFloat(0.05, 0.25)
+		features = ",".join(toStrList(args))
+		#print("next features: " + features)
+		self.clf.setConfigParam("train.data.feature.fields", features)
+		#return randomFloat(0.05, 0.25)
+		score =  self.clf.trainValidate()
+		print("next score {:.3f}".format(score))
+		return score
 		
 
 if __name__ == "__main__":
@@ -64,5 +72,6 @@ if __name__ == "__main__":
 	feSelector = FeatureSelector(clfName, clfConfigFile)
 	optimizer = createOptimizer(optName, optConfFile, feSelector)
 	optimizer.run()
+	print("best found")
 	print(optimizer.getBest())
 
