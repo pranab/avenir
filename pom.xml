@@ -17,7 +17,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <log4j.version>1.2.16</log4j.version>
+                <log4j.version>1.2.17</log4j.version>
                 <hadoop.version>0.20.2-cdh3u2</hadoop.version>
                 <jackson.version>1.9.13</jackson.version>
                 <jdk.level>1.8</jdk.level>
