@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -66,7 +66,7 @@ class Candidate(object):
 		"""
 		constructor
 		"""
-		self.soln = other.soln
+		self.soln = other.soln.copy()
 		self.score = other.score
 		self.seq = Candidate.counter
 		Candidate.counter += 1
@@ -189,16 +189,31 @@ class BaseOptimizer(object):
 		defValues["opti.solution.data.distr"] = (None, "missing solution data distribution")
 		defValues["opti.solution.data.groups"] = (None, None)
 		defValues["opti.num.iter"] = (100, None)
+		defValues["opti.global.search.strategy"] = (None, None)
+		defValues["opti.mutation.size"] = (1, None)
+		defValues["opti.local.search.strategy"] = ("mutateBest", None)
+		defValues["opti.performance.track.interval"] = (5, None)
 		self.config = Configuration(configFile, defValues)
 		
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.domain = domain
+		self.curSoln = None
 		self.bestSoln = None
+		self.trackedBestSoln = None
+		self.globSearchStrategy = self.config.getStringConfig("opti.global.search.strategy")[0]
+		self.locSearchStrategy = self.config.getStringConfig("opti.local.search.strategy")[0]
+		self.mutationSize =  self.config.getIntConfig("opti.mutation.size")[0]
+		self.perforTrackInterval = self.config.getIntConfig("opti.performance.track.interval")[0]
+		
+		#soln size and soln component data distribution
 		self.solnSizes = self.config.getIntListConfig("opti.solution.size")[0]
 		compDataDistr = self.config.getStringListConfig("opti.solution.data.distr")[0]
 		self.compDataDistr = list(map(lambda d: createSampler(d), compDataDistr))
+		
+		#correlated data groups only for variable size single comp data distr solution
 		dataGroups = self.config.getStringConfig("opti.solution.data.groups")[0]
 		dataGroups = self.getDataGroups(dataGroups)
+		
 		Candidate.initialize(self.solnSizes, dataGroups)
 		self.varSize = len(self.solnSizes) == 2
 		
@@ -255,9 +270,27 @@ class BaseOptimizer(object):
 				status = False
 				#raise ValueError("faled to mutate after multiple tries")
 				print("giving up on mutation")
+				break
+				
 		if status:
 			print("after mutation soln " + str(cand.soln))
 		return status
+	
+	def trackPerformance(self, iterCount):
+		"""
+		track performaance improvement at regular interval
+		"""
+		improvement = None
+		if iterCount % self.perforTrackInterval == 0:
+			if self.trackedBestSoln:
+				if self.trackedBestSoln == self.bestSoln:
+					improvement = 0.0
+				else:
+					improvement = (self.trackedBestSoln.score - self.bestSoln.score) / self.trackedBestSoln.score
+					self.trackedBestSoln = self.bestSoln
+			else:
+				self.trackedBestSoln = self.bestSoln
+		return improvement
 				
 	def getBest(self):
 		"""
@@ -297,6 +330,7 @@ class EvolutionaryOptimizer(BaseOptimizer):
 			cand = self.createCandidate()
 			if self.domain.isValid(cand.soln):
 				self.pool.append(cand)
+				print("initial soln " + str(cand.soln))
 			
 		self.bestSoln = self.findBest(self.pool)
 		
@@ -306,6 +340,7 @@ class EvolutionaryOptimizer(BaseOptimizer):
 			#best from a random sub set
 			selected = selectRandomSubListFromList(self.pool, poolSelSize)
 			bestInSel = self.findBest(selected)
+			print("subset best soln " + str(bestInSel.soln))
 			
 			#clone and mutate
 			maxTry = 5
@@ -318,7 +353,7 @@ class EvolutionaryOptimizer(BaseOptimizer):
 				if mutStat:
 					if self.domain.isValid(cloneCand.soln):
 						cloneCand.score = self.domain.evaluate(cloneCand.soln)
-						print("next iteration: {} score {:.3f} ".format(i, cloneCand.score))
+						print("...next iteration: {} score {:.3f} ".format(i, cloneCand.score))
 						break
 					else:
 						tryCount += 1
@@ -335,6 +370,7 @@ class EvolutionaryOptimizer(BaseOptimizer):
 					self.bestSoln = self.findBest(self.pool)
 				elif cloneCand.score < self.bestSoln.score:
 					self.bestSoln = cloneCand
+					print("better solution found")
 
 		
 	def findBest(self, candList):
