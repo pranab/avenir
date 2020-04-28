@@ -216,6 +216,10 @@ class BaseOptimizer(object):
 		
 		Candidate.initialize(self.solnSizes, dataGroups)
 		self.varSize = len(self.solnSizes) == 2
+
+		logFilePath = self.config.getStringConfig("common.logging.file")[0]
+		logLevName = self.config.getStringConfig("common.logging.level")[0]
+		self.logger = createLogger(__name__, logFilePath, logLevName)
 		
 	def createCandidate(self):
 		"""
@@ -255,26 +259,39 @@ class BaseOptimizer(object):
 		mutate by insert, delete(for var size solution only) or replace
 		"""
 		status = True
-		print("before mutation soln " + str(cand.soln))
+		self.logger.info("before mutation soln " + str(cand.soln))
 		pos = sampleUniform(0, len(cand.soln)  -1)
 		value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
-		print("mutation pos {}  value {}".format(pos, value))
+		self.logger.info("mutation pos {}  value {}".format(pos, value))
 		maxTry = 5
 		tryCount = 0 
 		while not cand.mutate(pos, value):
 			pos = sampleUniform(0, len(cand.soln) - 1)
 			value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
-			print("mutation pos {}  value {}".format(pos, value))
+			self.logger.info("mutation pos {}  value {}".format(pos, value))
 			tryCount += 1
 			if tryCount == maxTry:
 				status = False
 				#raise ValueError("faled to mutate after multiple tries")
-				print("giving up on mutation")
+				self.logger.info("giving up on mutation")
 				break
 				
 		if status:
-			print("after mutation soln " + str(cand.soln))
+			self.logger.info("after mutation soln " + str(cand.soln))
 		return status
+		
+	def findBest(self, candList):
+		"""
+		find best in candidate list
+		"""
+		bestScore = 1000000.0
+		bestSoln = None
+		for cand in candList:
+			if cand.score < bestScore:
+				bestScore = cand.score
+				bestSoln = cand
+		return bestSoln
+		
 	
 	def trackPerformance(self, iterCount):
 		"""
@@ -296,95 +313,18 @@ class BaseOptimizer(object):
 		"""
 		returns best solution
 		"""
-		return 	self.bestSoln		
-	
-class EvolutionaryOptimizer(BaseOptimizer):
+		return 	self.bestSoln	
+			
+class PopulationBasedOptimizer(BaseOptimizer):
 	"""
 	optimize with evolutionary search
 	"""
-	def __init__(self, configFile, domain):
-		"""
-		intialize
-		"""
-		defValues = {}
-		defValues["opti.pool.size"] = (5, None)
-		defValues["opti.pool.select.size"] = (3, None)
-		defValues["opti.purge.score.weight"] = (0.7, None)
-		defValues["opti.purge.age.scale"] = (1.0, None)
-		
-		super(EvolutionaryOptimizer, self).__init__(configFile, defValues, domain)
-
-		
-	def run(self):
-		"""
-		run optimizer
-		"""
+	def __init__(self, configFile, defValues, domain):
+		super(PopulationBasedOptimizer, self).__init__(configFile, defValues, domain)
 		self.pool = list()
 		self.poolSize = self.config.getIntConfig("opti.pool.size")[0]
-		poolSelSize = self.config.getIntConfig("opti.pool.select.size")[0]
 		self.purgeScoreWt = self.config.getFloatConfig("opti.purge.score.weight")[0]
 		self.purgeAgeScale = self.config.getFloatConfig("opti.purge.age.scale")[0]
-		
-		#initialize solution pool
-		while len(self.pool) < self.poolSize:
-			cand = self.createCandidate()
-			if self.domain.isValid(cand.soln):
-				self.pool.append(cand)
-				print("initial soln " + str(cand.soln))
-			
-		self.bestSoln = self.findBest(self.pool)
-		
-		#iterate
-		numIter = self.config.getIntConfig("opti.num.iter")[0]
-		for i in range(numIter):
-			#best from a random sub set
-			selected = selectRandomSubListFromList(self.pool, poolSelSize)
-			bestInSel = self.findBest(selected)
-			print("subset best soln " + str(bestInSel.soln))
-			
-			#clone and mutate
-			maxTry = 5
-			tryCount = 0 
-			mutStat = None
-			while True:
-				cloneCand = Candidate()
-				cloneCand.clone(bestInSel)
-				mutStat = self.mutate(cloneCand)
-				if mutStat:
-					if self.domain.isValid(cloneCand.soln):
-						cloneCand.score = self.domain.evaluate(cloneCand.soln)
-						print("...next iteration: {} score {:.3f} ".format(i, cloneCand.score))
-						break
-					else:
-						tryCount += 1
-						if tryCount == maxTry:
-							raise ValueError("invalid solution after multiple tries to mutate")
-				else:
-					break	
-			
-			#purge and add new
-			if mutStat:
-				self.purge()
-				self.pool.append(cloneCand)
-				if self.bestSoln is None:
-					self.bestSoln = self.findBest(self.pool)
-				elif cloneCand.score < self.bestSoln.score:
-					self.bestSoln = cloneCand
-					print("better solution found")
-
-		
-	def findBest(self, candList):
-		"""
-		find best in candidate list
-		"""
-		bestScore = 1000000.0
-		bestSoln = None
-		for cand in candList:
-			if cand.score < bestScore:
-				bestScore = cand.score
-				bestSoln = cand
-		return bestSoln
-		
 		
 	def purge(self): 
 		"""
@@ -402,30 +342,8 @@ class EvolutionaryOptimizer(BaseOptimizer):
 		if self.pool[worst] == self.bestSoln:
 			self.bestSoln = None
 		self.pool.pop(worst)
-		
-		
+	
 
-class SimulatedAnnealing(object):
-	"""
-	optimize with simulated annealing
-	"""
-	def __init__(self, configFile, domain):
-		"""
-		intialize
-		"""
-		pass
-		
-def createOptimizer(name, configFile, domain):
-	"""
-	creates optimizer
-	"""
-	if name == "eo":
-		optimizer = EvolutionaryOptimizer(configFile, domain)
-	elif name == "sa":
-		optimizer = SimulatedAnnealing(configFile, domain)
-	else:
-		raise ValueError("invalid optimizer name")
-	return optimizer
 	
 	
 		

@@ -27,7 +27,8 @@ from svm import *
 from rf import *
 from gbt import *
 from util import *
-from opti import *
+from optpopu import *
+from optsolo import *
 from sampler import *
 
 class FeatureSelector(object):
@@ -60,6 +61,18 @@ class FeatureSelector(object):
 		score =  self.clf.trainValidate()
 		print("next score {:.3f}".format(score))
 		return score
+
+def createOptimizer(name, configFile, domain):
+	"""
+	creates optimizer
+	"""
+	if name == "eo":
+		optimizer = EvolutionaryOptimizer(configFile, domain)
+	elif name == "sa":
+		optimizer = SimulatedAnnealing(configFile, domain)
+	else:
+		raise ValueError("invalid optimizer name")
+	return optimizer
 		
 
 if __name__ == "__main__":
