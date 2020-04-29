@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -24,6 +24,7 @@ import uuid
 from datetime import datetime
 import math
 import logging
+import logging.handlers
 from contextlib import contextmanager
 
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
@@ -150,6 +151,12 @@ def range_limit(val, min, max):
 		val = max
 	return val	
 
+def isInRange(val, min, max):
+	"""
+	checks if within range
+	"""
+	return val >= min and val <= max
+	
 def stripFileLines(filePath, offset):
 	"""
 	strips number of chars from both ends
@@ -374,7 +381,7 @@ def toFloatList(values):
 	"""
 	return list(map(lambda va: float(va), values))
 
-def toStrList(values, precision):
+def toStrList(values, precision=None):
 	"""
 	convert to string list
 	"""
@@ -758,7 +765,7 @@ def createLogger(name, logFilePath, logLevName):
 	creates logger
 	"""
 	logger = logging.getLogger(name)
-	fHandler = logging.FileHandler(logFilePath)
+	fHandler = logging.handlers.RotatingFileHandler(logFilePath, maxBytes=1048576, backupCount=4)
 	logLev = logLevName.lower()
 	if logLev == "debug":
 		logLevel = logging.DEBUG

@@ -38,13 +38,15 @@ class Candidate(object):
 	fixedSz = True
 	uniqueComp = False
 	dataGroups = None
+	logger = None
 	
 	@classmethod
-	def initialize(cls, solnSize, dataGroups):
+	def initialize(cls, solnSize, dataGroups, logger):
 		"""
 		class intialization
 		"""
 		cls.solnSize = solnSize
+		cls.logger = logger
 		if (len(solnSize) == 1):
 			cls.fixedSz = True
 			cls.uniqueComp = False
@@ -58,7 +60,7 @@ class Candidate(object):
 		constructor
 		"""
 		self.soln = list()
-		self.score = None
+		self.cost = None
 		self.seq = Candidate.counter
 		Candidate.counter += 1
 	
@@ -67,9 +69,16 @@ class Candidate(object):
 		constructor
 		"""
 		self.soln = other.soln.copy()
-		self.score = other.score
+		self.cost = other.cost
 		self.seq = Candidate.counter
 		Candidate.counter += 1
+		
+	def setSoln(self, soln):
+		"""
+		set soln
+		"""
+		self.soln = soln.copy()	
+		self.cost = None	
 
 	def build(self, comp, size):
 		"""
@@ -118,13 +127,13 @@ class Candidate(object):
 		else:
 			op = selectRandomFromList(Candidate.ops)
 			backup = self.soln.copy()
-			print("mutation: " + op)
+			Candidate.logger.info("mutation: " + op)
 			
 			if op == "delete" or op == "replace":
 				if Candidate.dataGroups:
 					foundGr = self.getGroup(self.soln[pos])
 					if foundGr:
-						print("removing group")
+						Candidate.logger.info("removing group")
 						for v in foundGr:
 							self.soln.remove(v)
 					else:
@@ -136,7 +145,7 @@ class Candidate(object):
 				if Candidate.dataGroups:
 					foundGr = self.getGroup(value)
 					if foundGr:
-						print("inserting group")
+						Candidate.logger.info("inserting group")
 						for v in foundGr:
 							status = self.safeInsert(v)
 							if not status:
@@ -147,7 +156,7 @@ class Candidate(object):
 					status = self.safeInsert(value)
 					
 			if not isInRange(len(self.soln), Candidate.solnSize[0], Candidate.solnSize[1]):
-				print("mutation: size beyond range")
+				Candidate.logger.info("mutation: size beyond range")
 				status = False
 			
 			if not status:
@@ -163,7 +172,7 @@ class Candidate(object):
 		if value not in self.soln:
 			self.soln.append(value)
 		else:
-			print("mutation: already exists")
+			Candidate.logger.info("mutation: already exists")
 			status = False
 		return status
 	
@@ -172,7 +181,7 @@ class Candidate(object):
 		content
 		"""
 		strDesc = "soln: " + str(self.soln) + '\n'
-		strDesc = strDesc + "score: {:.3f}".format(self.score)
+		strDesc = strDesc + "cost: {:.3f}".format(self.cost)
 		return strDesc
 
 class BaseOptimizer(object):
@@ -204,6 +213,7 @@ class BaseOptimizer(object):
 		self.locSearchStrategy = self.config.getStringConfig("opti.local.search.strategy")[0]
 		self.mutationSize =  self.config.getIntConfig("opti.mutation.size")[0]
 		self.perforTrackInterval = self.config.getIntConfig("opti.performance.track.interval")[0]
+		self.numIter = self.config.getIntConfig("opti.num.iter")[0]
 		
 		#soln size and soln component data distribution
 		self.solnSizes = self.config.getIntListConfig("opti.solution.size")[0]
@@ -214,31 +224,40 @@ class BaseOptimizer(object):
 		dataGroups = self.config.getStringConfig("opti.solution.data.groups")[0]
 		dataGroups = self.getDataGroups(dataGroups)
 		
-		Candidate.initialize(self.solnSizes, dataGroups)
 		self.varSize = len(self.solnSizes) == 2
 
 		logFilePath = self.config.getStringConfig("common.logging.file")[0]
 		logLevName = self.config.getStringConfig("common.logging.level")[0]
 		self.logger = createLogger(__name__, logFilePath, logLevName)
+		Candidate.initialize(self.solnSizes, dataGroups, self.logger)
 		
 	def createCandidate(self):
 		"""
 		create new candidate soln
 		"""
-		cand = Candidate()
-		size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
-		maxTry = 5
-		for j in range(size):
-			value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
-			tryCount = 0
-			while not cand.build(value, size):
+		while True:
+			cand = Candidate()
+			size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
+			maxTry = 5
+			built = True
+			for j in range(size):
 				value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
-				tryCount += 1
-				if tryCount == maxTry:
+				tryCount = 0
+				while not cand.build(value, size):
+					value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
+					tryCount += 1
+					if tryCount == maxTry:
+						built = False
+						break
+						
+				if not built:
 					break
 					
-		score = self.domain.evaluate(cand.soln)
-		cand.score = score
+			if built and self.domain.isValid(cand.soln):			
+				cost = self.domain.evaluate(cand.soln)
+				cand.cost = cost
+				break
+			
 		return cand
 
 	def getDataGroups(self,data):
@@ -280,19 +299,7 @@ class BaseOptimizer(object):
 			self.logger.info("after mutation soln " + str(cand.soln))
 		return status
 		
-	def findBest(self, candList):
-		"""
-		find best in candidate list
-		"""
-		bestScore = 1000000.0
-		bestSoln = None
-		for cand in candList:
-			if cand.score < bestScore:
-				bestScore = cand.score
-				bestSoln = cand
-		return bestSoln
-		
-	
+			
 	def trackPerformance(self, iterCount):
 		"""
 		track performaance improvement at regular interval
@@ -303,7 +310,7 @@ class BaseOptimizer(object):
 				if self.trackedBestSoln == self.bestSoln:
 					improvement = 0.0
 				else:
-					improvement = (self.trackedBestSoln.score - self.bestSoln.score) / self.trackedBestSoln.score
+					improvement = (self.trackedBestSoln.cost - self.bestSoln.cost) / self.trackedBestSoln.cost
 					self.trackedBestSoln = self.bestSoln
 			else:
 				self.trackedBestSoln = self.bestSoln
@@ -323,27 +330,125 @@ class PopulationBasedOptimizer(BaseOptimizer):
 		super(PopulationBasedOptimizer, self).__init__(configFile, defValues, domain)
 		self.pool = list()
 		self.poolSize = self.config.getIntConfig("opti.pool.size")[0]
-		self.purgeScoreWt = self.config.getFloatConfig("opti.purge.score.weight")[0]
+		self.purgeCostWt = self.config.getFloatConfig("opti.purge.cost.weight")[0]
 		self.purgeAgeScale = self.config.getFloatConfig("opti.purge.age.scale")[0]
+		self.fitnessDistr = None
+	
+	def populatePool(self):
+		"""
+		populate solution pool
+		"""
+		for i in range(self.poolSize):
+			cand = self.createCandidate()
+			self.pool.append(cand)
+			self.logger.info("initial soln " + str(cand.soln))
+
+	def findBest(self, candList):
+		"""
+		find best in candidate list
+		"""
+		bestCost = None
+		bestSoln = None
+		for cand in candList:
+			if bestCost is None or cand.cost < bestCost:
+				bestCost = cand.cost
+				bestSoln = cand
+		return bestSoln
+		
+	def findWorst(self, candList):
+		"""
+		find worst in candidate list
+		"""
+		worstCost = None
+		worstSoln = None
+		for cand in candList:
+			if worstCost is None or cand.cost > worstCost:
+				worstCost = cand.cost
+				worstSoln = cand
+		return worstSoln
+	
+	def findFitnessDistr(self):
+		"""
+		calculates fitness distribution
+		"""
+		worstCost = self.findWorst(self.pool).cost
+		fitness = list(map(lambda c: worstCost - c.cost, self.pool))
+		distr = list()
+		for i, f in enumerate(fitness):
+			pair = (str(i), f)
+			distr.append(pair)
+		self.fitnessDistr = CategoricalRejectSampler(distr)	
+
+	def findMultBest(self, candList, size):
+		"""
+		find best n from candidate list
+		"""
+		candList.sort(key=lambda c: c.cost, reverse=False)
+		bestSoln = candList[:size]
+		return bestSoln
+
+	def tournamentSelect(self, tournSize):
+		"""
+		selects based on tournament algorithm
+		"""
+		selected = selectRandomSubListFromList(self.pool, tournSize)
+		return self.findBest(selected)
+
+		
+	def fitnessDistrSelect(self, useCachedDistr):
+		"""
+		selects based on fitness probability algorithm
+		"""
+		if not useCachedDistr:
+			self.findFitnessDistr()
+		index = int(self.fitnessDistr.sample())
+		return self.pool[i]
 		
 	def purge(self): 
 		"""
 		purge soln based on age and cost
 		"""
-		worstScore = 0.0
+		worstCost = 0.0
 		worst = None
 		for i, cand in enumerate(self.pool):
-			score = cand.score
+			cost = cand.cost
 			age = (self.poolSize - i) * self.purgeAgeScale / self.poolSize
-			aggrScore = self.purgeScoreWt * score + (1.0 - self.purgeScoreWt) * age
-			if aggrScore > worstScore:
-				worstScore = aggrScore
+			aggrCost = self.purgeCostWt * cost + (1.0 - self.purgeCostWt) * age
+			if aggrCost > worstCost:
+				worstCost = aggrCost
 				worst = i
 		if self.pool[worst] == self.bestSoln:
 			self.bestSoln = None
 		self.pool.pop(worst)
 	
+	def multiPurge(self, size): 
+		"""
+		purge n soln based on cost
+		"""
+		self.pool = self.pool[:-size]
 
+	def crossOver(self, parents):
+		"""
+		cross over
+		"""
+		crossOverPoint = sampleUniform(1, len(parents[0].soln)-2)
+		children = list()
+		
+		c = parents[0].soln[:crossOverPoint]
+		c.extend(parents[1].soln[crossOverPoint:])
+		chOne = Candidate()
+		chOne.setSoln(c)
+		
+		c = parents[1].soln[:crossOverPoint]
+		c.extend(parents[0].soln[crossOverPoint:])
+		chTwo = Candidate()
+		chTwo.setSoln(c)
+		
+		children.append(chOne)
+		children.append(chTwo)
+		return children
+		
+		
 	
 	
 		
