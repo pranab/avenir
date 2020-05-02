@@ -180,10 +180,81 @@ class Candidate(object):
 		"""
 		content
 		"""
-		strDesc = "soln: " + str(self.soln) + '\n'
-		strDesc = strDesc + "cost: {:.3f}".format(self.cost)
+		strDesc = "cost: {:.3f}".format(self.cost) + " \tsoln: " + str(self.soln)
 		return strDesc
 
+class ProgressTracker(object):
+	"""
+	tracks optimizer progress
+	"""
+	def __init__(self):
+		"""
+		intialize
+		"""
+		self.tracker = list()
+		self.logger = None
+		
+	def register(self, iter, cand):
+		"""
+		register current best soln
+		"""
+		cloned = Candidate()
+		cloned.clone(cand)
+		progress = (iter, cloned)
+		self.tracker.append(progress)
+		
+	def iterSinceLastImprovement(self, iter):
+		"""
+		num iterations since last improvement
+		"""
+		return iter - self.tracker[-1][0]
+		
+	def lastProgessRate(self):
+		"""
+		cost reduction rate
+		"""
+		p1 = self.tracker[-2]
+		p2 = self.tracker[-1]
+		return (p1[1].cost - p2[1].cost) / (p2[0] - p1[0]) if len(self.tracker) > 1 else 0.0
+	
+	def findStats(self):
+		"""
+		return progress stats
+		"""
+		minCostDrop = None
+		for i in range(len(self.tracker) - 1):
+			p1 = self.tracker[i]
+			p2 = self.tracker[i+1]
+			costDrop = p1[1].cost - p2[1].cost
+			iterCount = p2[0] - p1[0]
+			rate = costDrop / iterCount
+			if minCostDrop is None:
+				minCostDrop = costDrop
+				maxCostDrop = costDrop
+				minIterCount = iterCount
+				maxIterCount = iterCount
+				minRate = rate
+				maxRate = rate
+			else:
+				minCostDrop = min(costDrop, minCostDrop)
+				maxCostDrop = max(costDrop, maxCostDrop)
+				minIterCount = min(iterCount, minIterCount)
+				maxiterCount = max(iterCount, maxIterCount)
+				minRate = min(rate, minRate)
+				maxRate = max(rate, maxRate)
+		
+		return(minCostDrop, maxCostDrop, minIterCount, maxIterCount, minRate, maxRate)
+				
+	def __str__(self):
+		"""
+		content
+		"""
+		content = ""
+		for tracked in self.tracker:
+			content = content + "iter: " + str(tracked[0]) + "\t" + str(tracked[1]) + "\n"
+		return content
+			
+		
 class BaseOptimizer(object):
 	"""
 	base optimizer
@@ -202,6 +273,8 @@ class BaseOptimizer(object):
 		defValues["opti.mutation.size"] = (1, None)
 		defValues["opti.local.search.strategy"] = ("mutateBest", None)
 		defValues["opti.performance.track.interval"] = (5, None)
+		defValues["opti.performance.track.on"] = (False, None)
+		
 		self.config = Configuration(configFile, defValues)
 		
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
@@ -214,6 +287,7 @@ class BaseOptimizer(object):
 		self.mutationSize =  self.config.getIntConfig("opti.mutation.size")[0]
 		self.perforTrackInterval = self.config.getIntConfig("opti.performance.track.interval")[0]
 		self.numIter = self.config.getIntConfig("opti.num.iter")[0]
+		self.tracker = None
 		
 		#soln size and soln component data distribution
 		self.solnSizes = self.config.getIntListConfig("opti.solution.size")[0]
@@ -230,6 +304,11 @@ class BaseOptimizer(object):
 		logLevName = self.config.getStringConfig("common.logging.level")[0]
 		self.logger = createLogger(__name__, logFilePath, logLevName)
 		Candidate.initialize(self.solnSizes, dataGroups, self.logger)
+		
+		self.trackingOn = self.config.getBooleanConfig("opti.performance.track.on")[0]
+		if self.trackingOn:
+			self.tracker = ProgressTracker()
+			self.tracker.logger = self.logger
 		
 	def createCandidate(self):
 		"""
@@ -315,6 +394,16 @@ class BaseOptimizer(object):
 			else:
 				self.trackedBestSoln = self.bestSoln
 		return improvement
+	
+	def setBest(self, iter, bestSoln):
+		"""
+		sets best soln
+		"""
+		self.bestSoln = bestSoln
+		if self.trackingOn:
+			self.tracker.register(iter, bestSoln)
+		self.logger.info("better solution found")
+
 				
 	def getBest(self):
 		"""
@@ -379,13 +468,19 @@ class PopulationBasedOptimizer(BaseOptimizer):
 			distr.append(pair)
 		self.fitnessDistr = CategoricalRejectSampler(distr)	
 
-	def findMultBest(self, candList, size):
+	def findMultBest(self, candList, size, preSorted=False):
 		"""
 		find best n from candidate list
 		"""
+		if not preSorted:
+			self.sort()
+		return candList[:size]
+
+	def sort(self, candList):
+		"""
+		sort by ascending order of cost
+		"""
 		candList.sort(key=lambda c: c.cost, reverse=False)
-		bestSoln = candList[:size]
-		return bestSoln
 
 	def tournamentSelect(self, tournSize):
 		"""
@@ -431,21 +526,25 @@ class PopulationBasedOptimizer(BaseOptimizer):
 		"""
 		cross over
 		"""
-		crossOverPoint = sampleUniform(1, len(parents[0].soln)-2)
-		children = list()
+		children = None
+		minSize = min(len(parents[0].soln), len(parents[1].soln))
+		if minSize > 1:
+			crossOverPoint = sampleUniform(1, minSize - 2)
+			children = list()
 		
-		c = parents[0].soln[:crossOverPoint]
-		c.extend(parents[1].soln[crossOverPoint:])
-		chOne = Candidate()
-		chOne.setSoln(c)
+			c = parents[0].soln[:crossOverPoint]
+			c.extend(parents[1].soln[crossOverPoint:])
+			chOne = Candidate()
+			chOne.setSoln(c)
 		
-		c = parents[1].soln[:crossOverPoint]
-		c.extend(parents[0].soln[crossOverPoint:])
-		chTwo = Candidate()
-		chTwo.setSoln(c)
+			c = parents[1].soln[:crossOverPoint]
+			c.extend(parents[0].soln[crossOverPoint:])
+			chTwo = Candidate()
+			chTwo.setSoln(c)
 		
-		children.append(chOne)
-		children.append(chTwo)
+			children.append(chOne)
+			children.append(chTwo)
+			
 		return children
 		
 		

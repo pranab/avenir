@@ -87,10 +87,9 @@ class EvolutionaryOptimizer(PopulationBasedOptimizer):
 				self.purge()
 				self.pool.append(cloneCand)
 				if self.bestSoln is None:
-					self.bestSoln = self.findBest(self.pool)
+					self.setBest(i, self.findBest(self.pool))
 				elif cloneCand.cost < self.bestSoln.cost:
-					self.bestSoln = cloneCand
-					self.logger.info("better solution found")
+					self.setBest(i, cloneCand)
 
 
 class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
@@ -107,6 +106,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		defValues["opti.replacement.size"] = (5, None)
 		defValues["opti.purge.cost.weight"] = (0.7, None)
 		defValues["opti.purge.age.scale"] = (1.0, None)
+		defValues["opti.purge.first"] = (True, None)
 		
 		super(GeneticAlgorithmOptimizer, self).__init__(configFile, defValues, domain)
 		
@@ -117,34 +117,50 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		self.populatePool()
 		matingSize = self.config.getIntConfig("opti.mating.size")[0]
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
+		purgeFirst = self.config.getBooleanConfig("opti.purge.first")[0]
 		
+		preSorted = False
+		if not purgeFirst:
+			self.sort(self.pool)
+			preSorted = True
+			
 		#iterate
 		for i in range(self.numIter):
-			matingList = findMultBest(self, candList, matingSize)
+			matingList = findMultBest(self, candList, matingSize, preSorted)
 			genBest = matingList[0]
 			if self.bestSoln is None or genBest.cost < self.bestSoln.cost:
-				self.bestSoln = genBest
+				self.setBest(i, genBest)
 			
 			#cross over	
 			children = list()
 			while len(children) < replSize:
 				parenrs = selectRandomSubListFromList(matingList, 2)
 				pair = self.crossOver(parents)
-				valid = True
-				for ch in pair:
-					if self.domain.isValid(cloneCand.soln):
-						ch.cost = self.domain.evaluate(ch.soln)
-					else:
-						valid = False
-						break
-				if valid:
-					children.extend(pair)
+				if pair:
+					valid = True
+					for ch in pair:
+						if self.domain.isValid(cloneCand.soln):
+							ch.cost = self.domain.evaluate(ch.soln)
+						else:
+							valid = False
+							break
+					if valid:
+						
+						children.extend(pair)
 			
 			#mutate
 			for ch in children:
 				self.mutate(ch)
 			
-			#purge worst and add children for next generation
-			self.multiPurge(replSize)
-			self.poll.extend(children)
+			
+			if purgeFirst:
+				#purge worst and add children for next generation
+				self.multiPurge(replSize)
+				self.poll.extend(children)
+			else:
+				#add children for next generation and then purge worst
+				self.poll.extend(children)
+				self.sort()
+				self.multiPurge(replSize)
+			
 	

@@ -85,6 +85,11 @@ if __name__ == "__main__":
 	feSelector = FeatureSelector(clfName, clfConfigFile)
 	optimizer = createOptimizer(optName, optConfFile, feSelector)
 	optimizer.run()
-	print("best found")
+	print("best soln found")
 	print(optimizer.getBest())
+	if optimizer.trackingOn:
+		print("soln history")
+		print(str(optimizer.tracker))
+		
+		
 
