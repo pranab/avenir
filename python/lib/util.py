@@ -248,6 +248,23 @@ def preturbVector(values, range):
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
 
+def shuffle(values, numShuffle=None):
+	"""
+	in place shuffling
+	"""
+	size = len(values)
+	if not numShuffle:
+		numShuffle = int(size / 2)
+	for i in range(numShuffle):
+		first = random.randint(0, size - 1)
+		second = random.randint(0, size - 1)
+		while first == second:
+			second = random.randint(0, size - 1)
+		tmp = values[first]
+		values[first] = values[second]
+		values[second] = tmp
+		
+	
 def splitList(itms, numGr):
 	"""
 	splits a list into sub lists
