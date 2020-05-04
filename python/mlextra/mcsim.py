@@ -23,6 +23,7 @@ import numpy as np
 import matplotlib
 import random
 import jprops
+import statistics 
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -39,7 +40,10 @@ class MonteCarloSimulator(object):
 		self.samplers = list()
 		self.numIter = numIter;
 		self.callback = callback
+		self.extraArgs = None
 		self.output = list()
+		self.sum = None
+		self.mean = None
 		
 	def registerIntUniforSampler(self, min, max):
 		"""
@@ -93,6 +97,12 @@ class MonteCarloSimulator(object):
 		"""
 		self.samplers.append(PermutationSampler.createSamplerWithValues(values))
 	
+	def registerExtraAfgs(self, args):
+		"""
+		extra args
+		"""
+		self.extraArgs = args
+
 	def run(self):
 		"""
 		run simulator
@@ -102,11 +112,14 @@ class MonteCarloSimulator(object):
 			for s in self.samplers:
 				arg = s.samples()
 				args.append(arg)
+			if self.extraArgs:
+				args.extend(self.extraArgs)
 			vOut = self.callback(args)	
 			self.output.append(vOut)
 	
 	def getOutput(self):
 		"""
+		raw output
 		"""
 		return self.output
 		
@@ -114,46 +127,113 @@ class MonteCarloSimulator(object):
 		"""
 		sum
 		"""
-		pass
+		if not self.sum:
+			self.sum = sum(self.output)
+		return self.sum
 		
-	def getAverage(self):
+	def getMean(self):
 		"""
 		average
 		"""
-		pass
+		self.mean = statistics.mean(self.output)
+		return self.mean 
 		
 	def getStdDev(self):
 		"""
 		std dev
 		"""
-		pass
+		return statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
+
+	def getMedian(self):
+		"""
+		average
+		"""
+		return statistics.median(self.output)
 
 	def getMax(self):
 		"""
 		max
 		"""
-		pass
+		return max(self.output)
 		
 	def getMin(self):
 		"""
 		min
 		"""
-		pass
+		return min(self.output)
 		
-	def getIntegral(self, drange):
+	def getIntegral(self, bounds):
 		"""
 		integral
 		"""
-		pass
+		if not self.sum:
+			self.sum = sum(self.output)
+		return self.sum * bounds / self.numIter
 	
-	def getLowerTailStat(self, drange):
+	def getLowerTailStat(self, zvalue, numIntPoints=50):
 		"""
 		lower tail stat
 		"""
-		pass
+		mean = self.getMean()
+		sd = self.getStdDev()
+		tailStart = self.getMin()
+		tailEnd = mean - zvalue * sd
+		cvaCounts = self.cumDistr(tailStart, tailEnd, numIntPoints)
+		
+		reqConf = floatRange(0.0, 0.1, .01)	
+		assert reqConf[-1] > cvaCounts[-1][1],  "p value outside interpolation range, reduce zvalue and try again"
+		critValues = self.interpolateCritValues(reqConf, cvaCounts, True, tailStart, tailEnd)
+		return critValues
+		
 
-	def getUpperTailStat(self, drange):
+	def getUpperTailStat(self, zvalue, numIntPoints=50):
 		"""
 		upper tail stat
 		"""
-		pass
+		mean = self.getMean()
+		sd = self.getStdDev()
+		tailStart = mean + zvalue * sd
+		tailEnd = self.getMax()
+		cvaCounts = self.cumDistr(tailStart, tailEnd, numIntPoints)		
+		
+		reqConf = floatRange(0.9, 1.0, .01)	
+		assert reqConf[0] > cvaCounts[0][1],  "p value outside interpolation range, reduce zvalue and try again"
+		critValues = self.interpolateCritValues(reqConf, cvaCounts, False, tailStart, tailEnd)
+		return critValues		
+		return critValues
+
+	def cumDistr(self, tailStart, tailEnd, numIntPoints):
+		"""
+		cumulative distribution at tail
+		"""
+		delta = (tailEnd - tailStart) / numIntPoints
+		cvalues = floatRange(tailStart, tailEnd, delta)
+		cvaCounts = list()
+		for cv in cvalues:
+			count = 0
+			for v in self.output:
+				if v < cv:
+					count += 1
+			p = (cv, count/self.numIter)
+			cvaCounts.append(p)
+		return cvaCounts
+			
+	def interpolateCritValues(self, reqConf, cvaCounts, lowertTail, tailStart, tailEnd):	
+		"""
+		interpolate for spefici confidence limits
+		"""
+		critValues = list()
+		reqConfSub = reqConf[1:] if lowertTail else reqConf[:-1]
+		for rc in reqConfSub:
+			for i in range(len(cvaCounts) -1):
+				if rc >= cvaCounts[i][1] and rc < cvaCounts[i+1][1]:
+					slope = (cvaCounts[i+1][0] - cvaCounts[i][0]) / (cvaCounts[i+1][1] - cvaCounts[i][1])
+					cval = cvaCounts[i][0] + slope * (rc - cvaCounts[i][1]) 
+					p = (rc, cval)
+					critValues.append(p)
+					break
+		if lowertTail:
+			critValues.insert(0.0, tailStart)
+		else:
+			critValues.append(1.0, tailEnd)
+		return critValues
