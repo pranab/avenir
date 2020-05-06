@@ -24,6 +24,7 @@ import matplotlib
 import random
 import jprops
 import statistics 
+from matplotlib import pyplot
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -45,39 +46,25 @@ class MonteCarloSimulator(object):
 		self.sum = None
 		self.mean = None
 		
-	def registerIntUniforSampler(self, min, max):
-		"""
-		int uniform sampler
-		"""
-		self.samplers.append(UniformNumericSampler(min, max))
-		
-	def registerFloatUniforSampler(self, min, max):
+	def registerUniformSampler(self, min, max):
 		"""
 		float uniform sampler
 		"""
 		self.samplers.append(UniformNumericSampler(min, max))
 
-	def registerIntGaussianSampler(self, mean, sd):
+	def registerTriangularSampler(self, min, max, midValue):
 		"""
-		int gaussian sampler
+		float triangular sampler
 		"""
-		sampler = GaussianRejectSampler(mean, sd)
-		sampler.sampleAsInt()
-		self.samplers.append(sampler)
+		self.samplers.append(TriangularRejectSampler(min, max, midValue))
 
-	def registerFloatGaussianSampler(self, mean, sd):
+	def registerGaussianSampler(self, mean, sd):
 		"""
 		float gaussian sampler
 		"""
 		self.samplers.append(GaussianRejectSampler(mean, sd))
 		
-	def registerIntNonParametricSampler(self, min, binWidth, *values):
-		"""
-		int nonparametric sampler
-		"""
-		self.samplers.append(NonParamRejectSampler(min, binWidth, values))
-
-	def registerFloatNonParametricSampler(self, min, binWidth, *values):
+	def registerNonParametricSampler(self, min, binWidth, *values):
 		"""
 		int nonparametric sampler
 		"""
@@ -85,19 +72,25 @@ class MonteCarloSimulator(object):
 		sampler.sampleAsFloat()
 		self.samplers.append(sampler)
 		
-	def registerRangePermutationSampler(self, min, max):
+	def registerRangePermutationSampler(self, min, max, *numShuffles):
 		"""
 		permutation sampler with range
 		"""
-		self.samplers.append(PermutationSampler.createSamplerWithRange(min, max))
+		self.samplers.append(PermutationSampler.createSamplerWithRange(min, max, *numShuffles))
 	
 	def registerValuesPermutationSampler(self, values):
 		"""
 		permutation sampler with values
 		"""
-		self.samplers.append(PermutationSampler.createSamplerWithValues(values))
+		self.samplers.append(PermutationSampler.createSamplerWithValues(values, *numShuffles))
 	
-	def registerExtraAfgs(self, args):
+	def registerCustomSampler(self, sampler):
+		"""
+		permutation sampler with values
+		"""
+		self.samplers.append(sampler)
+	
+	def registerExtraArgs(self, *args):
 		"""
 		extra args
 		"""
@@ -110,7 +103,7 @@ class MonteCarloSimulator(object):
 		for i in range(self.numIter):
 			args = list()
 			for s in self.samplers:
-				arg = s.samples()
+				arg = s.sample()
 				args.append(arg)
 			if self.extraArgs:
 				args.extend(self.extraArgs)
@@ -122,6 +115,13 @@ class MonteCarloSimulator(object):
 		raw output
 		"""
 		return self.output
+	
+	def drawHist(self):
+		"""
+		draw histogram
+		"""
+		pyplot.hist(self.output)
+		pyplot.show()	
 		
 	def getSum(self):
 		"""
@@ -136,19 +136,25 @@ class MonteCarloSimulator(object):
 		average
 		"""
 		self.mean = statistics.mean(self.output)
+		print("mean {:.5f}".format(self.mean))
 		return self.mean 
 		
 	def getStdDev(self):
 		"""
 		std dev
 		"""
-		return statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
+		sd = statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
+		print("std dev {:.5f}".format(sd))
+		return sd 
+		
 
 	def getMedian(self):
 		"""
 		average
 		"""
-		return statistics.median(self.output)
+		med = statistics.median(self.output)
+		print("median {:.5f}".format(med))
+		return med
 
 	def getMax(self):
 		"""
@@ -180,8 +186,9 @@ class MonteCarloSimulator(object):
 		tailEnd = mean - zvalue * sd
 		cvaCounts = self.cumDistr(tailStart, tailEnd, numIntPoints)
 		
-		reqConf = floatRange(0.0, 0.1, .01)	
-		assert reqConf[-1] > cvaCounts[-1][1],  "p value outside interpolation range, reduce zvalue and try again"
+		reqConf = floatRange(0.0, 0.158, .01)	
+		msg = "p value outside interpolation range, reduce zvalue and try again {:.5f}  {:.5f}".format(reqConf[-1], cvaCounts[-1][1])
+		assert reqConf[-1] < cvaCounts[-1][1], msg
 		critValues = self.interpolateCritValues(reqConf, cvaCounts, True, tailStart, tailEnd)
 		return critValues
 		
@@ -196,11 +203,11 @@ class MonteCarloSimulator(object):
 		tailEnd = self.getMax()
 		cvaCounts = self.cumDistr(tailStart, tailEnd, numIntPoints)		
 		
-		reqConf = floatRange(0.9, 1.0, .01)	
-		assert reqConf[0] > cvaCounts[0][1],  "p value outside interpolation range, reduce zvalue and try again"
+		reqConf = floatRange(0.85, 1.0, .01)	
+		msg = "p value outside interpolation range, reduce zvalue and try again {:.5f}  {:.5f}".format(reqConf[0], cvaCounts[0][1])
+		assert reqConf[0] > cvaCounts[0][1],  msg
 		critValues = self.interpolateCritValues(reqConf, cvaCounts, False, tailStart, tailEnd)
 		return critValues		
-		return critValues
 
 	def cumDistr(self, tailStart, tailEnd, numIntPoints):
 		"""
@@ -215,6 +222,7 @@ class MonteCarloSimulator(object):
 				if v < cv:
 					count += 1
 			p = (cv, count/self.numIter)
+			print("{:.5f}  {:.5f}".format(p[0], p[1]))
 			cvaCounts.append(p)
 		return cvaCounts
 			
@@ -223,17 +231,22 @@ class MonteCarloSimulator(object):
 		interpolate for spefici confidence limits
 		"""
 		critValues = list()
+		print("target conf limit " + str(reqConf))
 		reqConfSub = reqConf[1:] if lowertTail else reqConf[:-1]
 		for rc in reqConfSub:
 			for i in range(len(cvaCounts) -1):
 				if rc >= cvaCounts[i][1] and rc < cvaCounts[i+1][1]:
+					#print("interpoltate between " + str(cvaCounts[i])  +  " and " + str(cvaCounts[i+1]))
 					slope = (cvaCounts[i+1][0] - cvaCounts[i][0]) / (cvaCounts[i+1][1] - cvaCounts[i][1])
 					cval = cvaCounts[i][0] + slope * (rc - cvaCounts[i][1]) 
 					p = (rc, cval)
+					print(p)
 					critValues.append(p)
 					break
 		if lowertTail:
-			critValues.insert(0.0, tailStart)
+			p = (0.0, tailStart)
+			critValues.insert(0, p)
 		else:
-			critValues.append(1.0, tailEnd)
+			p = (1.0, tailEnd)
+			critValues.append(p)
 		return critValues

@@ -23,6 +23,7 @@ import time
 import uuid
 from datetime import datetime
 import math
+import numpy as np
 import logging
 import logging.handlers
 from contextlib import contextmanager
@@ -248,13 +249,24 @@ def preturbVector(values, range):
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
 
-def shuffle(values, numShuffle=None):
+def floatRange(beg, end, incr):
 	"""
-	in place shuffling
+	generates float range
+	"""
+	return list(np.arange(beg, end, incr))
+	
+def shuffle(values, *numShuffles):
+	"""
+	in place shuffling with swap of pairs
 	"""
 	size = len(values)
-	if not numShuffle:
+	if len(numShuffles) == 0:
 		numShuffle = int(size / 2)
+	elif len(numShuffles) == 1:
+		numShuffle = numShuffles[0]
+	else:
+		numShuffle = randint(numShuffles[0], numShuffles[1])
+	#print("numShuffle {}".format(numShuffle))
 	for i in range(numShuffle):
 		first = random.randint(0, size - 1)
 		second = random.randint(0, size - 1)
@@ -777,6 +789,16 @@ def swap(values, first, second):
 	values[first] = values[second]	
 	values[second] = t
 
+def swapBetweenLists(values1, values2):
+	"""
+	swap two elements between 2 lists
+	"""
+	p1 = randint(0, len(values1)-1)
+	p2 = randint(0, len(values2)-1)
+	tmp = values1[p1]	
+	values1[p1] = values2[p2]
+	values2[p2] = tmp
+	
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger

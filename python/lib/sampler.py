@@ -31,6 +31,17 @@ def randomFloat(low, high):
 	"""
 	return random.random() * (high-low) + low
 
+def randomNormSampled(mean, sd):
+	"""
+	sample float from normal
+	"""
+	return np.random.normal(mean, sd)
+	
+def randomNormSampledList(mean, sd, count):
+	"""
+	sample float list from normal 
+	"""
+	return np.random.normal(mean, sd, count)
 
 def minLimit(val, min):
 	"""
@@ -192,6 +203,30 @@ class GaussianRejectSampler:
 		if self.sampleAsInt:
 			samp = int(samp)
 		return samp
+		
+class TriangularRejectSampler:
+	"""
+	non parametric sampling using triangular distribution based on rejection sampling	
+	"""
+	def __init__(self, xmin, xmax, midValue):
+		self.xmin = xmin
+		self.xmax = xmax
+		self.midValue= midValue
+		self.xcenter = 0.5 * (xmin + xmax)
+		self.slope = midValue / (self.xcenter - xmin)
+		
+	def sample(self):
+		done = False
+		samp = None
+		while not done:
+			x = randomFloat(self.xmin, self.xmax)
+			y = randomFloat(0.0, self.midValue)
+			f = (x - self.xmin) * self.slope if x < self.xcenter else (self.xmax - x) * self.slope
+			if (y < f):
+				done = True
+				samp = x
+			
+		return samp;	
 
 class NonParamRejectSampler:
 	"""
@@ -411,25 +446,28 @@ class PermutationSampler:
 	"""
 	permutation sampler
 	"""
-	def __init__(self, values):
+	def __init__(self):
 		self.values = None
+		self.numShuffles = None
 	
 	@staticmethod
-	def createSamplerWithValues(values):
+	def createSamplerWithValues(values, *numShuffles):
 		"""
 		creator with values
 		"""
 		sampler = PermutationSampler()
 		sampler.values = values
+		sampler.numShuffles = numShuffles
 		return sampler
 		
 	@staticmethod
-	def createSamplerWithRange(min, max):
+	def createSamplerWithRange(min, max, *numShuffles):
 		"""
 		creator with ramge min and max
 		"""
 		sampler = PermutationSampler()
-		sampler.values = list(range(min,max))
+		sampler.values = list(range(min, max+1))
+		sampler.numShuffles = numShuffles
 		return sampler
 		
 	def sample(self):
@@ -437,7 +475,7 @@ class PermutationSampler:
 		sample new permutation
 		"""
 		cloned = self.values.copy()
-		shuffle(cloned)
+		shuffle(cloned, *self.numShuffles)
 		return cloned
 				
 def createSampler(data):
