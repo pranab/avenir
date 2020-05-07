@@ -149,6 +149,16 @@ def sampleWithReplace(data, sampSize):
 		j = random.randint(0, le - 1)
 		sampled.append(data[j])
 	return sampled
+
+class BinomialSampler:
+	"""
+	binomial sampler return True or False
+	"""
+	def __init__(self, pr):
+		self.pr = pr
+		
+	def sample(self):
+		return random.random() < self.pr
 	
 class UniformNumericSampler:
 	"""
@@ -208,20 +218,25 @@ class TriangularRejectSampler:
 	"""
 	non parametric sampling using triangular distribution based on rejection sampling	
 	"""
-	def __init__(self, xmin, xmax, midValue):
+	def __init__(self, xmin, xmax, vertexValue, vertexPos=None):
 		self.xmin = xmin
 		self.xmax = xmax
-		self.midValue= midValue
-		self.xcenter = 0.5 * (xmin + xmax)
-		self.slope = midValue / (self.xcenter - xmin)
+		self.vertexValue = vertexValue
+		if vertexPos: 
+			assert vertexPos > xmin and vertexPos < xmax, "vertex position outside bound"
+			self.vertexPos = vertexPos
+		else:
+			self.vertexPos = 0.5 * (xmin + xmax)
+		self.s1 = vertexValue / (self.vertexPos - xmin)
+		self.s2 = vertexValue / (xmax - self.vertexPos)
 		
 	def sample(self):
 		done = False
 		samp = None
 		while not done:
 			x = randomFloat(self.xmin, self.xmax)
-			y = randomFloat(0.0, self.midValue)
-			f = (x - self.xmin) * self.slope if x < self.xcenter else (self.xmax - x) * self.slope
+			y = randomFloat(0.0, self.vertexValue)
+			f = (x - self.xmin) * self.s1 if x < self.vertexPos else (self.xmax - x) * self.s2
 			if (y < f):
 				done = True
 				samp = x
@@ -266,6 +281,23 @@ class NonParamRejectSampler:
 				done = True
 				samp = x
 		return samp
+
+class JointNormalSampler:
+	"""
+	joint normal sampler	
+	"""
+	def __init__(self, *values):
+		lvalues = list(values)
+		assert len(lvalues) == 6, "incorrect number of arguments for joint normal sampler"
+		mean = lvalues[:2]
+		self.mean = np.array(mean)
+		sd = lvalues[2:]
+		self.sd = np.array(sd).reshape(2,2)
+		
+	def sample(self):
+		return list(np.random.multivariate_normal(self.mean, self.sd))
+		
+		
 
 class CategoricalRejectSampler:
 	"""

@@ -45,6 +45,12 @@ class MonteCarloSimulator(object):
 		self.output = list()
 		self.sum = None
 		self.mean = None
+
+	def registerBinomialSampler(self, pr):
+		"""
+		binomial sampler
+		"""
+		self.samplers.append(BinomialSampler(pr))
 		
 	def registerUniformSampler(self, min, max):
 		"""
@@ -52,11 +58,11 @@ class MonteCarloSimulator(object):
 		"""
 		self.samplers.append(UniformNumericSampler(min, max))
 
-	def registerTriangularSampler(self, min, max, midValue):
+	def registerTriangularSampler(self, min, max, vertexValue, vertexPos=None):
 		"""
 		float triangular sampler
 		"""
-		self.samplers.append(TriangularRejectSampler(min, max, midValue))
+		self.samplers.append(TriangularRejectSampler(min, max, vertexValue, vertexPos))
 
 	def registerGaussianSampler(self, mean, sd):
 		"""
@@ -104,7 +110,10 @@ class MonteCarloSimulator(object):
 			args = list()
 			for s in self.samplers:
 				arg = s.sample()
-				args.append(arg)
+				if type(arg) is list:
+					args.extend(arg)
+				else:
+					args.append(arg)
 			if self.extraArgs:
 				args.extend(self.extraArgs)
 			vOut = self.callback(args)	
@@ -192,7 +201,17 @@ class MonteCarloSimulator(object):
 		critValues = self.interpolateCritValues(reqConf, cvaCounts, True, tailStart, tailEnd)
 		return critValues
 		
-
+	def getPercentile(self, value):
+		"""
+		percentile
+		"""
+		count = 0
+		for v in self.output:
+			if v < value:
+				count += 1 
+		percent =  int(count * 100.0 / self.numIter)
+		return percent
+		
 	def getUpperTailStat(self, zvalue, numIntPoints=50):
 		"""
 		upper tail stat
