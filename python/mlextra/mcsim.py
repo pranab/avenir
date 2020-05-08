@@ -34,7 +34,7 @@ class MonteCarloSimulator(object):
 	"""
 	monte carlo simulator for intergation, various statistic for complex fumctions
 	"""
-	def __init__(self, numIter, callback):
+	def __init__(self, numIter, callback, logFilePath, logLevName):
 		"""
 		constructor
 		"""
@@ -45,13 +45,23 @@ class MonteCarloSimulator(object):
 		self.output = list()
 		self.sum = None
 		self.mean = None
+		self.sd = None
 
-	def registerBinomialSampler(self, pr):
+		self.logger = createLogger(__name__, logFilePath, logLevName)
+		self.logger.info("******** stating new  session of MonteCarloSimulator")
+
+	def registerBernoulliTrialSampler(self, pr):
 		"""
-		binomial sampler
+		bernoulli trial sampler
 		"""
-		self.samplers.append(BinomialSampler(pr))
+		self.samplers.append(BernoulliTrialSampler(pr))
 		
+	def registerPoissonSampler(self, rateOccur, maxSamp):
+		"""
+		poisson sampler
+		"""
+		self.samplers.append(PoissonSampler(rateOccur, maxSamp))
+
 	def registerUniformSampler(self, min, max):
 		"""
 		float uniform sampler
@@ -106,6 +116,10 @@ class MonteCarloSimulator(object):
 		"""
 		run simulator
 		"""
+		self.sum = None
+		self.mean = None
+		self.sd = None
+
 		for i in range(self.numIter):
 			args = list()
 			for s in self.samplers:
@@ -144,17 +158,17 @@ class MonteCarloSimulator(object):
 		"""
 		average
 		"""
-		self.mean = statistics.mean(self.output)
-		print("mean {:.5f}".format(self.mean))
+		if self.mean is None:
+			self.mean = statistics.mean(self.output)
 		return self.mean 
 		
 	def getStdDev(self):
 		"""
 		std dev
 		"""
-		sd = statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
-		print("std dev {:.5f}".format(sd))
-		return sd 
+		if self.sd is None:
+			self.sd = statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
+		return self.sd 
 		
 
 	def getMedian(self):
@@ -162,7 +176,6 @@ class MonteCarloSimulator(object):
 		average
 		"""
 		med = statistics.median(self.output)
-		print("median {:.5f}".format(med))
 		return med
 
 	def getMax(self):
@@ -241,7 +254,7 @@ class MonteCarloSimulator(object):
 				if v < cv:
 					count += 1
 			p = (cv, count/self.numIter)
-			print("{:.5f}  {:.5f}".format(p[0], p[1]))
+			self.logger.info("{:.3f}  {:.3f}".format(p[0], p[1]))
 			cvaCounts.append(p)
 		return cvaCounts
 			
@@ -250,7 +263,7 @@ class MonteCarloSimulator(object):
 		interpolate for spefici confidence limits
 		"""
 		critValues = list()
-		print("target conf limit " + str(reqConf))
+		self.logger.info("target conf limit " + str(reqConf))
 		reqConfSub = reqConf[1:] if lowertTail else reqConf[:-1]
 		for rc in reqConfSub:
 			for i in range(len(cvaCounts) -1):
@@ -259,7 +272,7 @@ class MonteCarloSimulator(object):
 					slope = (cvaCounts[i+1][0] - cvaCounts[i][0]) / (cvaCounts[i+1][1] - cvaCounts[i][1])
 					cval = cvaCounts[i][0] + slope * (rc - cvaCounts[i][1]) 
 					p = (rc, cval)
-					print(p)
+					self.logger.debug("interpolated crit values {:.3f} {:.3f}".format(p[0], p[1]))
 					critValues.append(p)
 					break
 		if lowertTail:

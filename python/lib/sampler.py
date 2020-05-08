@@ -150,9 +150,9 @@ def sampleWithReplace(data, sampSize):
 		sampled.append(data[j])
 	return sampled
 
-class BinomialSampler:
+class BernoulliTrialSampler:
 	"""
-	binomial sampler return True or False
+	bernoulli trial sampler return True or False
 	"""
 	def __init__(self, pr):
 		self.pr = pr
@@ -160,6 +160,31 @@ class BinomialSampler:
 	def sample(self):
 		return random.random() < self.pr
 	
+class PoissonSampler:
+	"""
+	poisson sampler returns number of events
+	"""
+	def __init__(self, rateOccur, maxSamp):
+		self.rateOccur = rateOccur
+		self.maxSamp = int(maxSamp)
+		self.pmax = self.calculatePr(rateOccur)
+
+	def calculatePr(self, numOccur):
+		p = (self.rateOccur ** numOccur) * math.exp(-self.rateOccur) / math.factorial(numOccur)
+		return p
+
+	def sample(self):
+		done = False
+		samp = 0
+		while not done:
+			no = randint(0, self.maxSamp)
+			sp = randomFloat(0.0, self.pmax)
+			ap = self.calculatePr(no)
+			if sp < ap:
+				done = True
+				samp = no
+		return samp
+
 class UniformNumericSampler:
 	"""
 	uniform sampler for numerical values
