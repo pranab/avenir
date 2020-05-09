@@ -206,7 +206,40 @@ class UniformCategoricalSampler:
 	
 	def sample(self):
 		return selectRandomFromList(self.values)	
+
+class NormalSampler:
+	"""
+	normal sampler
+	"""
+	def __init__(self, mean, stdDev):
+		self.mean = mean
+		self.stdDev = stdDev
+
+	def sample(self):
+		return np.random.normal(self.mean, self.stdDev)
 				
+class LogNormalSampler:
+	"""
+	log normal sampler
+	"""
+	def __init__(self, mean, stdDev):
+		self.mean = mean
+		self.stdDev = stdDev
+
+	def sample(self):
+		return np.random.lognormal(self.mean, self.stdDev)
+
+class ParetoSampler:
+	"""
+	log normal sampler
+	"""
+	def __init__(self, mode, shape):
+		self.mode = mode
+		self.shape = shape
+
+	def sample(self):
+		return (np.random.pareto(self.shape) + 1) * self.mode
+
 class GaussianRejectSampler:
 	"""
 	gaussian sampling based on rejection sampling
@@ -238,7 +271,34 @@ class GaussianRejectSampler:
 		if self.sampleAsInt:
 			samp = int(samp)
 		return samp
-		
+
+class DiscreteRejectSampler:
+	"""
+	non parametric sampling for categorical attributes using given distribution based 
+	on rejection sampling	
+	"""
+	def __init__(self,  xmin, xmax, *values):
+		self.xmin = xmin
+		self.xmax = xmax
+		self.distr = values
+		if (len(self.distr) == 1):
+			self.distr = self.distr[0]	
+		assert len(self.distr)	== self.xmax - self.xmin + 1, "invalid number of distr values"
+		self.pmax = float(max(self.distr))
+
+	def sample(self):
+		done = False
+		samp = None
+		while not done:
+			x = randint(self.xmin, self.xmax)
+			ps = randomFloat(0.0, self.pmax)
+			pa = self.distr[x - self.xmin]
+			if ps < pa:
+				samp = x
+				done = True
+		return samp
+
+
 class TriangularRejectSampler:
 	"""
 	non parametric sampling using triangular distribution based on rejection sampling	
