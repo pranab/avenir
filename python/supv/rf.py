@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -80,11 +80,11 @@ class RandomForest(BaseClassifier):
 		defValues["validate.use.saved.model"] = (False, None)
 		defValues["validate.score.method"] = ("accuracy", None)
 		
-		super(RandomForest, self).__init__(configFile, defValues)
+		super(RandomForest, self).__init__(configFile, defValues, __name__)
 
 	# builds model object
 	def buildModel(self):
-		print ("...building random forest model")
+		self.logger.info("...building random forest model")
 		numTrees = self.config.getIntConfig("train.num.trees")[0]
 		splitCriterion = self.config.getStringConfig("train.split.criterion")[0]
 		maxDepth = self.config.getStringConfig("train.max.depth")[0]
@@ -128,7 +128,7 @@ class RandomForest(BaseClassifier):
 			featData = featData.reshape(1, -1)
 		
 		#predict
-		print ("...predicting class probability")
+		self.logger.info("...predicting class probability")
 		clsData = self.classifier.predict_proba(featData) 
 		return clsData
 

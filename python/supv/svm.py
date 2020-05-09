@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -53,7 +53,7 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["train.kernel.function"] = ("rbf", None)
 		defValues["train.poly.degree"] = (3, None)
 		defValues["train.penalty"] = (1.0, None)
-		defValues["train.gamma"] = ("auto", None)
+		defValues["train.gamma"] = ("scale", None)
 		defValues["train.penalty.norm"] = ("l2", None)
 		defValues["train.loss"] = ("squared_hinge", None)
 		defValues["train.dual"] = (True, None)
@@ -77,11 +77,11 @@ class SupportVectorMachine(BaseClassifier):
 		defValues["validate.use.saved.model"] = (False, None)
 		defValues["validate.score.method"] = ("accuracy", None)
 		
-		super(SupportVectorMachine, self).__init__(configFile, defValues)
+		super(SupportVectorMachine, self).__init__(configFile, defValues, __name__)
 
 	# builds model object
 	def buildModel(self):
-		print ("...building svm model")
+		self.logger.info("...building svm model")
 		algo = self.config.getStringConfig("train.algorithm")[0]
 		kernelFun = self.config.getStringConfig("train.kernel.function")[0]
 		penalty = self.config.getFloatConfig("train.penalty")[0]
@@ -114,7 +114,7 @@ class SupportVectorMachine(BaseClassifier):
 		elif (algo == "linearsvc"):
 			model = sk.svm.LinearSVC(penalty=penaltyNorm, loss=trainLoss, dual=dualOpt)
 		else:
-			print ("invalid svm algorithm")
+			self.logger.info("invalid svm algorithm")
 			sys.exit()
 		self.classifier = model
 		return self.classifier
@@ -133,7 +133,7 @@ class SupportVectorMachine(BaseClassifier):
 			featData = featData.reshape(1, -1)
 		
 		#predict
-		print ("...predicting class probability")
+		self.logger.info("...predicting class probability")
 		clsData = self.classifier.predict_proba(featData) 
 		return clsData
 

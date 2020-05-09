@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -81,7 +81,7 @@ class LogisticRegressionDiscriminant(BaseClassifier):
 		defValues["validate.use.saved.model"] = (False, None)
 		defValues["validate.score.method"] = ("accuracy", None)
 
-		super(SupportVectorMachine, self).__init__(configFile, defValues)
+		super(LogisticRegressionDiscriminant, self).__init__(configFile, defValues, __name__)
 
 	# builds model object
 	def buildModel(self):

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -61,6 +61,10 @@ class BaseRegressor(object):
 		self.regressor = None
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		self.mode = self.config.getBooleanConfig("common.mode")[0]
+		logFilePath = self.config.getStringConfig("common.logging.file")[0]
+		logLevName = self.config.getStringConfig("common.logging.level")[0]
+		self.logger = createLogger(__name__, logFilePath, logLevName)
+		self.logger.info("********* starting session")
 	
 	def initConfig(self, configFile, defValues):
 		"""
@@ -104,7 +108,7 @@ class BaseRegressor(object):
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		
 		#train
-		print ("...training model")
+		self.logger.info("...training model")
 		self.regressor.fit(featData, outData) 
 		rsqScore = self.regressor.score(featData, outData)
 		coef = self.regressor.coef_
@@ -112,7 +116,7 @@ class BaseRegressor(object):
 		result = (rsqScore, intc, coef)
 		
 		if modelSave:
-			print ("...saving model")
+			self.logger.info("...saving model")
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.regressor, modelFilePath) 
 		return result
@@ -125,7 +129,7 @@ class BaseRegressor(object):
 		(featData, outDataActual) = self.prepData("validate")
 		
 		#predict
-		print ("...predicting")
+		self.logger.info("...predicting")
 		outDataPred = self.regressor.predict(featData) 
 		
 		#error
@@ -144,7 +148,7 @@ class BaseRegressor(object):
 		featData = self.prepData("predict")[0]
 		
 		#predict
-		print ("...predicting")
+		self.logger.info("...predicting")
 		outData = self.regressor.predict(featData) 
 		return outData
 
@@ -187,7 +191,7 @@ class BaseRegressor(object):
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if (useSavedModel and not self.regressor):
 			# load saved model
-			print ("...loading saved model")
+			self.logger.info("...loading saved model")
 			modelFilePath = self.getModelFilePath()
 			self.regressor = joblib.load(modelFilePath)
 		else:
@@ -208,7 +212,7 @@ class LinearRegressor(BaseRegressor):
 		"""
 		builds model object
 		"""
-		print ("...building linear regression model")
+		self.logger.info("...building linear regression model")
 		normalize = self.config.getBooleanConfig("train.normalize")[0]
 		self.regressor = LinearRegression(normalize=normalize)
 
@@ -233,7 +237,7 @@ class ElasticNetRegressor(BaseRegressor):
 		"""
 		builds model object
 		"""
-		print ("...building elastic net regression model")
+		self.logger.info("...building elastic net regression model")
 		alpha = self.config.getFloatConfig("train.alpha")[0]
 		loneratio = self.config.getFloatConfig("train.loneratio")[0]
 		normalize = self.config.getBooleanConfig("train.normalize")[0]

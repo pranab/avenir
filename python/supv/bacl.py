@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -37,13 +37,17 @@ from pasearch import *
 #base classifier class
 class BaseClassifier(object):
 	
-	def __init__(self, configFile, defValues):
+	def __init__(self, configFile, defValues, mname):
 		self.config = Configuration(configFile, defValues)
 		self.subSampleRate  = None
 		self.featData = None
 		self.clsData = None
 		self.classifier = None
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
+		logFilePath = self.config.getStringConfig("common.logging.file")[0]
+		logLevName = self.config.getStringConfig("common.logging.level")[0]
+		self.logger = createLogger(mname, logFilePath, logLevName)
+		self.logger.info("********* starting session")
 	
 	#initialize config	
 	def initConfig(self, configFile, defValues):
@@ -78,29 +82,29 @@ class BaseClassifier(object):
 			(featData, clsData) = (self.featData, self.clsData)
 		if self.subSampleRate is not None:
 			(featData, clsData) = subSample(featData, clsData, self.subSampleRate, False)
-			print ("subsample size  " + str(featData.shape[0]))
+			self.logger.info("subsample size  " + str(featData.shape[0]))
 		
 		# parameters
 		modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		
 		#train
-		print ("...training model")
+		self.logger.info("...training model")
 		self.classifier.fit(featData, clsData) 
 		score = self.classifier.score(featData, clsData)  
 		successCriterion = self.config.getStringConfig("train.success.criterion")[0]
 		result = None
 		if successCriterion == "accuracy":
-			print ("accuracy with training data {:06.3f}".format(score))
+			self.logger.info("accuracy with training data {:06.3f}".format(score))
 			result = score
 		elif successCriterion == "error":
 			error = 1.0 - score
-			print ("error with training data {:06.3f}".format(error))
+			self.logger.info("error with training data {:06.3f}".format(error))
 			result = error
 		else:
 			raise ValueError("invalid success criterion")
 			
 		if modelSave:
-			print ("...saving model")
+			self.logger.info("...saving model")
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.classifier, modelFilePath) 
 		return result
@@ -120,7 +124,7 @@ class BaseClassifier(object):
 		scoreMethod = self.config.getStringConfig("train.score.method")[0]
 		
 		#train with validation
-		print ("...training and kfold cross validating model")
+		self.logger.info("...training and kfold cross validating model")
 		scores = cross_val_score(self.classifier, featData, clsData, cv=numFolds,scoring=scoreMethod)
 		avScore = np.mean(scores)
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
@@ -128,7 +132,7 @@ class BaseClassifier(object):
 		
 	#train with k fold validation and search parameter space for optimum
 	def trainValidateSearch(self):
-		print ("...starting train validate with parameter search")
+		self.logger.info("...starting train validate with parameter search")
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
 			if searchStrategyName == "grid":
@@ -179,7 +183,7 @@ class BaseClassifier(object):
 		paramValues = searchStrategy.nextParamValues()
 		searchResults = []
 		while paramValues is not None:
-			print ("...next parameter set")
+			self.logger.info("...next parameter set")
 			paramStr = ""
 			for paramValue in paramValues:
 				self.setConfigParam(paramValue[0], str(paramValue[1]))
@@ -190,16 +194,16 @@ class BaseClassifier(object):
 			paramValues = searchStrategy.nextParamValues()
 			
 		# output
-		print ("all parameter search results")
+		self.logger.info("all parameter search results")
 		for searchResult in searchResults:
-			print ("{}\t{06.3f}".format(searchResult[0], searchResult[1]))
+			self.logger.info("{}\t{06.3f}".format(searchResult[0], searchResult[1]))
 		
-		print ("best parameter search result")
+		self.logger.info("best parameter search result")
 		bestSolution = searchStrategy.getBestSolution()
 		paramStr = ""
 		for paramValue in bestSolution[0]:
 			paramStr = paramStr + paramValue[0] + "=" + str(paramValue[1]) + "  "
-		print ("{}\t{:06.3f}".format(paramStr, bestSolution[1]))
+		self.logger.info("{}\t{:06.3f}".format(paramStr, bestSolution[1]))
 		return bestSolution
 			
 	#predict
@@ -208,7 +212,7 @@ class BaseClassifier(object):
 		useSavedModel = self.config.getBooleanConfig("validate.use.saved.model")[0]
 		if useSavedModel:
 			# load saved model
-			print ("...loading model")
+			self.logger.info("...loading model")
 			modelFilePath = self.getModelFilePath()
 			self.classifier = joblib.load(modelFilePath)
 		else:
@@ -219,20 +223,20 @@ class BaseClassifier(object):
 		(featData, clsDataActual) = self.prepValidationData()
 		
 		#predict
-		print ("...predicting")
+		self.logger.info("...predicting")
 		clsDataPred = self.classifier.predict(featData) 
 		
-		print ("...validating")
+		self.logger.info("...validating")
 		#print clsData
 		scoreMethod = self.config.getStringConfig("validate.score.method")[0]
 		if scoreMethod == "accuracy":
 			accuracy = sk.metrics.accuracy_score(clsDataActual, clsDataPred) 
-			print ("accuracy:")
-			print (accuracy)
+			self.logger.info("accuracy:")
+			self.logger.info(accuracy)
 		elif scoreMethod == "confusionMatrix":
 			confMatrx = sk.metrics.confusion_matrix(clsDataActual, clsDataPred)
-			print ("confusion matrix:")
-			print (confMatrx)
+			self.logger.info("confusion matrix:")
+			self.logger.info(confMatrx)
 
 	 
 	#predict
@@ -244,9 +248,9 @@ class BaseClassifier(object):
 		featData = self.prepPredictData()
 		
 		#predict
-		print ("...predicting")
+		self.logger.info("...predicting")
 		clsData = self.classifier.predict(featData) 
-		print (clsData)
+		self.logger.info(clsData)
 	
 	#predict with in memory data
 	def predict(self, recs=None):
@@ -264,7 +268,7 @@ class BaseClassifier(object):
 			featData = self.prepPredictData()
 		
 		#predict
-		print ("...predicting")
+		self.logger.info("...predicting")
 		clsData = self.classifier.predict(featData) 
 		return clsData
 		
@@ -277,7 +281,7 @@ class BaseClassifier(object):
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if (useSavedModel and not self.classifier):
 			# load saved model
-			print ("...loading saved model")
+			self.logger.info("...loading saved model")
 			modelFilePath = self.getModelFilePath()
 			self.classifier = joblib.load(modelFilePath)
 		else:
@@ -362,11 +366,11 @@ class BaseClassifier(object):
 	# report result
 	def reportResult(self, score, successCriterion, scoreMethod):
 		if successCriterion == "accuracy":
-			print ("average " + scoreMethod + " with k fold cross validation {:06.3f}".format(score))
+			self.logger.info("average " + scoreMethod + " with k fold cross validation {:06.3f}".format(score))
 			result = score
 		elif successCriterion == "error":
 			error = 1.0 - score
-			print ("average error with k fold cross validation {:06.3f}".format(error))
+			self.logger.info("average error with k fold cross validation {:06.3f}".format(error))
 			result = error
 		else:
 			raise ValueError("invalid success criterion")
@@ -392,48 +396,48 @@ class BaseClassifier(object):
 		for paramValue in result[0]:
 			pName = paramValue[0]
 			pValue = paramValue[1]
-			print (pName + "  " + pValue)
+			self.logger.info(pName + "  " + pValue)
 			self.setConfigParam(pName, pValue)
 		trainError = self.train()
 		
 		if testError < maxTestErr:
 			# criteria based on test error only
-			print ("Successfullt trained. Low test error level")
+			self.logger.info("Successfullt trained. Low test error level")
 			status = 1
 		else:
 			# criteria based on bias error and generalization error
 			avError = (trainError + testError) / 2
 			diffError = testError - trainError
-			print ("Auto training  completed: training error {:06.3f} test error: {:06.3f}".format(trainError, testError))
-			print ("Average of test and training error: {:06.3f} test and training error diff: {:06.3f}".format(avError, diffError))
+			self.logger.info("Auto training  completed: training error {:06.3f} test error: {:06.3f}".format(trainError, testError))
+			self.logger.info("Average of test and training error: {:06.3f} test and training error diff: {:06.3f}".format(avError, diffError))
 			if diffError > maxErrDiff:
 				# high generalization error
 				if avError > maxErr:
 					# high bias error
-					print ("High generalization error and high error. Need larger training data set and increased model complexity")
+					self.logger.info("High generalization error and high error. Need larger training data set and increased model complexity")
 					status = 4
 				else:
 					# low bias error
-					print ("High generalization error. Need larger training data set")
+					self.logger.info("High generalization error. Need larger training data set")
 					status = 3
 			else:
 				# low generalization error
 				if avError > maxErr:
 					# high bias error
-					print ("Converged, but with high error rate. Need to increase model complexity")
+					self.logger.info("Converged, but with high error rate. Need to increase model complexity")
 					status = 2
 				else:
 					# low bias error
-					print ("Successfullt trained. Low generalization error and low bias error level")
+					self.logger.info("Successfullt trained. Low generalization error and low bias error level")
 					status = 1
 				
 		if status == 1:
 			#train final model, use all data and save model
-			print ("...training the final model")
+			self.logger.info("...training the final model")
 			self.config.setParam("train.model.save", "True")
 			self.subSampleRate  = None
 			trainError = self.train()
-			print ("training error in final model {:06.3f}".format(trainError))
+			self.logger.info("training error in final model {:06.3f}".format(trainError))
 		
 		return status
 			
