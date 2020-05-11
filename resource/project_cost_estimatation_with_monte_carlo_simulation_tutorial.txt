@@ -1,0 +1,17 @@
+This tutorial is for calculating various statistical parameters for a project cost estimate using 
+Monte Carlo Simulation python library in avenir. 
+
+Setup
+=====
+Make sure you have ../lib  and ../mlextra directory with all the python files wrt where pccb.py is
+
+Run simulator
+=============
+./pccb.py 5000
+
+where 5000 is the number of iterations. You could choose a different number
+
+For different use case
+======================
+You have to implement the application in python using pccb.py as an example. Please
+refer to the blog post for more details

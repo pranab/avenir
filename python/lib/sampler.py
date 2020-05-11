@@ -231,7 +231,7 @@ class LogNormalSampler:
 
 class ParetoSampler:
 	"""
-	log normal sampler
+	pareto sampler
 	"""
 	def __init__(self, mode, shape):
 		self.mode = mode
@@ -367,6 +367,40 @@ class NonParamRejectSampler:
 				samp = x
 		return samp
 
+class JointNonParamRejectSampler:
+	"""
+	non parametric sampling using given distribution based on rejection sampling	
+	"""
+	def __init__(self, xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values):
+		self.values = values
+		if (len(self.values) == 1):
+			self.values = self.values[0]
+		assert len(self.values) ==  xnbin * ynbin, "wrong number of values for joint distr"
+		self.xmin = xmin
+		self.xmax = xmin + xbinWidth * xnbin
+		self.xbinWidth = xbinWidth
+		self.ymin = ymin
+		self.ymax = ymin + ybinWidth * ynbin
+		self.ybinWidth = ybinWidth
+		self.pmax = max(self.values)
+		self.values = np.array(self.values).reshape(xnbin, ynbin)
+
+	def sample(self):
+		done = False
+		samp = 0
+		while not done:
+			x = randomFloat(self.xmin, self.xmax)
+			y = randomFloat(self.ymin, self.ymax)
+			xbin = int((x - self.xmin) / self.xbinWidth)
+			ybin = int((y - self.ymin) / self.ybinWidth)
+			ap = self.values[xbin][ybin]
+			sp = randomFloat(0.0, self.pmax)
+			if (sp < ap):
+				done = True
+				samp = [x,y]
+		return samp
+
+
 class JointNormalSampler:
 	"""
 	joint normal sampler	
@@ -383,6 +417,20 @@ class JointNormalSampler:
 		return list(np.random.multivariate_normal(self.mean, self.sd))
 		
 		
+class MultiVarNormalSampler:
+	"""
+	muti variate normal sampler	
+	"""
+	def __init__(self, numVar, *values):
+		lvalues = list(values)
+		assert len(lvalues) == numVar + numVar * numVar, "incorrect number of arguments for multi var normal sampler"
+		mean = lvalues[:numVar]
+		self.mean = np.array(mean)
+		sd = lvalues[numVar:]
+		self.sd = np.array(sd).reshape(numVar,numVar)
+		
+	def sample(self):
+		return list(np.random.multivariate_normal(self.mean, self.sd))
 
 class CategoricalRejectSampler:
 	"""

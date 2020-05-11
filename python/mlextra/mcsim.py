@@ -64,30 +64,66 @@ class MonteCarloSimulator(object):
 
 	def registerUniformSampler(self, min, max):
 		"""
-		float uniform sampler
+		uniform sampler
 		"""
 		self.samplers.append(UniformNumericSampler(min, max))
 
 	def registerTriangularSampler(self, min, max, vertexValue, vertexPos=None):
 		"""
-		float triangular sampler
+		triangular sampler
 		"""
 		self.samplers.append(TriangularRejectSampler(min, max, vertexValue, vertexPos))
 
 	def registerGaussianSampler(self, mean, sd):
 		"""
-		float gaussian sampler
+		gaussian sampler
 		"""
 		self.samplers.append(GaussianRejectSampler(mean, sd))
 		
+	def registerNormalSampler(self, mean, sd):
+		"""
+		gaussian sampler using numpy
+		"""
+		self.samplers.append(NormalSampler(mean, sd))
+
+	def registerLogNormalSampler(self, mean, sd):
+		"""
+		log normal sampler using numpy
+		"""
+		self.samplers.append(LogNormalSampler(mean, sd))
+
+	def registerParetoSampler(self, mode, shape):
+		"""
+		pareto sampler using numpy
+		"""
+		self.samplers.append(ParetoSampler(mode, shape))
+
+	def registerDiscreteRejectSampler(self, xmin, xmax, *values):
+		"""
+		disccrete int sampler
+		"""
+		self.samplers.append(DiscreteRejectSampler(xmin, xmax, *values))
+
 	def registerNonParametricSampler(self, min, binWidth, *values):
 		"""
-		int nonparametric sampler
+		nonparametric sampler
 		"""
-		sampler = NonParamRejectSampler(min, binWidth, values)
+		sampler = NonParamRejectSampler(min, binWidth, *values)
 		sampler.sampleAsFloat()
 		self.samplers.append(sampler)
+
+	def registerMultiVarNormalSampler(self,  numVar, *values):
+		"""
+		multi var gaussian sampler using numpy
+		"""
+		self.samplers.append(MultiVarNormalSampler(numVar, *values))
 		
+	def registerJointNonParamRejectSampler(self, xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values):
+		"""
+		joint nonparametric sampler
+		"""
+		self.samplers.append(JointNonParamRejectSampler(xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values))
+
 	def registerRangePermutationSampler(self, min, max, *numShuffles):
 		"""
 		permutation sampler with range
@@ -139,11 +175,14 @@ class MonteCarloSimulator(object):
 		"""
 		return self.output
 	
-	def drawHist(self):
+	def drawHist(self, myTitle, myXlabel, myYlabel):
 		"""
 		draw histogram
 		"""
-		pyplot.hist(self.output)
+		pyplot.hist(self.output, density=True)
+		pyplot.title(myTitle)
+		pyplot.xlabel(myXlabel)
+		pyplot.ylabel(myYlabel)
 		pyplot.show()	
 		
 	def getSum(self):
