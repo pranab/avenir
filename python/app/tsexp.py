@@ -20,6 +20,8 @@ import sys
 from random import randint
 import time
 from datetime import datetime
+import pandas as pd
+import numpy as np
 from statsmodels.graphics import tsaplots
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.tsa.stattools import kpss
@@ -33,6 +35,7 @@ from scipy.stats import shapiro
 from scipy.stats import kendalltau
 from scipy.stats import mannwhitneyu
 from scipy.stats import wilcoxon
+from scipy.stats import chi2_contingency
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -103,6 +106,30 @@ def loadData(config, extra=False):
 		data = data[ra[0]:ra[1]]
 	return np.array(data)
 
+def getConTab(config):
+	"""
+	get contingency table
+	"""
+	filePath = config.getStringConfig("data.filePath")[0]
+	otherFilePath = config.getStringConfig("data.filePath.extra")[0]
+	c1 = config.getIntConfig("data.col.index")[0]
+	c2 = config.getIntConfig("data.col.index.extra")[0]
+	if filePath == otherFilePath:
+		data = pd.read_csv(filePath,  header=None) 
+		data = data.loc[ : , [c1, c2]]
+		data.columns = range(data.shape[1])
+	else:
+		d1 = pd.read_csv(filePath, header=None) 
+		d2 = pd.read_csv(otherFilePath, header=None) 
+		d1 = d1.loc[ : , c1 ]
+		d2 = d2.loc[ : , c2 ]
+		data = pd.concat([d1,d2], axis=1)
+		data.columns = range(data.shape[1])
+
+	crosstab = pd.crosstab(data[0], data[1], margins = False)
+	ctab = crosstab.values
+	return ctab
+
 def printStat(stat, pvalue, nhMsg, ahMsg):
 	"""
 	generic stat and pvalue output
@@ -115,11 +142,19 @@ if __name__ == "__main__":
 	op = sys.argv[1]
 	confFile = sys.argv[2]
 	config = loadConfig(confFile)
-	if not op == "cov":
+	noLoadOps = set(["cov", "desc", "contab", "cscorr"])
+	if op not in noLoadOps:
 		data = loadData(config)
-	
+
+	if op == "desc":
+		filePath = config.getStringConfig("data.filePath")[0]
+		data = pd.read_csv(filePath, header=None) 
+		print (data.head(5)) 
+		print(data.describe())
+		print(data.info())
+
 	#plot data
-	if op == "draw":
+	elif op == "draw":
 		pyplot.plot(data)
 		pyplot.show()
 	
@@ -256,6 +291,22 @@ if __name__ == "__main__":
 		dataSec = loadData(config, True)
 		stat, pvalue = kendalltau(data, dataSec)
 		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+	
+	#chi square correlation for categorical	
+	elif op == "cscorr":
+		ctab = getConTab(config)
+		stat, pvalue, dof, expctd = chi2_contingency(ctab)
+		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+		print("dof " + str(dof))
+		print("actual")
+		print(ctab)
+		print("expected")
+		print(expctd)
+
+	#contingency table	
+	elif op == "contab":
+		ctab = getConTab(config)
+		print(ctab)
 
 	#Kolmogorov Sminov 2 sample statistic	
 	elif op == "ks2s":
