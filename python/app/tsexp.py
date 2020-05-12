@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -26,6 +26,13 @@ from statsmodels.tsa.stattools import kpss
 from statsmodels.stats.stattools import jarque_bera
 from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot
+from scipy.stats import ks_2samp
+from scipy.stats import pearsonr
+from scipy.stats import spearmanr
+from scipy.stats import shapiro
+from scipy.stats import kendalltau
+from scipy.stats import mannwhitneyu
+from scipy.stats import wilcoxon
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -33,6 +40,8 @@ from sampler import *
 
 """
 Various data exploration functions. Some are applicable for time series only.
+https://machinelearningmastery.com/statistical-hypothesis-tests-in-python-cheat-sheet/
+https://machinelearningmastery.com/feature-selection-with-real-and-categorical-data/
 """
 
 def loadConfig(configFile):
@@ -94,6 +103,13 @@ def loadData(config, extra=False):
 		data = data[ra[0]:ra[1]]
 	return np.array(data)
 
+def printStat(stat, pvalue, nhMsg, ahMsg):
+	"""
+	generic stat and pvalue output
+	"""
+	print("stat:   {:.3f}".format(stat))
+	print("pvalue: {:.3f}".format(pvalue))
+	print(nhMsg if pvalue > 0.05 else ahMsg)
 
 if __name__ == "__main__":
 	op = sys.argv[1]
@@ -173,32 +189,35 @@ if __name__ == "__main__":
 		regression = config.getStringConfig("adf.regression")[0]
 		autolag = config.getStringConfig("adf.autolag")[0]
 		result = adfuller(data, regression=regression, autolag=autolag)
-		print(f'ADF Statistic: {result[0]}')
-		print(f'p value: {result[1]}')
+		printStat(result[0], result[1], "probably not stationary", "probably stationary")
 		print(f'num lags: {result[2]}')
 		print(f'num observation for regression: {result[3]}')
-		print('Critial Values:')
+		print('critial values:')
 		for key, value in result[4].items():
 			print(f'   {key}, {value}')    
 			
 	#stationarity test
 	elif op =="kpss":
 		regression = config.getStringConfig("kpss.regression")[0]
-		statistic, pvalue, nLags, criticalValues = kpss(data, regression=regression)
-		print(f'KPSS Statistic: {statistic}')
-		print(f'pvalue: {pvalue}')
+		stat, pvalue, nLags, criticalValues = kpss(data, regression=regression)
+		printStat(stat, pvalue, "probably not stationary", "probably stationary")
 		print(f'num lags: {nLags}')
-		print('Critial Values:')
+		print('critial values:')
 		for key, value in criticalValues.items():
 			print(f'   {key} : {value}')	
 				
 	#normalcy test	
 	elif op == "jarqBera":	
 		jb, jbpv, skew, kurtosis =  jarque_bera(data)
-		print(f'pvalue: {jbpv}')
+		printStat(jb, jbpv, "probably gaussian", "probably not gaussian")
 		print(f'skew: {skew}')
 		print(f'kurtosis: {kurtosis}')
 		
+	#normalcy test
+	elif op == "shapWilk":	
+		stat, pvalue = shapiro(data)
+		printStat(stat, pvalue, "probably gaussian", "probably not gaussian")
+
 	#histogram
 	elif op == "hist":	
 		cumulative = config.getBooleanConfig("hist.cumulative")[0]
@@ -219,7 +238,43 @@ if __name__ == "__main__":
 		cov = np.cov(values)
 		print("co variance matrix")
 		print(cov)
+
+	#pearson correlation	
+	elif op == "pcorr":
+		dataSec = loadData(config, True)
+		stat, pvalue = pearsonr(data, dataSec)
+		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+	
+	#spearman rank correlation	
+	elif op == "srcorr":
+		dataSec = loadData(config, True)
+		stat, pvalue = spearmanr(data, dataSec)
+		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+
+	#kendal rank correlation	
+	elif op == "krcorr":
+		dataSec = loadData(config, True)
+		stat, pvalue = kendalltau(data, dataSec)
+		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+
+	#Kolmogorov Sminov 2 sample statistic	
+	elif op == "ks2s":
+		dataSec = loadData(config, True)
+		stat, pvalue = ks_2samp(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
 		
+	#Mann-Whitney U 2 sample statistic	
+	elif op == "mawh":
+		dataSec = loadData(config, True)
+		stat, pvalue = mannwhitneyu(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
+
+	#Wilcoxon Signed-Rank 2 sample statistic	
+	elif op == "wilcox":
+		dataSec = loadData(config, True)
+		stat, pvalue = wilcoxon(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
+
 	else:
 		raise ValueError("unknown command")
 		
