@@ -28,6 +28,7 @@ from statsmodels.tsa.stattools import kpss
 from statsmodels.stats.stattools import jarque_bera
 from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot
+from scipy.stats import ttest_ind
 from scipy.stats import ks_2samp
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
@@ -35,7 +36,12 @@ from scipy.stats import shapiro
 from scipy.stats import kendalltau
 from scipy.stats import mannwhitneyu
 from scipy.stats import wilcoxon
+from scipy.stats import kruskal
+from scipy.stats import friedmanchisquare
 from scipy.stats import chi2_contingency
+from scipy.stats import f_oneway
+from scipy.stats import normaltest
+from scipy.stats import anderson
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -73,7 +79,8 @@ def loadConfig(configFile):
 	defValues["hist.cumulative"] = (False, None)
 	defValues["hist.density"] = (False, None)
 	defValues["cov.file.paths"] = (None, "missing list of file path and column index")
-	
+	defValues["ancorr.grby.col"] = (None, None)
+		
 	config = Configuration(configFile, defValues)
 	return config
 
@@ -106,9 +113,21 @@ def loadData(config, extra=False):
 		data = data[ra[0]:ra[1]]
 	return np.array(data)
 
-def getConTab(config):
+
+def loadMainData(config):
 	"""
-	get contingency table
+	load main data set in a data frame
+	"""
+	filePath = config.getStringConfig("data.filePath")[0]
+	c = config.getIntConfig("data.col.index")[0]
+	data = pd.read_csv(filePath,  header=None) 
+	data = data.loc[ : , c]
+	data.columns = range(data.shape[1])
+	return data
+
+def loadAllData(config):
+	"""
+	load both data sets in a data frame
 	"""
 	filePath = config.getStringConfig("data.filePath")[0]
 	otherFilePath = config.getStringConfig("data.filePath.extra")[0]
@@ -125,7 +144,13 @@ def getConTab(config):
 		d2 = d2.loc[ : , c2 ]
 		data = pd.concat([d1,d2], axis=1)
 		data.columns = range(data.shape[1])
+	return data
 
+def getConTab(config):
+	"""
+	get contingency table
+	"""
+	data = loadAllData(config)
 	crosstab = pd.crosstab(data[0], data[1], margins = False)
 	ctab = crosstab.values
 	return ctab
@@ -142,7 +167,7 @@ if __name__ == "__main__":
 	op = sys.argv[1]
 	confFile = sys.argv[2]
 	config = loadConfig(confFile)
-	noLoadOps = set(["cov", "desc", "contab", "cscorr"])
+	noLoadOps = set(["cov", "desc", "contab", "cscorr", "ancorr"])
 	if op not in noLoadOps:
 		data = loadData(config)
 
@@ -152,6 +177,7 @@ if __name__ == "__main__":
 		print (data.head(5)) 
 		print(data.describe())
 		print(data.info())
+		print(data.dtypes)
 
 	#plot data
 	elif op == "draw":
@@ -248,11 +274,27 @@ if __name__ == "__main__":
 		print(f'skew: {skew}')
 		print(f'kurtosis: {kurtosis}')
 		
-	#normalcy test
+	#shapiro wilks normalcy test
 	elif op == "shapWilk":	
 		stat, pvalue = shapiro(data)
 		printStat(stat, pvalue, "probably gaussian", "probably not gaussian")
 
+	#D’Agostino’s K square  normalcy test
+	elif op == "dagast":	
+		stat, pvalue = normaltest(data)
+		printStat(stat, pvalue, "probably gaussian", "probably not gaussian")
+
+	#anderson darling normalcy test
+	elif op == "andar":	
+		result = anderson(data)
+		print("stat {:.3f}".format(result.statistic))
+		for i in range(len(result.critical_values)):
+			sl, cv = result.significance_level[i], result.critical_values[i]
+			if int(sl) == 5:
+				if result.statistic < cv:
+					print("probably gaussian at the {:.1f} level".format(sl))
+				else:
+					print("probably not gaussian at the {:.1f} level".format(sl))
 	#histogram
 	elif op == "hist":	
 		cumulative = config.getBooleanConfig("hist.cumulative")[0]
@@ -292,7 +334,7 @@ if __name__ == "__main__":
 		stat, pvalue = kendalltau(data, dataSec)
 		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
 	
-	#chi square correlation for categorical	
+	#chi square correlation for  both categorical	
 	elif op == "cscorr":
 		ctab = getConTab(config)
 		stat, pvalue, dof, expctd = chi2_contingency(ctab)
@@ -303,10 +345,28 @@ if __name__ == "__main__":
 		print("expected")
 		print(expctd)
 
+	#anova correlation for categorical	and numerical
+	elif op == "ancorr":
+		data = loadAllData(config)
+		gbCol = config.getIntConfig("ancorr.grby.col")[0]
+		assert gbCol, "no group by column provided"
+		dCol = 0 if gbCol == 1 else 1
+		grouped = data.groupby([gbCol])
+		dlist =  list(map(lambda v : v[1].loc[:, dCol].values, grouped))
+		stat, pvalue = f_oneway(*dlist)
+		printStat(stat, pvalue, "probably uncorrelated", "probably correlated")
+
+
 	#contingency table	
 	elif op == "contab":
 		ctab = getConTab(config)
 		print(ctab)
+
+	#student t 2 sample statistic	
+	elif op == "stt":
+		dataSec = loadData(config, True)
+		stat, pvalue = ttest_ind(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
 
 	#Kolmogorov Sminov 2 sample statistic	
 	elif op == "ks2s":
@@ -324,6 +384,18 @@ if __name__ == "__main__":
 	elif op == "wilcox":
 		dataSec = loadData(config, True)
 		stat, pvalue = wilcoxon(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
+
+	#Kruskal-Wallis 2 sample statistic	
+	elif op == "krwa":
+		dataSec = loadData(config, True)
+		stat, pvalue = kruskal(data, dataSec)
+		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
+
+	#Kfriedman 2 sample statistic	
+	elif op == "freid":
+		dataSec = loadData(config, True)
+		stat, pvalue = friedmanchisquare(data, dataSec)
 		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
 
 	else:
