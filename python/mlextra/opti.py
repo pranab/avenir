@@ -272,6 +272,7 @@ class BaseOptimizer(object):
 		defValues["opti.global.search.strategy"] = (None, None)
 		defValues["opti.mutation.size"] = (1, None)
 		defValues["opti.local.search.strategy"] = ("mutateBest", None)
+		defValues["opti.local.search.num.iter"] = (10, None)
 		defValues["opti.performance.track.interval"] = (5, None)
 		defValues["opti.performance.track.on"] = (False, None)
 		
@@ -378,7 +379,48 @@ class BaseOptimizer(object):
 			self.logger.info("after mutation soln " + str(cand.soln))
 		return status
 		
-			
+	def mutateAndValidate(self, cand, maxTry, clone=False):
+		"""
+		mutate and validate with max number of retries
+		"""
+		tryCount = 0 
+		mutStat = None
+		while True:
+			if clone:
+				cloneCand = Candidate()
+				cloneCand.clone(cand)
+			else:
+				cloneCand = cand
+			mutStat = self.mutate(cloneCand)
+			if mutStat:
+				if self.domain.isValid(cloneCand.soln):
+					cloneCand.cost = self.domain.evaluate(cloneCand.soln)
+					self.logger.info("...next iteration: {} cost {:.3f} ".format(i, cloneCand.cost))
+					break
+				else:
+					tryCount += 1
+					if tryCount == maxTry:
+						raise ValueError("invalid solution after multiple tries to mutate")
+
+			return (mutStat, cloneCand)
+
+	def bestFromMultiMutate(cand, maxTry, numIter):
+		"""
+		mutate the same soluntion multiple times and find best
+		"""
+		bestSoln = cand
+		bestCost = cand.cost
+		foundBetter = False
+		for i in range(numIter):
+			mutStat, mutatedCand = self.mutateAndValidate(cand, 5, True)
+			if mutatedCand.cost < bestCost:
+				bestSoln = mutatedCand
+				bestCost = mutatedCand.cost
+				foundBetter = True
+
+		return (bestSoln, foundBetter)
+
+
 	def trackPerformance(self, iterCount):
 		"""
 		track performaance improvement at regular interval
