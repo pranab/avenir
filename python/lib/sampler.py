@@ -192,6 +192,9 @@ class UniformNumericSampler:
 	def __init__(self, min, max):
 		self.min = min
 		self.max = max
+
+	def isNumeric(self):
+		return True
 	
 	def sample(self):
 		samp =	sampleUniform(self.min, self.max) if isinstance(self.min, int) else randomFloat(self.min, self.max)
@@ -204,6 +207,9 @@ class UniformCategoricalSampler:
 	def __init__(self, values):
 		self.values = values
 	
+	def isNumeric(self):
+		return False
+
 	def sample(self):
 		return selectRandomFromList(self.values)	
 
@@ -214,6 +220,9 @@ class NormalSampler:
 	def __init__(self, mean, stdDev):
 		self.mean = mean
 		self.stdDev = stdDev
+
+	def isNumeric(self):
+		return True
 
 	def sample(self):
 		return np.random.normal(self.mean, self.stdDev)
@@ -226,6 +235,9 @@ class LogNormalSampler:
 		self.mean = mean
 		self.stdDev = stdDev
 
+	def isNumeric(self):
+		return True
+
 	def sample(self):
 		return np.random.lognormal(self.mean, self.stdDev)
 
@@ -236,6 +248,9 @@ class ParetoSampler:
 	def __init__(self, mode, shape):
 		self.mode = mode
 		self.shape = shape
+
+	def isNumeric(self):
+		return True
 
 	def sample(self):
 		return (np.random.pareto(self.shape) + 1) * self.mode
@@ -254,7 +269,9 @@ class GaussianRejectSampler:
 		self.ymax = 1.05 * self.fmax
 		self.sampleAsInt = False
 		
-		
+	def isNumeric(self):
+		return True
+	
 	def sampleAsInt(self):
 		self.sampleAsInt = True
 
@@ -286,6 +303,9 @@ class DiscreteRejectSampler:
 		assert len(self.distr)	== self.xmax - self.xmin + 1, "invalid number of distr values"
 		self.pmax = float(max(self.distr))
 
+	def isNumeric(self):
+		return True
+
 	def sample(self):
 		done = False
 		samp = None
@@ -314,6 +334,9 @@ class TriangularRejectSampler:
 			self.vertexPos = 0.5 * (xmin + xmax)
 		self.s1 = vertexValue / (self.vertexPos - xmin)
 		self.s2 = vertexValue / (xmax - self.vertexPos)
+
+	def isNumeric(self):
+		return True
 		
 	def sample(self):
 		done = False
@@ -346,6 +369,9 @@ class NonParamRejectSampler:
 		self.ymin = 0.0
 		self.ymax = self.fmax
 		self.sampleAsInt = True
+
+	def isNumeric(self):
+		return True
 		
 	def sampleAsFloat(self):
 		self.sampleAsInt = False
@@ -385,6 +411,9 @@ class JointNonParamRejectSampler:
 		self.pmax = max(self.values)
 		self.values = np.array(self.values).reshape(xnbin, ynbin)
 
+	def isNumeric(self):
+		return True
+
 	def sample(self):
 		done = False
 		samp = 0
@@ -412,6 +441,9 @@ class JointNormalSampler:
 		self.mean = np.array(mean)
 		sd = lvalues[2:]
 		self.sd = np.array(sd).reshape(2,2)
+
+	def isNumeric(self):
+		return True
 		
 	def sample(self):
 		return list(np.random.multivariate_normal(self.mean, self.sd))
@@ -428,6 +460,9 @@ class MultiVarNormalSampler:
 		self.mean = np.array(mean)
 		sd = lvalues[numVar:]
 		self.sd = np.array(sd).reshape(numVar,numVar)
+
+	def isNumeric(self):
+		return True
 		
 	def sample(self):
 		return list(np.random.multivariate_normal(self.mean, self.sd))
@@ -468,6 +503,9 @@ class DistrMixtureSampler:
 		self.compDistr = compDistr
 		if (len(self.compDistr) == 1):
 			self.compDistr = self.compDistr[0]
+			
+	def isNumeric(self):
+		return True
 	
 	def sample(self):
 		#sample comp wt distr
