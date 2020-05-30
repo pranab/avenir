@@ -163,6 +163,84 @@ def printStat(stat, pvalue, nhMsg, ahMsg):
 	print("pvalue: {:.3f}".format(pvalue))
 	print(nhMsg if pvalue > 0.05 else ahMsg)
 
+def zcStat(data1, data2):
+	"""
+	zhangC 2 sample statistic
+	"""
+	l1 = len(data1)
+	l2 = len(data2)
+	l = l1 + l2
+		
+	#find ranks
+	pooled = np.concatenate([data1, data2])
+	ranks = findRanks(data1, pooled)
+	ranks.extend(findRanks(data2, pooled))
+	
+	s1 = 0.0
+	for i in range(1, l1+1):
+		s1 += math.log(l1 / (i - 0.5) - 1.0) * math.log(l / (ranks[i-1] - 0.5) - 1.0)
+		
+	s2 = 0.0
+	for i in range(1, l2+1):
+		s2 += math.log(l2 / (i - 0.5) - 1.0) * math.log(l / (ranks[l1 + i - 1] - 0.5) - 1.0)
+	stat = (s1 + s2) / l
+	return stat
+
+def zaStat(data1, data2):
+	"""
+	zhangA 2 sample statistic
+	"""
+	l1 = len(data1)
+	l2 = len(data2)
+	l = l1 + l2
+	pooled = np.concatenate([data1, data2])
+	cd1 = CumDistr(data1)
+	cd2 = CumDistr(data2)
+	sum = 0.0
+	for i in range(1, l+1):
+		v = pooled[i-1]
+		f1 = cd1.getDistr(v)
+		f2 = cd2.getDistr(v)
+		
+		t1 = f1 * math.log(f1)
+		t2 = 0 if f1 == 1.0 else (1.0 - f1) * math.log(1.0 - f1)
+		sum += l1 * (t1 + t2) / ((i - 0.5) * (l - i + 0.5))
+		t1 = f2 * math.log(f2)
+		t2 = 0 if f2 == 1.0 else (1.0 - f2) * math.log(1.0 - f2)
+		sum += l2 * (t1 + t2) / ((i - 0.5) * (l - i + 0.5))
+	stat = -sum
+	return stat
+	
+def zkStat(data1, data2):
+	"""
+	zhangK 2 sample statistic
+	"""
+	l1 = len(data1)
+	l2 = len(data2)
+	l = l1 + l2
+	pooled = np.concatenate([data1, data2])
+	cd1 = CumDistr(data1)
+	cd2 = CumDistr(data2)
+	cd = CumDistr(pooled)
+	
+	maxStat = None
+	for i in range(1, l+1):
+		v = pooled[i-1]
+		f1 = cd1.getDistr(v)
+		f2 = cd2.getDistr(v)
+		f = cd.getDistr(v)
+		
+		t1 = 0 if f1 == 0 else f1 * math.log(f1 / f)
+		t2 = 0 if f1 == 1.0 else (1.0 - f1) * math.log((1.0 - f1) / (1.0 - f))
+		stat = l1 * (t1 + t2)
+		t1 = 0 if f2 == 0 else f2 * math.log(f2 / f)
+		t2 = 0 if f2 == 1.0 else (1.0 - f2) * math.log((1.0 - f2) / (1.0 - f))
+		stat += l2 * (t1 + t2)
+		if maxStat is None or stat > maxStat:
+			maxStat = stat
+	return maxStat
+	
+
 if __name__ == "__main__":
 	op = sys.argv[1]
 	confFile = sys.argv[2]
@@ -392,11 +470,29 @@ if __name__ == "__main__":
 		stat, pvalue = kruskal(data, dataSec)
 		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
 
-	#Kfriedman 2 sample statistic	
+	#friedman 2 sample statistic	
 	elif op == "freid":
 		dataSec = loadData(config, True)
 		stat, pvalue = friedmanchisquare(data, dataSec)
 		printStat(stat, pvalue, "probably same distribution", "probably same distribution")
+
+	#zhangC 2 sample statistic	
+	elif op == "zhangc":
+		dataSec = loadData(config, True)
+		stat = zcStat(data, dataSec)
+		print("two sample ZhangC stat {:.3f}".format(stat))
+
+	#zhangA 2 sample statistic	
+	elif op == "zhanga":
+		dataSec = loadData(config, True)
+		stat = zaStat(data, dataSec)
+		print("two sample ZhangA stat {:.3f}".format(stat))
+
+	#zhangK 2 sample statistic	
+	elif op == "zhangk":
+		dataSec = loadData(config, True)
+		stat = zkStat(data, dataSec)
+		print("two sample ZhangK stat {:.3f}".format(stat))
 
 	else:
 		raise ValueError("unknown command")

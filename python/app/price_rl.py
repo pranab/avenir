@@ -19,12 +19,17 @@
 import os
 import sys
 import random
+import numpy as np
+import math
 import gym
 from gym.spaces import Discrete, Box
 import numpy as np
 import ray
 import ray.rllib.agents.dqn as dqn
 from ray.tune.logger import pretty_print
+sys.path.append(os.path.abspath("../lib"))
+from util import *
+
 
 """
 Price optimization with Deep reinforcement learning using DQN lgorithm. Code is from the following 
@@ -33,16 +38,21 @@ excellent blog with enhancements to make it more usable.
 https://blog.griddynamics.com/deep-reinforcement-learning-for-supply-chain-and-price-optimization/
 """
 
-T = 20
-price_max = 500
-price_step = 10
-q_0 = 5000
-k = 20
-unit_cost = 100
-a_q = 300
-b_q = 100
+T = 20					# time steps in the price schedule
+priceMin = 400			# minimum valid price
+priceMax = 500			# maximum valid price
+priceStep = 5			# price schedule step
+demandIntcpt = 5000		# Intercept in the demand function q_t
+k = 10					# slope in the demand function, q_t
+unitCost = 100			# product production cost,
+aPrInc = 300			# response coefficient for price increase
+bPrDec = 100			# response coefficient for price decrease
+demCycPer = 5 * T		# cyclic demand period
+demCycAmp = 500			# cyclic demand amp
+ss = 2 * T + 1			# state space size 0 to T-1 past prices, T to 2T -1 one hot vector for current price, 2T cycle offset
+randDemSd = 100			# std dev of random demand
 
-price_grid = np.arange(price_step, price_max, price_step)
+priceGrid = np.arange(priceMin, priceMax, priceStep)
 
 
 def plus(x):
@@ -59,57 +69,79 @@ def minus(x):
 
 def shock(x):
 	"""
-	
+	non linear
 	"""
 	return np.sqrt(x)
   
-def env_intial_state():
+def envIntialState():
 	"""
 	initial state
 	"""
-	return np.repeat(0, 2*T)
+	st =  np.repeat(0, ss)
+	cycOff = random.randint(0, demCycPer)
+	st[ss - 1] = cycOff
+	return st
 
 
-def q_t(p_t, p_t_1, q_0, k, a, b):
+def curDemand(curPrice, prevPrice, demandIntcpt, k, a, b, coff):
 	"""
-	Demand at time step t for current price p_t and previous price p_t_1
+	demand at time step t for current price curPrice and previous price prevPrice
 	"""
-	return plus(q_0 - k*p_t - a*shock(plus(p_t - p_t_1)) + b*shock(minus(p_t - p_t_1)))
+	# price dependent
+	q =  demandIntcpt - k * curPrice - a * shock(plus(curPrice - prevPrice)) + b * shock(minus(curPrice - prevPrice)) 
+	
+	# cyclic 
+	q += demCycAmp * math.sin(2.0 * math.pi * coff / demCycPer)
+	
+	# random
+	q += np.random.normal(0, randDemSd)
+	
+	q =  plus(q)
+	return q
 
 
-def profit_t(p_t, p_t_1, q_0, k, a, b, unit_cost):
+def curProfit(curPrice, prevPrice, demandIntcpt, k, a, b, unitCost, coff):
 	"""
 	Profit at time step t
 	"""
-	return q_t(p_t, p_t_1, q_0, k, a, b)*(p_t - unit_cost) 
+	return curDemand(curPrice, prevPrice, demandIntcpt, k, a, b, coff) * (curPrice - unitCost) 
 
-def profit_t_response(p_t, p_t_1):
+def curProfitResponse(curPrice, prevPrice, coff):
 	"""
 	partial bindings for readability
 	"""
-	return profit_t(p_t, p_t_1, q_0, k, a_q, b_q, unit_cost)
+	return curProfit(curPrice, prevPrice, demandIntcpt, k, aPrInc, bPrDec, unitCost, coff)
   
-def env_step(t, state, action):
+def envStep(t, state, action):
 	"""
 	next step
 	"""
-	next_state = np.repeat(0, len(state))
-	next_state[0] = price_grid[action]
-	next_state[1:T] = state[0:T-1]
-	next_state[T+t] = 1
-	reward = profit_t_response(next_state[0], next_state[1])
-	return next_state, reward
+	nextState = np.repeat(0, len(state))
+	
+	#price history
+	nextState[0] = priceGrid[action]
+	nextState[1:T] = state[0:T-1]
+	
+	#cuurent price one hot vec
+	nextState[T+t] = 1
+	
+	#cycle offset
+	nextState[ss - 1] = (state[ss - 1] + 1) % demCycPer
+	
+	reward = curProfitResponse(nextState[0], nextState[1], nextState[ss - 1])
+	return nextState, reward
   
-def rand_state():
+def randState():
 	"""
 	random state
 	"""
-	state = np.repeat(0, 2 * T)
+	state = np.repeat(0, ss)
 	t = random.randint(5, T - 1)
 	for i in range(t):
-		pi = random.randint(0, len(price_grid) - 1)
-		state[i] = price_grid[pi]
+		pi = random.randint(0, len(priceGrid) - 1)
+		state[i] = priceGrid[pi]
 	state[T + t] = 1
+	stae[ss - 1] = random.randint(0, demCycPer)
 	return state
 	
 class HiLoPricingEnv(gym.Env):
@@ -120,25 +152,24 @@ class HiLoPricingEnv(gym.Env):
 	def __init__(self, config):
 		self.t = 0
 		self.reset()
-		self.action_space = Discrete(len(price_grid))
-		self.observation_space = Box(0, 10000, shape=(2*T, ), dtype=np.float32)
+		self.action_space = Discrete(len(priceGrid))
+		self.observation_space = Box(0, 10000, shape=(ss, ), dtype=np.float32)
 		print("observation space  " + str(self.observation_space.shape))
 		print("action space  " + str(self.action_space.n))
 	
 	def reset(self):
-		print("** reset " + str(HiLoPricingEnv.count))
 		HiLoPricingEnv.count += 1
-		self.state = env_intial_state()
+		self.state = envIntialState()
 		self.t = 0
 		return self.state
 		
 	def step(self, action):
-		next_state, reward = env_step(self.t, self.state, action)
+		nextState, reward = envStep(self.t, self.state, action)
 		self.t += 1
-		self.state = next_state
-		return next_state, reward, self.t == T - 1, {}
+		self.state = nextState
+		return nextState, reward, self.t == T - 1, {}
 
-def create_config():
+def createConfig():
 	"""
 	configuration
 	"""
@@ -153,19 +184,20 @@ def create_config():
 	config["exploration_final_eps"] = 0.01
 	return config
 	
-def train_dqn(num_iter):
+def trainDqn(numIter):
 	"""
 	train
 	"""
 	ray.shutdown()
 	ray.init()
-	config = create_config()
+	config = createConfig()
 	trainer = dqn.DQNTrainer(config=config, env=HiLoPricingEnv)
-	for i in range(num_iter):
+	for i in range(numIter):
 		print("**** next iteration " + str(i))
 		HiLoPricingEnv.count = 0
 		result = trainer.train()
 		print(pretty_print(result))
+		print("env reset count " + str(HiLoPricingEnv.count))
 
 	policy = trainer.get_policy()
 	weights = policy.get_weights()
@@ -179,96 +211,105 @@ def train_dqn(num_iter):
 	
 	return trainer
 
-def load_trainer(path):
+def loadTrainer(path):
 	"""
 	load trainer from checkpoint
 	"""
 	ray.shutdown()
 	ray.init()
-	config = create_config()
+	config = createConfig()
 	trainer = dqn.DQNTrainer(config=config, env=HiLoPricingEnv)
 	trainer.restore(path)
 	return trainer
 
-def train_incr(path, num_iter):
+def trainIncr(path, numIter):
 	"""
 	load trainer from checkpoint and incremental training
 	"""
-	trainer = load_trainer(path)
-	for i in range(num_iter):
+	trainer = loadTrainer(path)
+	for i in range(numIter):
 		print("**** next iteration " + str(i))
 		HiLoPricingEnv.count = 0
 		result = trainer.train()
 		print(pretty_print(result))
+		print("env reset count " + str(HiLoPricingEnv.count))
 	return trainer
 	
-def get_action(trainer):
+def getAction(trainer):
 	"""
 	get action given state from trained model
 	"""
 	policy = trainer.get_policy()
-	state = rand_state()
+	state = randState()
 	print("state:")
 	print(state)
 	action = policy.compute_single_action(state)
 	return action
+	
+if __name__ == "__main__":
+	op = sys.argv[1]
+	if op == "train":
+		"""
+		train
+		"""
+		numIter = int(sys.argv[2])
+		cpDir = sys.argv[3] if len(sys.argv) == 4 else None
+		trainer = trainDqn(numIter)
+		if cpDir:
+			checkpoint = trainer.save(cpDir)
+			print("checkpoint " + checkpoint)
 
-op = sys.argv[1]
-if op == "train":
-	"""
-	train
-	"""
-	num_iter = int(sys.argv[2])
-	cp_dir = sys.argv[3] if len(sys.argv) == 4 else None
-	trainer = train_dqn(num_iter)
-	if cp_dir:
-		checkpoint = trainer.save(cp_dir)
-		print("checkpoint " + checkpoint)
-
-if op == "inctr":
-	"""
-	train
-	"""
-	path = sys.argv[2]
-	num_iter = int(sys.argv[3])
-	cp_dir = sys.argv[4] if len(sys.argv) == 5 else None
-	trainer = train_incr(path, num_iter)
-	if cp_dir:
-		checkpoint = trainer.save(cp_dir)
-		print("checkpoint " + checkpoint)
+	elif op == "inctr":
+		"""
+		train
+		"""
+		path = sys.argv[2]
+		numIter = int(sys.argv[3])
+		cpDir = sys.argv[4] if len(sys.argv) == 5 else None
+		trainer = trainIncr(path, numIter)
+		if cpDir:
+			checkpoint = trainer.save(cpDir)
+			print("checkpoint " + checkpoint)
 	
-elif op == "tract":
-	"""
-	train and get action
-	"""
-	num_iter = int(sys.argv[2])
-	trainer = train_dqn(num_iter)
-	action = get_action(trainer)
-	print("action")
-	print(action)
+	elif op == "tract":
+		"""
+		train and get action
+		"""
+		numIter = int(sys.argv[2])
+		trainer = trainDqn(numIter)
+		action = getAction(trainer)
+		print("action")
+		print(action)
 	
-elif op == "loact":
-	"""
-	load trainer and get action
-	"""
-	path = sys.argv[2]
-	trainer = load_trainer(path)
-	policy = trainer.get_policy()
-	state = rand_state()
-	print("state:")
-	print(state)
-	result = policy.compute_single_action(state)
-	print("action:")
-	print(result)
+	elif op == "loact":
+		"""
+		load trainer and get action
+		"""
+		path = sys.argv[2]
+		state = sys.argv[3] if len(sys.argv) == 4 else None
+		if state:
+			#provided state
+			state = toIntList(state.split(","))
+			assert len(state) == ss, "invalid state size"
+		else:
+			# random state
+			state = randState()
+		trainer = loadTrainer(path)
+		policy = trainer.get_policy()
+		print("state:")
+		print(state)
+		result = policy.compute_single_action(state)
+		print("action:")
+		print(result)
 	
 	
-elif op == "crstate":
-	"""
-	create random state
-	"""
-	state = rand_state()
-	print(state)
+	elif op == "crstate":
+		"""
+		create random state
+		"""
+		state = randState()
+		print(state)
 	
-else:
-	raise ValueError("invalid command")
+	else:
+		raise ValueError("invalid command")
 	

@@ -20,6 +20,8 @@ import random
 import time
 import math
 import random
+import numpy as np
+from scipy import stats
 from random import randint
 from util import *
 
@@ -149,6 +151,29 @@ def sampleWithReplace(data, sampSize):
 		j = random.randint(0, le - 1)
 		sampled.append(data[j])
 	return sampled
+
+class CumDistr:
+	"""
+	cumulative distr
+	"""
+	def __init__(self, data, numBins = None):
+		if not numBins:
+			numBins = int(len(data) / 5)
+		res = stats.cumfreq(data, numbins=numBins)
+		self.cdistr = res.cumcount / len(data)
+		self.loLim = res.lowerlimit
+		self.upLim = res.lowerlimit + res.binsize * res.cumcount.size
+		self.binWidth = res.binsize
+		
+	def getDistr(self, value):
+		if value <= self.loLim:
+			d = 0.0
+		elif value >= self.upLim:
+			d = 1.0
+		else:
+			bin = int((value - self.loLim) / self.binWidth)
+			d = self.cdistr[bin]
+		return d
 
 class BernoulliTrialSampler:
 	"""

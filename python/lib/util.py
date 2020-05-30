@@ -799,6 +799,23 @@ def swapBetweenLists(values1, values2):
 	values1[p1] = values2[p2]
 	values2[p2] = tmp
 	
+def findRank(e, values):
+	"""
+	find rank of value in a list
+	"""
+	count =  1
+	for ve in values:
+		if ve < e:
+			count += 1
+	return count
+
+def findRanks(toBeRanked, values):
+	"""
+	find ranks of values in one list in another list
+	"""
+	return list(map(lambda e: findRank(e, values), toBeRanked))
+	
+	
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger
