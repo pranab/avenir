@@ -98,11 +98,17 @@ class MonteCarloSimulator(object):
 		"""
 		self.samplers.append(ParetoSampler(mode, shape))
 
-	def registerDiscreteRejectSampler(self, xmin, xmax, *values):
+	def registerGammaSampler(self, shape, scale):
+		"""
+		gamma sampler using numpy
+		"""
+		self.samplers.append(GammaSampler(shape, scale))
+
+	def registerDiscreteRejectSampler(self, xmin, xmax, step, *values):
 		"""
 		disccrete int sampler
 		"""
-		self.samplers.append(DiscreteRejectSampler(xmin, xmax, *values))
+		self.samplers.append(DiscreteRejectSampler(xmin, xmax, step, *values))
 
 	def registerNonParametricSampler(self, min, binWidth, *values):
 		"""
@@ -156,6 +162,7 @@ class MonteCarloSimulator(object):
 		self.mean = None
 		self.sd = None
 
+		#print(formatAny(self.numIter, "num iterations"))
 		for i in range(self.numIter):
 			args = list()
 			for s in self.samplers:

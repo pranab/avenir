@@ -815,7 +815,21 @@ def findRanks(toBeRanked, values):
 	"""
 	return list(map(lambda e: findRank(e, values), toBeRanked))
 	
+def formatFloat(prec, value, label = None):
+	"""
+	formats a float with optional label
+	"""
+	st = (label + " ") if label else ""
+	formatter = "{:." + str(prec) + "f}" 
+	return st + formatter.format(value)
 	
+def formatAny(value, label = None):
+	"""
+	formats any obkect with optional label
+	"""
+	st = (label + " ") if label else ""
+	return st + str(value)
+
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger

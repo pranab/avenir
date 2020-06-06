@@ -280,6 +280,20 @@ class ParetoSampler:
 	def sample(self):
 		return (np.random.pareto(self.shape) + 1) * self.mode
 
+class GammaSampler:
+	"""
+	pareto sampler
+	"""
+	def __init__(self, shape, scale):
+		self.shape = shape
+		self.scale = scale
+
+	def isNumeric(self):
+		return True
+
+	def sample(self):
+		return np.random.gamma(self.shape, self.scale)
+
 class GaussianRejectSampler:
 	"""
 	gaussian sampling based on rejection sampling
@@ -316,16 +330,21 @@ class GaussianRejectSampler:
 
 class DiscreteRejectSampler:
 	"""
-	non parametric sampling for categorical attributes using given distribution based 
+	non parametric sampling for discrete values  using given distribution based 
 	on rejection sampling	
 	"""
-	def __init__(self,  xmin, xmax, *values):
+	def __init__(self,  xmin, xmax, step, *values):
 		self.xmin = xmin
 		self.xmax = xmax
+		self.step = step
 		self.distr = values
 		if (len(self.distr) == 1):
 			self.distr = self.distr[0]	
-		assert len(self.distr)	== self.xmax - self.xmin + 1, "invalid number of distr values"
+		numSteps = int((self.xmax - self.xmin) / self.step)
+		#print("{:.3f} {:.3f} {:.3f} {}".format(self.xmin, self.xmax, self.step, numSteps))
+		assert len(self.distr)	== numSteps + 1, "invalid number of distr values expected " + str(numSteps + 1)
+		self.ximin = 0
+		self.ximax = numSteps
 		self.pmax = float(max(self.distr))
 
 	def isNumeric(self):
@@ -335,11 +354,12 @@ class DiscreteRejectSampler:
 		done = False
 		samp = None
 		while not done:
-			x = randint(self.xmin, self.xmax)
+			xi = randint(self.ximin, self.ximax)
+			#print(formatAny(xi, "xi"))
 			ps = randomFloat(0.0, self.pmax)
-			pa = self.distr[x - self.xmin]
+			pa = self.distr[xi]
 			if ps < pa:
-				samp = x
+				samp = self.xmin + xi  * self.step
 				done = True
 		return samp
 
