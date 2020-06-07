@@ -20,6 +20,8 @@ import os
 import sys
 import random
 import statistics 
+from causalgraphicalmodels import CausalGraphicalModel
+import matplotlib.pyplot as plt 
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
 from util import *
@@ -30,9 +32,14 @@ from mcsim import *
 Manufacturing supply chain simulation
 
 """
-seasonal = [.95, .97, 1.00, 1.03, 1.12, 1.32, 1.48, 1.41, 1.30, 1.12, 1.01, .98]
+seasonal = [-580, -340, 0, 370, 1250, 3230, 3980, 3760, 2770, 980, 120, -220]
+trend = [250, 350]
 
 def shipCost(quant):
+	"""
+	shipping and handling cost
+
+	"""
 	if quant < 1000:
 		sc = 1.6 * quant
 	elif  quant < 2000:
@@ -52,16 +59,25 @@ def border(args):
 	i += 1
 	pdem = int(args[i])
 	i += 1
-	month = int(args[i]) - 1
+	year = int(args[i])
+	i += 1
+	month = int(args[i])
 	i += 1
 	dwntm = args[i]
 	i += 1
 	poMarg = args[i]
 
 
-	#seasonal adjustment
-	dem =  int(dem * seasonal[month])
-	pdem =  int(pdem * seasonal[month])
+	#seasonal and trend adjustment
+	sadj = seasonal[month - 1]
+	fyear = (year - 1) + month / 12
+	if fyear <= 2:
+		tadj = trend[0] * fyear
+	else:
+		tadj = trend[0] * 2 + trend[1] * (fyear - 2)
+
+	dem =  int(dem + tadj + sadj)
+	pdem = int(pdem + tadj + sadj)
 
 	#back order
 	paOrd = int(pdem * (1 + poMarg))
@@ -87,12 +103,27 @@ def border(args):
 
 
 if __name__ == "__main__":
-	numIter = int(sys.argv[1])
-	simulator = MonteCarloSimulator(numIter, border, "./log/mcsim.log", "info")
-	simulator.registerNormalSampler(950, 200)
-	simulator.registerNormalSampler(950, 200)
-	simulator.registerUniformSampler(1, 12)
-	simulator.registerGammaSampler(1.0, .05)
-	simulator.registerDiscreteRejectSampler(0.0, 0.20, 0.04, 25, 30, 18, 10, 5, 2)
-	simulator.run()
+	op = sys.argv[1]
+	if op == "simu":
+		numIter = int(sys.argv[2])
+		simulator = MonteCarloSimulator(numIter, border, "./log/mcsim.log", "info")
+		simulator.registerNormalSampler(9000, 1500)
+		simulator.registerNormalSampler(9000, 1500)
+		simulator.registerUniformSampler(1, 5)
+		simulator.registerUniformSampler(1, 12)
+		simulator.registerGammaSampler(1.0, .05)
+		simulator.registerDiscreteRejectSampler(0.0, 0.20, 0.04, 25, 30, 18, 10, 5, 2)
+		simulator.run()
+
+	elif op == "grmo":
+		bo = CausalGraphicalModel(
+			nodes = ["dem", "prevDem", "partMarg", "prodDownTm", "partOrd", "boPartOrd", "prCap", "boPrCap", "bo", "profit"],
+			edges =[("dem", "boPartOrd"), ("prevDem", "partOrd"), ("partMarg", "partOrd"), ("partOrd", "boPartOrd"), 
+			("prodDownTm", "prCap"), ("prCap", "boPrCap") , ("dem", "boPrCap"),( "boPartOrd", "bo"), ("boPrCap", "bo")])
+		bo.draw()
+		plt.show()
+
+	else:
+		print("invalid command - quitting")
+		sys.exit(0)
 
