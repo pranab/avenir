@@ -42,8 +42,9 @@ T = 20					# time steps in the price schedule
 priceMin = 400			# minimum valid price
 priceMax = 500			# maximum valid price
 priceStep = 5			# price schedule step
-demandIntcpt = 5000		# Intercept in the demand function q_t
-k = 10					# slope in the demand function, q_t
+demandIntcpt = 5000		# Intercept in the demand function 
+k1 = -5.0				# first order coeff in the demand function
+k2 = -0.1				# second order coeff in the demand function,
 unitCost = 100			# product production cost,
 aPrInc = 300			# response coefficient for price increase
 bPrDec = 100			# response coefficient for price decrease
@@ -83,12 +84,14 @@ def envIntialState():
 	return st
 
 
-def curDemand(curPrice, prevPrice, demandIntcpt, k, a, b, coff):
+def curDemand(curPrice, prevPrice, demandIntcpt, k1, k2, a, b, coff):
 	"""
 	demand at time step t for current price curPrice and previous price prevPrice
 	"""
 	# price dependent
-	q =  demandIntcpt - k * curPrice - a * shock(plus(curPrice - prevPrice)) + b * shock(minus(curPrice - prevPrice)) 
+	pdm = curPrice - priceMin
+	pdp = curPrice - prevPrice
+	q =  demandIntcpt + k1 * pdm + k2 * pdm * pdm  - a * shock(plus(pdp)) + b * shock(minus(pdp)) 
 	
 	# cyclic 
 	q += demCycAmp * math.sin(2.0 * math.pi * coff / demCycPer)
@@ -100,17 +103,17 @@ def curDemand(curPrice, prevPrice, demandIntcpt, k, a, b, coff):
 	return q
 
 
-def curProfit(curPrice, prevPrice, demandIntcpt, k, a, b, unitCost, coff):
+def curProfit(curPrice, prevPrice, demandIntcpt, k1, k2, a, b, unitCost, coff):
 	"""
 	Profit at time step t
 	"""
-	return curDemand(curPrice, prevPrice, demandIntcpt, k, a, b, coff) * (curPrice - unitCost) 
+	return curDemand(curPrice, prevPrice, demandIntcpt, k1, k2, a, b, coff) * (curPrice - unitCost) 
 
 def curProfitResponse(curPrice, prevPrice, coff):
 	"""
 	partial bindings for readability
 	"""
-	return curProfit(curPrice, prevPrice, demandIntcpt, k, aPrInc, bPrDec, unitCost, coff)
+	return curProfit(curPrice, prevPrice, demandIntcpt, k1, k2, aPrInc, bPrDec, unitCost, coff)
   
 def envStep(t, state, action):
 	"""
@@ -141,7 +144,7 @@ def randState():
 		pi = random.randint(0, len(priceGrid) - 1)
 		state[i] = priceGrid[pi]
 	state[T + t] = 1
-	stae[ss - 1] = random.randint(0, demCycPer)
+	state[ss - 1] = random.randint(0, demCycPer)
 	return state
 	
 class HiLoPricingEnv(gym.Env):
@@ -182,6 +185,8 @@ def createConfig():
 	config["timesteps_per_iteration"] = 5000
 	config["hiddens"] = [128, 128, 128]
 	config["exploration_final_eps"] = 0.01
+
+	#config["use_exec_api"] = False
 	return config
 	
 def trainDqn(numIter):
@@ -193,7 +198,7 @@ def trainDqn(numIter):
 	config = createConfig()
 	trainer = dqn.DQNTrainer(config=config, env=HiLoPricingEnv)
 	for i in range(numIter):
-		print("**** next iteration " + str(i))
+		print("\n**** next iteration " + str(i))
 		HiLoPricingEnv.count = 0
 		result = trainer.train()
 		print(pretty_print(result))
@@ -228,7 +233,7 @@ def trainIncr(path, numIter):
 	"""
 	trainer = loadTrainer(path)
 	for i in range(numIter):
-		print("**** next iteration " + str(i))
+		print("\n**** next iteration " + str(i))
 		HiLoPricingEnv.count = 0
 		result = trainer.train()
 		print(pretty_print(result))
@@ -245,15 +250,31 @@ def getAction(trainer):
 	print(state)
 	action = policy.compute_single_action(state)
 	return action
-	
+
+def validateCpDir(cpDir):
+	"""
+	checks if checkpoint dir exists
+	"""
+	if cpDir and not os.path.isdir(cpDir):
+		raise ValueError("provided checkpoint directory does not exist")
+
+def validateCpFile(cpFile):
+	"""
+	checks if checkpoint file exists
+	"""
+	if not os.path.isfile(cpFile):
+		raise ValueError("provided checkpoint file does not exist")
+
 if __name__ == "__main__":
 	op = sys.argv[1]
 	if op == "train":
 		"""
 		train
 		"""
+		print("******** training and optionally checkpointing ********")
 		numIter = int(sys.argv[2])
 		cpDir = sys.argv[3] if len(sys.argv) == 4 else None
+		validateCpDir(cpDir)
 		trainer = trainDqn(numIter)
 		if cpDir:
 			checkpoint = trainer.save(cpDir)
@@ -263,9 +284,12 @@ if __name__ == "__main__":
 		"""
 		train
 		"""
+		print("******** incremental training on checkpointed model and then optionally checkpoint again ********")
 		path = sys.argv[2]
+		validateCpFile(path)
 		numIter = int(sys.argv[3])
 		cpDir = sys.argv[4] if len(sys.argv) == 5 else None
+		validateCpDir(cpDir)
 		trainer = trainIncr(path, numIter)
 		if cpDir:
 			checkpoint = trainer.save(cpDir)
@@ -275,6 +299,7 @@ if __name__ == "__main__":
 		"""
 		train and get action
 		"""
+		print("******** training without checkpointing and then getting action ********")
 		numIter = int(sys.argv[2])
 		trainer = trainDqn(numIter)
 		action = getAction(trainer)
@@ -285,7 +310,9 @@ if __name__ == "__main__":
 		"""
 		load trainer and get action
 		"""
+		print("******** loading checkpointed model and getting action ********")
 		path = sys.argv[2]
+		validateCpFile(path)
 		state = sys.argv[3] if len(sys.argv) == 4 else None
 		if state:
 			#provided state
@@ -293,6 +320,7 @@ if __name__ == "__main__":
 			assert len(state) == ss, "invalid state size"
 		else:
 			# random state
+			print("creating random but valid state")
 			state = randState()
 		trainer = loadTrainer(path)
 		policy = trainer.get_policy()
