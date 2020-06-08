@@ -1,0 +1,32 @@
+This tutorial is for product price optimization using deep reinforcement  learning using 
+RLlib and TensorFlow
+
+Setup
+=====
+Make sure you have ../lib   directory with all the python files wrt where pccb.py is. You need to
+have ray and tensorflow installed. ray has RLlib. If you want to use PyTorch instead, you should 
+have it installed.
+
+All the important parameters are defined in the beginning of price_rl.py. Please feel free to
+change them and experiment
+
+Train 
+=====
+./price_rl.py train <num_iter> <checkpoint_dir>
+
+num_iter = num of iteration e.g. 50 
+checkpoint_dir = checkpoint directory to save e.g ./model/price
+
+Restore check pointed model and train incrementally
+===================================================
+./price_rl.py inctr  <checkpoint_file_path> <num_iter> <checkpoint_dir>
+
+checkpoint_file_path = checkpoint file path e.g ./model/price/checkpoint_50/checkpoint-50
+num_iter = num of iteration e.g. 30 
+checkpoint_dir = checkpoint directory to save e.g ./model/price
+
+Restore check pointe model and get action
+=========================================
+./price_rl.py loact  <checkpoint_file_path>
+
+checkpoint_file_path = checkpoint file path e.g ./model/price/checkpoint_80/checkpoint-80
