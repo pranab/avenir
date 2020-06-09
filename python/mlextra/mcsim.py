@@ -46,9 +46,11 @@ class MonteCarloSimulator(object):
 		self.sum = None
 		self.mean = None
 		self.sd = None
+		self.replSamplers = dict()
 
 		self.logger = createLogger(__name__, logFilePath, logLevName)
 		self.logger.info("******** stating new  session of MonteCarloSimulator")
+
 
 	def registerBernoulliTrialSampler(self, pr):
 		"""
@@ -142,17 +144,41 @@ class MonteCarloSimulator(object):
 		"""
 		self.samplers.append(PermutationSampler.createSamplerWithValues(values, *numShuffles))
 	
+	def registerNormalSamplerWithTrendCycle(self, mean, stdDev, trend, cycle,  step=1):
+		"""
+		normal sampler with trend and cycle
+		"""
+		self.samplers.append(NormalSamplerWithTrendCycle(mean, stdDev, trend, cycle,  step))
+
 	def registerCustomSampler(self, sampler):
 		"""
 		permutation sampler with values
 		"""
 		self.samplers.append(sampler)
 	
+	def setSampler(self, var, iter, sampler):
+		"""
+		set sampler for some variable when iteration reaches certain point
+		"""
+		key = (var, iter)
+		self.replSamplers[key] = sampler
+
 	def registerExtraArgs(self, *args):
 		"""
 		extra args
 		"""
 		self.extraArgs = args
+
+	def replSampler(self, iter):
+		"""
+		replace samper for this iteration
+		"""
+		if len(self.replSamplers) > 0:
+			for v in range(self.numVars):
+				key = (v, iter)
+				if key in self.replSamplers:
+					sampler = self.replSamplers[key]
+					self.samplers[v] = sampler
 
 	def run(self):
 		"""
@@ -161,9 +187,11 @@ class MonteCarloSimulator(object):
 		self.sum = None
 		self.mean = None
 		self.sd = None
+		self.numVars = len(self.samplers)
 
 		#print(formatAny(self.numIter, "num iterations"))
 		for i in range(self.numIter):
+			self.replSampler(i)
 			args = list()
 			for s in self.samplers:
 				arg = s.sample()
@@ -173,6 +201,7 @@ class MonteCarloSimulator(object):
 					args.append(arg)
 			if self.extraArgs:
 				args.extend(self.extraArgs)
+			args.append(i)
 			vOut = self.callback(args)	
 			self.output.append(vOut)
 	

@@ -276,7 +276,7 @@ class NormalSamplerWithTrendCycle:
 		self.stdDev = stdDev
 		self.dmean = dmean
 		self.cycle = cycle
-		self.clen = len(cycle) if cycle else 0
+		self.clen = len(cycle) if cycle is not None else 0
 		self.step = step
 		self.count = 0
 

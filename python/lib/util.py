@@ -24,6 +24,8 @@ import uuid
 from datetime import datetime
 import math
 import numpy as np
+import matplotlib.pyplot as plt
+import numpy as np
 import logging
 import logging.handlers
 from contextlib import contextmanager
@@ -697,7 +699,7 @@ def dayAlign(ts):
 	"""
 	day aligned time	
 	"""
-	return int((ts / secInDay)) * secInDay
+	return int(ts / secInDay) * secInDay
 
 def timeAlign(ts, unit):
 	"""
@@ -868,7 +870,23 @@ def suppressStdout():
 			yield
 		finally:
 			sys.stdout = oldStdout
-		
+			
+def exitWithMsg(msg):
+	"""
+	print message and exit
+	"""
+	print(msg)
+	sys.exit(0)
+
+def drawLine(data, xscale):
+	"""
+	line plot
+	"""
+	plt.plot(data)
+	if xscale:
+		plt.xticks(range(xscale))
+	plt.show()
+	
 class StepFunction:
 	"""
 	step function
