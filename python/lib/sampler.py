@@ -266,6 +266,36 @@ class LogNormalSampler:
 	def sample(self):
 		return np.random.lognormal(self.mean, self.stdDev)
 
+class NormalSamplerWithTrendCycle:
+	"""
+	normal sampler
+	"""
+	def __init__(self, mean, stdDev, dmean, cycle,  step=1):
+		self.mean = mean
+		self.cmean = mean
+		self.stdDev = stdDev
+		self.dmean = dmean
+		self.cycle = cycle
+		self.clen = len(cycle) if cycle else 0
+		self.step = step
+		self.count = 0
+
+	def isNumeric(self):
+		return True
+
+	def sample(self):
+		s = np.random.normal(self.cmean, self.stdDev)
+		self.count += 1
+		if self.count % self.step == 0:
+			cy = 0
+			if self.clen > 1:
+				coff =  self.count % self.clen
+				cy = self.cycle[coff]
+			tr = self.count * self.dmean
+			self.cmean = self.mean + tr + cy
+		return s
+
+
 class ParetoSampler:
 	"""
 	pareto sampler
