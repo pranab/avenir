@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -51,6 +51,8 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.loss.reduction"] = ("sum", None)
 		defValues["train.learning.rate"] = (.0001, None)
 		defValues["train.num.iterations"] = (500, None) 
+		defValues["train.optimizer"] = ("sgd", None) 
+		defValues["train.lossFn"] = ("mse", None) 
 		
 		super(ThreeLayerNetwork, self).__init__()
     	
@@ -66,14 +68,42 @@ class ThreeLayerNetwork(torch.nn.Module):
 		self.lossRed = self.config.getStringConfig("train.loss.reduction")[0]
 		self.learnRate = self.config.getFloatConfig("train.learnig.rate")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
-    	
+		optimizer = self.config.getStringConfig("train.optimizer")[0]
+		lossFn = self.config.getStringConfig("train.lossFn")[0]
+   	
 		self.linear1 = torch.nn.Linear(numinp, numHidden)
+		self.act = torch.nn.ReLU()
 		self.linear2 = torch.nn.Linear(numHidden, numOut)
-		self.lossFn = torch.nn.MSELoss(reduction=lossRed)
-		(featData, outData) = self.prepTrainingData()
-		self.featData = torch.from_numpy(featData)
-		self.outData = torch.from_numpy(outData)
+
+		#training data
+		dataFile = self.config.getStringConfig("train.data.file")[0]
+		(featData, outData) = self.prepData(dataFile)
+		self.featData = Variable(torch.from_numpy(featData))
+		self.outData = Variable(torch.from_numpy(outData))
+
+		#validation data
+		dataFile = self.config.getStringConfig("valid.data.file")[0]
+		(featData, outData) = self.prepData(dataFile)
+		self.validFeatData = Variable(torch.from_numpy(featData))
+		self.validOutData = Variable(torch.from_numpy(outData))
+
+		#loss function
+		if lossFn == "mse":
+			self.lossFn = torch.nn.MSELoss(reduction=lossRed)
+		elif lossFn == "ce":
+			self.lossFn = torch.nn.CrossEntropyLoss(reduction=lossRed)
+		else:
+			exitWithMsg("invalid loss function")
     
+    	#optimizer
+		if optimizer == "sgd":
+			self.optimizer = torch.optim.SGD(model.parameters(), lr=model.learnRate)
+		elif optimizer == "adam":
+			self.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+		elif optimizer == "rmsprop":
+			self.optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+		else:
+			exitWithMsg("invalid optimizer")
 
 	def forward(self, x):
 		"""
@@ -81,16 +111,16 @@ class ThreeLayerNetwork(torch.nn.Module):
     	a Tensor of output data. We can use Modules defined in the constructor as
     	well as arbitrary (differentiable) operations on Tensors.
 		"""
-		h_relu = self.linear1(x).clamp(min=0)
-		y_pred = self.linear2(h_relu)
-		return y_pred
+		h = self.linear1(x)
+		hRe = self.act(h)
+		yPred = self.linear2(hRe)
+		return yPred
 
-	def prepTrainingData(self):
+	def prepData(self, dataFile):
 		"""
-		loads and prepares training data
+		loads and prepares  data
 		"""
 		# parameters
-		dataFile = self.config.getStringConfig("train.data.file")[0]
 		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
 		fieldIndices = strToIntArray(fieldIndices, ",")
 		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
@@ -107,17 +137,32 @@ class ThreeLayerNetwork(torch.nn.Module):
 
 	@staticmethod
 	def train(model):
-		optimizer = torch.optim.SGD(model.parameters(), lr=model.learnRate)
+
+		# train mode
+		model.train()
 		for t in range(model.numIter):
+
+	
 			# Forward pass: Compute predicted y by passing x to the model
-			y_pred = model(self.featData)
+			yPred = model(self.featData)
 
 			# Compute and print loss
-			loss = model.lossFn(y_pred, model.outData)
+			loss = model.lossFn(yPred, model.outData)
 			print(t, loss.item())
 
 			# Zero gradients, perform a backward pass, and update the weights.
-			optimizer.zero_grad()
+			self.optimizer.zero_grad()
 			loss.backward()
-			optimizer.step()    	
+			self.optimizer.step()    	
+
+		#validate
+		model.eval()
+		yPred = model(self.validFeatData)
+		yPred = yPred.data.cpu().numpy()
+		yActual = self.validOutData.cpu().numpy()
+		result = np.concatenate((yPred, yActual), axis = 1)
+		print(result)
+
+
+
     
