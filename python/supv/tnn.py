@@ -21,6 +21,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch.autograd import Variable
 import sklearn as sk
 import matplotlib
 import random
@@ -37,6 +38,7 @@ class ThreeLayerNetwork(torch.nn.Module):
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
 		"""
+		defValues = dict()
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
@@ -47,12 +49,15 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.num.hidden.units"] = (None, "missing number of hidden units")
+		defValues["train.activation"] = ("relu", None) 
 		defValues["train.batch.size"] = (10, None)
-		defValues["train.loss.reduction"] = ("sum", None)
+		defValues["train.loss.reduction"] = ("mean", None)
 		defValues["train.learning.rate"] = (.0001, None)
 		defValues["train.num.iterations"] = (500, None) 
 		defValues["train.optimizer"] = ("sgd", None) 
 		defValues["train.lossFn"] = ("mse", None) 
+		defValues["valid.data.file"] = (None, None)
+		self.config = Configuration(configFile, defValues)
 		
 		super(ThreeLayerNetwork, self).__init__()
     	
@@ -61,18 +66,27 @@ class ThreeLayerNetwork(torch.nn.Module):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
-		self.numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
-		self.numHidden = self.config.getIntConfig("train.num.hidden.units")[0]
-		self.numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
+		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
+		numHidden = self.config.getIntConfig("train.num.hidden.units")[0]
+		activation = self.config.getStringConfig("train.activation")[0]
+		numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
-		self.lossRed = self.config.getStringConfig("train.loss.reduction")[0]
-		self.learnRate = self.config.getFloatConfig("train.learnig.rate")[0]
+		lossRed = self.config.getStringConfig("train.loss.reduction")[0]
+		learnRate = self.config.getFloatConfig("train.learning.rate")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		optimizer = self.config.getStringConfig("train.optimizer")[0]
 		lossFn = self.config.getStringConfig("train.lossFn")[0]
    	
 		self.linear1 = torch.nn.Linear(numinp, numHidden)
-		self.act = torch.nn.ReLU()
+		if activation == "relu":
+			self.act = torch.nn.ReLU()
+		elif activation == "tanh":
+			self.act = torch.nn.Tanh()
+		elif activation == "sigmoid":
+			self.act = torch.nn.Sigmoid()
+		else:
+			exitWithMsg("invalid activation function")
+
 		self.linear2 = torch.nn.Linear(numHidden, numOut)
 
 		#training data
@@ -83,25 +97,27 @@ class ThreeLayerNetwork(torch.nn.Module):
 
 		#validation data
 		dataFile = self.config.getStringConfig("valid.data.file")[0]
-		(featData, outData) = self.prepData(dataFile)
-		self.validFeatData = Variable(torch.from_numpy(featData))
-		self.validOutData = Variable(torch.from_numpy(outData))
+		(featDataV, outDataV) = self.prepData(dataFile)
+		self.validFeatData = Variable(torch.from_numpy(featDataV))
+		self.validOutData = outDataV
 
 		#loss function
 		if lossFn == "mse":
 			self.lossFn = torch.nn.MSELoss(reduction=lossRed)
 		elif lossFn == "ce":
 			self.lossFn = torch.nn.CrossEntropyLoss(reduction=lossRed)
+		elif lossFn == "lone":
+			self.lossFn = torch.nn.L1Loss(reduction=lossRed)
 		else:
 			exitWithMsg("invalid loss function")
     
     	#optimizer
 		if optimizer == "sgd":
-			self.optimizer = torch.optim.SGD(model.parameters(), lr=model.learnRate)
+			self.optimizer = torch.optim.SGD(self.parameters(), lr=learnRate)
 		elif optimizer == "adam":
-			self.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+			self.optimizer = torch.optim.Adam(self.parameters(), lr=learnRate)
 		elif optimizer == "rmsprop":
-			self.optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+			self.optimizer = torch.optim.RMSprop(self.parameters(), lr=learnRate)
 		else:
 			exitWithMsg("invalid optimizer")
 
@@ -133,10 +149,10 @@ class ThreeLayerNetwork(torch.nn.Module):
 		outFieldIndices = self.config.getStringConfig("train.data.out.fields")[0]
 		outFieldIndices = strToIntArray(outFieldIndices, ",")
 		outData = data[:,outFieldIndices]	
-		return (featData, outData)
+		return (featData.astype(np.float32), outData.astype(np.float32))
 
 	@staticmethod
-	def train(model):
+	def trainModel(model):
 
 		# train mode
 		model.train()
@@ -144,23 +160,25 @@ class ThreeLayerNetwork(torch.nn.Module):
 
 	
 			# Forward pass: Compute predicted y by passing x to the model
-			yPred = model(self.featData)
+			yPred = model(model.featData)
 
 			# Compute and print loss
 			loss = model.lossFn(yPred, model.outData)
-			print(t, loss.item())
+			if t % 20 == 0:
+				print(t, loss.item())
 
 			# Zero gradients, perform a backward pass, and update the weights.
-			self.optimizer.zero_grad()
+			model.optimizer.zero_grad()
 			loss.backward()
-			self.optimizer.step()    	
+			model.optimizer.step()    	
 
 		#validate
 		model.eval()
-		yPred = model(self.validFeatData)
+		yPred = model(model.validFeatData)
 		yPred = yPred.data.cpu().numpy()
-		yActual = self.validOutData.cpu().numpy()
+		yActual = model.validOutData
 		result = np.concatenate((yPred, yActual), axis = 1)
+		print("predicted  actual")
 		print(result)
 
 

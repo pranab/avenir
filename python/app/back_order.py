@@ -24,9 +24,11 @@ from causalgraphicalmodels import CausalGraphicalModel
 import matplotlib.pyplot as plt 
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
+sys.path.append(os.path.abspath("../supv"))
 from util import *
 from sampler import *
 from mcsim import *
+from tnn import *
 
 """
 Manufacturing supply chain simulation
@@ -123,7 +125,12 @@ if __name__ == "__main__":
 		bo.draw()
 		plt.show()
 
-	else:
-		print("invalid command - quitting")
-		sys.exit(0)
+	elif op == "train":
+		prFile = sys.argv[2]
+		regressor = ThreeLayerNetwork(prFile)
+		regressor.buildModel()
+		ThreeLayerNetwork.trainModel(regressor)
 
+	else:
+		exitWithMsg("invalid command")
+	
