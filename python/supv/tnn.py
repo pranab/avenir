@@ -48,8 +48,10 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
-		defValues["train.num.hidden.units"] = (None, "missing number of hidden units")
-		defValues["train.activation"] = ("relu", None) 
+		defValues["train.num.hidden.units.one"] = (None, "missing number of hidden units")
+		defValues["train.activation.one"] = ("relu", None) 
+		defValues["train.num.hidden.units.two"] = (None, None)
+		defValues["train.activation.two"] = (None, None) 
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
 		defValues["train.learning.rate"] = (.0001, None)
@@ -57,6 +59,7 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.optimizer"] = ("sgd", None) 
 		defValues["train.lossFn"] = ("mse", None) 
 		defValues["valid.data.file"] = (None, None)
+		defValues["valid.accuracy.metric"] = (None, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(ThreeLayerNetwork, self).__init__()
@@ -66,9 +69,12 @@ class ThreeLayerNetwork(torch.nn.Module):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
+		self.verbose = self.config.getStringConfig("common.verbose")[0]
 		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
-		numHidden = self.config.getIntConfig("train.num.hidden.units")[0]
-		activation = self.config.getStringConfig("train.activation")[0]
+		numHiddenOne = self.config.getIntConfig("train.num.hidden.units.one")[0]
+		activationOne = self.config.getStringConfig("train.activation.one")[0]
+		numHiddenTwo = self.config.getIntConfig("train.num.hidden.units.two")[0]
+		activationTwo = self.config.getStringConfig("train.activation.two")[0]
 		numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		lossRed = self.config.getStringConfig("train.loss.reduction")[0]
@@ -76,18 +82,22 @@ class ThreeLayerNetwork(torch.nn.Module):
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		optimizer = self.config.getStringConfig("train.optimizer")[0]
 		lossFn = self.config.getStringConfig("train.lossFn")[0]
+		self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
    	
-		self.linear1 = torch.nn.Linear(numinp, numHidden)
-		if activation == "relu":
-			self.act = torch.nn.ReLU()
-		elif activation == "tanh":
-			self.act = torch.nn.Tanh()
-		elif activation == "sigmoid":
-			self.act = torch.nn.Sigmoid()
+		self.linear1 = torch.nn.Linear(numinp, numHiddenOne)
+		self.act1 = self.createActivation(activationOne)
+		if numHiddenTwo:
+			#two hidden layers
+			self.linear2 = torch.nn.Linear(numHiddenOne, numHiddenTwo)
+			self.act2 = self.createActivation(activationTwo)
+			self.linear3 = torch.nn.Linear(numHiddenTwo, numOut)
+			print("2 hidden layers")
 		else:
-			exitWithMsg("invalid activation function")
-
-		self.linear2 = torch.nn.Linear(numHidden, numOut)
+			#one hidden layer
+			self.linear2 = None
+			self.act2 = None
+			self.linear3 = torch.nn.Linear(numHiddenOne, numOut)
+			print("1 hidden layer")
 
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
@@ -121,16 +131,35 @@ class ThreeLayerNetwork(torch.nn.Module):
 		else:
 			exitWithMsg("invalid optimizer")
 
+	def createActivation(self, activation):
+		"""
+		create activation
+		"""
+		if activation is None:
+			act = None
+		elif activation == "relu":
+			act = torch.nn.ReLU()
+		elif activation == "tanh":
+			act = torch.nn.Tanh()
+		elif activation == "sigmoid":
+			act = torch.nn.Sigmoid()
+		else:
+			exitWithMsg("invalid activation function")
+		return act
+
 	def forward(self, x):
 		"""
     	In the forward function we accept a Tensor of input data and we must return
     	a Tensor of output data. We can use Modules defined in the constructor as
     	well as arbitrary (differentiable) operations on Tensors.
 		"""
-		h = self.linear1(x)
-		hRe = self.act(h)
-		yPred = self.linear2(hRe)
-		return yPred
+		y = self.linear1(x)
+		y = self.act1(y)
+		if  self.linear2 is not None:
+			y = self.linear2(y)
+			y = self.act2(y)
+		y = self.linear3(y)
+		return y
 
 	def prepData(self, dataFile):
 		"""
@@ -177,9 +206,13 @@ class ThreeLayerNetwork(torch.nn.Module):
 		yPred = model(model.validFeatData)
 		yPred = yPred.data.cpu().numpy()
 		yActual = model.validOutData
-		result = np.concatenate((yPred, yActual), axis = 1)
-		print("predicted  actual")
-		print(result)
+		if model.verbose:
+			result = np.concatenate((yPred, yActual), axis = 1)
+			print("predicted  actual")
+			print(result)
+		
+		score = perfMetric(model.accMetric, yActual, yPred)
+		print(formatFloat(3, score, "perf score"))
 
 
 
