@@ -22,11 +22,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.autograd import Variable
+from torch.utils.data import Dataset, TensorDataset
+from torch.utils.data import DataLoader
 import sklearn as sk
 import matplotlib
 import random
 import jprops
-from sklearn.ensemble import RandomForestClassifier 
 from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -58,8 +59,11 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.num.iterations"] = (500, None) 
 		defValues["train.optimizer"] = ("sgd", None) 
 		defValues["train.lossFn"] = ("mse", None) 
+		defValues["train.save.model"] = (False, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
+		defValues["predict.data.file"] = (None, None)
+		defValues["predict.use.saved.model"] = (True, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(ThreeLayerNetwork, self).__init__()
@@ -69,6 +73,8 @@ class ThreeLayerNetwork(torch.nn.Module):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
+		torch.manual_seed(9999)
+
 		self.verbose = self.config.getStringConfig("common.verbose")[0]
 		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
 		numHiddenOne = self.config.getIntConfig("train.num.hidden.units.one")[0]
@@ -102,13 +108,13 @@ class ThreeLayerNetwork(torch.nn.Module):
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		(featData, outData) = self.prepData(dataFile)
-		self.featData = Variable(torch.from_numpy(featData))
-		self.outData = Variable(torch.from_numpy(outData))
+		self.featData = torch.from_numpy(featData)
+		self.outData = torch.from_numpy(outData)
 
 		#validation data
 		dataFile = self.config.getStringConfig("valid.data.file")[0]
 		(featDataV, outDataV) = self.prepData(dataFile)
-		self.validFeatData = Variable(torch.from_numpy(featDataV))
+		self.validFeatData = torch.from_numpy(featDataV)
 		self.validOutData = outDataV
 
 		#loss function
@@ -161,7 +167,7 @@ class ThreeLayerNetwork(torch.nn.Module):
 		y = self.linear3(y)
 		return y
 
-	def prepData(self, dataFile):
+	def prepData(self, dataFile, includeOutFld=True):
 		"""
 		loads and prepares  data
 		"""
@@ -175,14 +181,47 @@ class ThreeLayerNetwork(torch.nn.Module):
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
 			featData = sk.preprocessing.scale(featData)
-		outFieldIndices = self.config.getStringConfig("train.data.out.fields")[0]
-		outFieldIndices = strToIntArray(outFieldIndices, ",")
-		outData = data[:,outFieldIndices]	
-		return (featData.astype(np.float32), outData.astype(np.float32))
+		
+		if includeOutFld:
+			outFieldIndices = self.config.getStringConfig("train.data.out.fields")[0]
+			outFieldIndices = strToIntArray(outFieldIndices, ",")
+			outData = data[:,outFieldIndices]	
+			foData = (featData.astype(np.float32), outData.astype(np.float32))
+		else:
+			foData = featData.astype(np.float32)
+		return foData
+
+	def saveCheckpt(self):
+		"""
+		checkpoints model
+		"""
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		assert os.path.exists(modelDirectory), "model save directory does not exist"
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		filepath = os.path.join(modelDirectory, modelFile)
+		state = {"state_dict": self.state_dict(), "optim_dict": self.optimizer.state_dict()}
+		torch.save(state, filepath)
+		if self.verbose:
+			print("model saved")
+
+	def restoreCheckpt(self, loadOpt=False):
+		"""
+		restored checkpointed model
+		"""
+		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		modelFile = self.config.getStringConfig("common.model.file")[0]
+		filepath = os.path.join(modelDirectory, modelFile)
+		assert os.path.exists(filepath), "model save file does not exist"
+		checkpoint = torch.load(filepath)
+		self.load_state_dict(checkpoint["state_dict"])
+		if loadOpt:
+			self.optimizer.load_state_dict(checkpoint["optim_dict"])
 
 	@staticmethod
-	def trainModel(model):
-
+	def allTrain(model):
+		"""
+		train with all data
+		"""
 		# train mode
 		model.train()
 		for t in range(model.numIter):
@@ -193,8 +232,8 @@ class ThreeLayerNetwork(torch.nn.Module):
 
 			# Compute and print loss
 			loss = model.lossFn(yPred, model.outData)
-			if t % 20 == 0:
-				print(t, loss.item())
+			if model.verbose and  t % 50 == 0:
+				print("epoch {}  loss {:.6f}".format(t, loss.item()))
 
 			# Zero gradients, perform a backward pass, and update the weights.
 			model.optimizer.zero_grad()
@@ -213,7 +252,79 @@ class ThreeLayerNetwork(torch.nn.Module):
 		
 		score = perfMetric(model.accMetric, yActual, yPred)
 		print(formatFloat(3, score, "perf score"))
+		return score
 
+	@staticmethod
+	def batchTrain(model):
+		"""
+		train with batch data
+		"""
+		trainData = TensorDataset(model.featData, model.outData)
+		trainDataLoader = DataLoader(dataset=trainData, batch_size=model.batchSize, shuffle=True)
+
+		# train mode
+		model.train()
+
+		#epoch
+		for t in range(model.numIter):
+			#batch
+			b = 0
+			for xBatch, yBatch in trainDataLoader:
+	
+				# Forward pass: Compute predicted y by passing x to the model
+				yPred = model(xBatch)
+
+				# Compute and print loss
+				loss = model.lossFn(yPred, yBatch)
+				if model.verbose and t % 50 == 0 and b % 5 == 0:
+					print("epoch {}  batch {}  loss {:.6f}".format(t, b, loss.item()))
+
+				# Zero gradients, perform a backward pass, and update the weights.
+				model.optimizer.zero_grad()
+				loss.backward()
+				model.optimizer.step()    	
+				b += 1
+
+		#validate
+		model.eval()
+		yPred = model(model.validFeatData)
+		yPred = yPred.data.cpu().numpy()
+		yActual = model.validOutData
+		if model.verbose:
+			result = np.concatenate((yPred, yActual), axis = 1)
+			print("predicted  actual")
+			print(result)
+		
+		score = perfMetric(model.accMetric, yActual, yPred)
+		print(formatFloat(3, score, "perf score"))
+
+		#save
+		modelSave = model.config.getBooleanConfig("train.model.save")[0]
+		if modelSave:
+			model.saveCheckpt()
+
+		return score
+
+	@staticmethod
+	def predict(model):
+		"""
+		predict
+		"""
+		#train or restore model
+		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			model.restoreCheckpt()
+		else:
+			ThreeLayerNetwork.batchTrain(model) 
+
+		#predict
+		dataFile = model.config.getStringConfig("predict.data.file")[0]
+		featData  = model.prepData(dataFile, False)
+		featData = torch.from_numpy(featData)
+		model.eval()
+		yPred = model(featData)
+		yPred = yPred.data.cpu().numpy()
+		print(yPred)
 
 
     

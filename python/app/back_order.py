@@ -69,6 +69,12 @@ def border(args):
 	i += 1
 	poMarg = args[i]
 
+	costPerUnit = 30
+	partsCostPerUnit = 12
+	otherCostPerUnit = 18
+
+	pricePerUnit = 50
+
 
 	#seasonal and trend adjustment
 	sadj = seasonal[month - 1]
@@ -87,6 +93,7 @@ def border(args):
 	prCap = int(14 * 10 * 70 * (1.0 - dwntm))
 	boPcap = dem - prCap if dem > prCap else 0
 	bo = max(boPa, boPcap)
+	#print("boPa {} boPcap {}".format(boPa, boPcap))
 
 	#shipping cost 
 	ro  = dem - bo
@@ -95,12 +102,26 @@ def border(args):
 		sc += shipCost(bo)
 
 	#revenue, cost and profit
-	pc = dem * 30
-	rev = dem * 50
+	if boPa > 0  and isEventSampled(40):
+		# back order parts from different supplier
+		pc = (dem - boPa) * costPerUnit + boPa * (1.1 * partsCostPerUnit + otherCostPerUnit)
+	else:
+		# normal
+		pc = dem * costPerUnit
+
+	#revenue and profit
+	if bo > 0:
+		#discount for back ordered quantities
+		rev = ro * pricePerUnit + bo * 0.9 * pricePerUnit
+	else:
+		#normal
+		rev = dem * pricePerUnit
+
+
 	prof = (rev - pc - sc) / dem
 
 	#demand, prev week demand, downtime, part order margin, back order, per unit profit
-	print("{},{},{:.3f},{:.3f},{},{:.3f}".format(pdem, dem, dwntm * 100, poMarg * 100, bo, prof))
+	print("{},{},{:.3f},{:.3f},{},{:.2f}".format(pdem, dem, dwntm * 100, poMarg * 100, bo, prof))
 
 
 
@@ -109,8 +130,8 @@ if __name__ == "__main__":
 	if op == "simu":
 		numIter = int(sys.argv[2])
 		simulator = MonteCarloSimulator(numIter, border, "./log/mcsim.log", "info")
-		simulator.registerNormalSampler(9000, 1500)
-		simulator.registerNormalSampler(9000, 1500)
+		simulator.registerNormalSampler(9000, 2000)
+		simulator.registerNormalSampler(9000, 2000)
 		simulator.registerUniformSampler(1, 5)
 		simulator.registerUniformSampler(1, 12)
 		simulator.registerGammaSampler(1.0, .05)
@@ -129,7 +150,13 @@ if __name__ == "__main__":
 		prFile = sys.argv[2]
 		regressor = ThreeLayerNetwork(prFile)
 		regressor.buildModel()
-		ThreeLayerNetwork.trainModel(regressor)
+		ThreeLayerNetwork.batchTrain(regressor)
+
+	elif op == "pred":
+		prFile = sys.argv[2]
+		regressor = ThreeLayerNetwork(prFile)
+		regressor.buildModel()
+		ThreeLayerNetwork.predict(regressor)
 
 	else:
 		exitWithMsg("invalid command")

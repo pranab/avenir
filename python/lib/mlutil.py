@@ -21,6 +21,7 @@ import sys
 import numpy as np
 import sklearn as sk
 from sklearn import preprocessing
+from sklearn import metrics
 import random
 from math import *
 from decimal import Decimal
@@ -421,11 +422,11 @@ def perfMetric(metric, yActual, yPred):
 	predictive model accuracy metric
 	"""
 	if metric == "rsquare":
-		score = sk.metrics.r2_score(yActual, yPred)
+		score = metrics.r2_score(yActual, yPred)
 	elif metric == "mae":
-		score = sk.metrics.mean_absolute_error(yActual, yPred)
+		score = metrics.mean_absolute_error(yActual, yPred)
 	elif metric == "mse":
-		score = sk.metrics.mean_squared_error(yActual, yPred)
+		score = metrics.mean_squared_error(yActual, yPred)
 	else:
 		exitWithMsg("invalid accuracy metric")
 	return score
