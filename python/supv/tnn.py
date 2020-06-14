@@ -117,41 +117,55 @@ class ThreeLayerNetwork(torch.nn.Module):
 		self.validFeatData = torch.from_numpy(featDataV)
 		self.validOutData = outDataV
 
-		#loss function
-		if lossFn == "mse":
-			self.lossFn = torch.nn.MSELoss(reduction=lossRed)
-		elif lossFn == "ce":
-			self.lossFn = torch.nn.CrossEntropyLoss(reduction=lossRed)
-		elif lossFn == "lone":
-			self.lossFn = torch.nn.L1Loss(reduction=lossRed)
-		else:
-			exitWithMsg("invalid loss function")
-    
-    	#optimizer
-		if optimizer == "sgd":
-			self.optimizer = torch.optim.SGD(self.parameters(), lr=learnRate)
-		elif optimizer == "adam":
-			self.optimizer = torch.optim.Adam(self.parameters(), lr=learnRate)
-		elif optimizer == "rmsprop":
-			self.optimizer = torch.optim.RMSprop(self.parameters(), lr=learnRate)
-		else:
-			exitWithMsg("invalid optimizer")
+		# loss function and optimizer
+		self.lossFn = self.createLossFunction(lossFn, lossRed)
+		self.optimizer =  self.createOptimizer(optimizer, learnRate)
 
-	def createActivation(self, activation):
+ 
+	def createActivation(self, actName):
 		"""
 		create activation
 		"""
-		if activation is None:
-			act = None
-		elif activation == "relu":
-			act = torch.nn.ReLU()
-		elif activation == "tanh":
-			act = torch.nn.Tanh()
-		elif activation == "sigmoid":
-			act = torch.nn.Sigmoid()
+		if actName is None:
+			activation = None
+		elif actName == "relu":
+			activation = torch.nn.ReLU()
+		elif actName == "tanh":
+			activation = torch.nn.Tanh()
+		elif actName == "sigmoid":
+			activation = torch.nn.Sigmoid()
 		else:
-			exitWithMsg("invalid activation function")
-		return act
+			exitWithMsg("invalid activation function name " + actName)
+		return activation
+
+	def createLossFunction(self, lossFnName, lossRed):
+		"""
+		create loss function
+		"""
+		if lossFnName == "mse":
+			lossFunc = torch.nn.MSELoss(reduction=lossRed)
+		elif lossFnName == "ce":
+			lossFunc = torch.nn.CrossEntropyLoss(reduction=lossRed)
+		elif lossFnName == "lone":
+			lossFunc = torch.nn.L1Loss(reduction=lossRed)
+		else:
+			exitWithMsg("invalid loss function name " + lossFnName)
+		return lossFunc
+
+	def createOptimizer(self, optName, learnRate):
+		"""
+		create loss function
+		"""
+		if optName == "sgd":
+			optimizer = torch.optim.SGD(self.parameters(), lr=learnRate)
+		elif optName == "adam":
+			optimizer = torch.optim.Adam(self.parameters(), lr=learnRate)
+		elif optName == "rmsprop":
+			optimizer = torch.optim.RMSprop(self.parameters(), lr=learnRate)
+		else:
+			exitWithMsg("invalid optimizer name " + optName)
+		return optimizer
+
 
 	def forward(self, x):
 		"""

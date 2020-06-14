@@ -124,6 +124,28 @@ def border(args):
 	print("{},{},{:.3f},{:.3f},{},{:.2f}".format(pdem, dem, dwntm * 100, poMarg * 100, bo, prof))
 
 
+def infer(model, dataFile,  cindex , cvalues):
+	"""
+	causal inference
+	"""
+	#train or restore model
+	useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+	if useSavedModel:
+		model.restoreCheckpt()
+	else:
+		ThreeLayerNetwork.batchTrain(model) 
+
+	#predict
+	featData  = model.prepData(dataFile, False)
+
+	for v in cvalues:
+		featData[:, :cindex] = v
+		tfeatData = torch.from_numpy(featData[:,:])
+		model.eval()
+		yPred = model(tfeatData)
+		yPred = yPred.data.cpu().numpy()
+		print("back order {}   unit profit {:.2f}".format(v, yPred.mean()))
+
 
 if __name__ == "__main__":
 	op = sys.argv[1]
@@ -157,6 +179,14 @@ if __name__ == "__main__":
 		regressor = ThreeLayerNetwork(prFile)
 		regressor.buildModel()
 		ThreeLayerNetwork.predict(regressor)
+
+	elif op == "infer":
+		prFile = sys.argv[2]
+		dataFile = sys.argv[3]
+		bvalues = toIntList(sys.argv[4].split(","))
+		regressor = ThreeLayerNetwork(prFile)
+		regressor.buildModel()
+		infer(regressor, dataFile,  4 , bvalues)
 
 	else:
 		exitWithMsg("invalid command")
