@@ -22,6 +22,7 @@ import random
 import statistics 
 from causalgraphicalmodels import CausalGraphicalModel
 import matplotlib.pyplot as plt 
+import sklearn as sk
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
 sys.path.append(os.path.abspath("../supv"))
@@ -123,6 +124,20 @@ def border(args):
 	#demand, prev week demand, downtime, part order margin, back order, per unit profit
 	print("{},{},{:.3f},{:.3f},{},{:.2f}".format(pdem, dem, dwntm * 100, poMarg * 100, bo, prof))
 
+def loadData(model, dataFile):
+	"""
+	loads and prepares  data
+	"""
+	# parameters
+	fieldIndices = model.config.getStringConfig("train.data.fields")[0]
+	fieldIndices = strToIntArray(fieldIndices, ",")
+	featFieldIndices = model.config.getStringConfig("train.data.feature.fields")[0]
+	featFieldIndices = strToIntArray(featFieldIndices, ",")
+
+	#training data
+	(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+	return featData.astype(np.float32)
+
 
 def infer(model, dataFile,  cindex , cvalues):
 	"""
@@ -135,16 +150,21 @@ def infer(model, dataFile,  cindex , cvalues):
 	else:
 		ThreeLayerNetwork.batchTrain(model) 
 
-	#predict
-	featData  = model.prepData(dataFile, False)
-
+	#featData  = loadData(model, dataFile)
 	for v in cvalues:
-		featData[:, :cindex] = v
+		#print(featData[:5,:])
+		featData  = loadData(model, dataFile)
+		featData[:,cindex] = v
+		#print(featData[:5,:])
 		tfeatData = torch.from_numpy(featData[:,:])
 		model.eval()
 		yPred = model(tfeatData)
 		yPred = yPred.data.cpu().numpy()
-		print("back order {}   unit profit {:.2f}".format(v, yPred.mean()))
+		#print(yPred)
+		yPred = yPred[:,0]
+		#print(yPred[:5])
+		av = yPred.mean()
+		print("back order {}\tunit profit {:.2f}".format(v, av))
 
 
 if __name__ == "__main__":
