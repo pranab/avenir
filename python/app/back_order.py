@@ -150,14 +150,14 @@ def infer(model, dataFile,  cindex , cvalues):
 	else:
 		ThreeLayerNetwork.batchTrain(model) 
 
-	#featData  = loadData(model, dataFile)
+	featData  = loadData(model, dataFile)
+	model.eval()
 	for v in cvalues:
 		#print(featData[:5,:])
-		featData  = loadData(model, dataFile)
+		#featData  = loadData(model, dataFile)
 		featData[:,cindex] = v
 		#print(featData[:5,:])
 		tfeatData = torch.from_numpy(featData[:,:])
-		model.eval()
 		yPred = model(tfeatData)
 		yPred = yPred.data.cpu().numpy()
 		#print(yPred)
