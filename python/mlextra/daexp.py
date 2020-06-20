@@ -49,7 +49,6 @@ from scipy.stats import chi2_contingency
 from scipy.stats import f_oneway
 from scipy.stats import normaltest
 from scipy.stats import anderson
-from skgof import ks_test, cvm_test, ad_test
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -113,11 +112,63 @@ class DataExplorer:
 
 	def addListData(self, dataSet, name):
 		"""
-		add columns for a file
+		list data
 		"""
 		if type(dataSet) == list:
 			dataSet = np.array(dataSet)
 		self.dataSets[name] = dataSet
+
+
+	def addFileCatData(self, filePath,  *columns):
+		"""
+		add columns from a file
+		"""
+		columns = list(columns)
+		noHeader = type(columns[0]) ==  int
+		if noHeader:			
+			nCols = int(len(columns) / 2)
+			colIndexes = columns[:nCols]
+			df = pd.read_csv(filePath,  header=None) 
+			nColsDf = len(df.columns)
+			for i in range(nCols):
+				ci = colIndexes[i]
+				assert ci < nColsDf, "col index {} outside range".format(ci)
+				col = df.loc[ : , ci].tolist()
+				cn = columns[i + nCols]
+				#print(ci,cn)
+				self.dataSets[cn] = col
+		else:
+			df = pd.read_csv(filePath,  header=0) 
+			for c in columns:
+				col = df[c].tolist()
+				self.dataSets[c] = col
+
+	def addDataFrameCatData(self, df,  *columns):
+		"""
+		add columns from a data frame
+		"""
+		columns = list(columns)
+		noHeader = type(columns[0]) ==  int
+		if noHeader:			
+			nCols = int(len(columns) / 2)
+			colIndexes = columns[:nCols]
+			nColsDf = len(df.columns)
+			for i in range(nCols):
+				ci = colIndexes[i]
+				assert ci < nColsDf, "col index {} outside range".format(ci)
+				col = df.loc[ : , ci].tolist()
+				cn = columns[i + nCols]
+				self.dataSets[cn] = col
+		else:
+			for c in columns:
+				col = df[c].tolist()
+				self.dataSets[c] = col
+
+	def addCatListData(self, ds, name):
+		"""
+		categorical list data
+		"""
+		self.dataSets[name] = ds
 
 	def getData(self, ds):
 		"""
@@ -131,9 +182,35 @@ class DataExplorer:
 		elif type(ds) == numpy.ndarray:
 			data = ds
 		else:
-			raise "invalid type, expecting data set name, list or ndarray"
-			
+			raise "invalid type, expecting data set name, list or ndarray"			
 		return data
+
+
+	def getCatData(self, ds):
+		"""
+		get data
+		"""
+		if type(ds) == str:
+			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			data =   self.dataSets[ds]
+		elif type(ds) == list:
+			data = ds
+		else:
+			raise "invalid type, expecting data set name or list"
+		return data
+
+	def loadCatFloatDataFrame(self, ds1, ds2):
+		"""
+		loads float and cat data into data frame
+		"""
+		data1 = self.getCatData(ds1)
+		data2 = self.getData(ds2)
+		df1 = pd.DataFrame(data=data1)
+		df2 = pd.DataFrame(data=data2)
+		df = pd.concat([df1,df2], axis=1)
+		df.columns = range(df.shape[1])
+		return df
+
 	def plot(self, ds, yscale=None):
 		"""
 		plots data
@@ -230,6 +307,65 @@ class DataExplorer:
 		data1 = self.getData(ds1)
 		data2 = self.getData(ds2)
 		stat, pvalue = sta.pearsonr(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+
+	def getSpearmanRankCorr(self, ds1, ds2, sigLev=.05):
+		"""
+		covariance
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.spearmanr(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+	def getKendalRankCorr(self, ds1, ds2, sigLev=.05):
+		"""
+		covariance
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.kendalltau(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+	def getConTab(self, ds1, ds2):
+		"""
+		get contingency table
+		"""
+		data1 = getCatData(ds1)
+		data2 = getCatData(ds2)
+		crosstab = pd.crosstab(data1, data2, margins = False)
+		ctab = crosstab.values
+		print("contingency table")
+		print(ctab)
+		return ctab
+
+	def getChiSqCorr(self, ds1, ds2, sigLev=.05):
+		"""
+		chi square correlation for  both categorical	
+		"""
+		ctab = self.getConTab(ds1, ds2)
+		stat, pvalue, dof, expctd = sta.chi2_contingency(ctab)
+		result = self.printResult("stat", stat, "pvalue", pvalue, "dof", dof, "expected", expctd)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+	def getAnovaCorr(self, ds1, ds2, grByCol, sigLev=.05):
+		"""
+		anova correlation for  numerical categorical	
+		"""
+		df = loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else loadCatFloatDataFrame(ds2, ds1)
+		grByCol = 0
+		dCol = 1
+		grouped = df.groupby([grByCol])
+		dlist =  list(map(lambda v : v[1].loc[:, dCol].values, grouped))
+		stat, pvalue = f_oneway(*dlist)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
