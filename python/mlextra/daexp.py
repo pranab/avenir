@@ -49,6 +49,7 @@ from scipy.stats import chi2_contingency
 from scipy.stats import f_oneway
 from scipy.stats import normaltest
 from scipy.stats import anderson
+from skgof import ks_test, cvm_test, ad_test
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -118,25 +119,41 @@ class DataExplorer:
 			dataSet = np.array(dataSet)
 		self.dataSets[name] = dataSet
 
-	def getData(self, dname):
+	def getData(self, ds):
 		"""
 		get data
 		"""
-		assert dname in self.dataSets, "data set {} does not exist".format(dname)
-		return  self.dataSets[dname]
+		if type(ds) == str:
+			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			data =   self.dataSets[ds]
+		elif type(ds) == list:
+			data = np.array(ds)
+		elif type(ds) == numpy.ndarray:
+			data = ds
+		else:
+			raise "invalid type, expecting data set name, list or ndarray"
 			
-	def plot(self, dname, yscale=None):
+		return data
+	def plot(self, ds, yscale=None):
 		"""
 		plots data
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		drawLine(data, yscale)
 
-	def getStats(self, dname):
+	def plotHist(self, ds, cumulative, density, nbins=None):
 		"""
 		plots data
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
+		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
+		plt.show()
+
+	def getStats(self, ds):
+		"""
+		plots data
+		"""
+		data = self.getData(ds)
 		stat = dict()
 		stat["length"] = len(data)
 		stat["min"] = data.min()
@@ -148,20 +165,20 @@ class DataExplorer:
 		return stat
 
 
-	def getDifference(self, dname, order):
+	def getDifference(self, ds, order):
 		"""
 		difference of given order
 		"""
-		data = data = self.getData(dname)
+		data = self.getData(ds)
 		diff = difference(data, order)
 		drawLine(diff)
 		return diff
 
-	def getTrend(self, dname, doPlot=False):
+	def getTrend(self, ds, doPlot=False):
 		"""
 		finds trend
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		sz = len(data)
 		X = list(range(0, sz))
 		X = np.reshape(X, (sz, 1))
@@ -185,82 +202,152 @@ class DataExplorer:
 			plt.show()
 		return result
 
-	def deTrend(self, dname, trend, doPlot=False):
+	def deTrend(self, ds, trend, doPlot=False):
 		"""
 		de trend
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		sz = len(data)
 		detrended =  list(map(lambda i : data[i]-trend[i], range(sz)))
 		if doPlot:
 			drawLine(detrended)
 		return detrended
 
-	def plotAcf(self, dname, lags, alpha, diffOrder=0):
+	def getCovar(self, *dsl):
+		"""
+		covariance
+		"""
+		data = list(map(lambda ds : self.getData(ds), dsl))
+		data = np.vstack(data)
+		cv = np.cov(data)
+		print(cv)
+		return cv
+
+	def getPearsonCorr(self, ds1, ds2, sigLev=.05):
+		"""
+		covariance
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.pearsonr(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+
+	def plotAcf(self, ds, lags, alpha, diffOrder=0):
 		"""
 		auto correlation
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		ddata = difference(data, diffOrder) if diffOrder > 0 else data
 		tsaplots.plot_acf(ddata, lags = lags, alpha = alpha)
 		plt.show()
 
-	def plotParAcf(self, dname, lags, alpha):
+	def plotParAcf(self, ds, lags, alpha):
 		"""
 		partial auto correlation
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		tsaplots.plot_pacf(data, lags = lags, alpha = alpha)
 		plt.show()
 
-	def plotCrossCorr(self, dnameOne, dnameTwo, normed, lags):
+	def plotCrossCorr(self, dsOne, dsTwo, normed, lags):
 		"""
 		cross correlation 
 		"""
-		dataOne = self.getData(dnameOne)
-		dataTwo = self.getData(dnameTwo)
+		dataOne = self.getData(dsOne)
+		dataTwo = self.getData(dsTwo)
 		plt.xcorr(dataOne, dataTwo, normed=normed, maxlags=lags)
 		plt.show()
 
-	def testStationaryAdf(self, dname, regression, autolag, critValue=.05):
+	def testStationaryAdf(self, ds, regression, autolag, sigLev=.05):
 		"""
 		Adf stationary test null hyp not stationary
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		re = adfuller(data, regression=regression, autolag=autolag)
 		result = self.printResult("stat", re[0], "pvalue", re[1] , "num lags", re[2] , "num observation for regression", re[3],
 		"critial values", re[4])
-		self.printStat(re[0], re[1], "probably not stationary", "probably stationary", critValue)
+		self.printStat(re[0], re[1], "probably not stationary", "probably stationary", sigLev)
 		return result
 
-	def testStationaryKpss(self, dname, regression, critValue=.05):
+	def testStationaryKpss(self, ds, regression, sigLev=.05):
 		"""
 		Kpss stationary test null hyp  stationary
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		stat, pvalue, nLags, criticalValues = kpss(data, regression=regression)
 		result = self.printResult("stat", stat, "pvalue", pvalue, "num lags", nLags, "critial values", criticalValues)
-		self.printStat(stat, pvalue, "probably stationary", "probably not stationary", critValue)
+		self.printStat(stat, pvalue, "probably stationary", "probably not stationary", sigLev)
 		return result
 
-	def testNormalJarqBera(self, dname, critValue=.05):
+	def testNormalJarqBera(self, ds, sigLev=.05):
 		"""
 		jarque bera normalcy test
 		"""
-		data = self.getData(dname)
+		data = self.getData(ds)
 		jb, jbpv, skew, kurtosis =  jarque_bera(data)
 		result = self.printResult("stat", jb, "pvalue", jbpv, "skew", skew, "kurtosis", kurtosis)
-		self.printStat(jb, jbpv, "probably gaussian", "probably not gaussian", critValue)
+		self.printStat(jb, jbpv, "probably gaussian", "probably not gaussian", sigLev)
 		return result
 
-	def printStat(self, stat, pvalue, nhMsg, ahMsg, critVal=.05):
+
+	def testNormalShapWilk(self, ds, sigLev=.05):
+		"""
+		shapiro wilks normalcy test
+		"""
+		data = self.getData(ds)
+		stat, pvalue = shapiro(data)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
+		return result
+
+	def testNormalDagast(self, ds, sigLev=.05):
+		"""
+		D’Agostino’s K square  normalcy test
+		"""
+		data = self.getData(ds)
+		stat, pvalue = normaltest(data)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
+		return result
+
+	def testNormalAnderson(self, ds, sigLev=.05):
+		"""
+		D’Agostino’s K square  normalcy test
+		"""
+		data = self.getData(ds)
+		re = anderson(data)
+		slAlpha = int(100 * sigLev)
+		msg = "significnt value not found"
+		for i in range(len(re.critical_values)):
+			sl, cv = re.significance_level[i], re.critical_values[i]
+			if int(sl) == slAlpha:
+				if re.statistic < cv:
+					msg = "probably gaussian at the {:.1f} level".format(sl)
+				else:
+					msg = "probably not gaussian at the {:.1f} level".format(sl)
+		result = self.printResult("stat", re.statistic, "test", msg)
+		print(msg)
+		return result
+
+
+	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
+		"""
+		2 sample cramer von mises
+		"""
+		pass
+		
+
+	def printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
 		generic stat and pvalue output
 		"""
 		print("test result:")
 		print("stat:   {:.3f}".format(stat))
 		print("pvalue: {:.3f}".format(pvalue))
-		print(nhMsg if pvalue > critVal else ahMsg)
+		print(nhMsg if pvalue > sigLev else ahMsg)
 
 	def printResult(self,  *values):
 		"""
