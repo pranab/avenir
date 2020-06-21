@@ -500,13 +500,24 @@ def getFileLines(dirPath):
 
 def getFileColumnAsString(dirPath, index, delim=","):
 	"""
-	get string fileds from a file
+	get string column from a file
 	"""
 	fields = list()
 	for rec in fileRecGen(dirPath, delim):
 		fields.append(rec[index])	
 	#print(fields)	
 	return fields
+
+def getFileColumnsAsString(dirPath, indexes, delim=","):
+	"""
+	get multiple string columns from a file
+	"""
+	nindex = len(indexes)
+	columns = list(map(lambda i : list(), range(nindex)))
+	for rec in fileRecGen(dirPath, delim):
+		for i in range(nindex):
+			columns[i].append(rec[indexes[i]])	
+	return columns
 
 def getFileColumnAsFloat(dirPath, index, delim=","):
 	"""
@@ -875,16 +886,18 @@ def exitWithMsg(msg):
 	"""
 	print message and exit
 	"""
-	print(msg)
+	print(msg + " -- quitting")
 	sys.exit(0)
 
-def drawLine(data, xscale):
+def drawLine(data, yscale=None):
 	"""
 	line plot
 	"""
 	plt.plot(data)
-	if xscale:
-		plt.xticks(range(xscale))
+	if yscale:
+		step = int(yscale / 10)
+		step = int(step / 10) * 10
+		plt.yticks(range(0, yscale, step))
 	plt.show()
 	
 class StepFunction:

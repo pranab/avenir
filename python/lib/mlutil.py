@@ -22,6 +22,8 @@ import numpy as np
 import sklearn as sk
 from sklearn import preprocessing
 from sklearn import metrics
+from sklearn.datasets import make_blobs
+from sklearn.datasets import make_classification
 import random
 from math import *
 from decimal import Decimal
@@ -187,6 +189,106 @@ class CatLabelGenerator:
 	# get original labels
 	def getOrigLabels(self, indx):
 		return self.encoders[indx].classes_	
+
+
+class SupvLearningDataGenerator:
+	"""
+	data generator for supervised learning
+	"""
+	def __init__(self,  configFile):
+		defValues = disct()
+		defValues["common.num.samp"] = (100, None)
+		defValues["common.num.feat"] = (5, None)
+		defValues["common.feat.trans"] = (None, None)
+		defValues["common.feat.types"] = (None, "missing feature types")
+		defValues["common.cat.feat.distr"] = (None, None)
+		defValues["class.gen.technique"] = ("blob", None)
+		defValues["class.num.feat.informative"] = (2, None)
+		defValues["class.num.feat.redundant"] = (2, None)
+		defValues["class.num.feat.repeated"] = (0, None)
+		defValues["class.num.feat.cat"] = (0, None)
+
+		self.config = Configuration(configFile, defValues)
+
+	def genClassifierData(self):
+		"""
+		generates classifier data
+		"""
+		nsamp =  self.config.getIntConfig("common.num.samp")[0]
+		nfeat =  self.config.getIntConfig("common.num.feat")[0]
+
+		#transform with shift and scale
+		ftrans =  self.config.getFloatListConfig("common.feat.trans")[0]
+		feTrans = dict()
+		for i in range(0, len(ftrans), 2):
+			tr = (ftrans[i], ftrans[i+1])
+			indx = int(i/2)
+			feTrans[indx] = tr
+
+		ftypes =  self.config.getStringListConfig("common.feat.types")[0]
+
+		# categorical feature distribution
+		feCatDist = dict()
+		fcatdl =  self.config.getStringListConfig("common.cat.feat.distr")[0]
+		for fcatds in fcatdl:
+			factd = fcatds.split(":")
+			feInd =  int(fcatd[0])
+			clVal =  int(fcatd[1])
+			key = (feInd, clVal)		#feature index and class value
+			dist = list(map(lambda i : (fcatd[i], fcatd[i+1]), range(2, len(factd), 2)))
+			feCatDist[key] = CategoricalRejectSampler(*dist)
+
+		#shift and scale
+		genTechnique = self.config.getStringConfig("class.gen.technique")[0]
+
+		if genTechnique == "blob":
+			features, claz = make_blobs(n_samples=nsamp, centers=2, n_features=nfeat)
+			for i in range(nsamp):
+				for j in range(nfeat):
+					tr = feTrans[j]
+					features[i,j] = features[i,j] * tr[1] + tr[0]
+		elif genTechnique == "classify":
+			nfeatInfo =  self.config.getIntConfig("class.num.feat.informative")[0]
+			nfeatRed =  self.config.getIntConfig("class.num.feat.redundant")[0]
+			nfeatRep =  self.config.getIntConfig("class.num.feat.repeated")[0]
+			shifts = list(map(lambda i : feTrans[i][0], range(nfeat)))
+			scales = list(map(lambda i : feTrans[i][1], range(nfeat)))
+			features, claz = make_classification(n_samples=nsamp, n_features=nfeat, n_informative=nfeatInfo, n_redundant=nfeatRed, 
+			n_repeated=nfeatRep, shift=shifts, scale=scales)
+		else:
+			raise "invalid genaration technique"
+
+		# add categorical features and format
+		nCatFeat = self.config.getIntConfig("common.num.feat.cat")[0]
+		for f , c in zip(features, claz):
+			nfs = list(map(lambda i : self.numFeToStr(i, f[i], c, ftypes[i]), range(ncol)))
+			cfs = list(map(lambda i : self.catFe(i, c, ftypes[i], feCatDist), range(ncol, ncol + nCatFeat, 1)))
+			rec = ",".join(nfs) + "," +  ",".join(cfs)  + "," + str(c)
+			yield rec
+
+	def numFeToStr(self, i, fv, cv, ft):
+		"""
+		nummeric feature value to string
+		"""
+		if ft == "float":
+			s = "{:.5f}".format(fv)
+		elif ft =="int":
+			s = str(int(fv))
+		else:		
+			raise "invalid type"
+		return s
+
+	def catFe(self, i, cv, ft, feCatDist):
+		"""
+		generate categorical feature
+		"""
+		if ft == "cat":
+			key = (i, cv)
+			s = feCatDist[key].sample()
+		else:		
+			raise "invalid type"
+		return s
+
 
 
 def loadDataFile(file, delim, cols, colIndices):
