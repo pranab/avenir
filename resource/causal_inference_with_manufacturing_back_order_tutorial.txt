@@ -1,0 +1,30 @@
+This tutorial is for causal inference for supply chain manufacturing back order using PyTorch
+
+
+Setup
+=====
+Make sure you have ../lib   ../mlextra and ../supv directories with all the python files wrt 
+where back_order.py is. You need to have PyTorch installed. All parameters are defined in 
+tnn_bo.properties file. Make changes as necessary
+
+Generate Data
+=============
+./back_order.py simu <num_recs> > bord_tr.txt
+where
+num_recs = number of records with weekly data e.g. 1000
+
+Train neural network model
+==========================
+./back_order.py train tnn_bo.properties
+
+if you want trained model check pointed make sure following parameters are  set  
+common.model.directory=./model/tnn
+common.model.file=bo.mod
+train.model.save=True
+ 
+Infer 
+=====
+./back_order.py infer 0,1000
+
+The last argument is list of back order quantities. Make sue the following parameter is set 
+it will output expected per unit profit for te 2 back order quantities
