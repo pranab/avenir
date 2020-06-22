@@ -44,12 +44,18 @@ class Configuration:
 		self.defValues = defValues
 		self.verbose = verbose
 
-	#set config param
+	
 	def setParam(self, name, value):
+		"""
+		set config param
+		"""
 		self.configs[name] = value
 
-	# get string param
+	
 	def getStringConfig(self, name):
+		"""
+		get string param
+		"""
 		if self.isNone(name):
 			val = (None, False)
 		elif self.isDefault(name):
@@ -60,8 +66,11 @@ class Configuration:
 			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 
-	# get int param
+	
 	def getIntConfig(self, name):
+		"""
+		get int param
+		"""
 		#print "%s %s" %(name,self.configs[name])
 		if self.isNone(name):
 			val = (None, False)
@@ -73,8 +82,11 @@ class Configuration:
 			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 		
-	# get float param
+	
 	def getFloatConfig(self, name):
+		"""
+		get float param
+		"""
 		#print "%s %s" %(name,self.configs[name])
 		if self.isNone(name):
 			val = (None, False)
@@ -86,8 +98,11 @@ class Configuration:
 			print( "{} {} {:06.3f}".format(name, self.configs[name], val[0]))
 		return val
 
-	# get boolean param
+	
 	def getBooleanConfig(self, name):
+		"""
+		#get boolean param
+		"""
 		if self.isNone(name):
 			val = (None, False)
 		elif self.isDefault(name):
@@ -99,20 +114,37 @@ class Configuration:
 			print( "{} {} {}".format(name, self.configs[name], val[0]))
 		return val
 		
-	# get int list param
+	
 	def getIntListConfig(self, name, delim=","):
+		"""
+		get int list param
+		"""
 		delSepStr = self.getStringConfig(name)
 		intList = strToIntArray(delSepStr[0], delim)
 		return (intList, delSepStr[1])
 	
-	# get string list param
+	def getFloatListConfig(self, name, delim=","):
+		"""
+		get float list param
+		"""
+		delSepStr = self.getStringConfig(name)
+		flList = strToFloatArray(delSepStr[0], delim)
+		return (flList, delSepStr[1])
+
+	
 	def getStringListConfig(self, name, delim=","):
+		"""
+		get string list param
+		"""
 		delSepStr = self.getStringConfig(name)
 		strList = delSepStr[0].split(delim)
 		return (strList, delSepStr[1])
 
-	# handles default
+	
 	def handleDefault(self, name):
+		"""
+		handles default
+		"""
 		dVal = self.defValues[name]
 		if (dVal[1] is None):
 			val = dVal[0]
@@ -120,18 +152,27 @@ class Configuration:
 			raise ValueError(dVal[1])
 		return val
 	
-	# true is value is None	
+	
 	def isNone(self, name):
+		"""
+		true is value is None	
+		"""
 		return self.configs[name].lower() == "none"
 	
-	# true if the value is default	
+	
 	def isDefault(self, name):
+		"""
+		true if the value is default	
+		"""
 		de = self.configs[name] == "_"
 		#print de
 		return de
 	
-	# returns one of two string parameters	
+	
 	def eitherOrStringConfig(self, firstName, secondName):
+		"""
+		returns one of two string parameters	
+		"""
 		if not self.isNone(firstName):
 			first = self.getStringConfig(firstName)[0]
 			second = None
@@ -145,8 +186,11 @@ class Configuration:
 				raise ValueError("at least one of the two parameters should be set " + firstName + "  " + secondName)
 		return (first, second)
 
-	# returns one of two int parameters	
+	
 	def eitherOrIntConfig(self, firstName, secondName):
+		"""
+		returns one of two int parameters	
+		"""
 		if not self.isNone(firstName):
 			first = self.getIntConfig(firstName)[0]
 			second = None
@@ -196,17 +240,20 @@ class SupvLearningDataGenerator:
 	data generator for supervised learning
 	"""
 	def __init__(self,  configFile):
-		defValues = disct()
+		defValues = dict()
 		defValues["common.num.samp"] = (100, None)
 		defValues["common.num.feat"] = (5, None)
 		defValues["common.feat.trans"] = (None, None)
 		defValues["common.feat.types"] = (None, "missing feature types")
 		defValues["common.cat.feat.distr"] = (None, None)
+		defValues["common.output.precision"] = (3, None)
+		defValues["common.error"] = (0.01, None)
 		defValues["class.gen.technique"] = ("blob", None)
 		defValues["class.num.feat.informative"] = (2, None)
 		defValues["class.num.feat.redundant"] = (2, None)
 		defValues["class.num.feat.repeated"] = (0, None)
 		defValues["class.num.feat.cat"] = (0, None)
+		defValues["class.num.class"] = (2, None)
 
 		self.config = Configuration(configFile, defValues)
 
@@ -216,7 +263,7 @@ class SupvLearningDataGenerator:
 		"""
 		nsamp =  self.config.getIntConfig("common.num.samp")[0]
 		nfeat =  self.config.getIntConfig("common.num.feat")[0]
-
+		nclass =  self.config.getIntConfig("class.num.class")[0]
 		#transform with shift and scale
 		ftrans =  self.config.getFloatListConfig("common.feat.trans")[0]
 		feTrans = dict()
@@ -231,22 +278,23 @@ class SupvLearningDataGenerator:
 		feCatDist = dict()
 		fcatdl =  self.config.getStringListConfig("common.cat.feat.distr")[0]
 		for fcatds in fcatdl:
-			factd = fcatds.split(":")
+			fcatd = fcatds.split(":")
 			feInd =  int(fcatd[0])
 			clVal =  int(fcatd[1])
 			key = (feInd, clVal)		#feature index and class value
-			dist = list(map(lambda i : (fcatd[i], fcatd[i+1]), range(2, len(factd), 2)))
+			dist = list(map(lambda i : (fcatd[i], float(fcatd[i+1])), range(2, len(fcatd), 2)))
 			feCatDist[key] = CategoricalRejectSampler(*dist)
 
 		#shift and scale
 		genTechnique = self.config.getStringConfig("class.gen.technique")[0]
-
+		error = self.config.getFloatConfig("common.error")[0]
 		if genTechnique == "blob":
-			features, claz = make_blobs(n_samples=nsamp, centers=2, n_features=nfeat)
-			for i in range(nsamp):
+			features, claz = make_blobs(n_samples=nsamp, centers=nclass, n_features=nfeat)
+			for i in range(nsamp):			#shift and scale
 				for j in range(nfeat):
 					tr = feTrans[j]
-					features[i,j] = features[i,j] * tr[1] + tr[0]
+					features[i,j] = (features[i,j]  + tr[0]) * tr[1]
+			claz = np.array(list(map(lambda c : random.randint(0, nclass-1) if random.random() < error else c, claz)))
 		elif genTechnique == "classify":
 			nfeatInfo =  self.config.getIntConfig("class.num.feat.informative")[0]
 			nfeatRed =  self.config.getIntConfig("class.num.feat.redundant")[0]
@@ -254,28 +302,32 @@ class SupvLearningDataGenerator:
 			shifts = list(map(lambda i : feTrans[i][0], range(nfeat)))
 			scales = list(map(lambda i : feTrans[i][1], range(nfeat)))
 			features, claz = make_classification(n_samples=nsamp, n_features=nfeat, n_informative=nfeatInfo, n_redundant=nfeatRed, 
-			n_repeated=nfeatRep, shift=shifts, scale=scales)
+			n_repeated=nfeatRep, n_classes=nclass, flip_y=error, shift=shifts, scale=scales)
 		else:
 			raise "invalid genaration technique"
 
 		# add categorical features and format
-		nCatFeat = self.config.getIntConfig("common.num.feat.cat")[0]
+		nCatFeat = self.config.getIntConfig("class.num.feat.cat")[0]
+		prec =  self.config.getIntConfig("common.output.precision")[0]
 		for f , c in zip(features, claz):
-			nfs = list(map(lambda i : self.numFeToStr(i, f[i], c, ftypes[i]), range(ncol)))
-			cfs = list(map(lambda i : self.catFe(i, c, ftypes[i], feCatDist), range(ncol, ncol + nCatFeat, 1)))
-			rec = ",".join(nfs) + "," +  ",".join(cfs)  + "," + str(c)
+			nfs = list(map(lambda i : self.numFeToStr(i, f[i], c, ftypes[i], prec), range(nfeat)))
+			if nCatFeat > 0:
+				cfs = list(map(lambda i : self.catFe(i, c, ftypes[i], feCatDist), range(nfeat, nfeat + nCatFeat, 1)))
+				rec = ",".join(nfs) + "," +  ",".join(cfs)  + "," + str(c)
+			else:
+				rec = ",".join(nfs)  + "," + str(c)
 			yield rec
 
-	def numFeToStr(self, i, fv, cv, ft):
+	def numFeToStr(self, i, fv, cv, ft, prec):
 		"""
 		nummeric feature value to string
 		"""
 		if ft == "float":
-			s = "{:.5f}".format(fv)
+			s = formatFloat(prec, fv)
 		elif ft =="int":
 			s = str(int(fv))
 		else:		
-			raise "invalid type"
+			raise "invalid type expecting float or int"
 		return s
 
 	def catFe(self, i, cv, ft, feCatDist):
@@ -286,7 +338,7 @@ class SupvLearningDataGenerator:
 			key = (i, cv)
 			s = feCatDist[key].sample()
 		else:		
-			raise "invalid type"
+			raise "invalid type expecting categorical"
 		return s
 
 
