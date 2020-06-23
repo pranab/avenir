@@ -218,6 +218,14 @@ class DataExplorer:
 		data = self.getData(ds)
 		drawLine(data, yscale)
 
+	def print(self, ds):
+		"""
+		prunt data
+		"""
+		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+		data =   self.dataSets[ds]
+		print(data)
+
 	def plotHist(self, ds, cumulative, density, nbins=None):
 		"""
 		plots data
@@ -338,9 +346,9 @@ class DataExplorer:
 		"""
 		get contingency table
 		"""
-		data1 = getCatData(ds1)
-		data2 = getCatData(ds2)
-		crosstab = pd.crosstab(data1, data2, margins = False)
+		data1 = self.getCatData(ds1)
+		data2 = self.getCatData(ds2)
+		crosstab = pd.crosstab(pd.Series(data1), pd.Series(data2), margins = False)
 		ctab = crosstab.values
 		print("contingency table")
 		print(ctab)
@@ -360,12 +368,12 @@ class DataExplorer:
 		"""
 		anova correlation for  numerical categorical	
 		"""
-		df = loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else loadCatFloatDataFrame(ds2, ds1)
+		df = self.loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else self.loadCatFloatDataFrame(ds2, ds1)
 		grByCol = 0
 		dCol = 1
 		grouped = df.groupby([grByCol])
 		dlist =  list(map(lambda v : v[1].loc[:, dCol].values, grouped))
-		stat, pvalue = f_oneway(*dlist)
+		stat, pvalue = sta.f_oneway(*dlist)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
@@ -468,6 +476,69 @@ class DataExplorer:
 		print(msg)
 		return result
 
+
+	def testTwoSampleStudent(self, ds1, ds2, sigLev=.05):
+		"""
+		student t 2 sample test
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.ttest_ind(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+
+	def testTwoSampleKs(self, ds1, ds2, sigLev=.05):
+		"""
+		Kolmogorov Sminov 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.ks_2samp(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+
+	def testTwoSampleMw(self, ds1, ds2, sigLev=.05):
+		"""
+		Mann-Whitney  2 sample statistic
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.mannwhitneyu(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+	def testTwoSampleWilcox(self, ds1, ds2, sigLev=.05):
+		"""
+		Wilcoxon Signed-Rank 2 sample statistic
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.wilcoxon(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+
+	def testTwoSampleKw(self, ds1, ds2, sigLev=.05):
+		"""
+		Kruskal-Wallis 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.kruskal(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+	def testTwoSampleFriedman(self, ds1, ds2, sigLev=.05):
+		"""
+		Kruskal-Wallis 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		stat, pvalue = sta.friedmanchisquare(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
 
 	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
 		"""
