@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 import logging.handlers
+import pickle
 from contextlib import contextmanager
 
 tokens = ["0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F","G","H","I","J","K","L","M",
@@ -900,6 +901,21 @@ def drawLine(data, yscale=None):
 		plt.yticks(range(0, yscale, step))
 	plt.show()
 	
+def saveObject(obj, filePath):
+	"""
+	saves an object
+	"""
+	with open(filePath, "wb") as outfile:
+		pickle.dump(obj,outfile)
+	
+def restoreObject(filePath):
+	"""
+	restores an object
+	"""
+	with open(filePath, "rb") as infile:
+		obj = pickle.load(infile)
+	return obj
+
 class StepFunction:
 	"""
 	step function

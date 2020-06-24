@@ -62,6 +62,17 @@ class DataExplorer:
 		self.dataSets = dict()
 		self.pp = pprint.PrettyPrinter(indent=4)
 
+	def save(self, filePath):
+		"""
+		save checkpoint
+		"""
+		saveObject(self.dataSets, filePath)
+
+	def restore(self, filePath):
+		"""
+		restore checkpoint
+		"""
+		self.dataSets = restoreObject(filePath)
 
 	def addFileData(self,filePath,  *columns):
 		"""
@@ -170,6 +181,14 @@ class DataExplorer:
 		"""
 		self.dataSets[name] = ds
 
+	def remData(self, ds):
+		"""
+		categorical list data
+		"""
+		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+		self.dataSets.pop(ds)
+		self.showNames()
+
 	def getData(self, ds):
 		"""
 		get data
@@ -211,6 +230,14 @@ class DataExplorer:
 		df.columns = range(df.shape[1])
 		return df
 
+	def showNames(self):
+		"""
+		lists data set names
+		"""
+		print("data sets")
+		for ds in self.dataSets.keys():
+			print(ds)
+
 	def plot(self, ds, yscale=None):
 		"""
 		plots data
@@ -224,7 +251,9 @@ class DataExplorer:
 		"""
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		data =   self.dataSets[ds]
-		print(data)
+		print(formatAny(len(data), "size"))
+		print("showing first 50 elements" )
+		print(data[:50])
 
 	def plotHist(self, ds, cumulative, density, nbins=None):
 		"""
@@ -530,13 +559,14 @@ class DataExplorer:
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
 
-	def testTwoSampleFriedman(self, ds1, ds2, sigLev=.05):
+	def testTwoSampleFriedman(self, ds1, ds2, ds3, sigLev=.05):
 		"""
 		Kruskal-Wallis 2 sample statistic	
 		"""
 		data1 = self.getData(ds1)
 		data2 = self.getData(ds2)
-		stat, pvalue = sta.friedmanchisquare(data1, data2)
+		data3 = self.getData(ds3)
+		stat, pvalue = sta.friedmanchisquare(data1, data2, data3)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
 
