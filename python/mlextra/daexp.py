@@ -306,6 +306,25 @@ class DataExplorer:
 		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
 		plt.show()
 
+	def getPercentile(self, ds, value):
+		"""
+		gets percentile
+		"""
+		data = self.getData(ds)
+		percent = sta.percentileofscore(data, value)
+		result = self.printResult("value", value, "percentile", percent)
+		return result
+
+	def getValueAtPercentile(self, ds, percent):
+		"""
+		gets value at percentile
+		"""
+		data = self.getData(ds)
+		assert isInRange(percent, 0, 100), "percent should be between 0 and 100"
+		value = sta.scoreatpercentile(data, percent)
+		result = self.printResult("value", value, "percentile", percent)
+		return result
+
 	def getStats(self, ds):
 		"""
 		plots data
@@ -317,7 +336,9 @@ class DataExplorer:
 		stat["max"] = data.max()
 		stat["mean"] = data.mean()
 		stat["median"] = np.median(data)
-		stat["mean"] = data.mean()
+		stat["std"] = np.std(data)
+		stat["skew"] = sta.skew(data)
+		stat["mad"] = sta.median_absolute_deviation(data)
 		self.pp.pprint(stat)
 		return stat
 
@@ -382,7 +403,7 @@ class DataExplorer:
 
 	def getPearsonCorr(self, ds1, ds2, sigLev=.05):
 		"""
-		covariance
+		pearson correlation coefficient 
 		"""
 		data1 = self.getData(ds1)
 		data2 = self.getData(ds2)
@@ -394,7 +415,7 @@ class DataExplorer:
 
 	def getSpearmanRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
-		covariance
+		spearman correlation coefficient
 		"""
 		data1 = self.getData(ds1)
 		data2 = self.getData(ds2)
@@ -405,11 +426,23 @@ class DataExplorer:
 
 	def getKendalRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
-		covariance
+		kendall’s tau, a correlation measure for ordinal data
 		"""
 		data1 = self.getData(ds1)
 		data2 = self.getData(ds2)
 		stat, pvalue = sta.kendalltau(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		return result
+
+	def getPointBiserialCorr(self, ds1, ds2, sigLev=.05):
+		"""
+		kendall’s tau, a correlation measure for ordinal data
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		assert isBinary(data1), "first data set is not binary"
+		stat, pvalue = sta.pointbiserialr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
@@ -639,6 +672,67 @@ class DataExplorer:
 		stat = (s1 + s2) / l
 		print(formatFloat(3, stat, "stat:"))
 		return stat
+
+	def testTwoSampleZa(self, ds1, ds2, sigLev=.05):
+		"""
+		Zhang A 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		l1 = len(data1)
+		l2 = len(data2)
+		l = l1 + l2
+		pooled = np.concatenate([data1, data2])
+		cd1 = CumDistr(data1)
+		cd2 = CumDistr(data2)
+		sum = 0.0
+		for i in range(1, l+1):
+			v = pooled[i-1]
+			f1 = cd1.getDistr(v)
+			f2 = cd2.getDistr(v)
+			
+			t1 = f1 * math.log(f1)
+			t2 = 0 if f1 == 1.0 else (1.0 - f1) * math.log(1.0 - f1)
+			sum += l1 * (t1 + t2) / ((i - 0.5) * (l - i + 0.5))
+			t1 = f2 * math.log(f2)
+			t2 = 0 if f2 == 1.0 else (1.0 - f2) * math.log(1.0 - f2)
+			sum += l2 * (t1 + t2) / ((i - 0.5) * (l - i + 0.5))
+		stat = -sum
+		print(formatFloat(3, stat, "stat:"))
+		return stat
+
+	def testTwoSampleZk(self, ds1, ds2, sigLev=.05):
+		"""
+		Zhang K 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		l1 = len(data1)
+		l2 = len(data2)
+		l = l1 + l2
+		pooled = np.concatenate([data1, data2])
+		cd1 = CumDistr(data1)
+		cd2 = CumDistr(data2)
+		cd = CumDistr(pooled)
+		
+		maxStat = None
+		for i in range(1, l+1):
+			v = pooled[i-1]
+			f1 = cd1.getDistr(v)
+			f2 = cd2.getDistr(v)
+			f = cd.getDistr(v)
+			
+			t1 = 0 if f1 == 0 else f1 * math.log(f1 / f)
+			t2 = 0 if f1 == 1.0 else (1.0 - f1) * math.log((1.0 - f1) / (1.0 - f))
+			stat = l1 * (t1 + t2)
+			t1 = 0 if f2 == 0 else f2 * math.log(f2 / f)
+			t2 = 0 if f2 == 1.0 else (1.0 - f2) * math.log((1.0 - f2) / (1.0 - f))
+			stat += l2 * (t1 + t2)
+			if maxStat is None or stat > maxStat:
+				maxStat = stat
+		print(formatFloat(3, maxStat, "stat:"))
+		return maxStat
+
 
 	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
 		"""
