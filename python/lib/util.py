@@ -24,6 +24,7 @@ import uuid
 from datetime import datetime
 import math
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
@@ -916,6 +917,30 @@ def restoreObject(filePath):
 		obj = pickle.load(infile)
 	return obj
 
+def isNumeric(data):
+	"""
+	true if all elements int or float
+	"""
+	if type(data) == list:
+		col = pd.Series(data)
+	else:
+		col = data
+	return col.dtype == np.int32 or col.dtype == np.int64 or col.dtype == np.float32 or col.dtype == np.float64
+
+def isBinary(data):
+	"""
+	true if all elements either 0 or 1
+	"""
+	re = next((d for d in data if not (type(d) == int and (d == 0 or d == 1))), None)
+	return (re is None)
+	
+def isCategorical(data):
+	"""
+	true if all elements int or string
+	"""
+	re = next((d for d in data if not (type(d) == int or type(d) == str)), None)
+	return (re is None)
+	
 class StepFunction:
 	"""
 	step function

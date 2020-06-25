@@ -26,7 +26,6 @@ from sklearn import metrics
 import random
 from math import *
 from decimal import Decimal
-#import jprops
 import pprint
 from statsmodels.graphics import tsaplots
 from statsmodels.tsa.stattools import adfuller
@@ -35,20 +34,6 @@ from statsmodels.stats.stattools import jarque_bera
 from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot as plt
 from scipy import stats as sta
-from scipy.stats import ttest_ind
-from scipy.stats import ks_2samp
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-from scipy.stats import shapiro
-from scipy.stats import kendalltau
-from scipy.stats import mannwhitneyu
-from scipy.stats import wilcoxon
-from scipy.stats import kruskal
-from scipy.stats import friedmanchisquare
-from scipy.stats import chi2_contingency
-from scipy.stats import f_oneway
-from scipy.stats import normaltest
-from scipy.stats import anderson
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -74,7 +59,20 @@ class DataExplorer:
 		"""
 		self.dataSets = restoreObject(filePath)
 
-	def addFileData(self,filePath,  *columns):
+	def addFileNumericData(self,filePath,  *columns):
+		"""
+		add numeric columns from a file
+		"""
+		self.addFileData(filePath, True, *columns)
+
+
+	def addFileBinaryData(self,filePath,  *columns):
+		"""
+		add binary columns from a file
+		"""
+		self.addFileData(filePath, False, *columns)
+
+	def addFileData(self, filePath,  numeric, *columns):
 		"""
 		add columns from a file
 		"""
@@ -88,7 +86,13 @@ class DataExplorer:
 			for i in range(nCols):
 				ci = colIndexes[i]
 				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci].to_numpy()
+				col = df.loc[ : , ci]
+				if numeric:
+					assert isNumeric(col), "data is not numeric"
+				else:
+					assert isBinary(col), "data is not binary"
+				#print(type(col), col.dtype)
+				col = col.to_numpy()
 				cn = columns[i + nCols]
 				#print(ci,cn)
 				self.dataSets[cn] = col
@@ -98,9 +102,21 @@ class DataExplorer:
 				col = df[c].to_numpy()
 				self.dataSets[c] = col
 
+	def addDataFrameNumericData(self,filePath,  *columns):
+		"""
+		add numeric columns from a file
+		"""
+		self.addDataFrameData(filePath, True, *columns)
 
 
-	def addDataFrameData(self, df,  *columns):
+	def addDataFrameBinaryData(self,filePath,  *columns):
+		"""
+		add binary columns from a file
+		"""
+		self.addDataFrameData(filePath, False, *columns)
+
+
+	def addDataFrameData(self, df,  numeric, *columns):
 		"""
 		add columns from a data frame
 		"""
@@ -113,7 +129,12 @@ class DataExplorer:
 			for i in range(nCols):
 				ci = colIndexes[i]
 				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci].to_numpy()
+				col = df.loc[ : , ci]
+				if numeric:
+					assert isNumeric(col), "data is not numeric"
+				else:
+					assert isBinary(col), "data is not binary"
+				col = col.to_numpy()
 				cn = columns[i + nCols]
 				self.dataSets[cn] = col
 		else:
@@ -121,13 +142,29 @@ class DataExplorer:
 				col = df[c].to_numpy()
 				self.dataSets[c] = col
 
-	def addListData(self, dataSet, name):
+	def addListNumericData(self, ds,  name):
+		"""
+		add numeric columns from a file
+		"""
+		self.addListData(ds, True,  name)
+
+
+	def addListBinaryData(self, ds, name):
+		"""
+		add binary columns from a file
+		"""
+		self.addListData(ds, False,  name)
+
+	def addListData(self, ds, numeric,  name):
 		"""
 		list data
 		"""
-		if type(dataSet) == list:
-			dataSet = np.array(dataSet)
-		self.dataSets[name] = dataSet
+		assert type(ds) == list, "data not a list"
+		if numeric:
+			assert isNumeric(ds), "data is not numeric"
+		else:
+			assert isBinary(ds), "data is not binary"
+		self.dataSets[name] = np.array(ds)
 
 
 	def addFileCatData(self, filePath,  *columns):
@@ -144,7 +181,9 @@ class DataExplorer:
 			for i in range(nCols):
 				ci = colIndexes[i]
 				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci].tolist()
+				col = df.loc[ : , ci]
+				assert isCategorical(col), "data is not categorical"
+				col = col.tolist()
 				cn = columns[i + nCols]
 				#print(ci,cn)
 				self.dataSets[cn] = col
@@ -167,7 +206,9 @@ class DataExplorer:
 			for i in range(nCols):
 				ci = colIndexes[i]
 				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci].tolist()
+				col = df.loc[ : , ci]
+				assert isCategorical(col), "data is not categorical"
+				col = col.tolist()
 				cn = columns[i + nCols]
 				self.dataSets[cn] = col
 		else:
@@ -179,11 +220,13 @@ class DataExplorer:
 		"""
 		categorical list data
 		"""
+		assert type(ds) == list, "data not a list"
+		assert isCategorical(ds), "data is not categorical"
 		self.dataSets[name] = ds
 
 	def remData(self, ds):
 		"""
-		categorical list data
+		removes data set
 		"""
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		self.dataSets.pop(ds)
@@ -471,7 +514,7 @@ class DataExplorer:
 		shapiro wilks normalcy test
 		"""
 		data = self.getData(ds)
-		stat, pvalue = shapiro(data)
+		stat, pvalue = sta.shapiro(data)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
 		return result
@@ -481,7 +524,7 @@ class DataExplorer:
 		D’Agostino’s K square  normalcy test
 		"""
 		data = self.getData(ds)
-		stat, pvalue = normaltest(data)
+		stat, pvalue = sta.normaltest(data)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
 		return result
@@ -491,7 +534,7 @@ class DataExplorer:
 		D’Agostino’s K square  normalcy test
 		"""
 		data = self.getData(ds)
-		re = anderson(data)
+		re = sta.anderson(data)
 		slAlpha = int(100 * sigLev)
 		msg = "significnt value not found"
 		for i in range(len(re.critical_values)):
@@ -569,6 +612,33 @@ class DataExplorer:
 		stat, pvalue = sta.friedmanchisquare(data1, data2, data3)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+
+
+	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
+		"""
+		Zhang C 2 sample statistic	
+		"""
+		data1 = self.getData(ds1)
+		data2 = self.getData(ds2)
+		l1 = len(data1)
+		l2 = len(data2)
+		l = l1 + l2
+			
+		#find ranks
+		pooled = np.concatenate([data1, data2])
+		ranks = findRanks(data1, pooled)
+		ranks.extend(findRanks(data2, pooled))
+		
+		s1 = 0.0
+		for i in range(1, l1+1):
+			s1 += math.log(l1 / (i - 0.5) - 1.0) * math.log(l / (ranks[i-1] - 0.5) - 1.0)
+			
+		s2 = 0.0
+		for i in range(1, l2+1):
+			s2 += math.log(l2 / (i - 0.5) - 1.0) * math.log(l / (ranks[l1 + i - 1] - 0.5) - 1.0)
+		stat = (s1 + s2) / l
+		print(formatFloat(3, stat, "stat:"))
+		return stat
 
 	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
 		"""
