@@ -240,6 +240,7 @@ class DataExplorer:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 			data =   self.dataSets[ds]
 		elif type(ds) == list:
+			assert isNumeric(ds), "data is not numeric"
 			data = np.array(ds)
 		elif type(ds) == numpy.ndarray:
 			data = ds
@@ -325,6 +326,17 @@ class DataExplorer:
 		result = self.printResult("value", value, "percentile", percent)
 		return result
 
+	def getRepeatedValues(self, ds, maxCnt=10):
+		"""
+		gets repeated values and counts
+		"""
+		data = self.getData(ds)
+		values, counts = sta.find_repeats(data)
+		vc = list(zip(values, counts))
+		vc.sort(key = lambda v : v[1], reverse = True)
+		result = self.printResult("values and repeat counts", vc[:maxCnt])
+		return result
+
 	def getStats(self, ds):
 		"""
 		plots data
@@ -336,8 +348,12 @@ class DataExplorer:
 		stat["max"] = data.max()
 		stat["mean"] = data.mean()
 		stat["median"] = np.median(data)
+		mode, modeCnt = sta.mode(data)
+		stat["mode"] = mode[0]
+		stat["mode count"] = modeCnt[0]
 		stat["std"] = np.std(data)
 		stat["skew"] = sta.skew(data)
+		stat["kurtosis"] = sta.kurtosis(data)
 		stat["mad"] = sta.median_absolute_deviation(data)
 		self.pp.pprint(stat)
 		return stat
@@ -390,6 +406,40 @@ class DataExplorer:
 		if doPlot:
 			drawLine(detrended)
 		return detrended
+
+	def fitLinearReg(self, ds, doPlot=False):
+		"""
+		fit  linear regression 
+		"""
+		data = self.getData(ds)
+		x = np.arange(len(data))
+		slope, intercept, rvalue, pvalue, stderr = sta.linregress(x, data)
+		result = self.printResult("slope", slope, "intercept", intercept, "rvalue", rvalue, "pvalue", pvalue, "stderr", stderr)
+		if doPlot:
+			self.regFitPlot(x, data, slope, intercept)
+		return result
+
+	def fitRobustLinearReg(self, ds, doPlot=False):
+		"""
+		fit robust linear regression based on median
+		"""
+		data = self.getData(ds)
+		slope , intercept = sta.siegelslopes(data)
+		result = self.printResult("slope", slope, "intercept", intercept)
+		if doPlot:
+			x = np.arange(len(data))
+			self.regFitPlot(x, data, slope, intercept)
+		return result
+
+	def regFitPlot(self, x, y, slope, intercept):
+		"""
+		plot linear rgeression fit line
+		"""
+		fig = plt.figure()
+		ax = fig.add_subplot(111)
+		ax.plot(x, y, "b.")
+		ax.plot(x, intercept + slope * x, "r-")
+		plt.show()
 
 	def getCovar(self, *dsl):
 		"""
