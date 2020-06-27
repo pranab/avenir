@@ -921,11 +921,31 @@ def isNumeric(data):
 	"""
 	true if all elements int or float
 	"""
-	if type(data) == list:
+	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
 	else:
 		col = data
 	return col.dtype == np.int32 or col.dtype == np.int64 or col.dtype == np.float32 or col.dtype == np.float64
+
+def isInteger(data):
+	"""
+	true if all elements int 
+	"""
+	if type(data) == list or type(data) == np.ndarray:
+		col = pd.Series(data)
+	else:
+		col = data
+	return col.dtype == np.int32 or col.dtype == np.int64
+
+def isFloat(data):
+	"""
+	true if all elements  float
+	"""
+	if type(data) == list or type(data) == np.ndarray:
+		col = pd.Series(data)
+	else:
+		col = data
+	return col.dtype == np.float32 or col.dtype == np.float64
 
 def isBinary(data):
 	"""

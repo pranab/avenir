@@ -59,6 +59,63 @@ class DataExplorer:
 		"""
 		self.dataSets = restoreObject(filePath)
 
+
+	def queryFileData(self, filePath,  *columns):
+		"""
+		query column data type  from a data frame
+		"""
+		lcolumns = list(columns)
+		noHeader = type(lcolumns[0]) ==  int
+		if noHeader:			
+			df = pd.read_csv(filePath,  header=None) 
+		else:
+			df = pd.read_csv(filePath,  header=0) 
+		return self.queryDataFrameData(df,  *columns)
+
+	def queryDataFrameData(self, df,  *columns):
+		"""
+		query column data type  from a data frame
+		"""
+		columns = list(columns)
+		noHeader = type(columns[0]) ==  int
+		dtypes = list()
+		if noHeader:			
+			nCols = int(len(columns) / 2)
+			colIndexes = columns[:nCols]
+			cnames = columns[nCols:]
+			nColsDf = len(df.columns)
+			for i in range(nCols):
+				ci = colIndexes[i]
+				assert ci < nColsDf, "col index {} outside range".format(ci)
+				col = df.loc[ : , ci]
+				dtypes.append(self.getDataType(col))
+		else:
+			cnames = columns
+			for c in columns:
+				col = df[c]
+				dtypes.append(self.getDataType(col))
+
+		nt = list(zip(cnames, dtypes))
+		result = self.printResult("columns and data types", nt)
+		return result
+
+	def getDataType(self, col):
+		"""
+		get data type 
+		"""
+		if isBinary(col):
+			dtype = "binary"
+		elif  isInteger(col):
+			dtype = "integer"
+		elif  isFloat(col):
+			dtype = "float"
+		elif  isCategorical(col):
+			dtype = "categorical"
+		else:
+			dtype = "mixed"
+		return dtype
+
+
 	def addFileNumericData(self,filePath,  *columns):
 		"""
 		add numeric columns from a file
@@ -139,7 +196,12 @@ class DataExplorer:
 				self.dataSets[cn] = col
 		else:
 			for c in columns:
-				col = df[c].to_numpy()
+				col = df[c]
+				if numeric:
+					assert isNumeric(col), "data is not numeric"
+				else:
+					assert isBinary(col), "data is not binary"
+				col = col.to_numpy()
 				self.dataSets[c] = col
 
 	def addListNumericData(self, ds,  name):
@@ -232,7 +294,7 @@ class DataExplorer:
 		self.dataSets.pop(ds)
 		self.showNames()
 
-	def getData(self, ds):
+	def getNumericData(self, ds):
 		"""
 		get data
 		"""
@@ -257,6 +319,7 @@ class DataExplorer:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 			data =   self.dataSets[ds]
 		elif type(ds) == list:
+			assert isCategorical(ds), "data is not categorical"
 			data = ds
 		else:
 			raise "invalid type, expecting data set name or list"
@@ -267,7 +330,7 @@ class DataExplorer:
 		loads float and cat data into data frame
 		"""
 		data1 = self.getCatData(ds1)
-		data2 = self.getData(ds2)
+		data2 = self.getNumericData(ds2)
 		df1 = pd.DataFrame(data=data1)
 		df2 = pd.DataFrame(data=data2)
 		df = pd.concat([df1,df2], axis=1)
@@ -286,7 +349,7 @@ class DataExplorer:
 		"""
 		plots data
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		drawLine(data, yscale)
 
 	def print(self, ds):
@@ -303,7 +366,7 @@ class DataExplorer:
 		"""
 		plots data
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
 		plt.show()
 
@@ -311,7 +374,7 @@ class DataExplorer:
 		"""
 		gets percentile
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		percent = sta.percentileofscore(data, value)
 		result = self.printResult("value", value, "percentile", percent)
 		return result
@@ -320,28 +383,43 @@ class DataExplorer:
 		"""
 		gets value at percentile
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		assert isInRange(percent, 0, 100), "percent should be between 0 and 100"
 		value = sta.scoreatpercentile(data, percent)
 		result = self.printResult("value", value, "percentile", percent)
 		return result
 
-	def getRepeatedValues(self, ds, maxCnt=10):
+	def getUniqueValueCounts(self, ds, maxCnt=10):
 		"""
-		gets repeated values and counts
+		gets unique values and counts
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		values, counts = sta.find_repeats(data)
+		cardinality = len(values)
 		vc = list(zip(values, counts))
 		vc.sort(key = lambda v : v[1], reverse = True)
-		result = self.printResult("values and repeat counts", vc[:maxCnt])
+		result = self.printResult("cardinality", cardinality,  "vunique alues and repeat counts", vc[:maxCnt])
+		return result
+
+	def getCatUniqueValueCounts(self, ds, maxCnt=10):
+		"""
+		gets unique categorical values and counts
+		"""
+		data = self.getCatData(ds)
+		series = pd.Series(data)
+		uvalues = series.value_counts()
+		values = uvalues.index.tolist()
+		counts = uvalues.tolist()
+		vc = list(zip(values, counts))
+		vc.sort(key = lambda v : v[1], reverse = True)
+		result = self.printResult("cardinality", len(values),  "unique values and repeat counts", vc[:maxCnt])
 		return result
 
 	def getStats(self, ds):
 		"""
 		plots data
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		stat = dict()
 		stat["length"] = len(data)
 		stat["min"] = data.min()
@@ -363,7 +441,7 @@ class DataExplorer:
 		"""
 		difference of given order
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		diff = difference(data, order)
 		drawLine(diff)
 		return diff
@@ -372,7 +450,7 @@ class DataExplorer:
 		"""
 		finds trend
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		sz = len(data)
 		X = list(range(0, sz))
 		X = np.reshape(X, (sz, 1))
@@ -400,7 +478,7 @@ class DataExplorer:
 		"""
 		de trend
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		sz = len(data)
 		detrended =  list(map(lambda i : data[i]-trend[i], range(sz)))
 		if doPlot:
@@ -411,7 +489,7 @@ class DataExplorer:
 		"""
 		fit  linear regression 
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		x = np.arange(len(data))
 		slope, intercept, rvalue, pvalue, stderr = sta.linregress(x, data)
 		result = self.printResult("slope", slope, "intercept", intercept, "rvalue", rvalue, "pvalue", pvalue, "stderr", stderr)
@@ -419,13 +497,25 @@ class DataExplorer:
 			self.regFitPlot(x, data, slope, intercept)
 		return result
 
-	def fitRobustLinearReg(self, ds, doPlot=False):
+	def fitSiegelRobustLinearReg(self, ds, doPlot=False):
 		"""
-		fit robust linear regression based on median
+		siegel robust linear regression fit based on median
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		slope , intercept = sta.siegelslopes(data)
 		result = self.printResult("slope", slope, "intercept", intercept)
+		if doPlot:
+			x = np.arange(len(data))
+			self.regFitPlot(x, data, slope, intercept)
+		return result
+
+	def fitTheilSenRobustLinearReg(self, ds, doPlot=False):
+		"""
+		thiel sen  robust linear fit regression based on median
+		"""
+		data = self.getNumericData(ds)
+		slope, intercept, loSlope, upSlope = sta.theilslopes(data)
+		result = self.printResult("slope", slope, "intercept", intercept, "lower slope", loSlope, "upper slope", upSlope)
 		if doPlot:
 			x = np.arange(len(data))
 			self.regFitPlot(x, data, slope, intercept)
@@ -445,7 +535,7 @@ class DataExplorer:
 		"""
 		covariance
 		"""
-		data = list(map(lambda ds : self.getData(ds), dsl))
+		data = list(map(lambda ds : self.getNumericData(ds), dsl))
 		data = np.vstack(data)
 		cv = np.cov(data)
 		print(cv)
@@ -455,8 +545,8 @@ class DataExplorer:
 		"""
 		pearson correlation coefficient 
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.pearsonr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -467,8 +557,8 @@ class DataExplorer:
 		"""
 		spearman correlation coefficient
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.spearmanr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -478,8 +568,8 @@ class DataExplorer:
 		"""
 		kendall’s tau, a correlation measure for ordinal data
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.kendalltau(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -489,8 +579,8 @@ class DataExplorer:
 		"""
 		kendall’s tau, a correlation measure for ordinal data
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		assert isBinary(data1), "first data set is not binary"
 		stat, pvalue = sta.pointbiserialr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
@@ -538,7 +628,7 @@ class DataExplorer:
 		"""
 		auto correlation
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		ddata = difference(data, diffOrder) if diffOrder > 0 else data
 		tsaplots.plot_acf(ddata, lags = lags, alpha = alpha)
 		plt.show()
@@ -547,7 +637,7 @@ class DataExplorer:
 		"""
 		partial auto correlation
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		tsaplots.plot_pacf(data, lags = lags, alpha = alpha)
 		plt.show()
 
@@ -555,8 +645,8 @@ class DataExplorer:
 		"""
 		cross correlation 
 		"""
-		dataOne = self.getData(dsOne)
-		dataTwo = self.getData(dsTwo)
+		dataOne = self.getNumericData(dsOne)
+		dataTwo = self.getNumericData(dsTwo)
 		plt.xcorr(dataOne, dataTwo, normed=normed, maxlags=lags)
 		plt.show()
 
@@ -564,7 +654,7 @@ class DataExplorer:
 		"""
 		Adf stationary test null hyp not stationary
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		re = adfuller(data, regression=regression, autolag=autolag)
 		result = self.printResult("stat", re[0], "pvalue", re[1] , "num lags", re[2] , "num observation for regression", re[3],
 		"critial values", re[4])
@@ -575,7 +665,7 @@ class DataExplorer:
 		"""
 		Kpss stationary test null hyp  stationary
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		stat, pvalue, nLags, criticalValues = kpss(data, regression=regression)
 		result = self.printResult("stat", stat, "pvalue", pvalue, "num lags", nLags, "critial values", criticalValues)
 		self.printStat(stat, pvalue, "probably stationary", "probably not stationary", sigLev)
@@ -585,7 +675,7 @@ class DataExplorer:
 		"""
 		jarque bera normalcy test
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		jb, jbpv, skew, kurtosis =  jarque_bera(data)
 		result = self.printResult("stat", jb, "pvalue", jbpv, "skew", skew, "kurtosis", kurtosis)
 		self.printStat(jb, jbpv, "probably gaussian", "probably not gaussian", sigLev)
@@ -596,7 +686,7 @@ class DataExplorer:
 		"""
 		shapiro wilks normalcy test
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		stat, pvalue = sta.shapiro(data)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
@@ -606,7 +696,7 @@ class DataExplorer:
 		"""
 		D’Agostino’s K square  normalcy test
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		stat, pvalue = sta.normaltest(data)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
@@ -616,7 +706,7 @@ class DataExplorer:
 		"""
 		D’Agostino’s K square  normalcy test
 		"""
-		data = self.getData(ds)
+		data = self.getNumericData(ds)
 		re = sta.anderson(data)
 		slAlpha = int(100 * sigLev)
 		msg = "significnt value not found"
@@ -636,8 +726,8 @@ class DataExplorer:
 		"""
 		student t 2 sample test
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ttest_ind(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -647,8 +737,8 @@ class DataExplorer:
 		"""
 		Kolmogorov Sminov 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ks_2samp(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -658,8 +748,8 @@ class DataExplorer:
 		"""
 		Mann-Whitney  2 sample statistic
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.mannwhitneyu(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -668,8 +758,8 @@ class DataExplorer:
 		"""
 		Wilcoxon Signed-Rank 2 sample statistic
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.wilcoxon(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -679,8 +769,8 @@ class DataExplorer:
 		"""
 		Kruskal-Wallis 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.kruskal(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -689,9 +779,9 @@ class DataExplorer:
 		"""
 		Kruskal-Wallis 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
-		data3 = self.getData(ds3)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		data3 = self.getNumericData(ds3)
 		stat, pvalue = sta.friedmanchisquare(data1, data2, data3)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
@@ -701,8 +791,8 @@ class DataExplorer:
 		"""
 		Zhang C 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
 		l2 = len(data2)
 		l = l1 + l2
@@ -727,8 +817,8 @@ class DataExplorer:
 		"""
 		Zhang A 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
 		l2 = len(data2)
 		l = l1 + l2
@@ -755,8 +845,8 @@ class DataExplorer:
 		"""
 		Zhang K 2 sample statistic	
 		"""
-		data1 = self.getData(ds1)
-		data2 = self.getData(ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
 		l2 = len(data2)
 		l = l1 + l2
