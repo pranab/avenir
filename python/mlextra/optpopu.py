@@ -119,14 +119,12 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
 		purgeFirst = self.config.getBooleanConfig("opti.purge.first")[0]
 		
-		preSorted = False
-		if not purgeFirst:
-			self.sort(self.pool)
-			preSorted = True
 			
 		#iterate
+		self.sort(self.pool)
+		preSorted = True
 		for i in range(self.numIter):
-			matingList = findMultBest(self, candList, matingSize, preSorted)
+			matingList = self.findMultBest(self.pool, matingSize, preSorted)
 			genBest = matingList[0]
 			if self.bestSoln is None or genBest.cost < self.bestSoln.cost:
 				self.setBest(i, genBest)
@@ -139,13 +137,12 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				if pair:
 					valid = True
 					for ch in pair:
-						if self.domain.isValid(cloneCand.soln):
+						if self.domain.isValid(ch.soln):
 							ch.cost = self.domain.evaluate(ch.soln)
 						else:
 							valid = False
 							break
 					if valid:
-						
 						children.extend(pair)
 			
 			#mutate
@@ -156,11 +153,12 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 			if purgeFirst:
 				#purge worst and add children for next generation
 				self.multiPurge(replSize)
-				self.poll.extend(children)
+				self.pool.extend(children)
+				self.sort(self.pool)
 			else:
 				#add children for next generation and then purge worst
-				self.poll.extend(children)
-				self.sort()
+				self.pool.extend(children)
+				self.sort(self.pool)
 				self.multiPurge(replSize)
 			
 	

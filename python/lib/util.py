@@ -91,6 +91,12 @@ def genNumIdList(numId, idSize):
 		iDs.append(genNumID(idSize))
 	return iDs
 
+def genNameInitial():
+	"""
+	generate name initial
+	"""
+	return selectRandomFromList(alphaTokens) + selectRandomFromList(alphaTokens)
+
 def genPhoneNum(arCode):
 	"""
 	generates phone number
@@ -311,7 +317,18 @@ def multVector(values, range):
 	scale = 1.0 - range + 2 * range * random.random()
 	nValues = list(map(lambda va: va * scale, values))
 	return nValues
-			
+	
+def weightedAverage(values, weights):
+	"""
+	calculates weighted average
+	"""		
+	assert len(values) == len(weights), "values and weights should be same size"
+	vw = zip(values, weights)
+	wva = list(map(lambda e : e[0] * e[1], vw))
+	#wa = sum(x * y for x, y in vw) / sum(weights)
+	wav = sum(wva) / sum(weights)
+	return wav
+
 def extractFields(line, delim, keepIndices):
 	"""
 	breaks a line into fields and keeps only specified fileds and returns new line
@@ -813,7 +830,30 @@ def swapBetweenLists(values1, values2):
 	tmp = values1[p1]	
 	values1[p1] = values2[p2]
 	values2[p2] = tmp
-	
+
+def findIntersection(lOne, lTwo):
+	"""
+	find intersection elements between 2 lists
+	"""
+	sOne = set(lOne)
+	sTwo = set(lTwo)
+	sInt = sOne.intersection(sTwo)
+	return list(sInt)
+
+def isIntvOverlapped(rOne, rTwo):
+	"""
+	checks overlap between 2 intervals
+	"""
+	clear = rOne[1] <=  rTwo[0] or rOne[0] >=  rTwo[1] 
+	return not clear
+
+def isIntvLess(rOne, rTwo):
+	"""
+	checks if first iterval is less than second
+	"""
+	less = rOne[1] <=  rTwo[0] 
+	return less
+
 def findRank(e, values):
 	"""
 	find rank of value in a list
