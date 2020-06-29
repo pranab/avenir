@@ -39,8 +39,16 @@ class Meeting(object):
 		self.hour = None
 		self.min = None
 		self.duration = None
-		self.start = none
+		self.start = None
 		self.end = None
+		
+	def __str__(self):
+		"""
+		content
+		"""
+		strDesc = "meeting day {} hour {} min {} duration {} start {} end {}".format(
+		self.day, self.hour, self.min, self.duration, self.start, self.end) 
+		return strDesc
 
 class MeetingScheduleCost(object):
 	"""
@@ -50,17 +58,25 @@ class MeetingScheduleCost(object):
 		"""
 		intialize
 		"""
+		self.logger = None
 		self.numMeeting = numMeeting
 		self.people = list(map(lambda i : genNameInitial(), range(numPeople)))
+		#self.logger("people" + str(self.people))
+		#print(self.people)
 		
 		#create meetings
 		self.participants = list()
 		self.partMeetigs = dict()
+		self.durations = list()
+		dsampler = DiscreteRejectSampler(30,120,30,80,100,60,40)
 		for m in range(numMeeting):
-			particinats = selectRandomSubListFromList(self.people, sampleUniform(2, 6))
-			self.participantsappend(particinats)
-			for p in particinats:
+			participants = selectRandomSubListFromList(self.people, sampleUniform(2, 6))
+			#self.logger("participants" + str(participants))
+			#print(participants)
+			self.participants.append(participants)
+			for p in participants:
 				appendKeyedList(self.partMeetigs, p, m)
+			self.durations.append(dsampler.sample())
 		
 		#constrain time ordered meetings
 		self.ordMeetings = list()		
@@ -85,42 +101,54 @@ class MeetingScheduleCost(object):
 		ma = selectRandomFromList(managers)
 		self.roleWt[ma] = 1.8
 		
+		self.solnCount = 0
+		self.invalidSonlCount = 0
+
 	def getMeetings(self, args):
 		"""
 		meeting list
 		"""
 		meetings = list()
-		for i in range(0, 4 * self.numMeeting, 4):
+		for i in range(0, 3 * self.numMeeting, 3):
 			mtg = Meeting()
 			mtg.day = args[i]
 			mtg.hour = args[i+1]
 			mtg.min = args[i+2]
-			mtg.duration = args[i+3]
-			mtg.start = (mtg.day - 1) * secInDay + mtg.hour * secInHour + mtg.min * secInMinute
+			mtg.duration = self.durations[int(i/3)]
+			mtg.start =  self.getSecInWeek(mtg.day,  mtg.hour, mtg.min)
 			mtg.end = mtg.start + mtg.duration * secInMinute
+			self.logger.info(mtg)
 			meetings.append(mtg)
 		return meetings
+		
+	def getSecInWeek(self, day, hour, min):
+		"""
+		sec into week
+		"""
+		return 	(day - 1) * secInDay + hour * secInHour + min * secInMinute
 		
 	def isValid(self, args):
 		"""
 		schedule validation
 		"""
+		self.solnCount += 1
 		meetings = self.getMeetings(args)
-		
 		#participants  conflict
 		conflicted = False
-		for i in range(self.numMeeting):
-			for j in range(i, self.numMeeting):
+		for i in range(self.numMeeting-1):
+			for j in range(i+1, self.numMeeting):
 				cp = findIntersection(self.participants[i], self.participants[j])
 				if len(cp) > 0:
+					self.logger.debug("common attendees {} {} {}".format(i, j, str(cp)))
 					r1 = (meetings[i].start, meetings[i].end)
-					r1 = (meetings[j].start, meetings[j].end)
+					r2 = (meetings[j].start, meetings[j].end)
 					conflicted = isIntvOverlapped(r1, r2)
+					self.logger.debug("r1 {} r2{} conflicted {}".format(str(r1), str(r2), conflicted))
 					if conflicted:
 						break
 			if conflicted:
 				break
-						
+				
 		#blocked hour conflict
 		bhconflicted = False
 		for p in self.partMeetigs.keys():
@@ -130,13 +158,12 @@ class MeetingScheduleCost(object):
 				r1 = (m.start, m.end)
 				if p in self.blockedHrs:
 					bh = self.blockedHrs[p]
-					if bh[0] == m.day:
-						bs = bh[1] * secInHour
-						be = (bh[1] + bh[1]) * secInHour
-						r2 = (bs, be)
-						bhconflicted = isIntvOverlapped(r1, r2)
-						if bhconflicted:
-							break
+					bs = self.getSecInWeek(bh[0], bh[1], 0)
+					be = bs + bh[2] * secInHour
+					r2 = (bs, be)
+					bhconflicted = isIntvOverlapped(r1, r2)
+					if bhconflicted:
+						break
 			if bhconflicted:
 				break
 
@@ -146,11 +173,14 @@ class MeetingScheduleCost(object):
 			for om in self.ordMeetings:
 				r1 = (meetings[om[0]].start, meetings[om[0]].end)
 				r1 = (meetings[om[1]].start, meetings[om[1]].end)
-				misOrdered = not isIntvLess(rOne, rTwo)
+				misOrdered = not isIntvLess(r1, r2)
 				if misOrdered:
 					break
+		self.logger.info("conflicted {}  bhconflicted {}  misOrdered {}".format(conflicted, bhconflicted, misOrdered))	
 					
 		valid  = not (conflicted or  bhconflicted or misOrdered)
+		if not valid:
+			self.invalidSonlCount += 1
 		return valid
 
 	def evaluate(self, args):
@@ -165,9 +195,9 @@ class MeetingScheduleCost(object):
 			mids = self.partMeetigs[p]
 			pmeetings = list(map(lambda m : meetings[m], mids))
 			
-			#meeting per day sorted by hour
+			#meeting per day sorted by time
 			meetByDay = dict()
-			for m in range(pmeetings):
+			for m in pmeetings:
 				appendKeyedList(meetByDay, m.day, m)
 			for d in meetByDay.keys():
 				meetByDay[d].sort(key = lambda m : m.start)
@@ -186,13 +216,14 @@ class MeetingScheduleCost(object):
 			avFt = mean(fslots)
 			cost = 8 - avFt / secInHour
 			pcost[p] = cost
-				
+		self.logger.info("done per person cost")	
+			
 		#overall cost
 		cwl = list(map(lambda p : (pcost[p], self.roleWt[p]) , self.partMeetigs.keys()))
 		costs = list(map(lambda cw : cw[0], cwl))
 		weights = list(map(lambda cw : cw[1], cwl))
 		cost = weightedAverage(costs, weights)
-		
+		self.logger.info("cost {:.3f}".format(cost))
 		return cost
 			
 if __name__ == "__main__":
@@ -203,11 +234,13 @@ if __name__ == "__main__":
 	
 	schedCost = MeetingScheduleCost(numMeeting, numPeople)
 	optimizer = GeneticAlgorithmOptimizer(optConfFile, schedCost)
+	schedCost.logger = optimizer.logger
 	optimizer.run()
 	print("best soln found")
 	print(optimizer.getBest())
 	if optimizer.trackingOn:
 		print("soln history")
 		print(str(optimizer.tracker))
+	print("soln count {}  invalid soln count".format(schedCost.solnCount, schedCost.invalidSonlCount))
 	
 			

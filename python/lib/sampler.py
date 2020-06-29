@@ -372,7 +372,7 @@ class DiscreteRejectSampler:
 			self.distr = self.distr[0]	
 		numSteps = int((self.xmax - self.xmin) / self.step)
 		#print("{:.3f} {:.3f} {:.3f} {}".format(self.xmin, self.xmax, self.step, numSteps))
-		assert len(self.distr)	== numSteps + 1, "invalid number of distr values expected " + str(numSteps + 1)
+		assert len(self.distr)	== numSteps + 1, "invalid number of distr values expected {}".format(numSteps + 1)
 		self.ximin = 0
 		self.ximax = numSteps
 		self.pmax = float(max(self.distr))
@@ -762,8 +762,9 @@ def createSampler(data):
 	"""
 	items = data.split(":")
 	size = len(items)
-	dtype = items[size  - 1]
-	stype = items[size  - 2]
+	dtype = items[-1]
+	stype = items[-2]
+	sampler = None
 	if stype == "uniform":
 		if dtype == "int":
 			min = int(items[0])
@@ -799,7 +800,14 @@ def createSampler(data):
 				pair = (cval, dist)
 				values.append(pair)
 			sampler = CategoricalRejectSampler(values)
-			
+	elif stype == "discrete":
+		vmin = int(items[0])
+		vmax = int(items[1])
+		step = int(items[2])
+		values = list(map(lambda i : int(items[i]), range(3, len(items)-2)))
+		sampler = DiscreteRejectSampler(vmin, vmax, step, values)
+	else:
+		raise ValueError("invalid sampler type " + dtype)
 	return sampler
 				 
 				

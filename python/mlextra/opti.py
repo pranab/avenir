@@ -176,6 +176,12 @@ class Candidate(object):
 			status = False
 		return status
 	
+	def getSolnAsFloat(self):
+		"""
+		solution as float list
+		"""
+		return toFloatList(self.soln)
+
 	def __str__(self):
 		"""
 		content
@@ -266,6 +272,7 @@ class BaseOptimizer(object):
 		"""
 		defValues["common.verbose"] = (False, None)
 		defValues["opti.solution.size"] = (None, "missing solution size")
+		defValues["opti.solution.comp.size"] = (None, "missing solution component size")
 		defValues["opti.solution.data.distr"] = (None, "missing solution data distribution")
 		defValues["opti.solution.data.groups"] = (None, None)
 		defValues["opti.num.iter"] = (100, None)
@@ -292,6 +299,7 @@ class BaseOptimizer(object):
 		
 		#soln size and soln component data distribution
 		self.solnSizes = self.config.getIntListConfig("opti.solution.size")[0]
+		self.solnCompSize = self.config.getIntConfig("opti.solution.comp.size")[0]
 		compDataDistr = self.config.getStringListConfig("opti.solution.data.distr")[0]
 		self.compDataDistr = list(map(lambda d: createSampler(d), compDataDistr))
 		
@@ -300,6 +308,8 @@ class BaseOptimizer(object):
 		dataGroups = self.getDataGroups(dataGroups)
 		
 		self.varSize = len(self.solnSizes) == 2
+		if not self.varSize:
+			assert self.solnSizes[0] % self.solnCompSize == 0, "soln size should be multiple of soln component size"
 
 		logFilePath = self.config.getStringConfig("common.logging.file")[0]
 		logLevName = self.config.getStringConfig("common.logging.level")[0]
@@ -321,10 +331,10 @@ class BaseOptimizer(object):
 			maxTry = 5
 			built = True
 			for j in range(size):
-				value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
+				value = self.sampleValue(j)
 				tryCount = 0
 				while not cand.build(value, size):
-					value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[j].sample()
+					value = self.sampleValue(j)
 					tryCount += 1
 					if tryCount == maxTry:
 						built = False
@@ -339,6 +349,17 @@ class BaseOptimizer(object):
 				break
 			
 		return cand
+
+	def sampleValue(self, i):
+		"""
+		samples solution element value
+		"""
+		if self.varSize:
+			value = self.compDataDistr[0].sample() 
+		else: 
+			ci = i % self.solnCompSize
+			value = self.compDataDistr[ci].sample()
+		return value
 
 	def getDataGroups(self,data):
 		"""
@@ -360,13 +381,13 @@ class BaseOptimizer(object):
 		status = True
 		self.logger.info("before mutation soln " + str(cand.soln))
 		pos = sampleUniform(0, len(cand.soln)  -1)
-		value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
+		value = self.sampleValue(pos)
 		self.logger.info("mutation pos {}  value {}".format(pos, value))
 		maxTry = 5
 		tryCount = 0 
 		while not cand.mutate(pos, value):
 			pos = sampleUniform(0, len(cand.soln) - 1)
-			value = self.compDataDistr[0].sample() if self.varSize else self.compDataDistr[pos].sample()
+			value = self.sampleValue(pos)
 			self.logger.info("mutation pos {}  value {}".format(pos, value))
 			tryCount += 1
 			if tryCount == maxTry:
@@ -473,7 +494,8 @@ class PopulationBasedOptimizer(BaseOptimizer):
 			cand = self.createCandidate()
 			self.pool.append(cand)
 			self.logger.info("initial soln " + str(cand.soln))
-
+		self.logger.info("completed initial pool creation")
+		
 	def findBest(self, candList):
 		"""
 		find best in candidate list
@@ -570,21 +592,24 @@ class PopulationBasedOptimizer(BaseOptimizer):
 		"""
 		children = None
 		minSize = min(len(parents[0].soln), len(parents[1].soln))
-		if minSize > 1:
-			crossOverPoint = sampleUniform(1, minSize - 2)
+		if minSize > 2:
+			crossOverPoint = sampleUniform(1, minSize - 1) 
+			if not self.varSize and self.solnCompSize < minSize:
+				crossOverPoint = int(crossOverPoint / self.solnCompSize) * self.solnCompSize
+				crossOverPoint = self.solnCompSize if crossOverPoint == 0 else crossOverPoint
+
 			children = list()
 		
 			c = parents[0].soln[:crossOverPoint]
 			c.extend(parents[1].soln[crossOverPoint:])
 			chOne = Candidate()
 			chOne.setSoln(c)
+			children.append(chOne)
 		
 			c = parents[1].soln[:crossOverPoint]
 			c.extend(parents[0].soln[crossOverPoint:])
 			chTwo = Candidate()
-			chTwo.setSoln(c)
-		
-			children.append(chOne)
+			chTwo.setSoln(c)		
 			children.append(chTwo)
 			
 		return children

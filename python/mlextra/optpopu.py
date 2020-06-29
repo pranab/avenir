@@ -114,7 +114,9 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		"""
 		run optimizer
 		"""
+		self.logger.info("**** starting GeneticAlgorithmOptimizer ****")
 		self.populatePool()
+		
 		matingSize = self.config.getIntConfig("opti.mating.size")[0]
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
 		purgeFirst = self.config.getBooleanConfig("opti.purge.first")[0]
@@ -124,30 +126,30 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		self.sort(self.pool)
 		preSorted = True
 		for i in range(self.numIter):
+			self.logger.info("next iteration " + str(i))
 			matingList = self.findMultBest(self.pool, matingSize, preSorted)
 			genBest = matingList[0]
 			if self.bestSoln is None or genBest.cost < self.bestSoln.cost:
 				self.setBest(i, genBest)
+				self.logger.info("new best soln found")
 			
 			#cross over	
 			children = list()
 			while len(children) < replSize:
-				parenrs = selectRandomSubListFromList(matingList, 2)
+				parents = selectRandomSubListFromList(matingList, 2)
 				pair = self.crossOver(parents)
 				if pair:
 					valid = True
 					for ch in pair:
 						if self.domain.isValid(ch.soln):
 							ch.cost = self.domain.evaluate(ch.soln)
-						else:
-							valid = False
-							break
-					if valid:
-						children.extend(pair)
-			
+							children.append(ch)
+			self.logger.info("created children")
+
 			#mutate
 			for ch in children:
 				self.mutate(ch)
+			self.logger.info("created children")
 			
 			
 			if purgeFirst:
@@ -155,6 +157,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				self.multiPurge(replSize)
 				self.pool.extend(children)
 				self.sort(self.pool)
+				self.logger.info("purged and added  children")
 			else:
 				#add children for next generation and then purge worst
 				self.pool.extend(children)
