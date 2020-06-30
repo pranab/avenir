@@ -104,6 +104,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		defValues["opti.pool.size"] = (10, None)
 		defValues["opti.mating.size"] = (5, None)
 		defValues["opti.replacement.size"] = (5, None)
+		defValues["opti.replacement.size.var"] = (None, None)
 		defValues["opti.purge.cost.weight"] = (0.7, None)
 		defValues["opti.purge.age.scale"] = (1.0, None)
 		defValues["opti.purge.first"] = (True, None)
@@ -119,6 +120,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 
 		matingSize = self.config.getIntConfig("opti.mating.size")[0]
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
+		replSizeVar = self.config.getFloatConfig("opti.replacement.size.var")[0]
 		purgeFirst = self.config.getBooleanConfig("opti.purge.first")[0]
 		
 			
@@ -134,9 +136,20 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				self.setBest(i, genBest)
 				self.logger.info("new best soln found")
 			
+			if replSizeVar is None:
+				newGenSize = replSize
+				oldGenSize = replSize
+			else:
+				newPoolSize = 0
+				while newPoolSize < (matingSize + 2):
+					newGenSize = int(preturbScalar(replSize, replSizeVar))
+					oldGenSize = int(preturbScalar(replSize, replSizeVar))
+					newPoolSize = self.poolSize + newGenSize - oldGenSize
+			self.logger.info("newGenSize  {}  oldGenSize {}".format(newGenSize, oldGenSize))
+
 			#cross over	
 			children = list()
-			while len(children) < replSize:
+			while len(children) < newGenSize:
 				parents = selectRandomSubListFromList(matingList, 2)
 				pair = self.crossOver(parents)
 				if pair:
@@ -151,7 +164,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 			#new generation
 			if purgeFirst:
 				#purge worst and add children for next generation
-				self.multiPurge(replSize)
+				self.multiPurge(oldGenSize)
 				self.pool.extend(children)
 				self.sort(self.pool)
 				self.logger.info("purged and added  children")
@@ -159,7 +172,8 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				#add children for next generation and then purge worst
 				self.pool.extend(children)
 				self.sort(self.pool)
-				self.multiPurge(replSize)
+				self.multiPurge(oldGenSize)
+				self.logger.info("added  children and purged")
 			
 		if self.locSearchStrategy is not None:
 			locBestSoln = self.localSearch(self.bestSoln)

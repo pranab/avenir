@@ -63,6 +63,7 @@ class Candidate(object):
 		self.cost = None
 		self.seq = Candidate.counter
 		Candidate.counter += 1
+		self.age = 0
 	
 	def clone(self, other):
 		"""
@@ -72,6 +73,7 @@ class Candidate(object):
 		self.cost = other.cost
 		self.seq = Candidate.counter
 		Candidate.counter += 1
+		self.age = other.age
 		
 	def setSoln(self, soln):
 		"""
