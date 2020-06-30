@@ -117,7 +117,7 @@ class MeetingScheduleCost(object):
 			mtg.duration = self.durations[int(i/3)]
 			mtg.start =  self.getSecInWeek(mtg.day,  mtg.hour, mtg.min)
 			mtg.end = mtg.start + mtg.duration * secInMinute
-			self.logger.info(mtg)
+			self.logger.debug(mtg)
 			meetings.append(mtg)
 		return meetings
 		
@@ -176,7 +176,7 @@ class MeetingScheduleCost(object):
 				misOrdered = not isIntvLess(r1, r2)
 				if misOrdered:
 					break
-		self.logger.info("conflicted {}  bhconflicted {}  misOrdered {}".format(conflicted, bhconflicted, misOrdered))	
+		self.logger.debug("conflicted {}  bhconflicted {}  misOrdered {}".format(conflicted, bhconflicted, misOrdered))	
 					
 		valid  = not (conflicted or  bhconflicted or misOrdered)
 		if not valid:
@@ -216,7 +216,7 @@ class MeetingScheduleCost(object):
 			avFt = mean(fslots)
 			cost = 8 - avFt / secInHour
 			pcost[p] = cost
-		self.logger.info("done per person cost")	
+		self.logger.debug("done per person cost")	
 			
 		#overall cost
 		cwl = list(map(lambda p : (pcost[p], self.roleWt[p]) , self.partMeetigs.keys()))
@@ -225,7 +225,18 @@ class MeetingScheduleCost(object):
 		cost = weightedAverage(costs, weights)
 		self.logger.info("cost {:.3f}".format(cost))
 		return cost
-			
+ 
+def	pritnSoln(cand, schedCost):
+	"""
+	print solution
+	"""
+	print("cost {:.3f}".format(cand.cost))
+	for i in range(0, len(cand.soln), 3):
+		desc = "meeting: day {} hour {} min {} duration {}".format(
+		cand.soln[i], cand.soln[i+1], cand.soln[i+2], schedCost.durations[int(i/3)])
+		print(desc)
+
+		
 if __name__ == "__main__":
 	assert len(sys.argv) == 4, "wrong command line args"
 	optConfFile = sys.argv[1]
@@ -236,11 +247,26 @@ if __name__ == "__main__":
 	optimizer = GeneticAlgorithmOptimizer(optConfFile, schedCost)
 	schedCost.logger = optimizer.logger
 	optimizer.run()
-	print("best soln found")
-	print(optimizer.getBest())
+	print("optimizer started, check log file for output details...")
+	
+	print("\nbest solution found")
+	best = optimizer.getBest()
+	pritnSoln(best, schedCost)
+
 	if optimizer.trackingOn:
-		print("soln history")
+		print("\nbest solution history")
 		print(str(optimizer.tracker))
-	print("soln count {}  invalid soln count".format(schedCost.solnCount, schedCost.invalidSonlCount))
+		
+	locBest = optimizer.getLocBest()
+	if locBest is not None:
+		print("\nbest solution after local search of global best solution")
+		pritnSoln(locBest, schedCost)
+	
+	if (locBest.cost < best.cost):
+		print("\nlocally search solution is best overall")
+	else:
+		print("\nlocal search failed to find a better solution")
+		
+	print("\ntotal solution count {}  invalid solution count {}".format(schedCost.solnCount, schedCost.invalidSonlCount))
 	
 			

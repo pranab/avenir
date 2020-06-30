@@ -257,7 +257,7 @@ class ProgressTracker(object):
 		"""
 		content = ""
 		for tracked in self.tracker:
-			content = content + "iter: " + str(tracked[0]) + "\t" + str(tracked[1]) + "\n"
+			content = content + "iter: " + "{:04d}".format(tracked[0]) + "\t" + str(tracked[1]) + "\n"
 		return content
 			
 		
@@ -278,10 +278,12 @@ class BaseOptimizer(object):
 		defValues["opti.num.iter"] = (100, None)
 		defValues["opti.global.search.strategy"] = (None, None)
 		defValues["opti.mutation.size"] = (1, None)
-		defValues["opti.local.search.strategy"] = ("mutateBest", None)
+		defValues["opti.local.search.strategy"] = (None, None)
 		defValues["opti.local.search.num.iter"] = (10, None)
 		defValues["opti.performance.track.interval"] = (5, None)
 		defValues["opti.performance.track.on"] = (False, None)
+		defValues["opti.soln.create.max.try"] = (10, None)
+		defValues["opti.soln.mutate.max.try"] = (10, None)
 		
 		self.config = Configuration(configFile, defValues)
 		
@@ -289,12 +291,14 @@ class BaseOptimizer(object):
 		self.domain = domain
 		self.curSoln = None
 		self.bestSoln = None
+		self.locBestSoln = None
 		self.trackedBestSoln = None
 		self.globSearchStrategy = self.config.getStringConfig("opti.global.search.strategy")[0]
 		self.locSearchStrategy = self.config.getStringConfig("opti.local.search.strategy")[0]
 		self.mutationSize =  self.config.getIntConfig("opti.mutation.size")[0]
 		self.perforTrackInterval = self.config.getIntConfig("opti.performance.track.interval")[0]
 		self.numIter = self.config.getIntConfig("opti.num.iter")[0]
+		self.numIterLocal = self.config.getIntConfig("opti.local.search.num.iter")[0]
 		self.tracker = None
 		
 		#soln size and soln component data distribution
@@ -311,6 +315,9 @@ class BaseOptimizer(object):
 		if not self.varSize:
 			assert self.solnSizes[0] % self.solnCompSize == 0, "soln size should be multiple of soln component size"
 
+		self.createMaxTry = self.config.getIntConfig("opti.soln.create.max.try")[0]
+		self.mutateMaxTry = self.config.getIntConfig("opti.soln.mutate.max.try")[0]
+
 		logFilePath = self.config.getStringConfig("common.logging.file")[0]
 		logLevName = self.config.getStringConfig("common.logging.level")[0]
 		self.logger = createLogger(__name__, logFilePath, logLevName)
@@ -325,6 +332,7 @@ class BaseOptimizer(object):
 		"""
 		create new candidate soln
 		"""
+		tryCount = 0
 		while True:
 			cand = Candidate()
 			size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
@@ -348,6 +356,10 @@ class BaseOptimizer(object):
 				cand.cost = cost
 				break
 			
+			tryCount += 1
+			if tryCount == self.createMaxTry:
+				raise ValueError("failed to create candidate solution after {} tries".format(self.createMaxTry))
+
 		return cand
 
 	def sampleValue(self, i):
@@ -379,27 +391,37 @@ class BaseOptimizer(object):
 		mutate by insert, delete(for var size solution only) or replace
 		"""
 		status = True
-		self.logger.info("before mutation soln " + str(cand.soln))
+		self.logger.debug("before mutation soln " + str(cand.soln))
 		pos = sampleUniform(0, len(cand.soln)  -1)
 		value = self.sampleValue(pos)
-		self.logger.info("mutation pos {}  value {}".format(pos, value))
-		maxTry = 5
+		self.logger.debug("mutation pos {}  value {}".format(pos, value))
 		tryCount = 0 
 		while not cand.mutate(pos, value):
 			pos = sampleUniform(0, len(cand.soln) - 1)
 			value = self.sampleValue(pos)
-			self.logger.info("mutation pos {}  value {}".format(pos, value))
+			self.logger.debug("mutation pos {}  value {}".format(pos, value))
 			tryCount += 1
-			if tryCount == maxTry:
+			if tryCount == self.mutateMaxTry:
 				status = False
 				#raise ValueError("faled to mutate after multiple tries")
-				self.logger.info("giving up on mutation")
+				self.logger.info("failed to  mutate after maximum number of tries")
 				break
 				
 		if status:
-			self.logger.info("after mutation soln " + str(cand.soln))
+			self.logger.debug("after mutation soln " + str(cand.soln))
 		return status
 		
+	def multiMutate(self, cand):
+		"""
+		multiple mutate by insert, delete(for var size solution only) or replace
+		"""
+		for _ in range(self.mutationSize):
+			status = self.mutate(cand)
+			if not status:
+				break
+
+		return status
+
 	def mutateAndValidate(self, cand, maxTry, clone=False):
 		"""
 		mutate and validate with max number of retries
@@ -441,6 +463,39 @@ class BaseOptimizer(object):
 
 		return (bestSoln, foundBetter)
 
+	def localSearch(self, cand):
+		"""
+		performs local search centered around a good solution
+		"""
+		self.logger.info("doing local search")
+		bestSoln = None
+		count = 0
+		if self.locSearchStrategy == "centered":
+			for _ in range(self.numIterLocal):
+				cloneCand = self.createClone(cand)
+				mvalid = self.mutate(cloneCand)
+				if mvalid and self.domain.isValid(cloneCand.soln):
+					count += 1
+					cloneCand.cost = self.domain.evaluate(cloneCand.soln)
+					if bestSoln is None or cloneCand.cost < bestSoln.cost:
+						bestSoln = cloneCand
+		else:
+			raise ValueError("invalid local search strategy")
+
+		if count == 0:
+			self.logger.info("could not generate any valid solution in local search")
+		else:
+			self.logger.info("performed {} local search".format(count))
+
+		return bestSoln
+
+	def createClone(self, cand):
+		"""
+		creates cloned solution
+		"""
+		cloneCand = Candidate()
+		cloneCand.clone(cand)
+		return cloneCand
 
 	def trackPerformance(self, iterCount):
 		"""
@@ -474,6 +529,12 @@ class BaseOptimizer(object):
 		"""
 		return 	self.bestSoln	
 			
+	def getLocBest(self):
+		"""
+		returns best solution
+		"""
+		return self.locBestSoln	
+
 class PopulationBasedOptimizer(BaseOptimizer):
 	"""
 	optimize with evolutionary search
@@ -495,7 +556,7 @@ class PopulationBasedOptimizer(BaseOptimizer):
 			self.pool.append(cand)
 			self.logger.info("initial soln " + str(cand.soln))
 		self.logger.info("completed initial pool creation")
-		
+
 	def findBest(self, candList):
 		"""
 		find best in candidate list

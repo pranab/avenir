@@ -116,7 +116,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		"""
 		self.logger.info("**** starting GeneticAlgorithmOptimizer ****")
 		self.populatePool()
-		
+
 		matingSize = self.config.getIntConfig("opti.mating.size")[0]
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
 		purgeFirst = self.config.getBooleanConfig("opti.purge.first")[0]
@@ -129,6 +129,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 			self.logger.info("next iteration " + str(i))
 			matingList = self.findMultBest(self.pool, matingSize, preSorted)
 			genBest = matingList[0]
+			self.logger.info("current best soln cost {:.3f}".format(genBest.cost))
 			if self.bestSoln is None or genBest.cost < self.bestSoln.cost:
 				self.setBest(i, genBest)
 				self.logger.info("new best soln found")
@@ -139,19 +140,15 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				parents = selectRandomSubListFromList(matingList, 2)
 				pair = self.crossOver(parents)
 				if pair:
-					valid = True
 					for ch in pair:
-						if self.domain.isValid(ch.soln):
+						mutValid = self.mutate(ch)
+						if mutValid and self.domain.isValid(ch.soln):
 							ch.cost = self.domain.evaluate(ch.soln)
 							children.append(ch)
-			self.logger.info("created children")
+			self.logger.info("created all children")
 
-			#mutate
-			for ch in children:
-				self.mutate(ch)
-			self.logger.info("created children")
 			
-			
+			#new generation
 			if purgeFirst:
 				#purge worst and add children for next generation
 				self.multiPurge(replSize)
@@ -164,4 +161,13 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				self.sort(self.pool)
 				self.multiPurge(replSize)
 			
-	
+		if self.locSearchStrategy is not None:
+			locBestSoln = self.localSearch(self.bestSoln)
+			self.locBestSoln = locBestSoln
+			if self.locBestSoln is not None:
+				if (self.locBestSoln.cost < self.bestSoln.cost):
+					self.logger.info("locally search solution is best overall")
+				else:
+					self.logger.info("local search failed to find a better solution")
+
+
