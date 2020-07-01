@@ -415,7 +415,7 @@ class DataExplorer:
 		result = self.printResult("cardinality", len(values),  "unique values and repeat counts", vc[:maxCnt])
 		return result
 
-	def getStats(self, ds):
+	def getStats(self, ds, nextreme=5):
 		"""
 		plots data
 		"""
@@ -424,6 +424,9 @@ class DataExplorer:
 		stat["length"] = len(data)
 		stat["min"] = data.min()
 		stat["max"] = data.max()
+		series = pd.Series(data)
+		stat["n smallest"] = series.nsmallest(n=nextreme).tolist()
+		stat["n largest"] = series.nlargest(n=nextreme).tolist()
 		stat["mean"] = data.mean()
 		stat["median"] = np.median(data)
 		mode, modeCnt = sta.mode(data)
@@ -702,9 +705,9 @@ class DataExplorer:
 		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
 		return result
 
-	def testNormalAnderson(self, ds, sigLev=.05):
+	def testDistrAnderson(self, ds, dist, sigLev=.05):
 		"""
-		D’Agostino’s K square  normalcy test
+		Anderson   test for normal, expon, logistic, gumbel, gumbel_l, gumbel_r
 		"""
 		data = self.getNumericData(ds)
 		re = sta.anderson(data)
@@ -714,13 +717,22 @@ class DataExplorer:
 			sl, cv = re.significance_level[i], re.critical_values[i]
 			if int(sl) == slAlpha:
 				if re.statistic < cv:
-					msg = "probably gaussian at the {:.1f} level".format(sl)
+					msg = "probably gaussian at the {:.3f} siginificance level".format(sl)
 				else:
-					msg = "probably not gaussian at the {:.1f} level".format(sl)
+					msg = "probably not gaussian at the {:.3f} siginificance level".format(sl)
 		result = self.printResult("stat", re.statistic, "test", msg)
 		print(msg)
 		return result
 
+	def testSkew(self, ds, sigLev=.05):
+		"""
+		test skew wrt  normal distr
+		"""
+		data = self.getNumericData(ds)
+		stat, pvalue = sta.skewtest(data)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same skew as normal distribution", "probably not same skew as normal distribution", sigLev)
+		return result
 
 	def testTwoSampleStudent(self, ds1, ds2, sigLev=.05):
 		"""
@@ -730,7 +742,7 @@ class DataExplorer:
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ttest_ind(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 
 	def testTwoSampleKs(self, ds1, ds2, sigLev=.05):
@@ -741,7 +753,7 @@ class DataExplorer:
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ks_2samp(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 
 	def testTwoSampleMw(self, ds1, ds2, sigLev=.05):
@@ -752,7 +764,7 @@ class DataExplorer:
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.mannwhitneyu(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 	def testTwoSampleWilcox(self, ds1, ds2, sigLev=.05):
 		"""
@@ -762,7 +774,7 @@ class DataExplorer:
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.wilcoxon(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 
 	def testTwoSampleKw(self, ds1, ds2, sigLev=.05):
@@ -773,19 +785,128 @@ class DataExplorer:
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.kruskal(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably snot ame distribution", sigLev)
 
 	def testTwoSampleFriedman(self, ds1, ds2, ds3, sigLev=.05):
 		"""
-		Kruskal-Wallis 2 sample statistic	
+		Friedman 2 sample statistic	
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		data3 = self.getNumericData(ds3)
 		stat, pvalue = sta.friedmanchisquare(data1, data2, data3)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably same distribution", sigLev)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
+	def testTwoSampleEs(self, ds1, ds2, sigLev=.05):
+		"""
+		Epps Singleton 2 sample statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.epps_singleton_2samp(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+
+	def testTwoSampleAnderson(self, ds1, ds2, sigLev=.05):
+		"""
+		Anderson 2 sample statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		dseq = (data1, data2)
+		stat, critValues, sLev = sta.anderson_ksamp(dseq)
+		slAlpha = 100 * sigLev
+
+		if slAlpha == 10:
+			cv = critValues[1]
+		elif slAlpha == 5:
+			cv = critValues[2]
+		elif slAlpha == 2.5:
+			cv = critValues[3]
+		elif slAlpha == 1:
+			cv = critValues[4]
+		else:
+			cv = None
+
+		result = self.printResult("stat", stat, "critValues", critValues, "critValue", cv, "significanceLevel", sLev)
+		print("stat:   {:.3f}".format(stat))
+		if cv is None:
+			msg = "critical values value not found for provided siginificance level"
+		else:
+			if stat < cv:
+				msg = "probably same distribution at the {:.3f} siginificance level".format(sigLev)
+			else:
+				msg = "probably not same distribution at the {:.3f} siginificance level".format(sigLev)
+		print(msg)
+		return result
+
+
+	def testTwoSampleScaleAb(self, ds1, ds2, sigLev=.05):
+		"""
+		Ansari Bradley 2 sample scale statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.ansari(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
+		return result
+
+	def testTwoSampleScaleMood(self, ds1, ds2, sigLev=.05):
+		"""
+		Mood 2 sample scale statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.mood(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
+		return result
+
+	def testTwoSampleVarBartlet(self, ds1, ds2, sigLev=.05):
+		"""
+		Ansari Bradley 2 sample scale statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.bartlett(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		return result
+
+	def testTwoSampleVarLevene(self, ds1, ds2, sigLev=.05):
+		"""
+		Levene 2 sample variance statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.levene(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		return result
+
+	def testTwoSampleVarFk(self, ds1, ds2, sigLev=.05):
+		"""
+		Fligner-Killeen 2 sample variance statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue = sta.fligner(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue)
+		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		return result
+
+	def testTwoSampleMedMood(self, ds1, ds2, sigLev=.05):
+		"""
+		Mood 2 sample median statistic	
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat, pvalue, median, ctable = sta.median_test(data1, data2)
+		result = self.printResult("stat", stat, "pvalue", pvalue, "median", median, "contigencyTable", ctable)
+		self.printStat(stat, pvalue, "probably same median", "probably not same median", sigLev)
+		return result
 
 	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
 		"""
@@ -885,9 +1006,10 @@ class DataExplorer:
 		"""
 		generic stat and pvalue output
 		"""
-		print("test result:")
+		print("\ntest result:")
 		print("stat:   {:.3f}".format(stat))
 		print("pvalue: {:.3f}".format(pvalue))
+		print("significance level: {:.3f}".format(sigLev))
 		print(nhMsg if pvalue > sigLev else ahMsg)
 
 	def printResult(self,  *values):
