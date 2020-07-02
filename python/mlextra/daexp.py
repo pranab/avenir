@@ -136,28 +136,10 @@ class DataExplorer:
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
 		if noHeader:			
-			nCols = int(len(columns) / 2)
-			colIndexes = columns[:nCols]
 			df = pd.read_csv(filePath,  header=None) 
-			nColsDf = len(df.columns)
-			for i in range(nCols):
-				ci = colIndexes[i]
-				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci]
-				if numeric:
-					assert isNumeric(col), "data is not numeric"
-				else:
-					assert isBinary(col), "data is not binary"
-				#print(type(col), col.dtype)
-				col = col.to_numpy()
-				cn = columns[i + nCols]
-				#print(ci,cn)
-				self.dataSets[cn] = col
 		else:
 			df = pd.read_csv(filePath,  header=0) 
-			for c in columns:
-				col = df[c].to_numpy()
-				self.dataSets[c] = col
+		self.addDataFrameData(df, numeric, *columns)
 
 	def addDataFrameNumericData(self,filePath,  *columns):
 		"""
@@ -999,8 +981,30 @@ class DataExplorer:
 		"""
 		2 sample cramer von mises
 		"""
-		pass
-		
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		data = np.concatenate((data1,data2))
+		rdata = sta.rankdata(data)
+		n = len(data1)
+		m = len(data2)
+		l = n + m
+
+		s1 = 0
+		for i in range(n):
+			t = rdata[i] - (i+1)	
+			s1 += (t * t)
+		s1 *= n
+
+		s2 = 0
+		for i in range(m):
+			t = rdata[i] - (i+1)	
+			s2 += (t * t)
+		s2 *= m
+
+		u = s1 + s2
+		stat = u / (n * m * l) - (4 * m * n - 1) / (6 * l)
+		result = self.printResult("stat", stat)
+		return result
 
 	def printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
