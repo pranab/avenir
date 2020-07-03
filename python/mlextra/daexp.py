@@ -286,7 +286,7 @@ class DataExplorer:
 		elif type(ds) == list:
 			assert isNumeric(ds), "data is not numeric"
 			data = np.array(ds)
-		elif type(ds) == numpy.ndarray:
+		elif type(ds) == np.ndarray:
 			data = ds
 		else:
 			raise "invalid type, expecting data set name, list or ndarray"			
@@ -351,6 +351,65 @@ class DataExplorer:
 		data = self.getNumericData(ds)
 		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
 		plt.show()
+
+	def getFeqDistr(self, ds,  nbins=10):
+		"""
+		get histogram
+		"""
+		data = self.getNumericData(ds)
+		frequency, lowLimit, binsize, extraPoints = sta.relfreq(data, numbins=nbins)
+		result = self.printResult("frequency", frequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
+		return result
+
+
+	def getCumFreqDistr(self, ds,  nbins=10):
+		"""
+		get cumulative freq distribution
+		"""
+		data = self.getNumericData(ds)
+		cumFrequency, lowLimit, binsize, extraPoints = sta.cumfreq(data, numbins=nbins)
+		result = self.printResult("cumFrequency", cumFrequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
+		return result
+
+	def getEntropy(self, ds,  nbins=10):
+		"""
+		get entropy
+		"""
+		data = self.getNumericData(ds)
+		result = self .getFeqDistr(data, nbins)
+		entropy = sta.entropy(result["frequency"])
+		result = self.printResult("entropy", entropy)
+		return result
+
+	def getRelEntropy(self, ds1,  ds2, nbins=10):
+		"""
+		get relative entropy or KL divergence
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		result1 = self .getFeqDistr(data1, nbins)
+		freq1  = result1["frequency"]
+		result2 = self .getFeqDistr(data2, nbins)
+		freq2  = result2["frequency"]
+		entropy = sta.entropy(freq1, freq2)
+		result = self.printResult("relEntropy", entropy)
+		return result
+
+	def getMutualInfo(self, ds1,  ds2, nbins=10):
+		"""
+		get mutual information
+		"""
+		en1 = self.getEntropy(ds1,nbins)
+		en2 = self.getEntropy(ds2,nbins)
+
+		d1 = self.getNumericData(ds1)
+		d2 = self.getNumericData(ds2)
+		d = np.vstack((d1, d2))
+		en = self.getEntropy(d,nbins)
+
+		mutInfo = en1["entropy"] + en2["entropy"] - en["entropy"]
+		result = self.printResult("mutInfo", mutInfo)
+		return result
 
 	def getPercentile(self, ds, value):
 		"""
