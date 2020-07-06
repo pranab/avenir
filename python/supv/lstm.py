@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -34,7 +34,9 @@ from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
-
+"""
+LSTM with one or more hidden layers with multi domensional data
+"""
 
 class LstmPredictor(nn.Module):
     def __init__(self, configFile):
@@ -51,13 +53,16 @@ class LstmPredictor(nn.Module):
     	defValues["common.device"] = ("cpu", None)
     	defValues["train.data.file"] = (None, "missing training data file path")
     	defValues["train.data.type"] = ("numeric", None)
-    	defValues["train.data.col"] = (0, None)
+    	defValues["train.data.feat.cols"] = (None, "missing feature columns")
+    	defValues["train.data.target.col"] = (None, "missing target column")
+    	defValues["train.data.delim"] = (",", None)
     	defValues["train.input.size"] = (None, "missing  input size")
     	defValues["train.hidden.size"] = (None, "missing  hidden size")
     	defValues["train.output.size"] = (None, "missing  output size")
     	defValues["train.num.layers"] = (1, None)
     	defValues["train.seq.len"] = (1, None)
     	defValues["train.batch.size"] = (1, None)
+    	defValues["train.batch.first"] = (False, None)
     	defValues["train.drop.prob"] = (0, None)
     	defValues["train.text.vocab.size"] = (-1, None)
     	defValues["train.text.embed.size"] = (-1, None)
@@ -68,6 +73,7 @@ class LstmPredictor(nn.Module):
     	defValues["train.weight.decay"] = (.00001, None)
     	defValues["train.momentum"] = (0, None)
     	defValues["train.momentum.nesterov"] = (False, None)
+    	defValues["train.out.sequence"] = (True, None)
     	defValues["train.out.activation"] = ("sigmoid", None)
     	defValues["train.loss"] = ("mse", None) 
     	defValues["train.grad.clip"] = (5, None) 
@@ -90,46 +96,98 @@ class LstmPredictor(nn.Module):
     	self.hiddenSize = self.config.getIntConfig("train.hidden.size")[0]
     	self.seqLen = self.config.getIntConfig("train.seq.len")[0]
     	self.batchSize = self.config.getIntConfig("train.batch.size")[0]
-    	vocabSize = self.config.getIntConfig("train.text.vocab.size")[0]
-    	if vocabSize > 0:
-    		embedSize = self.config.getIntConfig("train.text.vocab.size")[0]
-    		self.embedding = nn.Embedding(vocabSize, embedSize)
-    	else:
-    		self.embedding = None
+    	self.batchFirst = self.config.getBooleanConfig("train.batch.first")[0]
     	dropProb = self.config.getFloatConfig("train.drop.prob")[0]
-    	self.lstm = nn.LSTM(self.inputSize, self.hiddenSize, self.nLayers, dropout=dropProb, batch_first=True)
+    	self.outSeq = self.config.getBooleanConfig("train.out.sequence")[0]
+    	
+    	#model
+    	self.lstm = nn.LSTM(self.inputSize, self.hiddenSize, self.nLayers, dropout=dropProb, batch_first=self.batchFirst)
     	self.dropout = nn.Dropout(dropProb)
     	self.linear = nn.Linear(self.hiddenSize, self.outputSize)
     	outAct = self.config.getStringConfig("train.out.activation")[0]
     	if outAct == "sigmoid":
     		self.outAct = nn.Sigmoid()
-    	else :
+    	elif outAct == "softmax":
+    		self.outAct = nn.Softmax(dim=1)
+    	else:
     		self.outAct = None
+    		
     	
-
+    	#load data
+    	dataFilePath = self.config.getStringConfig("train.data.file")[0]
+    	fCols = self.config.getIntListConfig("train.data.feat.cols")[0]
+    	tCol = self.config.getIntConfig("train.data.target.col")[0]
+    	delim = self.config.getStringConfig("train.data.delim")[0]
+    	self.fData, self.tData = self.loadData(dataFilePath, delim, fCols[0], fCols[1], tCol)
+    	
+    	self.batchSize = self.config.getIntConfig("train.batch.size")[0]
+    	self.dataSize = self.fData.size()[0]
+    	self.numBatch = int(self.dataSize / self.batchSize)
+    	
+    def loadData(self, filePath, delim, scolStart, scolEnd, targetCol):
+    	"""
+    	loads data for file with one sequence per line and data can be a vector
+    	"""
+    	cols = list(range(scolStart, scolEnd, 1))
+    	cols.append(targetCol)
+    	data = np.loadtxt(file, delimiter=delim, usecols=cols)
+    	sData = data[:, :-1]
+    	tData = data[:, -1]
+    	return (SData.astype(np.float32), tData.astype(np.float32))
+    	
+    def batchTransform(self):
+    	"""
+    	transforms data from (dataSize, seqLength x inputSize) to (batch, seqLength, inputSize) tensor
+    	or (seqLength, batch, inputSize) tensor
+    	"""
+    	if self.batchFirst:
+    		bfData = torch.zeros(self.batchSize, self.seqLen, self.inputSize)
+    	else:
+    		bfData = torch.zeros(self.seqLen, self.batchSize, self.inputSize)
+    	
+    	btData = torch.zeros(self.batchSize,self.numBatch)
+    	
+    	for bi in range(self.numBatch):
+    		for bdi in range(self.batchSize):
+    			di = sampleUniform(0, self.dataSize-1)
+    			row = self.fData[di]
+    			for ci, cv in enumarate(row):
+    				si = int(ci / self.seqLen)
+    				ii = ci % self.seqLen
+    				if self.batchFirst:
+    					bfData[bi][si][ii] = cv
+    				else:
+    					bfData[si][bi][ii] = cv
+    			btData[bi][bdi] = self.tData[di]
+    			
+    	return (bfData, btData)		
+		
+	
     def forward(self, x, h):
     	"""
     	Forward pass
     	"""
-    	if self.embedding:
-    		x = self.embedding(x)
     	lstmOut, hout = self.lstm(x,h)
-    	lstmOut = lstmOut.contiguous().view(-1, self.hiddenSize)
-    	out = self.dropout(lstmOut)
-    	out = self.linear(out)
-    	if self.outAct:
-    		out = self.outAct(out)
-    	out = out.view(self.batchSize, -1)
-    	out = out[:,-1]
-    	return out, hout
+    	if self.outSeq:
+    		pass
+    	else:
+    		lstmOut = lstmOut[self.seqLen - 1].view(-1, self.hiddenSize)
+    		out = self.dropout(lstmOut)
+    		out = self.linear(out)
+    		if self.outAct:
+    			out = self.outAct(out)
+    		out = out.view(self.batchSize, -1)
+    		out = out[:,-1]
+    		return out, hout
     
     def initHidden(self):
     	"""
     	Initialize hidden weights
     	"""
-    	self.hiddenCell = (torch.zeros(self.nLayers,self.batchSize,self.hiddenSize),
-                            torch.zeros(self.nLayers,self.batchSize,self.hiddenSize))
-                            
+    	hidden = (torch.zeros(self.nLayers,self.batchSize,self.hiddenSize),
+    	torch.zeros(self.nLayers,self.batchSize,self.hiddenSize))
+    	return hidden 
+                 
     def createOptomizer(self):
     	"""
     	Create optimizer
@@ -174,32 +232,27 @@ class LstmPredictor(nn.Module):
     	train lstm
     	"""
     	self.train()
-    	dataFile = self.config.getStringConfig("train.data.file")[0]
-    	dataType = self.config.getStringConfig("train.data.type")[0]
-    	if dataType == "numeric":
-    		dataCol = self.config.getIntConfig("train.data.col")[0]
-    		trainData = createLabeledSeq(dataFile, ",", dataCol, self.seqLen)
-    	else:
-    		raise ValueError("invalid data type")
-    	trainData = torch.utils.data.TensorDataset(torch.from_numpy(np.array(trainData[0])), torch.from_numpy(np.array(trainData[1])))
-    	trainLoader = DataLoader(trainData, shuffle=True, batch_size=self.batchSize)
-    	
     	device = self.config.getStringConfig("common.device")[0]
     	self.to(device)
     	optimizer = self.createOptomizer()
     	criterion = self.createLossFun()
     	clip = self.config.getFloatConfig("train.grad.clip")[0]
     	numIter = self.config.getIntConfig("train.num.iterations")[0]
+    	
     	for it in range(numIter):
+    		#forward pass
     		hid = model.initHidden()
-    		for inputs, labels in trainLoader:
-    			hid = tuple([e.data for e in hid])
-    			inputs, labels = inputs.to(device), labels.to(device)
-    			optimizer.zero_grad()
-    			output, hid = model(inputs, hid)
-    			loss = criterion(output.squeeze(), labels.float())
-    			loss.backward()
-    			nn.utils.clip_grad_norm_(model.parameters(), clip)
-    			optimizer.step()
+    		inputs, labels = self.batchTransform()
+    		inputs, labels = inputs.to(device), labels.to(device)
+    		output, hid = self(inputs, hid)
+    		loss = criterion(output.squeeze(), labels)
+    		if self.verbose and it % 50 == 0:
+    			print("epoch {}  loss {:.6f}".format(t, loss.item()))
+    		
+    		# Zero gradients, perform a backward pass, and update the weights.
+    		optimizer.zero_grad()
+    		loss.backward()
+    		nn.utils.clip_grad_norm_(model.parameters(), clip)
+    		optimizer.step()
 			
 		
