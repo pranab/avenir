@@ -64,8 +64,6 @@ class LstmPredictor(nn.Module):
     	defValues["train.batch.size"] = (1, None)
     	defValues["train.batch.first"] = (False, None)
     	defValues["train.drop.prob"] = (0, None)
-    	defValues["train.text.vocab.size"] = (-1, None)
-    	defValues["train.text.embed.size"] = (-1, None)
     	defValues["train.optimizer"] = ("adam", None) 
     	defValues["train.learning.rate"] = (.0001, None)
     	defValues["train.betas"] = ("0.9, 0.999", None)
@@ -102,7 +100,7 @@ class LstmPredictor(nn.Module):
     	
     	#model
     	self.lstm = nn.LSTM(self.inputSize, self.hiddenSize, self.nLayers, dropout=dropProb, batch_first=self.batchFirst)
-    	self.dropout = nn.Dropout(dropProb)
+    	self.dropout = nn.Dropout(dropProb) if dropProb > 0 else None
     	self.linear = nn.Linear(self.hiddenSize, self.outputSize)
     	outAct = self.config.getStringConfig("train.out.activation")[0]
     	if outAct == "sigmoid":
@@ -131,23 +129,26 @@ class LstmPredictor(nn.Module):
     	cols = list(range(scolStart, scolEnd, 1))
     	cols.append(targetCol)
     	data = np.loadtxt(file, delimiter=delim, usecols=cols)
+    	#one output for whole sequence
     	sData = data[:, :-1]
     	tData = data[:, -1]
-    	return (SData.astype(np.float32), tData.astype(np.float32))
     	
-    def batchTransform(self):
+    	#target int (index into class labels)  for classification 
+    	sData = sData.astype(np.float32)
+    	tData = tData.astype(np.float32) if self.outputSize == 1 else tData.astype(np.int32)
+    	return (sData, tData)
+    	
+    def batchGenarator(self):
     	"""
     	transforms data from (dataSize, seqLength x inputSize) to (batch, seqLength, inputSize) tensor
     	or (seqLength, batch, inputSize) tensor
     	"""
-    	if self.batchFirst:
-    		bfData = torch.zeros(self.batchSize, self.seqLen, self.inputSize)
-    	else:
-    		bfData = torch.zeros(self.seqLen, self.batchSize, self.inputSize)
     	
-    	btData = torch.zeros(self.batchSize,self.numBatch)
-    	
-    	for bi in range(self.numBatch):
+    	for _ in range(self.numBatch):
+    		bfData = torch.zeros(self.batchSize, self.seqLen, self.inputSize) if self.batchFirst else torch.zeros(self.seqLen, self.batchSize, self.inputSize)
+    		btData = torch.zeros(self.batchSize)
+    		
+    		i = 0
     		for bdi in range(self.batchSize):
     			di = sampleUniform(0, self.dataSize-1)
     			row = self.fData[di]
@@ -155,30 +156,47 @@ class LstmPredictor(nn.Module):
     				si = int(ci / self.seqLen)
     				ii = ci % self.seqLen
     				if self.batchFirst:
-    					bfData[bi][si][ii] = cv
+    					bfData[bdi][si][ii] = cv
     				else:
-    					bfData[si][bi][ii] = cv
-    			btData[bi][bdi] = self.tData[di]
-    			
-    	return (bfData, btData)		
+    					bfData[si][bdi][ii] = cv
+    			btData[i] = self.tData[di]
+    			i += 1
+    		
+    		#for seq output correct forst 2 dimensions
+    		if  self.outSeq and not self.batchFirst:
+    			btData = torch.transpose(btData,0,1)
+ 
+    		yield (bfData, btData)		
 		
 	
     def forward(self, x, h):
     	"""
     	Forward pass
     	"""
-    	lstmOut, hout = self.lstm(x,h)
+    	out, hout = self.lstm(x,h)
     	if self.outSeq:
-    		pass
-    	else:
-    		lstmOut = lstmOut[self.seqLen - 1].view(-1, self.hiddenSize)
-    		out = self.dropout(lstmOut)
+    		# seq to seq prediction
+    		out = out.view(-1, self.hiddenSize)
+    		if self.dropout is not None:
+    			out = self.dropout(out)
     		out = self.linear(out)
-    		if self.outAct:
+    		if self.outAct is not None:
+    			out = self.outAct(out)
+    		out = out.view(self.batchSize * self.seqLen, -1)
+    	else:
+    		#seq to one prediction
+    		out = out[self.seqLen - 1].view(-1, self.hiddenSize)
+    		if self.dropout is not None:
+    			out = self.dropout(out)
+    		out = self.linear(out)
+    		if self.outAct is not None:
     			out = self.outAct(out)
     		out = out.view(self.batchSize, -1)
-    		out = out[:,-1]
-    		return out, hout
+    		if self.outputSize == 2:
+    			#binary classification
+    			out = out[:,-1]
+    		
+    	return out, hout
     
     def initHidden(self):
     	"""
@@ -240,19 +258,26 @@ class LstmPredictor(nn.Module):
     	numIter = self.config.getIntConfig("train.num.iterations")[0]
     	
     	for it in range(numIter):
-    		#forward pass
-    		hid = model.initHidden()
-    		inputs, labels = self.batchTransform()
-    		inputs, labels = inputs.to(device), labels.to(device)
-    		output, hid = self(inputs, hid)
-    		loss = criterion(output.squeeze(), labels)
-    		if self.verbose and it % 50 == 0:
-    			print("epoch {}  loss {:.6f}".format(t, loss.item()))
+    		b = 0
+    		for inputs, labels in self.batchGenerator():
+    			#forward pass
+    			hid = model.initHidden()
+    			inputs, labels = inputs.to(device), labels.to(device)
+    			output, hid = self(inputs, hid)
+    			
+    			#loss
+    			if self.outSeq:
+    				labels = labels.view(self.batchSize * self.seqLen, -1)
+    			loss = criterion(output, labels)
+    			
+    			if self.verbose and it % 50 == 0 and b % 10 == 0:
+    				print("epoch {}  batch {}  loss {:.6f}".format(it, b, loss.item()))
     		
-    		# Zero gradients, perform a backward pass, and update the weights.
-    		optimizer.zero_grad()
-    		loss.backward()
-    		nn.utils.clip_grad_norm_(model.parameters(), clip)
-    		optimizer.step()
+    			# zero gradients, perform a backward pass, and update the weights.
+    			optimizer.zero_grad()
+    			loss.backward()
+    			nn.utils.clip_grad_norm_(model.parameters(), clip)
+    			optimizer.step()
+    			b += 1
 			
 		

@@ -33,7 +33,7 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 
-class ThreeLayerNetwork(torch.nn.Module):
+class FeedForwardNetwork(torch.nn.Module):
 	def __init__(self, configFile):
 		"""
     	In the constructor we instantiate two nn.Linear modules and assign them as
@@ -59,6 +59,13 @@ class ThreeLayerNetwork(torch.nn.Module):
 		defValues["train.num.iterations"] = (500, None) 
 		defValues["train.optimizer"] = ("sgd", None) 
 		defValues["train.lossFn"] = ("mse", None) 
+		defValues["train.weight.decay"] = (0, None) 
+		defValues["train.momentum"] = (0, None) 
+		defValues["train.eps"] = (1e-08, None) 
+		defValues["train.dampening"] = (0, None) 
+		defValues["train.momentum.nesterov"] = (False, None) 
+		defValues["train.betas"] = ([0.9, 0.999], None) 
+		defValues["train.alpha"] = (0.99, None) 
 		defValues["train.save.model"] = (False, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
@@ -91,11 +98,11 @@ class ThreeLayerNetwork(torch.nn.Module):
 		self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
    	
 		self.linear1 = torch.nn.Linear(numinp, numHiddenOne)
-		self.act1 = self.createActivation(activationOne)
+		self.act1 = FeedForwardNetwork.createActivation(activationOne)
 		if numHiddenTwo:
 			#two hidden layers
 			self.linear2 = torch.nn.Linear(numHiddenOne, numHiddenTwo)
-			self.act2 = self.createActivation(activationTwo)
+			self.act2 = FeedForwardNetwork.createActivation(activationTwo)
 			self.linear3 = torch.nn.Linear(numHiddenTwo, numOut)
 			print("2 hidden layers")
 		else:
@@ -118,11 +125,12 @@ class ThreeLayerNetwork(torch.nn.Module):
 		self.validOutData = outDataV
 
 		# loss function and optimizer
-		self.lossFn = self.createLossFunction(lossFn, lossRed)
-		self.optimizer =  self.createOptimizer(optimizer, learnRate)
+		self.lossFn = FeedForwardNetwork.createLossFunction(lossFn, lossRed)
+		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
 
  
-	def createActivation(self, actName):
+	@staticmethod
+	def createActivation(actName):
 		"""
 		create activation
 		"""
@@ -134,10 +142,13 @@ class ThreeLayerNetwork(torch.nn.Module):
 			activation = torch.nn.Tanh()
 		elif actName == "sigmoid":
 			activation = torch.nn.Sigmoid()
+		elif actName == "softmax":
+			activation = torch.nn.Softmax(dim=1)
 		else:
 			exitWithMsg("invalid activation function name " + actName)
 		return activation
 
+	@staticmethod
 	def createLossFunction(self, lossFnName, lossRed):
 		"""
 		create loss function
@@ -148,20 +159,36 @@ class ThreeLayerNetwork(torch.nn.Module):
 			lossFunc = torch.nn.CrossEntropyLoss(reduction=lossRed)
 		elif lossFnName == "lone":
 			lossFunc = torch.nn.L1Loss(reduction=lossRed)
+		elif lossFnName == "bce":
+			lossFunc = torch.nn.BCELoss()
 		else:
 			exitWithMsg("invalid loss function name " + lossFnName)
 		return lossFunc
 
-	def createOptimizer(self, optName, learnRate):
+	@staticmethod
+	def createOptimizer(self, model, optName):
 		"""
-		create loss function
+		create optimizer
 		"""
+		config = model.config
+		learnRate = config.getFloatConfig("train.learning.rate")[0]
+		weightDecay = config.getFloatConfig("train.weight.decay")[0]
+		momentum = config.getFloatConfig("train.momentum")[0]
+		eps = self.config.getFloatConfig("train.eps")[0]
 		if optName == "sgd":
-			optimizer = torch.optim.SGD(self.parameters(), lr=learnRate)
+			dampening = config.getFloatConfig("train.dampening")[0]
+			momentumNesterov = config.getBooleanConfig("train.momentum.nesterov")[0]
+			optimizer = torch.optim.SGD(model.parameters(),lr=learnRate, momentum=momentum, 
+			dampening=dampening, weight_decay=weightDecay, nesterov=momentumNesterov)
 		elif optName == "adam":
-			optimizer = torch.optim.Adam(self.parameters(), lr=learnRate)
+		   	betas = config.getFloatListConfig("train.betas")[0]
+		   	betas = (betas[0], betas[1]) 
+		   	optimizer = torch.optim.Adam(model.parameters(), lr=learnRate,betas=betas, eps = eps,
+    		weight_decay=weightDecay)
 		elif optName == "rmsprop":
-			optimizer = torch.optim.RMSprop(self.parameters(), lr=learnRate)
+			alpha = config.getFloatConfig("train.alpha")[0]
+			optimizer = torch.optim.RMSprop(model.parameters(), lr=learnRate, alpha=alpha,
+			eps=eps, weight_decay=weightDecay, momentum=momentum)
 		else:
 			exitWithMsg("invalid optimizer name " + optName)
 		return optimizer
