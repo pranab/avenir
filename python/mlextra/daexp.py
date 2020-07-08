@@ -35,6 +35,7 @@ from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot as plt
 from scipy import stats as sta
 from statsmodels.tsa.seasonal import seasonal_decompose
+from sklearn.ensemble import IsolationForest
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -560,6 +561,20 @@ class DataExplorer:
 			"residual", res.resid)
 		return result
 
+	def getOutliersWithIsoForest(self, contamination,  *dsl):
+		"""
+		finds outliers using isolation forest
+		"""
+		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(dlist)
+		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
+		dmat = np.column_stack(dlist)
+		isf = IsolationForest(contamination=contamination)
+		ypred = isf.fit_predict(dmat)
+		mask = ypred == -1
+		doul = dmat[mask, :]
+		result = self.printResult("outliers", doul)	
+		return result
 
 	def fitLinearReg(self, ds, doPlot=False):
 		"""
@@ -1096,6 +1111,19 @@ class DataExplorer:
 		stat = u / (n * m * l) - (4 * m * n - 1) / (6 * l)
 		result = self.printResult("stat", stat)
 		return result
+
+	def ensureSameSize(self, dlist):
+		"""
+		ensures all data sets are of same size
+		"""
+		le = None
+		for d in dlist:
+			cle = len(d)
+			if le is None:
+				le = cle
+			else:
+				assert cle == le, "all data sets need to be of same size"
+
 
 	def printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
