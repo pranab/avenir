@@ -36,6 +36,8 @@ from matplotlib import pyplot as plt
 from scipy import stats as sta
 from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -52,12 +54,16 @@ class DataExplorer:
 	def save(self, filePath):
 		"""
 		save checkpoint
+		params:
+		filePath : path of file where saved
 		"""
 		saveObject(self.dataSets, filePath)
 
 	def restore(self, filePath):
 		"""
 		restore checkpoint
+		params:
+		filePath : path of file from where to store
 		"""
 		self.dataSets = restoreObject(filePath)
 
@@ -65,6 +71,9 @@ class DataExplorer:
 	def queryFileData(self, filePath,  *columns):
 		"""
 		query column data type  from a data frame
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		lcolumns = list(columns)
 		noHeader = type(lcolumns[0]) ==  int
@@ -77,6 +86,9 @@ class DataExplorer:
 	def queryDataFrameData(self, df,  *columns):
 		"""
 		query column data type  from a data frame
+		params:
+		df : data frame with data
+		columns : indexes followed by column name or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -104,6 +116,8 @@ class DataExplorer:
 	def getDataType(self, col):
 		"""
 		get data type 
+		params:
+		col : contains data array like
 		"""
 		if isBinary(col):
 			dtype = "binary"
@@ -121,6 +135,9 @@ class DataExplorer:
 	def addFileNumericData(self,filePath,  *columns):
 		"""
 		add numeric columns from a file
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		self.addFileData(filePath, True, *columns)
 
@@ -128,12 +145,19 @@ class DataExplorer:
 	def addFileBinaryData(self,filePath,  *columns):
 		"""
 		add binary columns from a file
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		self.addFileData(filePath, False, *columns)
 
 	def addFileData(self, filePath,  numeric, *columns):
 		"""
 		add columns from a file
+		params:
+		filePath : path of file with data
+		numeric : True if numeric False in binary
+		columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -146,6 +170,9 @@ class DataExplorer:
 	def addDataFrameNumericData(self,filePath,  *columns):
 		"""
 		add numeric columns from a file
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		self.addDataFrameData(filePath, True, *columns)
 
@@ -153,6 +180,9 @@ class DataExplorer:
 	def addDataFrameBinaryData(self,filePath,  *columns):
 		"""
 		add binary columns from a file
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		self.addDataFrameData(filePath, False, *columns)
 
@@ -160,6 +190,10 @@ class DataExplorer:
 	def addDataFrameData(self, df,  numeric, *columns):
 		"""
 		add columns from a data frame
+		params:
+		df : data frame with data
+		numeric : True if numeric False in binary
+		columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -191,6 +225,9 @@ class DataExplorer:
 	def addListNumericData(self, ds,  name):
 		"""
 		add numeric columns from a file
+		params:
+		ds : list with data
+		name : name of data set
 		"""
 		self.addListData(ds, True,  name)
 
@@ -198,12 +235,19 @@ class DataExplorer:
 	def addListBinaryData(self, ds, name):
 		"""
 		add binary columns from a file
+		params:
+		ds : list with data
+		name : name of data set
 		"""
 		self.addListData(ds, False,  name)
 
 	def addListData(self, ds, numeric,  name):
 		"""
-		list data
+		adds list data
+		params:
+		ds : list with data
+		numeric : True if numeric False in binary
+		name : name of data set
 		"""
 		assert type(ds) == list, "data not a list"
 		if numeric:
@@ -216,6 +260,9 @@ class DataExplorer:
 	def addFileCatData(self, filePath,  *columns):
 		"""
 		add columns from a file
+		params:
+		filePath : path of file with data
+		columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -242,6 +289,9 @@ class DataExplorer:
 	def addDataFrameCatData(self, df,  *columns):
 		"""
 		add columns from a data frame
+		params:
+		df : data frame with data
+		columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -265,6 +315,9 @@ class DataExplorer:
 	def addCatListData(self, ds, name):
 		"""
 		categorical list data
+		params:
+		ds : list with data
+		name : name of data set
 		"""
 		assert type(ds) == list, "data not a list"
 		assert isCategorical(ds), "data is not categorical"
@@ -273,6 +326,8 @@ class DataExplorer:
 	def remData(self, ds):
 		"""
 		removes data set
+		params:
+		ds : data set name
 		"""
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		self.dataSets.pop(ds)
@@ -281,6 +336,8 @@ class DataExplorer:
 	def getNumericData(self, ds):
 		"""
 		get data
+		params:
+		ds : data set name or list or numpy array with data
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -298,6 +355,8 @@ class DataExplorer:
 	def getCatData(self, ds):
 		"""
 		get data
+		params:
+		ds : data set name or list  with data
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -312,9 +371,13 @@ class DataExplorer:
 	def loadCatFloatDataFrame(self, ds1, ds2):
 		"""
 		loads float and cat data into data frame
+		params:
+		ds1: data set name or list
+		ds2: data set name or list or numpy array
 		"""
 		data1 = self.getCatData(ds1)
 		data2 = self.getNumericData(ds2)
+		self.ensureSameSize([data1, data2])
 		df1 = pd.DataFrame(data=data1)
 		df2 = pd.DataFrame(data=data2)
 		df = pd.concat([df1,df2], axis=1)
@@ -332,13 +395,29 @@ class DataExplorer:
 	def plot(self, ds, yscale=None):
 		"""
 		plots data
+		params:
+		ds: data set name or list or numpy array
 		"""
 		data = self.getNumericData(ds)
 		drawLine(data, yscale)
 
+	def scatterPlot(self, ds1, ds2):
+		"""
+		scatter plots data
+		params:
+		"""
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		self.ensureSameSize([data1, data2])
+		x = np.arange(1, len(data1)+1, 1)
+		plt.scatter(x, data1 ,color="red")
+		plt.scatter(x, data2 ,color="blue")
+		plt.show()
+
 	def print(self, ds):
 		"""
 		prunt data
+		params:
 		"""
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		data =   self.dataSets[ds]
@@ -349,6 +428,7 @@ class DataExplorer:
 	def plotHist(self, ds, cumulative, density, nbins=None):
 		"""
 		plots data
+		params:
 		"""
 		data = self.getNumericData(ds)
 		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
@@ -357,6 +437,8 @@ class DataExplorer:
 	def getFeqDistr(self, ds,  nbins=10):
 		"""
 		get histogram
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		frequency, lowLimit, binsize, extraPoints = sta.relfreq(data, numbins=nbins)
@@ -367,6 +449,8 @@ class DataExplorer:
 	def getCumFreqDistr(self, ds,  nbins=10):
 		"""
 		get cumulative freq distribution
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		cumFrequency, lowLimit, binsize, extraPoints = sta.cumfreq(data, numbins=nbins)
@@ -376,6 +460,8 @@ class DataExplorer:
 	def getEntropy(self, ds,  nbins=10):
 		"""
 		get entropy
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		result = self .getFeqDistr(data, nbins)
@@ -386,6 +472,8 @@ class DataExplorer:
 	def getRelEntropy(self, ds1,  ds2, nbins=10):
 		"""
 		get relative entropy or KL divergence
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -400,6 +488,8 @@ class DataExplorer:
 	def getMutualInfo(self, ds1,  ds2, nbins=10):
 		"""
 		get mutual information
+		params:
+
 		"""
 		en1 = self.getEntropy(ds1,nbins)
 		en2 = self.getEntropy(ds2,nbins)
@@ -416,6 +506,8 @@ class DataExplorer:
 	def getPercentile(self, ds, value):
 		"""
 		gets percentile
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		percent = sta.percentileofscore(data, value)
@@ -425,6 +517,8 @@ class DataExplorer:
 	def getValueAtPercentile(self, ds, percent):
 		"""
 		gets value at percentile
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		assert isInRange(percent, 0, 100), "percent should be between 0 and 100"
@@ -435,6 +529,8 @@ class DataExplorer:
 	def getUniqueValueCounts(self, ds, maxCnt=10):
 		"""
 		gets unique values and counts
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		values, counts = sta.find_repeats(data)
@@ -447,6 +543,8 @@ class DataExplorer:
 	def getCatUniqueValueCounts(self, ds, maxCnt=10):
 		"""
 		gets unique categorical values and counts
+		params:
+
 		"""
 		data = self.getCatData(ds)
 		series = pd.Series(data)
@@ -461,6 +559,8 @@ class DataExplorer:
 	def getStats(self, ds, nextreme=5):
 		"""
 		plots data
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		stat = dict()
@@ -486,6 +586,8 @@ class DataExplorer:
 	def getDifference(self, ds, order):
 		"""
 		difference of given order
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		diff = difference(data, order)
@@ -495,6 +597,8 @@ class DataExplorer:
 	def getTrend(self, ds, doPlot=False):
 		"""
 		finds trend
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		sz = len(data)
@@ -523,6 +627,8 @@ class DataExplorer:
 	def deTrend(self, ds, trend, doPlot=False):
 		"""
 		de trend
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		sz = len(data)
@@ -534,6 +640,8 @@ class DataExplorer:
 	def getTimeSeriesComponents(self, ds, model, freq, summaryOnly, doPlot=False):
 		"""
 		extracts trend, cycle and residue components of time series
+		params:
+
 		"""
 		assert model == "additive" or model == "multiplicative", "model must be additive or multiplicative"
 		data = self.getNumericData(ds)
@@ -564,21 +672,68 @@ class DataExplorer:
 	def getOutliersWithIsoForest(self, contamination,  *dsl):
 		"""
 		finds outliers using isolation forest
+		params:
+
 		"""
 		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
 		dmat = np.column_stack(dlist)
+
 		isf = IsolationForest(contamination=contamination)
 		ypred = isf.fit_predict(dmat)
 		mask = ypred == -1
 		doul = dmat[mask, :]
-		result = self.printResult("outliers", doul)	
+		mask = ypred != -1
+		dwoul = dmat[mask, :]
+		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		return result
+
+	def getOutliersWithLocalFactor(self, contamination,  *dsl):
+		"""
+		finds outliers using local outlier factor
+		params:
+
+		"""
+		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(dlist)
+		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
+		dmat = np.column_stack(dlist)
+
+		lof = LocalOutlierFactor(contamination=contamination)
+		ypred = lof.fit_predict(dmat)
+		mask = ypred == -1
+		doul = dmat[mask, :]
+		mask = ypred != -1
+		dwoul = dmat[mask, :]
+		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		return result
+
+	def getOutliersWithSupVecMach(self, nu,  *dsl):
+		"""
+		finds outliers using one class svm
+		params:
+
+		"""
+		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(dlist)
+		assert nu >= 0 and nu <= 0.5, "error upper bound outside valid range"
+		dmat = np.column_stack(dlist)
+
+		svm = OneClassSVM(nu=nu)
+		ypred = svm.fit_predict(dmat)
+		mask = ypred == -1
+		doul = dmat[mask, :]
+		mask = ypred != -1
+		dwoul = dmat[mask, :]
+		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
 
 	def fitLinearReg(self, ds, doPlot=False):
 		"""
 		fit  linear regression 
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		x = np.arange(len(data))
@@ -591,6 +746,8 @@ class DataExplorer:
 	def fitSiegelRobustLinearReg(self, ds, doPlot=False):
 		"""
 		siegel robust linear regression fit based on median
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		slope , intercept = sta.siegelslopes(data)
@@ -603,6 +760,8 @@ class DataExplorer:
 	def fitTheilSenRobustLinearReg(self, ds, doPlot=False):
 		"""
 		thiel sen  robust linear fit regression based on median
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		slope, intercept, loSlope, upSlope = sta.theilslopes(data)
@@ -615,6 +774,8 @@ class DataExplorer:
 	def regFitPlot(self, x, y, slope, intercept):
 		"""
 		plot linear rgeression fit line
+		params:
+
 		"""
 		fig = plt.figure()
 		ax = fig.add_subplot(111)
@@ -625,8 +786,11 @@ class DataExplorer:
 	def getCovar(self, *dsl):
 		"""
 		covariance
+		params:
+
 		"""
 		data = list(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(data)
 		data = np.vstack(data)
 		cv = np.cov(data)
 		print(cv)
@@ -635,9 +799,12 @@ class DataExplorer:
 	def getPearsonCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		pearson correlation coefficient 
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
+		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.pearsonr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -647,9 +814,12 @@ class DataExplorer:
 	def getSpearmanRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		spearman correlation coefficient
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
+		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.spearmanr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -658,9 +828,12 @@ class DataExplorer:
 	def getKendalRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		kendall’s tau, a correlation measure for ordinal data
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
+		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.kendalltau(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -669,10 +842,13 @@ class DataExplorer:
 	def getPointBiserialCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		kendall’s tau, a correlation measure for ordinal data
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		assert isBinary(data1), "first data set is not binary"
+		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.pointbiserialr(data1, data2)
 		result = self.printResult("stat", stat, "pvalue", pvalue)
 		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
@@ -681,9 +857,12 @@ class DataExplorer:
 	def getConTab(self, ds1, ds2):
 		"""
 		get contingency table
+		params:
+
 		"""
 		data1 = self.getCatData(ds1)
 		data2 = self.getCatData(ds2)
+		self.ensureSameSize([data1, data2])
 		crosstab = pd.crosstab(pd.Series(data1), pd.Series(data2), margins = False)
 		ctab = crosstab.values
 		print("contingency table")
@@ -693,6 +872,8 @@ class DataExplorer:
 	def getChiSqCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		chi square correlation for  both categorical	
+		params:
+
 		"""
 		ctab = self.getConTab(ds1, ds2)
 		stat, pvalue, dof, expctd = sta.chi2_contingency(ctab)
@@ -703,6 +884,8 @@ class DataExplorer:
 	def getAnovaCorr(self, ds1, ds2, grByCol, sigLev=.05):
 		"""
 		anova correlation for  numerical categorical	
+		params:
+
 		"""
 		df = self.loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else self.loadCatFloatDataFrame(ds2, ds1)
 		grByCol = 0
@@ -718,6 +901,8 @@ class DataExplorer:
 	def plotAcf(self, ds, lags, alpha, diffOrder=0):
 		"""
 		auto correlation
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		ddata = difference(data, diffOrder) if diffOrder > 0 else data
@@ -727,23 +912,30 @@ class DataExplorer:
 	def plotParAcf(self, ds, lags, alpha):
 		"""
 		partial auto correlation
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		tsaplots.plot_pacf(data, lags = lags, alpha = alpha)
 		plt.show()
 
-	def plotCrossCorr(self, dsOne, dsTwo, normed, lags):
+	def plotCrossCorr(self, ds1, ds2, normed, lags):
 		"""
 		cross correlation 
+		params:
+
 		"""
-		dataOne = self.getNumericData(dsOne)
-		dataTwo = self.getNumericData(dsTwo)
-		plt.xcorr(dataOne, dataTwo, normed=normed, maxlags=lags)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		#self.ensureSameSize([data1, data2])
+		plt.xcorr(data1, data2, normed=normed, maxlags=lags)
 		plt.show()
 
 	def testStationaryAdf(self, ds, regression, autolag, sigLev=.05):
 		"""
 		Adf stationary test null hyp not stationary
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		re = adfuller(data, regression=regression, autolag=autolag)
@@ -755,6 +947,8 @@ class DataExplorer:
 	def testStationaryKpss(self, ds, regression, sigLev=.05):
 		"""
 		Kpss stationary test null hyp  stationary
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		stat, pvalue, nLags, criticalValues = kpss(data, regression=regression)
@@ -765,6 +959,8 @@ class DataExplorer:
 	def testNormalJarqBera(self, ds, sigLev=.05):
 		"""
 		jarque bera normalcy test
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		jb, jbpv, skew, kurtosis =  jarque_bera(data)
@@ -776,6 +972,8 @@ class DataExplorer:
 	def testNormalShapWilk(self, ds, sigLev=.05):
 		"""
 		shapiro wilks normalcy test
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.shapiro(data)
@@ -786,6 +984,8 @@ class DataExplorer:
 	def testNormalDagast(self, ds, sigLev=.05):
 		"""
 		D’Agostino’s K square  normalcy test
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.normaltest(data)
@@ -796,6 +996,8 @@ class DataExplorer:
 	def testDistrAnderson(self, ds, dist, sigLev=.05):
 		"""
 		Anderson   test for normal, expon, logistic, gumbel, gumbel_l, gumbel_r
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		re = sta.anderson(data)
@@ -815,6 +1017,8 @@ class DataExplorer:
 	def testSkew(self, ds, sigLev=.05):
 		"""
 		test skew wrt  normal distr
+		params:
+
 		"""
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.skewtest(data)
@@ -825,6 +1029,8 @@ class DataExplorer:
 	def testTwoSampleStudent(self, ds1, ds2, sigLev=.05):
 		"""
 		student t 2 sample test
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -836,6 +1042,8 @@ class DataExplorer:
 	def testTwoSampleKs(self, ds1, ds2, sigLev=.05):
 		"""
 		Kolmogorov Sminov 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -847,6 +1055,8 @@ class DataExplorer:
 	def testTwoSampleMw(self, ds1, ds2, sigLev=.05):
 		"""
 		Mann-Whitney  2 sample statistic
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -857,6 +1067,8 @@ class DataExplorer:
 	def testTwoSampleWilcox(self, ds1, ds2, sigLev=.05):
 		"""
 		Wilcoxon Signed-Rank 2 sample statistic
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -868,6 +1080,8 @@ class DataExplorer:
 	def testTwoSampleKw(self, ds1, ds2, sigLev=.05):
 		"""
 		Kruskal-Wallis 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -878,6 +1092,8 @@ class DataExplorer:
 	def testTwoSampleFriedman(self, ds1, ds2, ds3, sigLev=.05):
 		"""
 		Friedman 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -889,6 +1105,8 @@ class DataExplorer:
 	def testTwoSampleEs(self, ds1, ds2, sigLev=.05):
 		"""
 		Epps Singleton 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -899,6 +1117,8 @@ class DataExplorer:
 	def testTwoSampleAnderson(self, ds1, ds2, sigLev=.05):
 		"""
 		Anderson 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -933,6 +1153,8 @@ class DataExplorer:
 	def testTwoSampleScaleAb(self, ds1, ds2, sigLev=.05):
 		"""
 		Ansari Bradley 2 sample scale statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -944,6 +1166,8 @@ class DataExplorer:
 	def testTwoSampleScaleMood(self, ds1, ds2, sigLev=.05):
 		"""
 		Mood 2 sample scale statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -955,6 +1179,8 @@ class DataExplorer:
 	def testTwoSampleVarBartlet(self, ds1, ds2, sigLev=.05):
 		"""
 		Ansari Bradley 2 sample scale statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -966,6 +1192,8 @@ class DataExplorer:
 	def testTwoSampleVarLevene(self, ds1, ds2, sigLev=.05):
 		"""
 		Levene 2 sample variance statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -977,6 +1205,8 @@ class DataExplorer:
 	def testTwoSampleVarFk(self, ds1, ds2, sigLev=.05):
 		"""
 		Fligner-Killeen 2 sample variance statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -988,6 +1218,8 @@ class DataExplorer:
 	def testTwoSampleMedMood(self, ds1, ds2, sigLev=.05):
 		"""
 		Mood 2 sample median statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -999,6 +1231,8 @@ class DataExplorer:
 	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang C 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -1025,6 +1259,8 @@ class DataExplorer:
 	def testTwoSampleZa(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang A 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -1053,6 +1289,8 @@ class DataExplorer:
 	def testTwoSampleZk(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang K 2 sample statistic	
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -1086,6 +1324,8 @@ class DataExplorer:
 	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
 		"""
 		2 sample cramer von mises
+		params:
+
 		"""
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -1115,6 +1355,8 @@ class DataExplorer:
 	def ensureSameSize(self, dlist):
 		"""
 		ensures all data sets are of same size
+		params:
+
 		"""
 		le = None
 		for d in dlist:
@@ -1127,6 +1369,8 @@ class DataExplorer:
 
 	def printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
+		params:
+
 		generic stat and pvalue output
 		"""
 		print("\ntest result:")
@@ -1138,6 +1382,8 @@ class DataExplorer:
 	def printResult(self,  *values):
 		"""
 		print results
+		params:
+
 		"""
 		result = dict()
 		for i in range(0, len(values), 2):
