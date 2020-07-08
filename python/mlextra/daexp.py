@@ -34,6 +34,7 @@ from statsmodels.stats.stattools import jarque_bera
 from sklearn.linear_model import LinearRegression
 from matplotlib import pyplot as plt
 from scipy import stats as sta
+from statsmodels.tsa.seasonal import seasonal_decompose
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -528,6 +529,37 @@ class DataExplorer:
 		if doPlot:
 			drawLine(detrended)
 		return detrended
+
+	def getTimeSeriesComponents(self, ds, model, freq, summaryOnly, doPlot=False):
+		"""
+		extracts trend, cycle and residue components of time series
+		"""
+		assert model == "additive" or model == "multiplicative", "model must be additive or multiplicative"
+		data = self.getNumericData(ds)
+		res = seasonal_decompose(data, model=model, freq=freq)
+		if doPlot:
+			res.plot()
+			plt.show()
+
+		#summar of componenets
+		trend = np.array(removeNan(res.trend))
+		trendMean = trend.mean()
+		trendSlope = (trend[-1] - trend[0]) / (len(trend) - 1)
+		seasonal = np.array(removeNan(res.seasonal))
+		seasonalAmp = (seasonal.max() - seasonal.min()) / 2
+		resid = np.array(removeNan(res.resid))
+		residueMean = resid.mean()
+		residueStdDev = np.std(resid)
+
+		if summaryOnly:
+			result = self.printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
+			"residueMean", residueMean, "residueStdDev", residueStdDev)
+		else:
+			result = self.printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
+			"residueMean", residueMean, "residueStdDev", residueStdDev, "trend", res.trend, "seasonal", res.seasonal,
+			"residual", res.resid)
+		return result
+
 
 	def fitLinearReg(self, ds, doPlot=False):
 		"""

@@ -652,6 +652,12 @@ def isNumber(st):
 	"""
 	return st.replace('.','',1).isdigit()
 
+def removeNan(values):
+	"""
+	removes nan from list
+	"""
+	return list(filter(lambda v: not math.isnan(v), values))
+	
 def fileRecGen(filePath, delim = None):
 	"""
 	file record generator
