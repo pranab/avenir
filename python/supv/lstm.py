@@ -34,6 +34,8 @@ from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
+from tnn import FeedForwardNetwork
+
 """
 LSTM with one or more hidden layers with multi domensional data
 """
@@ -64,13 +66,15 @@ class LstmPredictor(nn.Module):
     	defValues["train.batch.size"] = (1, None)
     	defValues["train.batch.first"] = (False, None)
     	defValues["train.drop.prob"] = (0, None)
-    	defValues["train.optimizer"] = ("adam", None) 
-    	defValues["train.learning.rate"] = (.0001, None)
-    	defValues["train.betas"] = ("0.9, 0.999", None)
-    	defValues["train.eps"] = (1e-8, None)
-    	defValues["train.weight.decay"] = (.00001, None)
-    	defValues["train.momentum"] = (0, None)
-    	defValues["train.momentum.nesterov"] = (False, None)
+    	defValues["train.optimizer"] = ("adam", None)
+    	defValues["train.opt.learning.rate"] = (.0001, None)
+    	defValues["train.opt.weight.decay"] = (0, None)
+    	defValues["train.opt.momentum"] = (0, None)
+    	defValues["train.opt.eps"] = (1e-08, None)
+    	defValues["train.opt.dampening"] = (0, None)
+    	defValues["train.opt.momentum.nesterov"] = (False, None)
+    	defValues["train.opt.betas"] = ([0.9, 0.999], None)
+    	defValues["train.opt.alpha"] = (0.99, None)
     	defValues["train.out.sequence"] = (True, None)
     	defValues["train.out.activation"] = ("sigmoid", None)
     	defValues["train.loss"] = ("mse", None) 
@@ -103,13 +107,7 @@ class LstmPredictor(nn.Module):
     	self.dropout = nn.Dropout(dropProb) if dropProb > 0 else None
     	self.linear = nn.Linear(self.hiddenSize, self.outputSize)
     	outAct = self.config.getStringConfig("train.out.activation")[0]
-    	if outAct == "sigmoid":
-    		self.outAct = nn.Sigmoid()
-    	elif outAct == "softmax":
-    		self.outAct = nn.Softmax(dim=1)
-    	else:
-    		self.outAct = None
-    		
+    	self.outAct = FeedForwardNetwork.createActivation(outAct)   		
     	
     	#load data
     	dataFilePath = self.config.getStringConfig("train.data.file")[0]
@@ -205,46 +203,7 @@ class LstmPredictor(nn.Module):
     	hidden = (torch.zeros(self.nLayers,self.batchSize,self.hiddenSize),
     	torch.zeros(self.nLayers,self.batchSize,self.hiddenSize))
     	return hidden 
-                 
-    def createOptomizer(self):
-    	"""
-    	Create optimizer
-    	"""
-    	optimizerName = self.config.getStringConfig("train.optimizer")[0]
-    	learnRate = self.config.getFloatConfig("train.learning.rate")[0]
-    	weightDecay = self.config.getFloatConfig("train.weight.decay")[0]
-    	if optimizerName == "adam":
-    		betas = self.config.getStringConfig("train.betas")[0]
-    		betas = strToFloatArray(self.betas, ",")
-    		betas = (betas[0], betas[1]) 
-    		eps = self.config.getFloatConfig("train.eps")[0]
-    		optimizer = torch.optim.Adam(self.parameters(), lr=learnRate, betas=betas, eps = eps,
-    		weight_decay=weightDecay)
-    	elif optimizerName == "sgd":
-    		momentum = self.config.getFloatConfig("train.momentum")[0]
-    		dampening = self.config.getFloatConfig("train.dampening")[0]
-    		momentumNesterov = self.config.getBooleanConfig("train.momentum.nesterov")[0]
-    		optimizer = torch.optim.SGD(self.parameters(), momentum=momentum, dampening=dampening,
-    		weight_decay=weightDecay, nesterov=momentumNesterov)
-    	else:
-    		raise ValueError("invalid optimizer type")
-    	return optimizer
-    	
-    def createLossFun(self):
-    	"""
-    	Create loss function
-    	"""
-    	loss = self.config.getStringConfig("train.loss")[0]
-    	if loss == "mse":
-    		criterion = nn.MSELoss()
-    	elif loss == "ce":
-    		criterion = nn.CrossEntropyLoss()
-    	elif loss == "bce":
-    		criterion = nn.BCELoss()
-    	else:
-    		raise ValueError("invalid loss function")
-    	return criterion
-    	
+                     	
     def trainLstm(self):
     	"""
     	train lstm
@@ -252,8 +211,10 @@ class LstmPredictor(nn.Module):
     	self.train()
     	device = self.config.getStringConfig("common.device")[0]
     	self.to(device)
-    	optimizer = self.createOptomizer()
-    	criterion = self.createLossFun()
+    	optimizerName = self.config.getStringConfig("train.optimizer")[0]
+    	optimizer = FeedForwardNetwork.createOptimizer(self, optimizerName)
+    	lossFn = self.config.getStringConfig("train.loss")[0]
+    	criterion = FeedForwardNetwork.createLossFunction(self, lossFn)
     	clip = self.config.getFloatConfig("train.grad.clip")[0]
     	numIter = self.config.getIntConfig("train.num.iterations")[0]
     	

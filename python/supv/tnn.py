@@ -50,22 +50,23 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.num.hidden.units.one"] = (None, "missing number of hidden units")
-		defValues["train.activation.one"] = ("relu", None) 
+		defValues["train.activation.one"] = ("relu", None)
 		defValues["train.num.hidden.units.two"] = (None, None)
-		defValues["train.activation.two"] = (None, None) 
+		defValues["train.activation.two"] = (None, None)
+		defValues["train.out.activation"] = (None, None)
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
-		defValues["train.learning.rate"] = (.0001, None)
-		defValues["train.num.iterations"] = (500, None) 
-		defValues["train.optimizer"] = ("sgd", None) 
+		defValues["train.num.iterations"] = (500, None)
 		defValues["train.lossFn"] = ("mse", None) 
-		defValues["train.weight.decay"] = (0, None) 
-		defValues["train.momentum"] = (0, None) 
-		defValues["train.eps"] = (1e-08, None) 
-		defValues["train.dampening"] = (0, None) 
-		defValues["train.momentum.nesterov"] = (False, None) 
-		defValues["train.betas"] = ([0.9, 0.999], None) 
-		defValues["train.alpha"] = (0.99, None) 
+		defValues["train.optimizer"] = ("sgd", None) 
+		defValues["train.opt.learning.rate"] = (.0001, None)
+		defValues["train.opt.weight.decay"] = (0, None) 
+		defValues["train.opt.momentum"] = (0, None) 
+		defValues["train.opt.eps"] = (1e-08, None) 
+		defValues["train.opt.dampening"] = (0, None) 
+		defValues["train.opt.momentum.nesterov"] = (False, None) 
+		defValues["train.opt.betas"] = ([0.9, 0.999], None) 
+		defValues["train.opt.alpha"] = (0.99, None) 
 		defValues["train.save.model"] = (False, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
@@ -90,8 +91,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		activationTwo = self.config.getStringConfig("train.activation.two")[0]
 		numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
-		lossRed = self.config.getStringConfig("train.loss.reduction")[0]
-		learnRate = self.config.getFloatConfig("train.learning.rate")[0]
+		#lossRed = self.config.getStringConfig("train.loss.reduction")[0]
+		#learnRate = self.config.getFloatConfig("train.opt.learning.rate")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		optimizer = self.config.getStringConfig("train.optimizer")[0]
 		lossFn = self.config.getStringConfig("train.lossFn")[0]
@@ -111,7 +112,9 @@ class FeedForwardNetwork(torch.nn.Module):
 			self.act2 = None
 			self.linear3 = torch.nn.Linear(numHiddenOne, numOut)
 			print("1 hidden layer")
-
+		outAct = self.config.getStringConfig("train.out.activation")[0]
+		self.outAct = FeedForwardNetwork.createActivation(outAct)   		
+ 
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		(featData, outData) = self.prepData(dataFile)
@@ -125,7 +128,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.validOutData = outDataV
 
 		# loss function and optimizer
-		self.lossFn = FeedForwardNetwork.createLossFunction(lossFn, lossRed)
+		self.lossFn = FeedForwardNetwork.createLossFunction(self, lossFn)
 		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
 
  
@@ -149,10 +152,12 @@ class FeedForwardNetwork(torch.nn.Module):
 		return activation
 
 	@staticmethod
-	def createLossFunction(self, lossFnName, lossRed):
+	def createLossFunction(model, lossFnName):
 		"""
 		create loss function
 		"""
+		config = model.config
+		lossRed = config.getStringConfig("train.loss.reduction")[0]
 		if lossFnName == "mse":
 			lossFunc = torch.nn.MSELoss(reduction=lossRed)
 		elif lossFnName == "ce":
@@ -160,33 +165,39 @@ class FeedForwardNetwork(torch.nn.Module):
 		elif lossFnName == "lone":
 			lossFunc = torch.nn.L1Loss(reduction=lossRed)
 		elif lossFnName == "bce":
-			lossFunc = torch.nn.BCELoss()
+			lossFunc = torch.nn.BCELoss(reduction=lossRed)
+		elif lossFnName == "bcel":
+			lossFunc = torch.nn.BCEWithLogitsLoss(reduction=lossRed)
+		elif lossFnName == "sm":
+			lossFunc = torch.nn.SoftMarginLoss(reduction=lossRed)
+		elif lossFnName == "mlsm":
+			lossFunc = torch.nn.MultiLabelSoftMarginLoss(reduction=lossRed)
 		else:
 			exitWithMsg("invalid loss function name " + lossFnName)
 		return lossFunc
 
 	@staticmethod
-	def createOptimizer(self, model, optName):
+	def createOptimizer(model, optName):
 		"""
 		create optimizer
 		"""
 		config = model.config
-		learnRate = config.getFloatConfig("train.learning.rate")[0]
-		weightDecay = config.getFloatConfig("train.weight.decay")[0]
-		momentum = config.getFloatConfig("train.momentum")[0]
-		eps = self.config.getFloatConfig("train.eps")[0]
+		learnRate = config.getFloatConfig("train.opt.learning.rate")[0]
+		weightDecay = config.getFloatConfig("train.opt.weight.decay")[0]
+		momentum = config.getFloatConfig("train.opt.momentum")[0]
+		eps = self.config.getFloatConfig("train.opt.eps")[0]
 		if optName == "sgd":
-			dampening = config.getFloatConfig("train.dampening")[0]
-			momentumNesterov = config.getBooleanConfig("train.momentum.nesterov")[0]
+			dampening = config.getFloatConfig("train.opt.dampening")[0]
+			momentumNesterov = config.getBooleanConfig("train.opt.momentum.nesterov")[0]
 			optimizer = torch.optim.SGD(model.parameters(),lr=learnRate, momentum=momentum, 
 			dampening=dampening, weight_decay=weightDecay, nesterov=momentumNesterov)
 		elif optName == "adam":
-		   	betas = config.getFloatListConfig("train.betas")[0]
+		   	betas = config.getFloatListConfig("train.opt.betas")[0]
 		   	betas = (betas[0], betas[1]) 
 		   	optimizer = torch.optim.Adam(model.parameters(), lr=learnRate,betas=betas, eps = eps,
     		weight_decay=weightDecay)
 		elif optName == "rmsprop":
-			alpha = config.getFloatConfig("train.alpha")[0]
+			alpha = config.getFloatConfig("train.opt.alpha")[0]
 			optimizer = torch.optim.RMSprop(model.parameters(), lr=learnRate, alpha=alpha,
 			eps=eps, weight_decay=weightDecay, momentum=momentum)
 		else:
@@ -200,12 +211,19 @@ class FeedForwardNetwork(torch.nn.Module):
     	a Tensor of output data. We can use Modules defined in the constructor as
     	well as arbitrary (differentiable) operations on Tensors.
 		"""
+		#first hidden
 		y = self.linear1(x)
 		y = self.act1(y)
+		
+		#second hidden
 		if  self.linear2 is not None:
 			y = self.linear2(y)
 			y = self.act2(y)
 		y = self.linear3(y)
+		
+		#output activation
+		if self.outAct is not None:
+			y = self.outAct(y)
 		return y
 
 	def prepData(self, dataFile, includeOutFld=True):

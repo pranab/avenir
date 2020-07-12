@@ -55,6 +55,7 @@ class DataExplorer:
 	"""
 	def __init__(self, verbose=True):
 		self.dataSets = dict()
+		self.notes = dict()
 		self.pp = pprint.PrettyPrinter(indent=4)
 		self.verbose = verbose
 
@@ -64,8 +65,12 @@ class DataExplorer:
 		params:
 		filePath : path of file where saved
 		"""
-		self.printBanner("saving data sets")
-		saveObject(self.dataSets, filePath)
+		self.__printBanner("saving workspace")
+		ws = dict()
+		ws["data"] = self.dataSets
+		ws["notes"] = self.notes
+		saveObject(ws, filePath)
+		self.__printDone()
 
 	def restore(self, filePath):
 		"""
@@ -73,8 +78,11 @@ class DataExplorer:
 		params:
 		filePath : path of file from where to store
 		"""
-		self.printBanner("")
-		self.dataSets = restoreObject(filePath)
+		self.__printBanner("restring workspace")
+		ws = restoreObject(filePath)
+		self.dataSets = ws["data"]
+		self.notes = ws["notes"]
+		self.__printDone()
 
 
 	def queryFileData(self, filePath,  *columns):
@@ -84,7 +92,7 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("querying column data type from a data frame")
+		self.__printBanner("querying column data type from a data frame")
 		lcolumns = list(columns)
 		noHeader = type(lcolumns[0]) ==  int
 		if noHeader:			
@@ -100,7 +108,7 @@ class DataExplorer:
 		df : data frame with data
 		columns : indexes followed by column name or column names
 		"""
-		self.printBanner("querying column data type  from a data frame")
+		self.__printBanner("querying column data type  from a data frame")
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
 		dtypes = list()
@@ -121,7 +129,7 @@ class DataExplorer:
 				dtypes.append(self.getDataType(col))
 
 		nt = list(zip(cnames, dtypes))
-		result = self.printResult("columns and data types", nt)
+		result = self.__printResult("columns and data types", nt)
 		return result
 
 	def getDataType(self, col):
@@ -150,9 +158,9 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding numeric columns from a file")
+		self.__printBanner("adding numeric columns from a file")
 		self.addFileData(filePath, True, *columns)
-		self.printDone()
+		self.__printDone()
 
 
 	def addFileBinaryData(self,filePath,  *columns):
@@ -162,9 +170,9 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding binary columns from a file")
+		self.__printBanner("adding binary columns from a file")
 		self.addFileData(filePath, False, *columns)
-		self.printDone()
+		self.__printDone()
 
 	def addFileData(self, filePath,  numeric, *columns):
 		"""
@@ -189,7 +197,7 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding numeric columns from a data frame")
+		self.__printBanner("adding numeric columns from a data frame")
 		self.addDataFrameData(filePath, True, *columns)
 
 
@@ -200,7 +208,7 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding binary columns from a data frame")
+		self.__printBanner("adding binary columns from a data frame")
 		self.addDataFrameData(filePath, False, *columns)
 
 
@@ -246,9 +254,9 @@ class DataExplorer:
 		ds : list with data
 		name : name of data set
 		"""
-		self.printBanner("add numeric data from a list")
+		self.__printBanner("add numeric data from a list")
 		self.addListData(ds, True,  name)
-		self.printDone()
+		self.__printDone()
 
 
 	def addListBinaryData(self, ds, name):
@@ -258,9 +266,9 @@ class DataExplorer:
 		ds : list with data
 		name : name of data set
 		"""
-		self.printBanner("adding binary data from a list")
+		self.__printBanner("adding binary data from a list")
 		self.addListData(ds, False,  name)
-		self.printDone()
+		self.__printDone()
 
 	def addListData(self, ds, numeric,  name):
 		"""
@@ -285,7 +293,7 @@ class DataExplorer:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding categorical columns from a file")
+		self.__printBanner("adding categorical columns from a file")
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
 		if noHeader:			
@@ -307,7 +315,7 @@ class DataExplorer:
 			for c in columns:
 				col = df[c].tolist()
 				self.dataSets[c] = col
-		self.printDone()
+		self.__printDone()
 
 	def addDataFrameCatData(self, df,  *columns):
 		"""
@@ -316,7 +324,7 @@ class DataExplorer:
 		df : data frame with data
 		columns : indexes followed by column names or column names
 		"""
-		self.printBanner("adding categorical columns from a data frame")
+		self.__printBanner("adding categorical columns from a data frame")
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
 		if noHeader:			
@@ -343,11 +351,11 @@ class DataExplorer:
 		ds : list with data
 		name : name of data set
 		"""
-		self.printBanner("adding categorical list data")
+		self.__printBanner("adding categorical list data")
 		assert type(ds) == list, "data not a list"
 		assert isCategorical(ds), "data is not categorical"
 		self.dataSets[name] = ds
-		self.printDone()
+		self.__printDone()
 
 	def remData(self, ds):
 		"""
@@ -355,12 +363,40 @@ class DataExplorer:
 		params:
 		ds : data set name
 		"""
-		self.printBanner("removing data set", ds)
+		self.__printBanner("removing data set", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		self.dataSets.pop(ds)
 		names = self.showNames()
-		self.printDone()
+		self.__printDone()	
 		return names
+	
+	def addNote(self, ds, note):
+		"""
+		get data
+		params:
+		ds : data set name or list or numpy array with data
+		note: note text
+		"""
+		self.__printBanner("adding note")
+		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+		dnotes = self.notes.get(ds, list())
+		dnotes.append(note)
+		self.notes[ds] = dnotes
+		self.__printDone()
+
+	def getNotes(self, ds):
+		"""
+		get data
+		params:
+		ds : data set name or list or numpy array with data
+		"""
+		self.__printBanner("getting notes")
+		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)		
+		dnotes = self.notes.get(ds)
+		if self.verbose and dnotes is not None:
+			for dn in dnotes:
+				print(dn)
+		return dnotes
 
 	def getNumericData(self, ds):
 		"""
@@ -417,13 +453,13 @@ class DataExplorer:
 		"""
 		lists data set names
 		"""
-		self.printBanner("listing data set names")
+		self.__printBanner("listing data set names")
 		names = self.dataSets.keys()
 		if self.verbose:
 			print("data sets")
 			for ds in names:
 				print(ds)
-		self.printDone()
+		self.__printDone()
 		return names
 
 	def plot(self, ds, yscale=None):
@@ -432,7 +468,7 @@ class DataExplorer:
 		params:
 		ds: data set name or list or numpy array
 		"""
-		self.printBanner("plotting data", ds)
+		self.__printBanner("plotting data", ds)
 		data = self.getNumericData(ds)
 		drawLine(data, yscale)
 
@@ -443,7 +479,7 @@ class DataExplorer:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
 		"""
-		self.printBanner("scatter plotting data", ds1, ds2)
+		self.__printBanner("scatter plotting data", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
@@ -458,7 +494,7 @@ class DataExplorer:
 		params:
 		ds: data set name or list or numpy array
 		"""
-		self.printBanner("printing data", ds)
+		self.__printBanner("printing data", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		data =   self.dataSets[ds]
 		print(formatAny(len(data), "size"))
@@ -471,7 +507,7 @@ class DataExplorer:
 		params:
 		ds: data set name or list or numpy array
 		"""
-		self.printBanner("plotting histogram", ds)
+		self.__printBanner("plotting histogram", ds)
 		data = self.getNumericData(ds)
 		plt.hist(data, bins=nbins, cumulative=cumulative, density=density)
 		plt.show()
@@ -482,11 +518,11 @@ class DataExplorer:
 		params:
 		ds: data set name or list or numpy array
 		"""
-		self.printBanner("checking  monotonic change", ds)
+		self.__printBanner("checking  monotonic change", ds)
 		data = self.getNumericData(ds)
 		monoIncreasing = all(list(map(lambda i : data[i] >= data[i-1], range(1, len(data), 1))))
 		monoDecreasing = all(list(map(lambda i : data[i] <= data[i-1], range(1, len(data), 1))))
-		result = self.printResult("monoIncreasing", monoIncreasing, "monoDecreasing", monoDecreasing)
+		result = self.__printResult("monoIncreasing", monoIncreasing, "monoDecreasing", monoDecreasing)
 		return result
 
 	def getFeqDistr(self, ds,  nbins=10):
@@ -496,10 +532,10 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		nbins: num of bins
 		"""
-		self.printBanner("getting histogram", ds)
+		self.__printBanner("getting histogram", ds)
 		data = self.getNumericData(ds)
 		frequency, lowLimit, binsize, extraPoints = sta.relfreq(data, numbins=nbins)
-		result = self.printResult("frequency", frequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
+		result = self.__printResult("frequency", frequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
 		return result
 
 
@@ -510,10 +546,10 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		nbins: num of bins
 		"""
-		self.printBanner("getting cumulative freq distribution", ds)
+		self.__printBanner("getting cumulative freq distribution", ds)
 		data = self.getNumericData(ds)
 		cumFrequency, lowLimit, binsize, extraPoints = sta.cumfreq(data, numbins=nbins)
-		result = self.printResult("cumFrequency", cumFrequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
+		result = self.__printResult("cumFrequency", cumFrequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
 		return result
 
 	def getEntropy(self, ds,  nbins=10):
@@ -523,11 +559,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		nbins: num of bins
 		"""
-		self.printBanner("getting entropy", ds)
+		self.__printBanner("getting entropy", ds)
 		data = self.getNumericData(ds)
 		result = self .getFeqDistr(data, nbins)
 		entropy = sta.entropy(result["frequency"])
-		result = self.printResult("entropy", entropy)
+		result = self.__printResult("entropy", entropy)
 		return result
 
 	def getRelEntropy(self, ds1,  ds2, nbins=10):
@@ -538,7 +574,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		nbins: num of bins
 		"""
-		self.printBanner("getting relative entropy or KL divergence", ds1, ds2)
+		self.__printBanner("getting relative entropy or KL divergence", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		result1 = self .getFeqDistr(data1, nbins)
@@ -546,7 +582,7 @@ class DataExplorer:
 		result2 = self .getFeqDistr(data2, nbins)
 		freq2  = result2["frequency"]
 		entropy = sta.entropy(freq1, freq2)
-		result = self.printResult("relEntropy", entropy)
+		result = self.__printResult("relEntropy", entropy)
 		return result
 
 	def getMutualInfo(self, ds1,  ds2, nbins=10):
@@ -557,7 +593,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		nbins: num of bins
 		"""
-		self.printBanner("getting mutual information", ds1, ds2)
+		self.__printBanner("getting mutual information", ds1, ds2)
 		en1 = self.getEntropy(ds1,nbins)
 		en2 = self.getEntropy(ds2,nbins)
 
@@ -567,7 +603,7 @@ class DataExplorer:
 		en = self.getEntropy(d,nbins)
 
 		mutInfo = en1["entropy"] + en2["entropy"] - en["entropy"]
-		result = self.printResult("mutInfo", mutInfo)
+		result = self.__printResult("mutInfo", mutInfo)
 		return result
 
 	def getPercentile(self, ds, value):
@@ -577,10 +613,10 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		value: the value
 		"""
-		self.printBanner("getting percentile", ds)
+		self.__printBanner("getting percentile", ds)
 		data = self.getNumericData(ds)
 		percent = sta.percentileofscore(data, value)
-		result = self.printResult("value", value, "percentile", percent)
+		result = self.__printResult("value", value, "percentile", percent)
 		return result
 
 	def getValueAtPercentile(self, ds, percent):
@@ -590,11 +626,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		percent: percentile
 		"""
-		self.printBanner("getting value at percentile", ds)
+		self.__printBanner("getting value at percentile", ds)
 		data = self.getNumericData(ds)
 		assert isInRange(percent, 0, 100), "percent should be between 0 and 100"
 		value = sta.scoreatpercentile(data, percent)
-		result = self.printResult("value", value, "percentile", percent)
+		result = self.__printResult("value", value, "percentile", percent)
 		return result
 
 	def getUniqueValueCounts(self, ds, maxCnt=10):
@@ -604,13 +640,13 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		maxCnt; max value count pairs to return
 		"""
-		self.printBanner("getting unique values and counts", ds)
+		self.__printBanner("getting unique values and counts", ds)
 		data = self.getNumericData(ds)
 		values, counts = sta.find_repeats(data)
 		cardinality = len(values)
 		vc = list(zip(values, counts))
 		vc.sort(key = lambda v : v[1], reverse = True)
-		result = self.printResult("cardinality", cardinality,  "vunique alues and repeat counts", vc[:maxCnt])
+		result = self.__printResult("cardinality", cardinality,  "vunique alues and repeat counts", vc[:maxCnt])
 		return result
 
 	def getCatUniqueValueCounts(self, ds, maxCnt=10):
@@ -620,7 +656,7 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		maxCnt; max value count pairs to return
 		"""
-		self.printBanner("getting unique categorical values and counts", ds)
+		self.__printBanner("getting unique categorical values and counts", ds)
 		data = self.getCatData(ds)
 		series = pd.Series(data)
 		uvalues = series.value_counts()
@@ -628,7 +664,7 @@ class DataExplorer:
 		counts = uvalues.tolist()
 		vc = list(zip(values, counts))
 		vc.sort(key = lambda v : v[1], reverse = True)
-		result = self.printResult("cardinality", len(values),  "unique values and repeat counts", vc[:maxCnt])
+		result = self.__printResult("cardinality", len(values),  "unique values and repeat counts", vc[:maxCnt])
 		return result
 
 	def getStats(self, ds, nextreme=5):
@@ -638,7 +674,7 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		nextreme: num of extreme values
 		"""
-		self.printBanner("getting summary statistics", ds)
+		self.__printBanner("getting summary statistics", ds)
 		data = self.getNumericData(ds)
 		stat = dict()
 		stat["length"] = len(data)
@@ -667,7 +703,7 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		order: order of difference
 		"""
-		self.printBanner("getting difference of given order", ds)
+		self.__printBanner("getting difference of given order", ds)
 		data = self.getNumericData(ds)
 		diff = difference(data, order)
 		drawLine(diff)
@@ -680,7 +716,7 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("getting trend")
+		self.__printBanner("getting trend")
 		data = self.getNumericData(ds)
 		sz = len(data)
 		X = list(range(0, sz))
@@ -712,7 +748,7 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("doing de trend", ds)
+		self.__printBanner("doing de trend", ds)
 		data = self.getNumericData(ds)
 		sz = len(data)
 		detrended =  list(map(lambda i : data[i]-trend[i], range(sz)))
@@ -728,7 +764,7 @@ class DataExplorer:
 
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("extracting trend, cycle and residue components of time series", ds)
+		self.__printBanner("extracting trend, cycle and residue components of time series", ds)
 		assert model == "additive" or model == "multiplicative", "model must be additive or multiplicative"
 		data = self.getNumericData(ds)
 		res = seasonal_decompose(data, model=model, freq=freq)
@@ -747,10 +783,10 @@ class DataExplorer:
 		residueStdDev = np.std(resid)
 
 		if summaryOnly:
-			result = self.printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
+			result = self.__printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
 			"residueMean", residueMean, "residueStdDev", residueStdDev)
 		else:
-			result = self.printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
+			result = self.__printResult("trendMean", trendMean, "trendSlope", trendSlope, "seasonalAmp", seasonalAmp,
 			"residueMean", residueMean, "residueStdDev", residueStdDev, "trend", res.trend, "seasonal", res.seasonal,
 			"residual", res.resid)
 		return result
@@ -762,7 +798,7 @@ class DataExplorer:
 
 		dsl: list of data set name or list or numpy array
 		"""
-		self.printBanner("getting outliers using isolation forest", *dsl)
+		self.__printBanner("getting outliers using isolation forest", *dsl)
 		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
@@ -774,7 +810,7 @@ class DataExplorer:
 		doul = dmat[mask, :]
 		mask = ypred != -1
 		dwoul = dmat[mask, :]
-		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
 
 	def getOutliersWithLocalFactor(self, contamination,  *dsl):
@@ -784,7 +820,7 @@ class DataExplorer:
 
 		dsl: list of data set name or list or numpy array
 		"""
-		self.printBanner("getting outliers using local outlier factor", *dsl)
+		self.__printBanner("getting outliers using local outlier factor", *dsl)
 		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
@@ -796,7 +832,7 @@ class DataExplorer:
 		doul = dmat[mask, :]
 		mask = ypred != -1
 		dwoul = dmat[mask, :]
-		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
 
 	def getOutliersWithSupVecMach(self, nu,  *dsl):
@@ -806,7 +842,7 @@ class DataExplorer:
 
 		dsl: list of data set name or list or numpy array
 		"""
-		self.printBanner("getting outliers using one class svm", *dsl)
+		self.__printBanner("getting outliers using one class svm", *dsl)
 		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(dlist)
 		assert nu >= 0 and nu <= 0.5, "error upper bound outside valid range"
@@ -818,7 +854,7 @@ class DataExplorer:
 		doul = dmat[mask, :]
 		mask = ypred != -1
 		dwoul = dmat[mask, :]
-		result = self.printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
 
 	def fitLinearReg(self, ds, doPlot=False):
@@ -828,11 +864,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("fitting linear regression", ds)
+		self.__printBanner("fitting linear regression", ds)
 		data = self.getNumericData(ds)
 		x = np.arange(len(data))
 		slope, intercept, rvalue, pvalue, stderr = sta.linregress(x, data)
-		result = self.printResult("slope", slope, "intercept", intercept, "rvalue", rvalue, "pvalue", pvalue, "stderr", stderr)
+		result = self.__printResult("slope", slope, "intercept", intercept, "rvalue", rvalue, "pvalue", pvalue, "stderr", stderr)
 		if doPlot:
 			self.regFitPlot(x, data, slope, intercept)
 		return result
@@ -844,10 +880,10 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("fitting siegel robust linear regression  based on median", ds)
+		self.__printBanner("fitting siegel robust linear regression  based on median", ds)
 		data = self.getNumericData(ds)
 		slope , intercept = sta.siegelslopes(data)
-		result = self.printResult("slope", slope, "intercept", intercept)
+		result = self.__printResult("slope", slope, "intercept", intercept)
 		if doPlot:
 			x = np.arange(len(data))
 			self.regFitPlot(x, data, slope, intercept)
@@ -860,10 +896,10 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
-		self.printBanner("fitting thiel sen  robust linear regression based on median", ds)
+		self.__printBanner("fitting thiel sen  robust linear regression based on median", ds)
 		data = self.getNumericData(ds)
 		slope, intercept, loSlope, upSlope = sta.theilslopes(data)
-		result = self.printResult("slope", slope, "intercept", intercept, "lower slope", loSlope, "upper slope", upSlope)
+		result = self.__printResult("slope", slope, "intercept", intercept, "lower slope", loSlope, "upper slope", upSlope)
 		if doPlot:
 			x = np.arange(len(data))
 			self.regFitPlot(x, data, slope, intercept)
@@ -875,7 +911,7 @@ class DataExplorer:
 		params:
 
 		"""
-		self.printBanner("plotting linear rgeression fit line")
+		self.__printBanner("plotting linear rgeression fit line")
 		fig = plt.figure()
 		ax = fig.add_subplot(111)
 		ax.plot(x, y, "b.")
@@ -888,7 +924,7 @@ class DataExplorer:
 		params:
 
 		"""
-		self.printBanner("getting covariance", *dsl)
+		self.__printBanner("getting covariance", *dsl)
 		data = list(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(data)
 		data = np.vstack(data)
@@ -904,13 +940,13 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 
 		"""
-		self.printBanner("getting pearson correlation coefficient ", ds1, ds2)
+		self.__printBanner("getting pearson correlation coefficient ", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.pearsonr(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 
@@ -922,13 +958,13 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("getting spearman correlation coefficient",ds1, ds2)
+		self.__printBanner("getting spearman correlation coefficient",ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.spearmanr(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 	def getKendalRankCorr(self, ds1, ds2, sigLev=.05):
@@ -939,13 +975,13 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("getting kendall’s tau, a correlation measure for ordinal data", ds1, ds2)
+		self.__printBanner("getting kendall’s tau, a correlation measure for ordinal data", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.kendalltau(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 	def getPointBiserialCorr(self, ds1, ds2, sigLev=.05):
@@ -956,14 +992,14 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("getting point biserial correlation  between binary and numeric", ds1, ds2)
+		self.__printBanner("getting point biserial correlation  between binary and numeric", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		assert isBinary(data1), "first data set is not binary"
 		self.ensureSameSize([data1, data2])
 		stat, pvalue = sta.pointbiserialr(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 	def getConTab(self, ds1, ds2):
@@ -973,7 +1009,7 @@ class DataExplorer:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
 		"""
-		self.printBanner("getting contingency table for categorical data", ds1, ds2)
+		self.__printBanner("getting contingency table for categorical data", ds1, ds2)
 		data1 = self.getCatData(ds1)
 		data2 = self.getCatData(ds2)
 		self.ensureSameSize([data1, data2])
@@ -991,11 +1027,11 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("getting chi square correlation for  two categorical", ds1, ds2)
+		self.__printBanner("getting chi square correlation for  two categorical", ds1, ds2)
 		ctab = self.getConTab(ds1, ds2)
 		stat, pvalue, dof, expctd = sta.chi2_contingency(ctab)
-		result = self.printResult("stat", stat, "pvalue", pvalue, "dof", dof, "expected", expctd)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue, "dof", dof, "expected", expctd)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 	def getAnovaCorr(self, ds1, ds2, grByCol, sigLev=.05):
@@ -1007,15 +1043,15 @@ class DataExplorer:
 
 		sigLev: statistical significance level
 		"""
-		self.printBanner("anova correlation for numerical categorical", ds1, ds2)
+		self.__printBanner("anova correlation for numerical categorical", ds1, ds2)
 		df = self.loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else self.loadCatFloatDataFrame(ds2, ds1)
 		grByCol = 0
 		dCol = 1
 		grouped = df.groupby([grByCol])
 		dlist =  list(map(lambda v : v[1].loc[:, dCol].values, grouped))
 		stat, pvalue = sta.f_oneway(*dlist)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably uncorrelated", "probably correlated", sigLev)
 		return result
 
 
@@ -1027,7 +1063,7 @@ class DataExplorer:
 		lags: num of lags
 		alpha: confidence level
 		"""
-		self.printBanner("plotting auto correlation", ds)
+		self.__printBanner("plotting auto correlation", ds)
 		data = self.getNumericData(ds)
 		ddata = difference(data, diffOrder) if diffOrder > 0 else data
 		tsaplots.plot_acf(ddata, lags = lags, alpha = alpha)
@@ -1041,10 +1077,10 @@ class DataExplorer:
 		lags: num of lags
 		alpha: confidence level
 		"""
-		self.printBanner("getting auto correlation", ds)
+		self.__printBanner("getting auto correlation", ds)
 		data = self.getNumericData(ds)
 		autoCorr, confIntv  = stt.acf(data, nlags=lags, fft=False, alpha=alpha)
-		result = self.printResult("autoCorr", autoCorr, "confIntv", confIntv)
+		result = self.__printResult("autoCorr", autoCorr, "confIntv", confIntv)
 		return result
 
 
@@ -1056,7 +1092,7 @@ class DataExplorer:
 		lags: num of lags
 		alpha: confidence level
 		"""
-		self.printBanner("plotting partial auto correlation", ds)
+		self.__printBanner("plotting partial auto correlation", ds)
 		data = self.getNumericData(ds)
 		tsaplots.plot_pacf(data, lags = lags, alpha = alpha)
 		plt.show()
@@ -1069,10 +1105,10 @@ class DataExplorer:
 		lags: num of lags
 		alpha: confidence level
 		"""
-		self.printBanner("getting partial auto correlation", ds)
+		self.__printBanner("getting partial auto correlation", ds)
 		data = self.getNumericData(ds)
 		partAutoCorr, confIntv  = stt.pacf(data, nlags=lags, alpha=alpha)
-		result = self.printResult("partAutoCorr", partAutoCorr, "confIntv", confIntv)
+		result = self.__printResult("partAutoCorr", partAutoCorr, "confIntv", confIntv)
 		return result
 
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
@@ -1084,7 +1120,7 @@ class DataExplorer:
 		normed: If True, input vectors are normalised to unit 
 		lags: num of lags
 		"""  
-		self.printBanner("plotting cross correlation between two numeric", ds1, ds2)
+		self.__printBanner("plotting cross correlation between two numeric", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
@@ -1098,13 +1134,26 @@ class DataExplorer:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
 		"""
-		self.printBanner("getting cross correlation", ds1, ds2)
+		self.__printBanner("getting cross correlation", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		self.ensureSameSize([data1, data2])
 		crossCorr = stt.ccf(data1, data2)
-		result = self.printResult("crossCorr", crossCorr)
+		result = self.__printResult("crossCorr", crossCorr)
 		return result
+
+	def getFourierTransform(self, ds):
+		"""
+		gets auts correlation
+		params:
+		ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting fourier transform", ds)
+		data = self.getNumericData(ds)
+		ft = np.fft.rfft(data)
+		result = self.__printResult("fourierTransform", ft)
+		return result
+
 
 	def testStationaryAdf(self, ds, regression, autolag, sigLev=.05):
 		"""
@@ -1115,7 +1164,7 @@ class DataExplorer:
 		autolag: method to use when automatically determining the lag
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing ADF stationary test", ds)
+		self.__printBanner("doing ADF stationary test", ds)
 		relist = ["c","ct","ctt","nc"]
 		assert regression in relist, "invalid regression value"
 		alList = ["AIC", "BIC", "t-stat", None]
@@ -1123,9 +1172,9 @@ class DataExplorer:
 
 		data = self.getNumericData(ds)
 		re = stt.adfuller(data, regression=regression, autolag=autolag)
-		result = self.printResult("stat", re[0], "pvalue", re[1] , "num lags", re[2] , "num observation for regression", re[3],
+		result = self.__printResult("stat", re[0], "pvalue", re[1] , "num lags", re[2] , "num observation for regression", re[3],
 		"critial values", re[4])
-		self.printStat(re[0], re[1], "probably not stationary", "probably stationary", sigLev)
+		self.__printStat(re[0], re[1], "probably not stationary", "probably stationary", sigLev)
 		return result
 
 	def testStationaryKpss(self, ds, regression, nlags, sigLev=.05):
@@ -1137,7 +1186,7 @@ class DataExplorer:
 
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing KPSS stationary test", ds)
+		self.__printBanner("doing KPSS stationary test", ds)
 		relist = ["c","ct"]
 		assert regression in relist, "invalid regression value"
 		nlList =[None, "auto", "legacy"]
@@ -1146,8 +1195,8 @@ class DataExplorer:
 
 		data = self.getNumericData(ds)
 		stat, pvalue, nLags, criticalValues = stt.kpss(data, regression=regression)
-		result = self.printResult("stat", stat, "pvalue", pvalue, "num lags", nLags, "critial values", criticalValues)
-		self.printStat(stat, pvalue, "probably stationary", "probably not stationary", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue, "num lags", nLags, "critial values", criticalValues)
+		self.__printStat(stat, pvalue, "probably stationary", "probably not stationary", sigLev)
 		return result
 
 	def testNormalJarqBera(self, ds, sigLev=.05):
@@ -1157,11 +1206,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing ajrque bera normalcy test", ds)
+		self.__printBanner("doing ajrque bera normalcy test", ds)
 		data = self.getNumericData(ds)
 		jb, jbpv, skew, kurtosis =  sstt.jarque_bera(data)
-		result = self.printResult("stat", jb, "pvalue", jbpv, "skew", skew, "kurtosis", kurtosis)
-		self.printStat(jb, jbpv, "probably gaussian", "probably not gaussian", sigLev)
+		result = self.__printResult("stat", jb, "pvalue", jbpv, "skew", skew, "kurtosis", kurtosis)
+		self.__printStat(jb, jbpv, "probably gaussian", "probably not gaussian", sigLev)
 		return result
 
 
@@ -1172,11 +1221,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing shapiro wilks normalcy test", ds)
+		self.__printBanner("doing shapiro wilks normalcy test", ds)
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.shapiro(data)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
 		return result
 
 	def testNormalDagast(self, ds, sigLev=.05):
@@ -1186,11 +1235,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing D’Agostino’s K square  normalcy test", ds)
+		self.__printBanner("doing D’Agostino’s K square  normalcy test", ds)
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.normaltest(data)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably gaussian", "probably not gaussian", sigLev)
 		return result
 
 	def testDistrAnderson(self, ds, dist, sigLev=.05):
@@ -1201,7 +1250,7 @@ class DataExplorer:
 		dist: type of distribution
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Anderson test for for various distributions", ds)
+		self.__printBanner("doing Anderson test for for various distributions", ds)
 		diList = ["norm", "expon", "logistic", "gumbel", "gumbel_l", "gumbel_r", "extreme1"]
 		assert dist in diList, "invalid distribution"
 
@@ -1216,7 +1265,7 @@ class DataExplorer:
 					msg = "probably {} at the {:.3f} siginificance level".format(dist, sl)
 				else:
 					msg = "probably not {} at the {:.3f} siginificance level".format(dist, sl)
-		result = self.printResult("stat", re.statistic, "test", msg)
+		result = self.__printResult("stat", re.statistic, "test", msg)
 		print(msg)
 		return result
 
@@ -1227,11 +1276,11 @@ class DataExplorer:
 		ds: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("testing skew wrt normal distr", ds)
+		self.__printBanner("testing skew wrt normal distr", ds)
 		data = self.getNumericData(ds)
 		stat, pvalue = sta.skewtest(data)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same skew as normal distribution", "probably not same skew as normal distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same skew as normal distribution", "probably not same skew as normal distribution", sigLev)
 		return result
 
 	def testTwoSampleStudent(self, ds1, ds2, sigLev=.05):
@@ -1242,12 +1291,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing student t 2 sample test", ds1, ds2)
+		self.__printBanner("doing student t 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ttest_ind(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 		return result
 
 	def testTwoSampleKs(self, ds1, ds2, sigLev=.05):
@@ -1258,12 +1307,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Kolmogorov Sminov 2 sample test", ds1, ds2)
+		self.__printBanner("doing Kolmogorov Sminov 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ks_2samp(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 
 	def testTwoSampleMw(self, ds1, ds2, sigLev=.05):
@@ -1274,12 +1323,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Mann-Whitney  2 sample test", ds1, ds2)
+		self.__printBanner("doing Mann-Whitney  2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.mannwhitneyu(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 	def testTwoSampleWilcox(self, ds1, ds2, sigLev=.05):
 		"""
@@ -1289,12 +1338,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Wilcoxon Signed-Rank 2 sample test", ds1, ds2)
+		self.__printBanner("doing Wilcoxon Signed-Rank 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.wilcoxon(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 
 	def testTwoSampleKw(self, ds1, ds2, sigLev=.05):
@@ -1305,12 +1354,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Kruskal-Wallis 2 sample test", ds1, ds2)
+		self.__printBanner("doing Kruskal-Wallis 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.kruskal(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably snot ame distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably snot ame distribution", sigLev)
 
 	def testTwoSampleFriedman(self, ds1, ds2, ds3, sigLev=.05):
 		"""
@@ -1320,13 +1369,13 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Friedman 2 sample  test", ds1, ds2)
+		self.__printBanner("doing Friedman 2 sample  test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		data3 = self.getNumericData(ds3)
 		stat, pvalue = sta.friedmanchisquare(data1, data2, data3)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 	def testTwoSampleEs(self, ds1, ds2, sigLev=.05):
 		"""
@@ -1336,12 +1385,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Epps Singleton 2 sample  test", ds1, ds2)
+		self.__printBanner("doing Epps Singleton 2 sample  test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.epps_singleton_2samp(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same distribution", "probably not same distribution", sigLev)
 
 	def testTwoSampleAnderson(self, ds1, ds2, sigLev=.05):
 		"""
@@ -1351,7 +1400,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Anderson 2 sample test", ds1, ds2)
+		self.__printBanner("doing Anderson 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		dseq = (data1, data2)
@@ -1369,7 +1418,7 @@ class DataExplorer:
 		else:
 			cv = None
 
-		result = self.printResult("stat", stat, "critValues", critValues, "critValue", cv, "significanceLevel", sLev)
+		result = self.__printResult("stat", stat, "critValues", critValues, "critValue", cv, "significanceLevel", sLev)
 		print("stat:   {:.3f}".format(stat))
 		if cv is None:
 			msg = "critical values value not found for provided siginificance level"
@@ -1390,12 +1439,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
+		self.__printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.ansari(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
 		return result
 
 	def testTwoSampleScaleMood(self, ds1, ds2, sigLev=.05):
@@ -1406,12 +1455,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Mood 2 sample scale test", ds1, ds2)
+		self.__printBanner("doing Mood 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.mood(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same scale", "probably not same scale", sigLev)
 		return result
 
 	def testTwoSampleVarBartlet(self, ds1, ds2, sigLev=.05):
@@ -1422,12 +1471,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
+		self.__printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.bartlett(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
 		return result
 
 	def testTwoSampleVarLevene(self, ds1, ds2, sigLev=.05):
@@ -1438,12 +1487,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Levene 2 sample variance test", ds1, ds2)
+		self.__printBanner("doing Levene 2 sample variance test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.levene(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
 		return result
 
 	def testTwoSampleVarFk(self, ds1, ds2, sigLev=.05):
@@ -1454,12 +1503,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Fligner-Killeen 2 sample variance test", ds1, ds2)
+		self.__printBanner("doing Fligner-Killeen 2 sample variance test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue = sta.fligner(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue)
-		self.printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue)
+		self.__printStat(stat, pvalue, "probably same variance", "probably not same variance", sigLev)
 		return result
 
 	def testTwoSampleMedMood(self, ds1, ds2, sigLev=.05):
@@ -1470,12 +1519,12 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Mood 2 sample median test", ds1, ds2)
+		self.__printBanner("doing Mood 2 sample median test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		stat, pvalue, median, ctable = sta.median_test(data1, data2)
-		result = self.printResult("stat", stat, "pvalue", pvalue, "median", median, "contigencyTable", ctable)
-		self.printStat(stat, pvalue, "probably same median", "probably not same median", sigLev)
+		result = self.__printResult("stat", stat, "pvalue", pvalue, "median", median, "contigencyTable", ctable)
+		self.__printStat(stat, pvalue, "probably same median", "probably not same median", sigLev)
 		return result
 
 	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
@@ -1486,7 +1535,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Zhang-C 2 sample test", ds1, ds2)
+		self.__printBanner("doing Zhang-C 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
@@ -1517,7 +1566,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Zhang-A 2 sample test", ds1, ds2)
+		self.__printBanner("doing Zhang-A 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
@@ -1550,7 +1599,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing Zhang-K 2 sample test", ds1, ds2)
+		self.__printBanner("doing Zhang-K 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		l1 = len(data1)
@@ -1588,7 +1637,7 @@ class DataExplorer:
 		ds2: data set name or list or numpy array
 		sigLev: statistical significance level
 		"""
-		self.printBanner("doing 2 sample CVM test", ds1, ds2)
+		self.__printBanner("doing 2 sample CVM test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
 		data2 = self.getNumericData(ds2)
 		data = np.concatenate((data1,data2))
@@ -1611,7 +1660,7 @@ class DataExplorer:
 
 		u = s1 + s2
 		stat = u / (n * m * l) - (4 * m * n - 1) / (6 * l)
-		result = self.printResult("stat", stat)
+		result = self.__printResult("stat", stat)
 		return result
 
 	def ensureSameSize(self, dlist):
@@ -1628,7 +1677,7 @@ class DataExplorer:
 			else:
 				assert cle == le, "all data sets need to be of same size"
 
-	def printBanner(self, msg, *dsl):
+	def __printBanner(self, msg, *dsl):
 		"""
 		print banner for any function
 		params:
@@ -1642,14 +1691,14 @@ class DataExplorer:
 			print("\n== " + msg + " ==")
 
 
-	def printDone(self):
+	def __printDone(self):
 		"""
 		print banner for any function
 		"""
 		if self.verbose:
 			print("done")
 
-	def printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
+	def __printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
 		generic stat and pvalue output
 		params:
@@ -1661,7 +1710,7 @@ class DataExplorer:
 			print("significance level: {:.3f}".format(sigLev))
 			print(nhMsg if pvalue > sigLev else ahMsg)
 
-	def printResult(self,  *values):
+	def __printResult(self,  *values):
 		"""
 		print results
 		params:
