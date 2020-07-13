@@ -48,6 +48,23 @@ Each data set (array like) is given a name while loading
 Perform various data exploration operation refering to the data sets by name
 Save and restore workspace if needed
 """
+class DataSetMetaData:
+	"""
+	data set meta data
+	"""
+	dtypeNum = 1
+	dtypeCat = 2
+	dtypeBin = 3
+	def __init__(self, dtype):
+		self.notes = list()
+		self.dtype = dtype
+
+	def addNote(self, note):
+		"""
+		add note
+		"""
+		self.notes.append(note)
+
 
 class DataExplorer:
 	"""
@@ -55,7 +72,7 @@ class DataExplorer:
 	"""
 	def __init__(self, verbose=True):
 		self.dataSets = dict()
-		self.notes = dict()
+		self.metaData = dict()
 		self.pp = pprint.PrettyPrinter(indent=4)
 		self.verbose = verbose
 
@@ -68,7 +85,7 @@ class DataExplorer:
 		self.__printBanner("saving workspace")
 		ws = dict()
 		ws["data"] = self.dataSets
-		ws["notes"] = self.notes
+		ws["metaData"] = self.metaData
 		saveObject(ws, filePath)
 		self.__printDone()
 
@@ -81,7 +98,7 @@ class DataExplorer:
 		self.__printBanner("restring workspace")
 		ws = restoreObject(filePath)
 		self.dataSets = ws["data"]
-		self.notes = ws["notes"]
+		self.metaData = ws["metaData"]
 		self.__printDone()
 
 
@@ -236,7 +253,8 @@ class DataExplorer:
 					assert isBinary(col), "data is not binary"
 				col = col.to_numpy()
 				cn = columns[i + nCols]
-				self.dataSets[cn] = col
+				dtype = DataSetMetaData.dtypeNum if numeric else DataSetMetaData.dtypeBin
+				self.__addDataSet(cn, col, dtype)
 		else:
 			for c in columns:
 				col = df[c]
@@ -245,7 +263,19 @@ class DataExplorer:
 				else:
 					assert isBinary(col), "data is not binary"
 				col = col.to_numpy()
-				self.dataSets[c] = col
+				dtype = DataSetMetaData.dtypeNum if numeric else DataSetMetaData.dtypeBin
+				self.__addDataSet(c, col, dtype)
+
+	def __addDataSet(self, dsn, data, dtype):
+		"""
+		add dada set
+		params:
+		dsn: data set name
+		data : numpy array data 
+		"""
+		self.dataSets[dsn] = data
+		self.metaData[dsn] = DataSetMetaData(dtype)
+
 
 	def addListNumericData(self, ds,  name):
 		"""
@@ -308,13 +338,12 @@ class DataExplorer:
 				assert isCategorical(col), "data is not categorical"
 				col = col.tolist()
 				cn = columns[i + nCols]
-				#print(ci,cn)
-				self.dataSets[cn] = col
+				self.__addDataSet(cn, col, DataSetMetaData.dtypeCat)
 		else:
 			df = pd.read_csv(filePath,  header=0) 
 			for c in columns:
 				col = df[c].tolist()
-				self.dataSets[c] = col
+				self.__addDataSet(c, col, DataSetMetaData.dtypeCat)
 		self.__printDone()
 
 	def addDataFrameCatData(self, df,  *columns):
@@ -338,11 +367,11 @@ class DataExplorer:
 				assert isCategorical(col), "data is not categorical"
 				col = col.tolist()
 				cn = columns[i + nCols]
-				self.dataSets[cn] = col
+				self.__addDataSet(cn, col, DataSetMetaData.dtypeCat)
 		else:
 			for c in columns:
 				col = df[c].tolist()
-				self.dataSets[c] = col
+				self.__addDataSet(c, col, DataSetMetaData.dtypeCat)
 
 	def addCatListData(self, ds, name):
 		"""
@@ -366,6 +395,7 @@ class DataExplorer:
 		self.__printBanner("removing data set", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		self.dataSets.pop(ds)
+		self.metaData.pop(ds)
 		names = self.showNames()
 		self.__printDone()	
 		return names
@@ -379,9 +409,8 @@ class DataExplorer:
 		"""
 		self.__printBanner("adding note")
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
-		dnotes = self.notes.get(ds, list())
-		dnotes.append(note)
-		self.notes[ds] = dnotes
+		mdata = self.metaData[ds]
+		mdata.addNote(note)
 		self.__printDone()
 
 	def getNotes(self, ds):
@@ -392,8 +421,9 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting notes")
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)		
-		dnotes = self.notes.get(ds)
-		if self.verbose and dnotes is not None:
+		mdata = self.metaData[ds]
+		dnotes = mdata.notes
+		if self.verbose:
 			for dn in dnotes:
 				print(dn)
 		return dnotes
@@ -406,6 +436,7 @@ class DataExplorer:
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			assert self.metaData[ds].dtype == DataSetMetaData.dtypeNum, "data set {} is expected to be numerical type for this operation".format(ds)
 			data =   self.dataSets[ds]
 		elif type(ds) == list:
 			assert isNumeric(ds), "data is not numeric"
@@ -425,6 +456,7 @@ class DataExplorer:
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			assert self.metaData[ds].dtype == DataSetMetaData.dtypeCat, "data set {} is expected to be categorical type for this operation".format(ds)
 			data =   self.dataSets[ds]
 		elif type(ds) == list:
 			assert isCategorical(ds), "data is not categorical"
@@ -497,9 +529,10 @@ class DataExplorer:
 		self.__printBanner("printing data", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
 		data =   self.dataSets[ds]
-		print(formatAny(len(data), "size"))
-		print("showing first 50 elements" )
-		print(data[:50])
+		if self.verbore:
+			print(formatAny(len(data), "size"))
+			print("showing first 50 elements" )
+			print(data[:50])
 
 	def plotHist(self, ds, cumulative, density, nbins=None):
 		"""
@@ -905,7 +938,7 @@ class DataExplorer:
 			self.regFitPlot(x, data, slope, intercept)
 		return result
 
-	def regFitPlot(self, x, y, slope, intercept):
+	def plotRegFit(self, x, y, slope, intercept):
 		"""
 		plot linear rgeression fit line
 		params:
@@ -1004,7 +1037,7 @@ class DataExplorer:
 
 	def getConTab(self, ds1, ds2):
 		"""
-		get contingency table
+		get contingency table for categorical data pair
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
@@ -1021,7 +1054,7 @@ class DataExplorer:
 
 	def getChiSqCorr(self, ds1, ds2, sigLev=.05):
 		"""
-		chi square correlation for  categorical	
+		chi square correlation for  categorical	data pair
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
@@ -1055,9 +1088,9 @@ class DataExplorer:
 		return result
 
 
-	def plotAcf(self, ds, lags, alpha, diffOrder=0):
+	def plotAutoCorr(self, ds, lags, alpha, diffOrder=0):
 		"""
-		auto correlation
+		plots auto correlation
 		params:
 		ds: data set name or list or numpy array
 		lags: num of lags
@@ -1113,7 +1146,7 @@ class DataExplorer:
 
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
 		"""
-		cross correlation 
+		plots cross correlation 
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
@@ -1144,7 +1177,7 @@ class DataExplorer:
 
 	def getFourierTransform(self, ds):
 		"""
-		gets auts correlation
+		gets fast fourier transform
 		params:
 		ds: data set name or list or numpy array
 		"""
