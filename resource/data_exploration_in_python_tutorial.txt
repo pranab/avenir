@@ -39,6 +39,27 @@ done
     'skew': -0.009681701835865877,
     'std': 2569.1597609989144}
 
+Check if data is Gaussian
+=========================
+We will use shapiro wilks test (there are few others available)for the same data set loded 
+in the previous example.. 
+
+
+code:
+exp.testNormalShapWilk("demand")
+
+output:
+== doing shapiro wilks normalcy test for data sets demand ==
+result details:
+{'pvalue': 0.02554553933441639, 'stat': 0.9965143203735352}
+
+test result:
+stat:   0.997
+pvalue: 0.026
+significance level: 0.050
+probably not gaussian
+
+
 Find outliers in data
 =====================
 We will find outliers in data if any using isolation forest algorithm
@@ -185,6 +206,35 @@ probably not stationary
 
 
 Please feel free play around and learn about your data
+
+Find out if 2 samples are from the same distribution
+====================================================
+This something you may want to know if your deployed machine learning model needs retraining
+because the data has drifted. We are using Kolmogorov Sminov test. There are few other options 
+available in the API
+
+code:
+exp.addFileNumericData("hsale.txt", 0, "hsale")
+exp.addFileNumericData("sale.txt", 0, "sale")
+exp.testTwoSampleKs("hsale", "sale")
+
+output:
+== adding numeric columns from a file ==
+done
+
+== adding numeric columns from a file ==
+done
+
+== doing Kolmogorov Sminov 2 sample test for data sets hsale sale ==
+result details:
+{'pvalue': 0.0, 'stat': 0.836}
+
+test result:
+stat:   0.836
+pvalue: 0.000
+significance level: 0.050
+probably not same distribution
+
 
 
 

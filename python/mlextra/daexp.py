@@ -95,7 +95,7 @@ class DataExplorer:
 		params:
 		filePath : path of file from where to store
 		"""
-		self.__printBanner("restring workspace")
+		self.__printBanner("restoring workspace")
 		ws = restoreObject(filePath)
 		self.dataSets = ws["data"]
 		self.metaData = ws["metaData"]
@@ -104,7 +104,7 @@ class DataExplorer:
 
 	def queryFileData(self, filePath,  *columns):
 		"""
-		query column data type  from a data frame
+		query column data type  from a data file
 		params:
 		filePath : path of file with data
 		columns : indexes followed by column names or column names
@@ -837,7 +837,7 @@ class DataExplorer:
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
 		dmat = np.column_stack(dlist)
 
-		isf = IsolationForest(contamination=contamination)
+		isf = IsolationForest(contamination=contamination, behaviour="new")
 		ypred = isf.fit_predict(dmat)
 		mask = ypred == -1
 		doul = dmat[mask, :]
@@ -1562,7 +1562,7 @@ class DataExplorer:
 
 	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
 		"""
-		Zhang C 2 sample statistic	
+		Zhang-C 2 sample statistic	
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
@@ -1593,7 +1593,7 @@ class DataExplorer:
 
 	def testTwoSampleZa(self, ds1, ds2, sigLev=.05):
 		"""
-		Zhang A 2 sample statistic	
+		Zhang-A 2 sample statistic	
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
@@ -1626,7 +1626,7 @@ class DataExplorer:
 
 	def testTwoSampleZk(self, ds1, ds2, sigLev=.05):
 		"""
-		Zhang K 2 sample statistic	
+		Zhang-K 2 sample statistic	
 		params:
 		ds1: data set name or list or numpy array
 		ds2: data set name or list or numpy array
