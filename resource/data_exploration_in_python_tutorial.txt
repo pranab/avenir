@@ -1,0 +1,193 @@
+This tutorial is for data exploration using python. There are about 70 functions available
+in daexp.py. In this tutorial I will provide bunch of expamples showing how to use the API
+
+
+Setup
+=====
+Make sure you have ../lib   ../mlextra and directories with all the python files wrt 
+where your script is is. You need to have all the python libraries mentioned in the blog installed.
+
+
+Basic summary statistics
+========================
+Very basic stats
+
+code:
+sys.path.append(os.path.abspath("../mlextra")) 
+from daexp import * 
+
+exp = DataExplorer() 
+exp.addFileNumericData("bord.txt", 0, 1, "pdemand", "demand") 
+exp.getStats("pdemand") 
+
+output: 
+== adding numeric columns from a file ==
+done
+
+== getting summary statistics for data sets pdemand ==
+{   'kurtosis': -0.12152386739702337,
+    'length': 1000,
+    'mad': 2575.2762,
+    'max': 18912,
+    'mean': 10920.908,
+    'median': 11011.5,
+    'min': 3521,
+    'mode': 10350,
+    'mode count': 3,
+    'n largest': [18912, 18894, 17977, 17811, 17805],
+    'n smallest': [3521, 3802, 4185, 4473, 4536],
+    'skew': -0.009681701835865877,
+    'std': 2569.1597609989144}
+
+Find outliers in data
+=====================
+We will find outliers in data if any using isolation forest algorithm
+
+code:
+exp.addFileNumericData("sale1.txt", 0, "sale")
+exp.getOutliersWithIsoForest(.002, "sale")
+
+output:
+== adding numeric columns from a file ==
+done
+
+== getting outliers using isolation forest for data sets sale ==
+result details:
+{   'dataWithoutOutliers': array([[1006],
+       [1076],
+       [1107],
+       [1066],
+       [ 954],
+	   .......
+       [1044],
+       [ 939],
+       [ 876]]),
+    'numOutliers': 2,
+    'outliers': array([[5000],
+       [ 832]])}
+       
+We found 2 outliers	   
+
+
+Find auto correlation peaks
+===========================
+We are going to find aut correlation secondary peak, that will tell what the seasonal cycle is if any
+
+code:
+exp.addFileNumericData("sale.txt", 0, "sale") 
+exp.getAutoCorr("sale", 20)
+
+output:
+== adding numeric columns from a file ==
+done
+
+== getting auto correlation for data sets sale ==
+result details:
+{   'autoCorr': array([ 1.        ,  0.5738174 , -0.20129608, -0.82667856, -0.82392299,
+       -0.20331679,  0.56991343,  0.91427488,  0.5679168 , -0.20108015,
+       -0.81710428, -0.8175842 , -0.20391004,  0.56864915,  0.90936982,
+        0.56528676, -0.20657182, -0.81111562, -0.81204275, -0.1970099 ,
+        0.56175539]),
+    'confIntv': array([[ 1.        ,  1.        ],
+       [ 0.5118379 ,  0.6357969 ],
+       [-0.28111578, -0.12147637],
+       [-0.90842511, -0.74493201],
+       [-0.93316119, -0.71468479],
+       [-0.33426918, -0.07236441],
+       [ 0.43775398,  0.70207288],
+       [ 0.77298956,  1.0555602 ],
+       [ 0.40548625,  0.73034734],
+       [-0.37096731, -0.03119298],
+       [-0.98790327, -0.64630529],
+       [-1.00279183, -0.63237657],
+       [-0.40249873, -0.00532136],
+       [ 0.36925779,  0.76804052],
+       [ 0.70384298,  1.11489665],
+       [ 0.34484471,  0.7857288 ],
+       [-0.43251377,  0.01937013],
+       [-1.03778192, -0.58444933],
+       [-1.04959751, -0.57448798],
+       [-0.44499878,  0.05097898],
+       [ 0.313166  ,  0.81034477]])}
+
+Saving some note on finding and save workspace
+==============================================
+In the previous test we found a auto correlation peak at 7. We are going to save this in a 
+not and save the workspace
+
+code:
+exp.addNote("sale", "auto correlation peak found at 7")
+exp.save("./model/daexp/exp.mod")
+
+output:
+== adding note ==
+done
+
+== saving workspace ==
+done 
+
+Restore workspace and  extract time series components
+=====================================================
+We are going to restore the work space, look at our notes and then extract time series 
+components
+
+code:
+exp.restore("./model/daexp/exp.mod")
+exp.getNotes("sale")
+exp.getTimeSeriesComponents("sale","additive", 7, True, False)
+
+output:
+== restring workspace ==
+done
+
+== getting notes ==
+auto correlation peak found at 7
+
+== extracting trend, cycle and residue components of time series for data sets sale ==
+result details:
+{   'residueMean': 0.022420235699977295,
+    'residueStdDev': 19.14825253159541,
+    'seasonalAmp': 98.22786720321932,
+    'trendMean': 1004.9323081345215,
+    'trendSlope': -0.0048913825348870996}
+
+Notice we didn't  call any add data API. We are using the datasets saved in the previous session
+and restored in the current session. But you could add additional data sets
+
+Find out if data is stationary
+==============================
+We are using the same restored workspace. The data has trend and seasonality and hemce not
+stationary. The following test confirms that because pvalue is less that sigificant level
+rejecting null hypothesis of being stationary
+
+code:
+exp.testStationaryKpss("sale", "c", None)
+
+output:
+== doing KPSS stationary test for data sets sale ==
+/usr/local/lib/python3.7/site-packages/statsmodels/tsa/stattools.py:1685: FutureWarning: 
+The behavior of using lags=None will change in the next release. Currently lags=None is the 
+same as lags='legacy', and so a sample-size lag length is used. After the next release, 
+the default will change to be the same as lags='auto' which uses an automatic lag length 
+selection method. To silence this warning, either use 'auto' or 'legacy'
+  warn(msg, FutureWarning)
+result details:
+{   'critial values': {'1%': 0.739, '10%': 0.347, '2.5%': 0.574, '5%': 0.463},
+    'num lags': 22,
+    'pvalue': 0.04146105558567144,
+    'stat': 0.5009129131996188}
+
+test result:
+stat:   0.501
+pvalue: 0.041
+significance level: 0.050
+probably not stationary
+
+
+Please feel free play around and learn about your data
+
+
+
+
+
+
