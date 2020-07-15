@@ -5,7 +5,7 @@ in daexp.py. In this tutorial I will provide bunch of expamples showing how to u
 Setup
 =====
 Make sure you have ../lib   ../mlextra and directories with all the python files wrt 
-where your script is is. You need to have all the python libraries mentioned in the blog installed.
+where your script is. You need to have all the python libraries mentioned in the blog installed.
 
 
 Basic summary statistics
@@ -205,8 +205,6 @@ significance level: 0.050
 probably not stationary
 
 
-Please feel free play around and learn about your data
-
 Find out if 2 samples are from the same distribution
 ====================================================
 This something you may want to know if your deployed machine learning model needs retraining
@@ -234,6 +232,9 @@ stat:   0.836
 pvalue: 0.000
 significance level: 0.050
 probably not same distribution
+
+I have provided few sample use cases for the API. Create your own data exploration story and feel 
+free play around and learn about your data
 
 
 

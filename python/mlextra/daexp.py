@@ -327,23 +327,11 @@ class DataExplorer:
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
 		if noHeader:			
-			nCols = int(len(columns) / 2)
-			colIndexes = columns[:nCols]
 			df = pd.read_csv(filePath,  header=None) 
-			nColsDf = len(df.columns)
-			for i in range(nCols):
-				ci = colIndexes[i]
-				assert ci < nColsDf, "col index {} outside range".format(ci)
-				col = df.loc[ : , ci]
-				assert isCategorical(col), "data is not categorical"
-				col = col.tolist()
-				cn = columns[i + nCols]
-				self.__addDataSet(cn, col, DataSetMetaData.dtypeCat)
 		else:
 			df = pd.read_csv(filePath,  header=0) 
-			for c in columns:
-				col = df[c].tolist()
-				self.__addDataSet(c, col, DataSetMetaData.dtypeCat)
+
+		self.addDataFrameCatData(df,  *columns)
 		self.__printDone()
 
 	def addDataFrameCatData(self, df,  *columns):
