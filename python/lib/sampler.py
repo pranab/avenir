@@ -33,6 +33,18 @@ def randomFloat(low, high):
 	"""
 	return random.random() * (high-low) + low
 
+def randomUniformSampled(low, high):
+	"""
+	sample float within range
+	"""
+	return np.random.uniform(low, high)
+
+def randomUniformSampledList(low, high, size):
+	"""
+	sample float within range
+	"""
+	return np.random.uniform(low, high, size)
+
 def randomNormSampled(mean, sd):
 	"""
 	sample float from normal
@@ -755,7 +767,63 @@ class PermutationSampler:
 		cloned = self.values.copy()
 		shuffle(cloned, *self.numShuffles)
 		return cloned
-				
+	
+class SpikeyDataSampler:
+	"""
+	samples spikey data
+	"""
+	def __init__(self, intvMean, intvStd, spikeValueMean, spikeValueStd, spikeMaxDuration, baseValue = 0):
+		self.intvSampler = NormalSampler(intvMean, intvStd)
+		self.spikeSampler = NormalSampler(spikeValueMean, spikeValueStd)
+		self.spikeMaxDuration = spikeMaxDuration
+		self.baseValue = baseValue
+		self.inSpike = False
+		self.spikeCount = 0
+		self.baseCount = 0
+		self.baseLength = int(self.intvSampler.sample())
+		self.spikeValues = list()
+		self.spikeLength = None
+
+	def sample(self):
+		"""
+		sample new permutation
+		"""
+		if self.baseCount <= self.baseLength:
+			sampled = self.baseValue
+			self.baseCount += 1
+		else:
+			if not self.inSpike:
+				#starting spike
+				spikeVal = self.spikeSampler.sample()
+				self.spikeLength = sampleUniform(1, self.spikeMaxDuration)
+				spikeMaxPos = 0 if self.spikeLength == 1 else sampleUniform(0, self.spikeLength-1)
+				self.spikeValues.clear()
+				for i in range(self.spikeLength):
+					if i < spikeMaxPos:
+						frac = (i + 1) / (spikeMaxPos + 1)
+						frac = sampleFloatFromBase(frac, 0.1 * frac)
+					elif i > spikeMaxPos:
+						frac =  (self.spikeLength - i) / (self.spikeLength - spikeMaxPos)
+						frac = sampleFloatFromBase(frac, 0.1 * frac)
+					else:
+						frac = 1.0
+					self.spikeValues.append(frac * spikeVal)
+					self.inSpike = True
+					self.spikeCount = 0
+	
+
+			sampled = self.spikeValues[self.spikeCount]
+			self.spikeCount += 1
+
+			if self.spikeCount == self.spikeLength:
+				#ending spike
+				self.baseCount = 0
+				self.baseLength = int(self.intvSampler.sample())
+				self.inSpike = False
+
+		return sampled
+
+
 def createSampler(data):
 	"""
 	create sampler
