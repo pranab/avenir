@@ -677,27 +677,27 @@ class DataExplorer:
 
 	def getLessThanValues(self, ds, cvalue):
 		"""
-		gets percentile
+		gets values less than given value
 		params:
 		ds: data set name or list or numpy array
 		cvalue: condition value
 		"""
 		self.__printBanner("getting values less than", ds)
 		fdata = self.__getCondValues(ds, cvalue, "lt")
-		result = self.__printResult("lessThanvalues", fdata )
+		result = self.__printResult("count", len(fdata),  "lessThanvalues", fdata )
 		return result
 
 
 	def getGreaterThanValues(self, ds, cvalue):
 		"""
-		gets percentile
+		gets values greater than given value
 		params:
 		ds: data set name or list or numpy array
 		cvalue: condition value
 		"""
 		self.__printBanner("getting values greater than", ds)
 		fdata = self.__getCondValues(ds, cvalue, "gt")
-		result = self.__printResult("greaterThanvalues", fdata )
+		result = self.__printResult("count", len(fdata), "greaterThanvalues", fdata )
 		return result
 
 	def __getCondValues(self, ds, cvalue, cond):
@@ -953,11 +953,13 @@ class DataExplorer:
 			ser = pd.Series(data)
 		elif type(ds) == list or type(ds) == np.ndarray:
 			ser = pd.Series(ds)
+			data = ds
 		else:
 			raise ValueError("invalid data type")
 		nv = ser.isnull().tolist()
 		nullCount = nv.count(True)
-		result = self.__printResult("nullCount", nullCount)
+		nullFraction = nullCount / len(data)
+		result = self.__printResult("nullFraction", nullFraction, "nullCount", nullCount)
 		return result
 
 
