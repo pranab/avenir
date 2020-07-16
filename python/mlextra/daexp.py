@@ -640,6 +640,27 @@ class DataExplorer:
 		result = self.__printResult("value", value, "percentile", percent)
 		return result
 
+	def getValueRangePercentile(self, ds, value1, value2):
+		"""
+		gets percentile
+		params:
+		ds: data set name or list or numpy array
+		value1: first value
+		value2: second value
+		"""
+		self.__printBanner("getting percentile difference for value range", ds)
+		if value1 < value2:
+			v1 = value1
+			v2 = value2
+		else:
+			v1 = value2
+			v2 = value1
+		data = self.getNumericData(ds)
+		per1 = sta.percentileofscore(data, v1)
+		per2 = sta.percentileofscore(data, v2)
+		result = self.__printResult("valueFirst", value1, "valueSecond", value2, "percentileDiff", per2 - per1)
+		return result
+
 	def getValueAtPercentile(self, ds, percent):
 		"""
 		gets value at percentile
@@ -653,6 +674,47 @@ class DataExplorer:
 		value = sta.scoreatpercentile(data, percent)
 		result = self.__printResult("value", value, "percentile", percent)
 		return result
+
+	def getLessThanValues(self, ds, cvalue):
+		"""
+		gets percentile
+		params:
+		ds: data set name or list or numpy array
+		cvalue: condition value
+		"""
+		self.__printBanner("getting values less than", ds)
+		fdata = self.__getCondValues(ds, cvalue, "lt")
+		result = self.__printResult("lessThanvalues", fdata )
+		return result
+
+
+	def getGreaterThanValues(self, ds, cvalue):
+		"""
+		gets percentile
+		params:
+		ds: data set name or list or numpy array
+		cvalue: condition value
+		"""
+		self.__printBanner("getting values greater than", ds)
+		fdata = self.__getCondValues(ds, cvalue, "gt")
+		result = self.__printResult("greaterThanvalues", fdata )
+		return result
+
+	def __getCondValues(self, ds, cvalue, cond):
+		"""
+		gets percentile
+		params:
+		ds: data set name or list or numpy array
+		cvalue: condition value
+		cond: condition
+		"""
+		data = self.getNumericData(ds)
+		if cond == "lt":
+			ind = np.where(data < cvalue)
+		else:
+			ind = np.where(data > cvalue)
+		fdata = data[ind]
+		return fdata
 
 	def getUniqueValueCounts(self, ds, maxCnt=10):
 		"""
@@ -877,6 +939,27 @@ class DataExplorer:
 		dwoul = dmat[mask, :]
 		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
+
+	def getNullCount(self, ds):
+		"""
+		get count of null fields
+		params:
+		ds : data set name or list or numpy array with data
+		"""
+		self.__printBanner("getting null value count", ds)
+		if type(ds) == str:
+			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			data =  self.dataSets[ds]
+			ser = pd.Series(data)
+		elif type(ds) == list or type(ds) == np.ndarray:
+			ser = pd.Series(ds)
+		else:
+			raise ValueError("invalid data type")
+		nv = ser.isnull().tolist()
+		nullCount = nv.count(True)
+		result = self.__printResult("nullCount", nullCount)
+		return result
+
 
 	def fitLinearReg(self, ds, doPlot=False):
 		"""
