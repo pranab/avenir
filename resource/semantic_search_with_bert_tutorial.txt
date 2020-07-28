@@ -1,0 +1,34 @@
+This tutorial is for semantic search with BERT pre trained trasformer model. it provides
+some tensor similarity functions to perform experiment.
+
+Setup
+=====
+You need to have Spacy and PyTorch installed. You can refer to  spacy document for installing transformer
+https://spacy.io/universe/project/spacy-transformers
+
+I installed from this URL directly. It's a big download, about 400 MB
+https://github.com/explosion/spacy-models/releases/download/en_trf_bertbaseuncased_lg-2.3.0/en_trf_bertbaseuncased_lg-2.3.0.tar.gz 
+
+
+Executing search
+================
+./ssearch <sim_algo>
+
+sim_algo is the similarity algorithm to be used. Choices are as follows
+
+ds: 	doc avrage similarity
+tsma: 	token max similarity
+tsavm: 	token average of max similarity
+tsmav: 	token max of average similarity
+tsa: 	token average similarity
+tsme: 	token median similarity
+ssa: 	sentence average similarity
+ssme: 	sentence median similarity
+ssma: 	sentence max similarity
+
+Corpus
+======
+Only a smal corpus has been used. All text is hard coded in the python script. You probably 
+want to change the script so that you can load your corpus from some external storage e.g file 
+system or database
+
