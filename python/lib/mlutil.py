@@ -581,8 +581,28 @@ def perfMetric(metric, yActual, yPred):
 		score = metrics.mean_absolute_error(yActual, yPred)
 	elif metric == "mse":
 		score = metrics.mean_squared_error(yActual, yPred)
+	elif metric == "acc":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.accuracy_score(yActual, yPred)
+	elif metric == "prec":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.precision_score(yActual, yPred)
+	elif metric == "rec":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.recall_score(yActual, yPred)
+	elif metric == "fone":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.f1_score(yActual, yPred)
+	elif metric == "confm":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.confusion_matrix(yActual, yPred)
+	elif metric == "clarep":
+		yPred = np.argmax(yPred, axis=1)
+		score = metrics.classification_report(yActual, yPred)
+	elif metric == "ce":
+		score = metrics.log_loss(yActual, yPred, labels=[0, 1])
 	else:
-		exitWithMsg("invalid accuracy metric")
+		exitWithMsg("invalid prediction performance metric")
 	return score
 
 

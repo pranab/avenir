@@ -38,6 +38,7 @@ Manufacturing supply chain simulation
 seasonal = [-580, -340, 0, 370, 1250, 3230, 3980, 3760, 2770, 980, 120, -220]
 trend = [250, 350]
 
+
 def shipCost(quant):
 	"""
 	shipping and handling cost
@@ -61,25 +62,40 @@ def border(args):
 	dem = int(args[i])
 	i += 1
 	pdem = int(args[i])
-	i += 1
-	year = int(args[i])
-	i += 1
-	month = int(args[i])
+	#i += 1
+	#year = int(args[i])
+	#i += 1
+	#month = int(args[i])
 	i += 1
 	dwntm = args[i]
 	i += 1
 	poMarg = args[i]
-
+	i += 1
+	sampler = args[i]
+	i += 1
+	it = args[i]
+	
+	#5 years data
+	it = it % 260
+	year = int(it / 52)
+	month = int((it % 52) / 4.33)
+	#print("year {}  month {}".format(year, month))
+	
+	defQt = sampler.output[-1] if len(sampler.output) > 0 else 0
+	if sampler.prSamples is not None:
+		pdem = sampler.prSamples[0]
+		
 	costPerUnit = 30
 	partsCostPerUnit = 12
 	otherCostPerUnit = 18
-
 	pricePerUnit = 50
+	machHours = 140
+	prPerMach = 70
+	prCapWeek = machHours * prPerMach
 
-
-	#seasonal and trend adjustment
-	sadj = seasonal[month - 1]
-	fyear = (year - 1) + month / 12
+	#seasonal and piece wise linear trend adjustment
+	sadj = seasonal[month]
+	fyear = year
 	if fyear <= 2:
 		tadj = trend[0] * fyear
 	else:
@@ -88,11 +104,24 @@ def border(args):
 	dem =  int(dem + tadj + sadj)
 	pdem = int(pdem + tadj + sadj)
 
-	#back order
-	paOrd = int(pdem * (1 + poMarg))
+	#back order from parts shortage
+	mpdem = pdem * (1 + poMarg)
+	paOrd = int(mpdem)
 	boPa = dem - paOrd if dem > paOrd else 0
-	prCap = int(14 * 10 * 70 * (1.0 - dwntm))
-	boPcap = dem - prCap if dem > prCap else 0
+	#print(formatAny(boPa, "boPa"))
+	
+	#back order from prod capacity limit using current demand
+	rdem = dem + defQt
+	if rdem <= prCapWeek:
+		prCap = rdem 
+		defQt = 0
+	else:
+		prCap = prCapWeek
+		defQt = rdem - prCapWeek		
+	boPcap = rdem - prCap if rdem > prCap else 0
+	#print(formatAny(boPcap, "boPcap"))
+	
+	# max of the 2 
 	bo = max(boPa, boPcap)
 	#print("boPa {} boPcap {}".format(boPa, boPcap))
 
@@ -110,7 +139,7 @@ def border(args):
 		# normal
 		pc = dem * costPerUnit
 
-	#revenue and profit
+	#revenue
 	if bo > 0:
 		#discount for back ordered quantities
 		rev = ro * pricePerUnit + bo * 0.9 * pricePerUnit
@@ -118,11 +147,12 @@ def border(args):
 		#normal
 		rev = dem * pricePerUnit
 
-
+	#profit
 	prof = (rev - pc - sc) / dem
 
 	#demand, prev week demand, downtime, part order margin, back order, per unit profit
 	print("{},{},{:.3f},{:.3f},{},{:.2f}".format(pdem, dem, dwntm * 100, poMarg * 100, bo, prof))
+	return defQt
 
 def loadData(model, dataFile):
 	"""
@@ -154,7 +184,6 @@ def infer(model, dataFile,  cindex , cvalues):
 	model.eval()
 	for v in cvalues:
 		#print(featData[:5,:])
-		#featData  = loadData(model, dataFile)
 		featData[:,cindex] = v
 		#print(featData[:5,:])
 		tfeatData = torch.from_numpy(featData[:,:])
@@ -172,10 +201,10 @@ if __name__ == "__main__":
 	if op == "simu":
 		numIter = int(sys.argv[2])
 		simulator = MonteCarloSimulator(numIter, border, "./log/mcsim.log", "info")
-		simulator.registerNormalSampler(9000, 2000)
-		simulator.registerNormalSampler(9000, 2000)
-		simulator.registerUniformSampler(1, 5)
-		simulator.registerUniformSampler(1, 12)
+		simulator.registerNormalSampler(7000, 1000)
+		simulator.registerNormalSampler(7000, 1000)
+		#simulator.registerUniformSampler(1, 5)
+		#simulator.registerUniformSampler(1, 12)
 		simulator.registerGammaSampler(1.0, .05)
 		simulator.registerDiscreteRejectSampler(0.0, 0.20, 0.04, 25, 30, 18, 10, 5, 2)
 		simulator.run()
@@ -190,9 +219,9 @@ if __name__ == "__main__":
 
 	elif op == "train":
 		prFile = sys.argv[2]
-		regressor = ThreeLayerNetwork(prFile)
+		regressor = FeedForwardNetwork(prFile)
 		regressor.buildModel()
-		ThreeLayerNetwork.batchTrain(regressor)
+		FeedForwardNetwork.batchTrain(regressor)
 
 	elif op == "pred":
 		prFile = sys.argv[2]

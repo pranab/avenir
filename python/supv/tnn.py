@@ -53,7 +53,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.activation.one"] = ("relu", None)
 		defValues["train.num.hidden.units.two"] = (None, None)
 		defValues["train.activation.two"] = (None, None)
-		defValues["train.out.activation"] = (None, None)
+		defValues["train.activation.out"] = (None, None)
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
 		defValues["train.num.iterations"] = (500, None)
@@ -68,13 +68,15 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.opt.betas"] = ([0.9, 0.999], None) 
 		defValues["train.opt.alpha"] = (0.99, None) 
 		defValues["train.save.model"] = (False, None) 
+		defValues["train.track.error"] = (False, None) 
+		defValues["train.batch.intv"] = (5, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
 		defValues["predict.data.file"] = (None, None)
 		defValues["predict.use.saved.model"] = (True, None)
 		self.config = Configuration(configFile, defValues)
 		
-		super(ThreeLayerNetwork, self).__init__()
+		super(FeedForwardNetwork, self).__init__()
     	
 
 	def buildModel(self):
@@ -95,8 +97,10 @@ class FeedForwardNetwork(torch.nn.Module):
 		#learnRate = self.config.getFloatConfig("train.opt.learning.rate")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
 		optimizer = self.config.getStringConfig("train.optimizer")[0]
-		lossFn = self.config.getStringConfig("train.lossFn")[0]
+		self.lossFnStr = self.config.getStringConfig("train.lossFn")[0]
 		self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
+		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
+		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
    	
 		self.linear1 = torch.nn.Linear(numinp, numHiddenOne)
 		self.act1 = FeedForwardNetwork.createActivation(activationOne)
@@ -112,7 +116,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			self.act2 = None
 			self.linear3 = torch.nn.Linear(numHiddenOne, numOut)
 			print("1 hidden layer")
-		outAct = self.config.getStringConfig("train.out.activation")[0]
+		outAct = self.config.getStringConfig("train.activation.out")[0]
 		self.outAct = FeedForwardNetwork.createActivation(outAct)   		
  
 		#training data
@@ -128,7 +132,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.validOutData = outDataV
 
 		# loss function and optimizer
-		self.lossFn = FeedForwardNetwork.createLossFunction(self, lossFn)
+		self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
 		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
 
  
@@ -185,7 +189,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		learnRate = config.getFloatConfig("train.opt.learning.rate")[0]
 		weightDecay = config.getFloatConfig("train.opt.weight.decay")[0]
 		momentum = config.getFloatConfig("train.opt.momentum")[0]
-		eps = self.config.getFloatConfig("train.opt.eps")[0]
+		eps = config.getFloatConfig("train.opt.eps")[0]
 		if optName == "sgd":
 			dampening = config.getFloatConfig("train.opt.dampening")[0]
 			momentumNesterov = config.getBooleanConfig("train.opt.momentum.nesterov")[0]
@@ -323,7 +327,10 @@ class FeedForwardNetwork(torch.nn.Module):
 
 		# train mode
 		model.train()
-
+ 
+		if model.trackErr:
+			trErr = list()
+			vaErr = list()
 		#epoch
 		for t in range(model.numIter):
 			#batch
@@ -337,6 +344,11 @@ class FeedForwardNetwork(torch.nn.Module):
 				loss = model.lossFn(yPred, yBatch)
 				if model.verbose and t % 50 == 0 and b % 5 == 0:
 					print("epoch {}  batch {}  loss {:.6f}".format(t, b, loss.item()))
+					
+				if model.trackErr and b % model.batchIntv == 0:
+					trErr.append(loss.item())
+					vloss = FeedForwardNetwork.evaluateModel(model)
+					vaErr.append(vloss)
 
 				# Zero gradients, perform a backward pass, and update the weights.
 				model.optimizer.zero_grad()
@@ -362,6 +374,15 @@ class FeedForwardNetwork(torch.nn.Module):
 		if modelSave:
 			model.saveCheckpt()
 
+		if model.trackErr:
+			x = np.arange(len(trErr))
+			plt.plot(x,trErr,label = "training error")
+			plt.plot(x,vaErr,label = "validation error")
+			plt.xlabel("iteratiin")
+			plt.ylabel("error")
+			plt.legend(["training error", "validation error"], loc='upper left')
+			plt.show()
+			
 		return score
 
 	@staticmethod
@@ -385,5 +406,18 @@ class FeedForwardNetwork(torch.nn.Module):
 		yPred = yPred.data.cpu().numpy()
 		print(yPred)
 
-
-    
+	@staticmethod
+	def evaluateModel(model):
+		"""
+		evaluate model
+		"""
+		model.eval()
+		with torch.no_grad():
+			yPred = model(model.validFeatData)
+			yPred = yPred.data.cpu().numpy()
+			yActual = model.validOutData
+			score = perfMetric(model.lossFnStr, yActual, yPred)
+		model.train()
+		return score
+    	
+    	
