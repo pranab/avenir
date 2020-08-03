@@ -20,6 +20,7 @@ import os
 import sys
 import random
 import statistics 
+import numpy as np
 from causalgraphicalmodels import CausalGraphicalModel
 import matplotlib.pyplot as plt 
 import sklearn as sk
@@ -178,13 +179,25 @@ def infer(model, dataFile,  cindex , cvalues):
 	if useSavedModel:
 		model.restoreCheckpt()
 	else:
-		ThreeLayerNetwork.batchTrain(model) 
+		FeedForwardNetwork.batchTrain(model) 
 
 	featData  = loadData(model, dataFile)
+	
+	#scaled values
+	fc = featData[:,cindex]
+	me = np.mean(fc)
+	sd = np.std(fc)
+	print("me {:.3f}  sd {:.3f}".format(me, sd))
+	scvalues = list(map(lambda v : (v - me) / sd, cvalues))
+	
+	#scale all data
+	if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
+		featData = sk.preprocessing.scale(featData)
+	
 	model.eval()
-	for v in cvalues:
+	for sv, v in zip(scvalues, cvalues):
 		#print(featData[:5,:])
-		featData[:,cindex] = v
+		featData[:,cindex] = sv
 		#print(featData[:5,:])
 		tfeatData = torch.from_numpy(featData[:,:])
 		yPred = model(tfeatData)
@@ -225,15 +238,15 @@ if __name__ == "__main__":
 
 	elif op == "pred":
 		prFile = sys.argv[2]
-		regressor = ThreeLayerNetwork(prFile)
+		regressor = FeedForwardNetwork(prFile)
 		regressor.buildModel()
-		ThreeLayerNetwork.predict(regressor)
+		FeedForwardNetwork.predict(regressor)
 
 	elif op == "infer":
 		prFile = sys.argv[2]
 		dataFile = sys.argv[3]
 		bvalues = toIntList(sys.argv[4].split(","))
-		regressor = ThreeLayerNetwork(prFile)
+		regressor = FeedForwardNetwork(prFile)
 		regressor.buildModel()
 		infer(regressor, dataFile,  4 , bvalues)
 
