@@ -33,6 +33,7 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 
+
 class FeedForwardNetwork(torch.nn.Module):
 	def __init__(self, configFile):
 		"""
@@ -49,11 +50,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
-		defValues["train.num.hidden.units.one"] = (None, "missing number of hidden units")
-		defValues["train.activation.one"] = ("relu", None)
-		defValues["train.num.hidden.units.two"] = (None, None)
-		defValues["train.activation.two"] = (None, None)
-		defValues["train.activation.out"] = (None, None)
+		defValues["train.layer.data"] = (None, "missing layer data")
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
 		defValues["train.num.iterations"] = (500, None)
@@ -87,10 +84,6 @@ class FeedForwardNetwork(torch.nn.Module):
 
 		self.verbose = self.config.getStringConfig("common.verbose")[0]
 		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
-		numHiddenOne = self.config.getIntConfig("train.num.hidden.units.one")[0]
-		activationOne = self.config.getStringConfig("train.activation.one")[0]
-		numHiddenTwo = self.config.getIntConfig("train.num.hidden.units.two")[0]
-		activationTwo = self.config.getStringConfig("train.activation.two")[0]
 		numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		#lossRed = self.config.getStringConfig("train.loss.reduction")[0]
@@ -101,24 +94,40 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
 		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
 		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
-   	
-		self.linear1 = torch.nn.Linear(numinp, numHiddenOne)
-		self.act1 = FeedForwardNetwork.createActivation(activationOne)
-		if numHiddenTwo:
-			#two hidden layers
-			self.linear2 = torch.nn.Linear(numHiddenOne, numHiddenTwo)
-			self.act2 = FeedForwardNetwork.createActivation(activationTwo)
-			self.linear3 = torch.nn.Linear(numHiddenTwo, numOut)
-			print("2 hidden layers")
-		else:
-			#one hidden layer
-			self.linear2 = None
-			self.act2 = None
-			self.linear3 = torch.nn.Linear(numHiddenOne, numOut)
-			print("1 hidden layer")
-		outAct = self.config.getStringConfig("train.activation.out")[0]
-		self.outAct = FeedForwardNetwork.createActivation(outAct)   		
- 
+		
+		#build network
+		layers = list()
+		ninp = numinp
+		trData =  self.config.getStringConfig("train.layer.data")[0].split(",")
+		for ld in trData:
+			lde = ld.split(":")
+			assert len(lde) == 5, "expecting 5 items for layer data"
+			nunit = int(lde[0])
+			actStr = lde[1]
+			act = FeedForwardNetwork.createActivation(actStr) if actStr != "none"  else None
+			bnorm = lde[2] == "true"
+			afterAct = lde[3] == "true"
+			dpr = float(lde[4])
+			
+			layers.append(torch.nn.Linear(ninp, nunit))			
+			if bnorm:
+				#with batch norm
+				if afterAct:
+					safeAppend(layers, act)
+					layers.append(torch.nn.BatchNorm1d(nunit))
+				else:
+					layers.append(torch.nn.BatchNorm1d(nunit))
+					safeAppend(layers, act)
+			else:
+				#without batch norm
+				safeAppend(layers, act)
+			
+			if dpr > 0:
+				layers.append(torch.nn.Dropout(dpr))
+			ninp = nunit
+			
+		self.layers = torch.nn.Sequential(*layers)	
+		
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		(featData, outData) = self.prepData(dataFile)
@@ -215,19 +224,7 @@ class FeedForwardNetwork(torch.nn.Module):
     	a Tensor of output data. We can use Modules defined in the constructor as
     	well as arbitrary (differentiable) operations on Tensors.
 		"""
-		#first hidden
-		y = self.linear1(x)
-		y = self.act1(y)
-		
-		#second hidden
-		if  self.linear2 is not None:
-			y = self.linear2(y)
-			y = self.act2(y)
-		y = self.linear3(y)
-		
-		#output activation
-		if self.outAct is not None:
-			y = self.outAct(y)
+		y = self.layers(x)	
 		return y
 
 	def prepData(self, dataFile, includeOutFld=True):
