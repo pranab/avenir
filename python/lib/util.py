@@ -837,6 +837,13 @@ def swapBetweenLists(values1, values2):
 	values1[p1] = values2[p2]
 	values2[p2] = tmp
 
+def safeAppend(values, value):
+	"""
+	append only if not None
+	"""
+	if value is not None:
+		values.append(value)
+		
 def findIntersection(lOne, lTwo):
 	"""
 	find intersection elements between 2 lists
