@@ -120,16 +120,28 @@ class Configuration:
 		get int list param
 		"""
 		delSepStr = self.getStringConfig(name)
-		intList = strToIntArray(delSepStr[0], delim)
-		return (intList, delSepStr[1])
+		if self.isNone(name):
+			val = (None, False)
+		elif self.isDefault(name):
+			val = (self.handleDefault(name), True)
+		else:
+			intList = strToIntArray(delSepStr[0], delim)
+			val =(intList, delSepStr[1])
+		return val
 	
 	def getFloatListConfig(self, name, delim=","):
 		"""
 		get float list param
 		"""
 		delSepStr = self.getStringConfig(name)
-		flList = strToFloatArray(delSepStr[0], delim)
-		return (flList, delSepStr[1])
+		if self.isNone(name):
+			val = (None, False)
+		elif self.isDefault(name):
+			val = (self.handleDefault(name), True)
+		else:
+			flList = strToFloatArray(delSepStr[0], delim)
+			val =(flList, delSepStr[1])
+		return val
 
 	
 	def getStringListConfig(self, name, delim=","):
@@ -137,9 +149,14 @@ class Configuration:
 		get string list param
 		"""
 		delSepStr = self.getStringConfig(name)
-		strList = delSepStr[0].split(delim)
-		return (strList, delSepStr[1])
-
+		if self.isNone(name):
+			val = (None, False)
+		elif self.isDefault(name):
+			val = (self.handleDefault(name), True)
+		else:
+			strList = delSepStr[0].split(delim)
+			val = (strList, delSepStr[1])
+		return val
 	
 	def handleDefault(self, name):
 		"""
