@@ -365,8 +365,15 @@ class LstmNetwork(nn.Module):
     		else:
     			yPred = np.argmax(yPred, axis=1)
     	
-    	for p in yPred:
-    		print(p)	
+    	#for i in range(dsize):
+    		#print(str(pfData[i].data.cpu().numpy()) + "\t" + str(yPred[i]))
+    		
+    	i = 0
+    	for rec in fileRecGen(prDataFilePath, ","):
+    		rec = ",".join(rec) + "\t" + str(yPred[i])
+    		print(rec)
+    		i += 1
+
 			
 
 		
