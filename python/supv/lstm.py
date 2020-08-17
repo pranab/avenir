@@ -79,7 +79,13 @@ class LstmNetwork(nn.Module):
     	defValues["train.loss.fn"] = ("mse", None) 
     	defValues["train.loss.reduction"] = ("mean", None)
     	defValues["train.grad.clip"] = (5, None) 
-    	defValues["train.num.iterations"] = (500, None) 
+    	defValues["train.num.iterations"] = (500, None)
+    	defValues["train.save.model"] = (False, None) 
+    	defValues["valid.data.file"] = (None, "missing validation data file path")
+    	defValues["valid.accuracy.metric"] = (None, None)
+    	defValues["predict.data.file"] = (None, None)
+    	defValues["predict.use.saved.model"] = (True, None)
+    	defValues["predict.output"] = ("binary", None)
 
     	self.config = Configuration(configFile, defValues)
   
@@ -92,6 +98,8 @@ class LstmNetwork(nn.Module):
     	"""
     	Loads configuration and builds the various piecess necessary for the model
     	"""
+    	torch.manual_seed(9999)
+    	self.verbose = self.config.getStringConfig("common.verbose")[0]
     	self.inputSize = self.config.getIntConfig("train.input.size")[0]
     	self.outputSize = self.config.getIntConfig("train.output.size")[0]
     	self.nLayers = self.config.getIntConfig("train.num.layers")[0]
@@ -111,15 +119,20 @@ class LstmNetwork(nn.Module):
     	
     	#load training data
     	dataFilePath = self.config.getStringConfig("train.data.file")[0]
-    	fCols = self.config.getIntListConfig("train.data.feat.cols")[0]
-    	assert len(fCols) == 2, "specify only start and end columns of features"
-    	tCol = self.config.getIntConfig("train.data.target.col")[0]
-    	delim = self.config.getStringConfig("train.data.delim")[0]
-    	self.fData, self.tData = self.loadData(dataFilePath, delim, fCols[0], fCols[1], tCol)
+    	self.fCols = self.config.getIntListConfig("train.data.feat.cols")[0]
+    	assert len(self.fCols) == 2, "specify only start and end columns of features"
+    	self.tCol = self.config.getIntConfig("train.data.target.col")[0]
+    	self.delim = self.config.getStringConfig("train.data.delim")[0]
+    	
+    	self.fData, self.tData = self.loadData(dataFilePath, self.delim, self.fCols[0],self.fCols[1], self.tCol)
+    	self.fData = torch.from_numpy(self.fData)
+    	self.tData = torch.from_numpy(self.tData)
     	
     	#load validation data
     	vaDataFilePath = self.config.getStringConfig("valid.data.file")[0]
-    	self.vfData, self.vtData = self.loadData(vaDataFilePath, delim, fCols[0], fCols[1], tCol)
+    	self.vfData, self.vtData = self.loadData(vaDataFilePath, self.delim, self.fCols[0], self.fCols[1], self.tCol)
+    	self.vfData = torch.from_numpy(self.vfData)
+    	self.vtData = torch.from_numpy(self.vtData)
     	
     	self.batchSize = self.config.getIntConfig("train.batch.size")[0]
     	self.dataSize = self.fData.shape[0]
@@ -129,19 +142,35 @@ class LstmNetwork(nn.Module):
     	"""
     	loads data for file with one sequence per line and data can be a vector
     	"""
-    	cols = list(range(scolStart, scolEnd + 1, 1))
-    	cols.append(targetCol)
-    	data = np.loadtxt(filePath, delimiter=delim, usecols=cols)
-    	#one output for whole sequence
-    	sData = data[:, :-1]
-    	if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-    		sData = sk.preprocessing.scale(sData)
-    	tData = data[:, -1]
+    	if targetCol >= 0:
+    		cols = list(range(scolStart, scolEnd + 1, 1))
+    		cols.append(targetCol)
+    		data = np.loadtxt(filePath, delimiter=delim, usecols=cols)
+    		#one output for whole sequence
+    		sData = data[:, :-1]
+    		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+    			sData = sk.preprocessing.scale(sData)
+    		tData = data[:, -1]
     	
-    	#target int (index into class labels)  for classification 
-    	sData = sData.astype(np.float32)
-    	tData = tData.astype(np.float32) if self.outputSize == 1 else tData.astype(np.int32)
-    	return (sData, tData)
+    		#target int (index into class labels)  for classification 
+    		sData = sData.astype(np.float32)
+    		tData = tData.astype(np.float32) if self.outputSize == 1 else tData.astype(np.long)
+    		exData =  (sData, tData)
+    	else:
+    		cols = list(range(scolStart, scolEnd + 1, 1))
+    		data = np.loadtxt(filePath, delimiter=delim, usecols=cols)
+
+    		#one output for whole sequence
+    		sData = data
+    		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+    			sData = sk.preprocessing.scale(sData)
+    	
+    		#target int (index into class labels)  for classification 
+    		sData = sData.astype(np.float32)
+    		exData =  sData
+    	
+    	return exData
+    	
     	
     def formattedBatchGenarator(self):
     	"""
@@ -152,7 +181,7 @@ class LstmNetwork(nn.Module):
     	for _ in range(self.numBatch):
     		bfData = torch.zeros([self.batchSize, self.seqLen, self.inputSize], dtype=torch.float32) if self.batchFirst\
     		else torch.zeros([self.seqLen, self.batchSize, self.inputSize], dtype=torch.float32)
-    		tdType = torch.float32 if self.outputSize == 1 else torch.int32
+    		tdType = torch.float32 if self.outputSize == 1 else torch.long
     		btData = torch.zeros([self.batchSize], dtype=tdType)
     		
     		i = 0
@@ -160,12 +189,12 @@ class LstmNetwork(nn.Module):
     			di = sampleUniform(0, self.dataSize-1)
     			row = self.fData[di]
     			for ci, cv in enumerate(row):
-    				si = int(ci / self.seqLen)
-    				ii = ci % self.seqLen
+    				si = int(ci / self.inputSize)
+    				ii = ci % self.inputSize
     				if self.batchFirst:
     					bfData[bdi][si][ii] = cv
     				else:
-    					print(type(bfData[si][bdi][ii]))
+    					#print(si, bdi, ii)
     					bfData[si][bdi][ii] = cv
     			btData[i] = self.tData[di]
     			i += 1
@@ -176,28 +205,30 @@ class LstmNetwork(nn.Module):
  
     		yield (bfData, btData)		
 		
-    def formatValidData(self):
+    def formatData(self, fData, tData=None):
     	"""
-    	transforms validation data from (dataSize, seqLength x inputSize) to (batch, seqLength, inputSize) tensor
-    	or (seqLength, batch, inputSize) tensor
+    	transforms validation or prediction data data from (dataSize, seqLength x inputSize) to 
+    	(batch, seqLength, inputSize) tensor or (seqLength, batch, inputSize) tensor
     	"""
-    	vdSize = self.vfData.shape[0]
-    	bfData = torch.zeros([vdSize, self.seqLen, self.inputSize], dtype=torch.float32) if self.batchFirst\
-    	else torch.zeros([self.seqLen, vdSize, self.inputSize], dtype=torch.float32)
+    	dSize = fData.shape[0]
+    	bfData = torch.zeros([dSize, self.seqLen, self.inputSize], dtype=torch.float32) if self.batchFirst\
+    	else torch.zeros([self.seqLen, dSize, self.inputSize], dtype=torch.float32)
     	
-    	for ri in vdSize:    
-    		row = self.vfData[ri]
+    	for ri in range(dSize):    
+    		row = fData[ri]
     		for ci, cv in enumerate(row):
-    			si = int(ci / self.seqLen)
-    			ii = ci % self.seqLen
+    			si = int(ci / self.inputSize)
+    			ii = ci % self.inputSize
     			if self.batchFirst:
     				bfData[ri][si][ii] = cv
     			else:
     				bfData[si][ri][ii] = cv
-    	
-    	btData = torch.from_numpy(self.vtData)
-    	btData = torch.transpose(btData,0,1) if  self.outSeq and not self.batchFirst else btData
-    	return (bfData, btData)
+    	if tData is not None:
+    		btData = torch.transpose(tData,0,1) if  self.outSeq and not self.batchFirst else tData
+    		formData =  (bfData, btData)
+    	else:
+    		formData  = bfData
+    	return formData
 		
     def forward(self, x, h):
     	"""
@@ -221,43 +252,41 @@ class LstmNetwork(nn.Module):
     		out = self.linear(out)
     		if self.outAct is not None:
     			out = self.outAct(out)
-    		out = out.view(self.batchSize, -1)
-    		
-    		#if self.outputSize == 2:
-    			#binary classification
-    			#out = out[:,-1]
+    		#out = out.view(self.batchSize, -1)
     		
     	return out, hout
     
-    def initHidden(self):
+    def initHidden(self, batch):
     	"""
     	Initialize hidden weights
     	"""
-    	hidden = (torch.zeros(self.nLayers,self.batchSize,self.hiddenSize),
-    	torch.zeros(self.nLayers,self.batchSize,self.hiddenSize))
+    	hidden = (torch.zeros(self.nLayers,batch,self.hiddenSize),
+    	torch.zeros(self.nLayers,batch,self.hiddenSize))
     	return hidden 
                      	
     def trainLstm(self):
     	"""
     	train lstm
     	"""
+    	print("..starting training")
     	self.train()
  
     	device = self.config.getStringConfig("common.device")[0]
     	self.to(device)
     	optimizerName = self.config.getStringConfig("train.optimizer")[0]
-    	optimizer = FeedForwardNetwork.createOptimizer(self, optimizerName)
+    	self.optimizer = FeedForwardNetwork.createOptimizer(self, optimizerName)
     	lossFn = self.config.getStringConfig("train.loss.fn")[0]
     	criterion = FeedForwardNetwork.createLossFunction(self, lossFn)
     	clip = self.config.getFloatConfig("train.grad.clip")[0]
     	numIter = self.config.getIntConfig("train.num.iterations")[0]
+    	accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
     	
  
     	for it in range(numIter):
     		b = 0
     		for inputs, labels in self.formattedBatchGenarator():
     			#forward pass
-    			hid = self.initHidden()
+    			hid = self.initHidden(self.batchSize)
     			inputs, labels = inputs.to(device), labels.to(device)
     			output, hid = self(inputs, hid)
     			
@@ -270,24 +299,76 @@ class LstmNetwork(nn.Module):
     				print("epoch {}  batch {}  loss {:.6f}".format(it, b, loss.item()))
     		
     			# zero gradients, perform a backward pass, and update the weights.
-    			optimizer.zero_grad()
+    			self.optimizer.zero_grad()
     			loss.backward()
     			nn.utils.clip_grad_norm_(self.parameters(), clip)
-    			optimizer.step()
+    			self.optimizer.step()
     			b += 1
     	
     	#validate		
+    	print("..validating model")
     	self.eval()
-    	fData, tData = self.formatValidData()
-    	yPred = self(fData)
-    	yPred = yPred.data.cpu().numpy()
-    	yActual = tData
+    	with torch.no_grad():
+    		fData, tData = self.formatData(self.vfData, self.vtData)
+    		fData = fData.to(device)
+    		vsize = tData.shape[0]
+    		hid = self.initHidden(vsize)
+    		yPred, _ = self(fData, hid)
+    		yPred = yPred.data.cpu().numpy()
+    		yActual = tData.data.cpu().numpy()
+    	
     	if self.verbose:
-    		result = np.concatenate((yPred, yActual), axis = 1)
-    		print("predicted  actual")
-    		print(result)
+    		print("\npredicted \t\t actual")
+    		for i in range(vsize):
+    			print(str(yPred[i]) + "\t" + str(yActual[i]))
     		
-    	score = perfMetric(self.accMetric, yActual, yPred)
+    	score = perfMetric(accMetric, yActual, yPred)
     	print(formatFloat(3, score, "perf score"))
+    	
+    	#save
+    	modelSave = self.config.getBooleanConfig("train.model.save")[0]
+    	if modelSave:
+    		FeedForwardNetwork.saveCheckpt(self)
+    		
+    def predictLstm(self):
+    	"""
+    	predict
+    	"""
+    	print("..predicting using model")
+    	useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+    	if useSavedModel:
+    		FeedForwardNetwork.restoreCheckpt(self)
+    	else:
+    		self.trainLstm()
+    		
+    	prDataFilePath = self.config.getStringConfig("predict.data.file")[0]
+    	pfData = self.loadData(prDataFilePath, self.delim, self.fCols[0], self.fCols[1], -1)
+    	pfData = torch.from_numpy(pfData)
+    	dsize = pfData.shape[0]
+    	
+    	#predict
+    	device = self.config.getStringConfig("common.device")[0]
+    	self.eval()
+    	with torch.no_grad():
+    		fData = self.formatData(pfData)
+    		fData = fData.to(device)
+    		hid = self.initHidden(dsize)
+    		yPred, _ = self(fData, hid)
+    		yPred = yPred.data.cpu().numpy()
+    		
+    	if self.outputSize == 2:
+    		#classification
+    		outType = self.config.getStringConfig("predict.output")[0]
+    		if outType == "prob":
+    			yPred = yPred[:, 1]
+    			yPred = list(map(lambda v : "{:.3f}".format(v), yPred))
+    		else:
+    			yPred = np.argmax(yPred, axis=1)
+    	
+    	for p in yPred:
+    		print(p)	
+			
+
+		
 	
 		

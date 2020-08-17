@@ -251,31 +251,35 @@ class FeedForwardNetwork(torch.nn.Module):
 			foData = featData.astype(np.float32)
 		return foData
 
-	def saveCheckpt(self):
+	@staticmethod
+	def saveCheckpt(model):
 		"""
 		checkpoints model
 		"""
-		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
+		print("..saving model checkpoint")
+		modelDirectory = model.config.getStringConfig("common.model.directory")[0]
 		assert os.path.exists(modelDirectory), "model save directory does not exist"
-		modelFile = self.config.getStringConfig("common.model.file")[0]
+		modelFile = model.config.getStringConfig("common.model.file")[0]
 		filepath = os.path.join(modelDirectory, modelFile)
-		state = {"state_dict": self.state_dict(), "optim_dict": self.optimizer.state_dict()}
+		state = {"state_dict": model.state_dict(), "optim_dict": model.optimizer.state_dict()}
 		torch.save(state, filepath)
-		if self.verbose:
+		if model.verbose:
 			print("model saved")
 
-	def restoreCheckpt(self, loadOpt=False):
+	@staticmethod
+	def restoreCheckpt(model, loadOpt=False):
 		"""
 		restored checkpointed model
 		"""
-		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
-		modelFile = self.config.getStringConfig("common.model.file")[0]
+		print("..restoring model checkpoint")
+		modelDirectory = model.config.getStringConfig("common.model.directory")[0]
+		modelFile = model.config.getStringConfig("common.model.file")[0]
 		filepath = os.path.join(modelDirectory, modelFile)
 		assert os.path.exists(filepath), "model save file does not exist"
 		checkpoint = torch.load(filepath)
-		self.load_state_dict(checkpoint["state_dict"])
+		model.load_state_dict(checkpoint["state_dict"])
 		if loadOpt:
-			self.optimizer.load_state_dict(checkpoint["optim_dict"])
+			model.optimizer.load_state_dict(checkpoint["optim_dict"])
 
 	@staticmethod
 	def allTrain(model):
@@ -369,7 +373,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		#save
 		modelSave = model.config.getBooleanConfig("train.model.save")[0]
 		if modelSave:
-			model.saveCheckpt()
+			FeedForwardNetwork.saveCheckpt(model)
 
 		if model.trackErr:
 			x = np.arange(len(trErr))
@@ -390,9 +394,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		#train or restore model
 		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
 		if useSavedModel:
-			model.restoreCheckpt()
+			FeedForwardNetwork.restoreCheckpt(model)
 		else:
-			ThreeLayerNetwork.batchTrain(model) 
+			FeedForwardNetwork.batchTrain(model) 
 
 		#predict
 		dataFile = model.config.getStringConfig("predict.data.file")[0]
