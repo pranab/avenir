@@ -4,7 +4,8 @@ Setup
 =====
 Make sure you have ../lib   ../mlextra and ../supv directories with all the python files wrt 
 where ctrace.py is. You need to have PyTorch installed. All parameters are defined in 
-lstm_ct.properties file. Make changes as necessary
+lstm_ct.properties file. Make changes as necessary. Any parameter that is set to _ will use default
+values defined in lstm.py
 
 Generate Data
 =============
@@ -25,7 +26,18 @@ Train model
 ===========
 ./ctrace.py train lstm_ct.properties
 
+The trained model could be saved by setting these parameters as follows
+common.model.directory=./model/lstm
+common.model.file=ctr.mod
+train.model.save=True
+
 Predict
 =======
 ./ctrace.py pred  lstm_ct.properties
+
+The saved model could be used for prediction by setting this configuration parameter
+predict.use.saved.model=True
+
+Type of prediction (binary or probability) can be selected with this parameter
+predict.output=prob
 

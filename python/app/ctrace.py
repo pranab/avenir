@@ -107,7 +107,14 @@ class TraceData:
 				
 		threshold = 7.3
 		threshold = threshold if vulnerable == 1 else threshold + 0.2
-		inf = 1 if tvl > threshold and isEventSampled(90) else 0
+		#inf = 1 if tvl > threshold and isEventSampled(90) else 0
+		if tvl > threshold:
+			if tvl < threshold + 3.0:
+				inf = 1 if isEventSampled(90) else 0
+			else:
+				inf = 1
+		else:
+			inf = 0
 		if inf == 1:
 			self.count += 1
 		self.level.append(tvl)

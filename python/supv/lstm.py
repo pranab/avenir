@@ -112,7 +112,6 @@ class LstmNetwork(nn.Module):
     	
     	#model
     	self.lstm = nn.LSTM(self.inputSize, self.hiddenSize, self.nLayers, dropout=dropProb, batch_first=self.batchFirst)
-    	self.dropout = nn.Dropout(dropProb) if dropProb > 0 else None
     	self.linear = nn.Linear(self.hiddenSize, self.outputSize)
     	outAct = self.config.getStringConfig("train.out.activation")[0]
     	self.outAct = FeedForwardNetwork.createActivation(outAct)   		
@@ -238,8 +237,6 @@ class LstmNetwork(nn.Module):
     	if self.outSeq:
     		# seq to seq prediction
     		out = out.view(-1, self.hiddenSize)
-    		if self.dropout is not None:
-    			out = self.dropout(out)
     		out = self.linear(out)
     		if self.outAct is not None:
     			out = self.outAct(out)
@@ -247,8 +244,6 @@ class LstmNetwork(nn.Module):
     	else:
     		#seq to one prediction
     		out = out[self.seqLen - 1].view(-1, self.hiddenSize)
-    		if self.dropout is not None:
-    			out = self.dropout(out)
     		out = self.linear(out)
     		if self.outAct is not None:
     			out = self.outAct(out)
