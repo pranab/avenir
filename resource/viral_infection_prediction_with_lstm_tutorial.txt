@@ -1,0 +1,31 @@
+This tutorial is for viral infection prediction with LSTM using PyTorch
+
+Setup
+=====
+Make sure you have ../lib   ../mlextra and ../supv directories with all the python files wrt 
+where ctrace.py is. You need to have PyTorch installed. All parameters are defined in 
+lstm_ct.properties file. Make changes as necessary
+
+Generate Data
+=============
+-training data 
+./ctrace.py simu <num_rec>  y > ctr_tr.txt
+num_rec = number of records e.f if you choose 5000, tere will be 1000 sequence records
+because sequence is composed of 5 records
+
+-validation data 
+./ctrace.py simu <num_rec> y > ctr_va.txt
+
+-prediction data
+./ctrace.py simu <num_rec> n > ctr_pr.txt
+The 3rd command line argument is n, which means target value won't be generated
+since this data will be used for prediction
+
+Train model
+===========
+./ctrace.py train lstm_ct.properties
+
+Predict
+=======
+./ctrace.py pred  lstm_ct.properties
+
