@@ -47,6 +47,7 @@ class MonteCarloSimulator(object):
 		self.mean = None
 		self.sd = None
 		self.replSamplers = dict()
+		self.prSamples = None
 
 		self.logger = createLogger(__name__, logFilePath, logLevName)
 		self.logger.info("******** stating new  session of MonteCarloSimulator")
@@ -188,6 +189,7 @@ class MonteCarloSimulator(object):
 		self.mean = None
 		self.sd = None
 		self.numVars = len(self.samplers)
+		vOut = 0
 
 		#print(formatAny(self.numIter, "num iterations"))
 		for i in range(self.numIter):
@@ -199,11 +201,15 @@ class MonteCarloSimulator(object):
 					args.extend(arg)
 				else:
 					args.append(arg)
+					
+			slen = len(args)
 			if self.extraArgs:
 				args.extend(self.extraArgs)
+			args.append(self)
 			args.append(i)
 			vOut = self.callback(args)	
 			self.output.append(vOut)
+			self.prSamples = args[:slen]
 	
 	def getOutput(self):
 		"""

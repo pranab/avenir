@@ -37,6 +37,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
+from sklearn.covariance import EllipticEnvelope
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -933,6 +934,28 @@ class DataExplorer:
 
 		svm = OneClassSVM(nu=nu)
 		ypred = svm.fit_predict(dmat)
+		mask = ypred == -1
+		doul = dmat[mask, :]
+		mask = ypred != -1
+		dwoul = dmat[mask, :]
+		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		return result
+
+	def getOutliersWithCovarDeterminant(self, contamination,  *dsl):
+		"""
+		gets outliers using covariance determinan
+		params:
+
+		dsl: list of data set name or list or numpy array
+		"""
+		self.__printBanner("getting outliers using using covariance determinant", *dsl)
+		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(dlist)
+		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
+		dmat = np.column_stack(dlist)
+
+		lof = EllipticEnvelope(contamination=contamination)
+		ypred = lof.fit_predict(dmat)
 		mask = ypred == -1
 		doul = dmat[mask, :]
 		mask = ypred != -1

@@ -62,6 +62,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2020/05/11/monte-carlo-simulation-library-in-python-with-project-cost-estimation-as-an-example/
 * https://pkghosh.wordpress.com/2020/06/08/deep-reinforcement-learning-with-rllib-and-tensorflow-for-price-optimization/
 * https://pkghosh.wordpress.com/2020/07/13/learn-about-your-data-with-about-seventy-data-exploration-functions-all-in-one-python-class/
+* https://pkghosh.wordpress.com/2020/07/28/semantic-search-with-pre-trained-neural-transformer-model-using-document-sentence-and-token-level-embedding/
+* https://pkghosh.wordpress.com/2020/08/18/predicting-individual-viral-infection-using-contact-data-with-lstm-neural-network/
 
 
 ## Getting started
