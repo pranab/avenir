@@ -222,6 +222,21 @@ class PoissonSampler:
 				samp = no
 		return samp
 
+class ExponentialSampler:
+	"""
+	returns interval between events
+	"""
+	def __init__(self, rateOccur, maxSamp = None):
+		self.interval = 1.0 / rateOccur
+		self.maxSamp = int(maxSamp) if maxSamp is not None else None
+
+	def sample(self):
+		sampled = np.random.exponential(scale=self.interval)
+		if self.maxSamp is not None:
+			while sampled > self.maxSamp:
+				sampled = np.random.exponential(scale=self.interval)
+		return sampled
+
 class UniformNumericSampler:
 	"""
 	uniform sampler for numerical values
@@ -442,18 +457,19 @@ class NonParamRejectSampler:
 	"""
 	non parametric sampling using given distribution based on rejection sampling	
 	"""
-	def __init__(self, min, binWidth, *values):
+	def __init__(self, xmin, binWidth, *values):
 		self.values = values
 		if (len(self.values) == 1):
 			self.values = self.values[0]
-		self.xmin = min
-		self.xmax = min + binWidth * (len(self.values) - 1)
+		self.xmin = xmin
+		self.xmax = xmin + binWidth * (len(self.values) - 1)
+		#print(self.xmin, self.xmax, binWidth)
 		self.binWidth = binWidth
 		self.fmax = 0
 		for v in self.values:
 			if (v > self.fmax):
 				self.fmax = v
-		self.ymin = 0.0
+		self.ymin = 0
 		self.ymax = self.fmax
 		self.sampleAsInt = True
 
@@ -772,8 +788,15 @@ class SpikeyDataSampler:
 	"""
 	samples spikey data
 	"""
-	def __init__(self, intvMean, intvStd, spikeValueMean, spikeValueStd, spikeMaxDuration, baseValue = 0):
-		self.intvSampler = NormalSampler(intvMean, intvStd)
+	def __init__(self, intvMean, intvScale, distr, spikeValueMean, spikeValueStd, spikeMaxDuration, baseValue = 0):
+		if distr == "norm":
+			self.intvSampler = NormalSampler(intvMean, intvScale)
+		elif distr == "expo":
+			rate = 1.0 / intvScale
+			self.intvSampler = ExponentialSampler(rate)
+		else:
+			raise ValueError("invalid distribution")
+
 		self.spikeSampler = NormalSampler(spikeValueMean, spikeValueStd)
 		self.spikeMaxDuration = spikeMaxDuration
 		self.baseValue = baseValue

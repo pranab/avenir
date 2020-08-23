@@ -44,10 +44,18 @@ class Configuration:
 		self.defValues = defValues
 		self.verbose = verbose
 
+	def override(self, configFile):
+		"""
+		over ride configuration from file
+		"""
+		with open(configFile) as fp:
+  			for key, value in jprops.iter_properties(fp):
+  				self.configs[key] = value
+  			
 	
 	def setParam(self, name, value):
 		"""
-		set config param
+		override individual configuration
 		"""
 		self.configs[name] = value
 

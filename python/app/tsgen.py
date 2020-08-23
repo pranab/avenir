@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -43,6 +43,7 @@ def loadConfig(configFile):
 	defValues["output.value.type"] = ("float", None)
 	defValues["output.value.precision"] = (3, None)
 	defValues["output.time.format"] = ("epoch", None)
+	defValues["rnp.distr"] = (None, None)
 	defValues["ts.base"] = ("mean", None)
 	defValues["ts.base.params"] = (None, "missing time series base parameters")
 	defValues["ts.trend"] = ("nothing", None)
@@ -55,9 +56,14 @@ def loadConfig(configFile):
 	defValues["ts.random.params"] = (None, None)
 	defValues["rw.init.value"] = (5.0, None)
 	defValues["rw.range"] = (1.0, None)
+	defValues["ar.params"] = (None, None)
 	defValues["corr.file.path"] = (None, None)
 	defValues["corr.file.col"] = (None, None)
+	defValues["corr.scale"] = (1.0, None)
 	defValues["corr.noise.stddev"] = (None, None)
+	defValues["corr.lag"] = (0, None)
+	defValues["ol.percent"] = (5, None)
+	defValues["ol.distr"] = (None, "missing outlier distribution")
 	
 
 	config = Configuration(configFile, defValues)
@@ -74,17 +80,38 @@ def getDateTime(tm, tmFormat):
 		dt = dt.strftime("%Y-%m-%d %H:%M:%S")
 	return dt
 
+def arValue(arParams, hist):
+	"""
+	auto regressed value
+	"""
+	val = 0.0
+	for i in range(len(arParams)):
+		if i == 0:
+			val = arParams[i]
+		else:
+			val += arParams[i] * hist[i-1]
+	return val
+	
 
 if __name__ == "__main__":
 	op = sys.argv[1]
+	
+	#configuration
 	confFile = sys.argv[2]
 	config = loadConfig(confFile)
 	delim = ","
 	
+	#override config
+	if len(sys.argv) == 4:
+		ovFilePath = sys.argv[3]
+		config.override(ovFilePath)
+	
+	#start time
 	winSz = config.getStringConfig("window.size")[0]
 	items = winSz.split("_")
 	curTm, pastTm = pastTime(int(items[0]), items[1])
 	
+	#sample interval
 	sampIntvType = config.getStringConfig("window.samp.interval")[0]
 	sampIntv = config.getStringConfig("window.samp.interval.params")[0].split(delim)
 	intvDistr = None
@@ -97,9 +124,12 @@ if __name__ == "__main__":
 	else:
 		raise ValueError("invalid sampling interval type")
 		
+	#time alignment
 	sampAlignUnit = config.getStringConfig("window.samp.align.unit")[0]
+	if sampAlignUnit is not None:
+		pastTm = timeAlign(pastTm, sampAlignUnit)	
 	
-	#output
+	#output format
 	tsValType = config.getStringConfig("output.value.type")[0]
 	valPrecision = config.getIntConfig("output.value.precision")[0]
 	tsTimeFormat = config.getStringConfig("output.time.format")[0]
@@ -108,16 +138,36 @@ if __name__ == "__main__":
 	else:
 		ouForm = "{},{:."  + str(valPrecision) + "f}"
 	
+	#non parametric random
+	if op == "rnp":
+		distr = config.getFloatListConfig("npr.distr")[0]
+		minVal = distr[0]
+		bw = distr[1]
+		dis = distr[2:]
+		sampler = NonParamRejectSampler(minVal, bw, dis)
+		sampler.sampleAsFloat()
+		sampTm = pastTm
+		
+		while (sampTm < curTm):
+			curVal = sampler.sample()
+			if tsValType == "int":
+				curVal = int(curVal)
+				
+			#date time
+			dt = getDateTime(sampTm, tsTimeFormat)
+				
+			print(ouForm.format(dt, curVal))
+			sampTm += sampIntv
 	
-	#generic time series 
-	if op == "gen":
+	#generic time series with trend, cycle, gaussian remainder
+	elif op == "gen":
 		tsBaseType = config.getStringConfig("ts.base")[0]
 		items = config.getStringConfig("ts.base.params")[0].split(delim)
 		if tsBaseType == "mean":
 			tsMean = float(items[0])
-		elif tsBaseType == "exp":
-			tsAlpha = float(items[0])
-			tsHist = toFloatList(items[1:])
+		elif tsBaseType == "ar":
+			arParams = config.getFloatListConfig("ar.params")[0]
+			hist = list()
 		else:
 			raise ValueError("invalid base type")
 		
@@ -136,13 +186,13 @@ if __name__ == "__main__":
 		yearCycle = weekCycle = dayCycle = None
 		for c in cycles:
 			key = "ts.cycle." + c + ".params"
-			cycleValues = config.getStringConfig(key)[0].split(delim)
+			cycleValues = config.getfloatListConfig(key)[0]
 			if c == "year":
-				yearCycle = toFloatList(cycleValues)
+				yearCycle = cycleValues
 			elif c == "week":
-				weekCycle = toFloatList(cycleValues)
+				weekCycle = cycleValues
 			elif c == "day":
-				dayCycle = toFloatList(cycleValues)
+				dayCycle = cycleValues
 			
 		
 		tsRandom = config.getBooleanConfig("ts.random")[0]
@@ -152,9 +202,6 @@ if __name__ == "__main__":
 			tsRandStdDev = float(items[1])
 			tsRandDistr = GaussianRejectSampler(tsRandMean,tsRandStdDev)
 		
-	
-		if sampAlignUnit:
-			pastTm = timeAlign(pastTm, sampAlignUnit)	
 	
 		if intvDistr:
 			sampIntv = int(intvDistr.sample())
@@ -167,13 +214,21 @@ if __name__ == "__main__":
 		
 			#base
 			if tsBaseType == "mean":
+				#mean
 				curVal = tsMean
 			else:
-				alphaInv = 1
-				for i in reversed(range(lenn(tsHist))):
-					curVal = tsAplha * alphaInv * tsHist[i] 
-					alphaInv *= (1.0 - tsAplha)
-		
+				#auto regressive
+				curVal = arValue(arParams, hist) 	
+					
+			#random remainder
+			if tsRandStdDev:
+				curVal += tsRandDistr.sample()
+
+			#update history
+			if tsBaseType == "ar":
+				hist.insert(0, curVal)
+				hist.pop(len(hist) - 1)
+
 			#trend
 			if tsTrendType == "linear":
 				curVal += counter * tsTrendSlope
@@ -195,9 +250,6 @@ if __name__ == "__main__":
 				hour = hourOfDay(sampTm)
 				curVal += dayCycle[hour]
 
-			#random remainder
-			if tsRandStdDev:
-				curVal += tsRandDistr.sample()
 	
 			#date time
 			if tsTimeFormat == "epoch":
@@ -206,10 +258,6 @@ if __name__ == "__main__":
 				dt = datetime.fromtimestamp(sampTm)
 				dt = dt.strftime("%Y-%m-%d %H:%M:%S")
 		
-			#update history
-			if tsBaseType == "exp":
-				tsHist.append(curVal)
-				tsHist.pop(0)
 		
 			#value
 			if tsValType == "int":
@@ -246,20 +294,63 @@ if __name__ == "__main__":
 				sampIntv = int(intvDistr.sample())
 			sampTm += sampIntv
 	
-	# generates correlated time seriec
+	#auto regressive		
+	elif op == "ar":
+		initVal = config.getFloatConfig("rw.init.value")[0]
+		
+		#ar parameters
+		arParams = config.getFloatListConfig("ar.params")[0]
+		hist = list()
+		for i in range(len(arParams) - 1):
+			hist.append(0.0)
+		
+		#random component
+		items = config.getStringConfig("ts.random.params")[0].split(delim)
+		tsRandMean = float(items[0])
+		tsRandStdDev = float(items[1])
+		rsampler = NormalSampler(tsRandMean, tsRandStdDev)
+
+		sampTm = pastTm
+		curVal = initVal
+		
+		while (sampTm < curTm):
+			curVal = arValue(arParams, hist) 	
+			curVal += rsampler.sample()
+			hist.insert(0, curVal)
+			hist.pop(len(hist) - 1)
+
+			if tsValType == "int":
+				curVal = int(curVal)
+				
+			#date time
+			dt = getDateTime(sampTm, tsTimeFormat)
+				
+			print(ouForm.format(dt, curVal))
+			sampTm += sampIntv
+			
+
+	# generates correlated time series
 	elif op == "corr":
 		refFile = config.getStringConfig("corr.file.path")[0]
 		refCol = config.getIntConfig("corr.file.col")[0]
+		scale = config.getFloatConfig("corr.scale")[0]
 		noiseSd = config.getFloatConfig("corr.noise.stddev")[0]
+		lag = config.getIntConfig("corr.lag")[0]
 		noiseDistr = GaussianRejectSampler(0,noiseSd)
+		lCount = 0
 		for rec in fileRecGen(refFile, ","):
-			val = float(rec[refCol]) + noiseDistr.sample()
-			val = "%.3f" %(val)
-			rec[refCol] = val
-			nRec = ",".join(rec)
-			print(nRec)
+			if lCount >= lag:
+				val = float(rec[refCol]) * scale + noiseDistr.sample()
+				val = "{:.3f}".format(val)
+				rec[refCol] = val
+				nRec = ",".join(rec)
+				print(nRec)
+			lCount += 1
 
-		
+	#add outlier
+	elif op == "aol":
+		pass
+			
 	else:
 		raise ValueError("ivalid time series type")
 			
