@@ -37,7 +37,7 @@ def loadConfig(configFile):
 	"""
 	defValues = {}
 	defValues["window.size"] = (None, "missing time window size")
-	defValues["window.samp.interval"] = ("fixed", None)
+	defValues["window.samp.interval.type"] = ("fixed", None)
 	defValues["window.samp.interval.params"] = (None, "missing time interval parameters")
 	defValues["window.samp.align.unit"] = (None, None)
 	defValues["output.value.type"] = ("float", None)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 	curTm, pastTm = pastTime(int(items[0]), items[1])
 	
 	#sample interval
-	sampIntvType = config.getStringConfig("window.samp.interval")[0]
+	sampIntvType = config.getStringConfig("window.samp.interval.type")[0]
 	sampIntv = config.getStringConfig("window.samp.interval.params")[0].split(delim)
 	intvDistr = None
 	if sampIntvType == "fixed":
@@ -137,9 +137,29 @@ if __name__ == "__main__":
 		ouForm = "{},{}"
 	else:
 		ouForm = "{},{:."  + str(valPrecision) + "f}"
+		
+	#gaussian random
+	if op == "rg":
+		distr = config.getFloatListConfig("gr.distr")[0]
+		mean = distr[0]
+		sd = distr[1]
+		sampler = NormalSampler(mean, sd)
+		sampTm = pastTm
+		
+		while (sampTm < curTm):
+			curVal = sampler.sample()
+			if tsValType == "int":
+				curVal = int(curVal)
+				
+			#date time
+			dt = getDateTime(sampTm, tsTimeFormat)
+				
+			print(ouForm.format(dt, curVal))
+			sampTm += sampIntv
+
 	
 	#non parametric random
-	if op == "rnp":
+	elif op == "rnp":
 		distr = config.getFloatListConfig("npr.distr")[0]
 		minVal = distr[0]
 		bw = distr[1]
@@ -182,11 +202,11 @@ if __name__ == "__main__":
 		else:
 			raise ValueError("invalid trend type")
 		
-		cycles = config.getStringConfig("ts.cycles")[0].split(delim)
+		cycles = config.getStringListConfig("ts.cycles")[0]
 		yearCycle = weekCycle = dayCycle = None
 		for c in cycles:
 			key = "ts.cycle." + c + ".params"
-			cycleValues = config.getfloatListConfig(key)[0]
+			cycleValues = config.getFloatListConfig(key)[0]
 			if c == "year":
 				yearCycle = cycleValues
 			elif c == "week":
@@ -200,7 +220,7 @@ if __name__ == "__main__":
 			items = config.getStringConfig("ts.random.params")[0].split(delim)
 			tsRandMean = float(items[0])
 			tsRandStdDev = float(items[1])
-			tsRandDistr = GaussianRejectSampler(tsRandMean,tsRandStdDev)
+			tsRandDistr = NormalSampler(tsRandMean,tsRandStdDev)
 		
 	
 		if intvDistr:
@@ -296,7 +316,6 @@ if __name__ == "__main__":
 	
 	#auto regressive		
 	elif op == "ar":
-		initVal = config.getFloatConfig("rw.init.value")[0]
 		
 		#ar parameters
 		arParams = config.getFloatListConfig("ar.params")[0]
@@ -311,8 +330,7 @@ if __name__ == "__main__":
 		rsampler = NormalSampler(tsRandMean, tsRandStdDev)
 
 		sampTm = pastTm
-		curVal = initVal
-		
+		i = 0		
 		while (sampTm < curTm):
 			curVal = arValue(arParams, hist) 	
 			curVal += rsampler.sample()
@@ -325,8 +343,10 @@ if __name__ == "__main__":
 			#date time
 			dt = getDateTime(sampTm, tsTimeFormat)
 				
-			print(ouForm.format(dt, curVal))
+			if i > 5:	
+				print(ouForm.format(dt, curVal))
 			sampTm += sampIntv
+			i += 1
 			
 
 	# generates correlated time series
