@@ -40,6 +40,7 @@ def loadConfig(configFile):
 	defValues["window.samp.interval.type"] = ("fixed", None)
 	defValues["window.samp.interval.params"] = (None, "missing time interval parameters")
 	defValues["window.samp.align.unit"] = (None, None)
+	defValues["window.time.unit"] = ("s", None)
 	defValues["output.value.type"] = ("float", None)
 	defValues["output.value.precision"] = (3, None)
 	defValues["output.time.format"] = ("epoch", None)
@@ -62,6 +63,11 @@ def loadConfig(configFile):
 	defValues["corr.scale"] = (1.0, None)
 	defValues["corr.noise.stddev"] = (None, None)
 	defValues["corr.lag"] = (0, None)
+	defValues["ccorr.file.path"] = (None, None)
+	defValues["ccorr.file.col"] = (None, None)
+	defValues["ccorr.co.params"] = (None, None)
+	defValues["ccorr.unco.params"] = (None, None)
+	defValues["si.params"] = (None, None)
 	defValues["ol.percent"] = (5, None)
 	defValues["ol.distr"] = (None, "missing outlier distribution")
 	
@@ -91,8 +97,30 @@ def arValue(arParams, hist):
 		else:
 			val += arParams[i] * hist[i-1]
 	return val
-	
 
+def sinComponents(params):
+	"""
+	returns list sine components
+	"""
+	comps = list()
+	for i in range(0, len(params), 2):
+		amp = params[i]
+		per = params[i + 1]
+		phase = randomFloat(0, 2.0 * math.pi)
+		co = (amp, per, phase)
+		comps.append(co)
+	return comps
+
+def addSines(comps, sampTm):
+	"""
+	adds multiple sine comopnents
+	"""
+	val = 0
+	for c in comps:
+		t = 2.0 * math.pi * (sampTm % c[1]) / c[1]
+		val += c[0] * math.sin(c[2] + t)
+	return val
+	
 if __name__ == "__main__":
 	op = sys.argv[1]
 	
@@ -138,6 +166,11 @@ if __name__ == "__main__":
 	else:
 		ouForm = "{},{:."  + str(valPrecision) + "f}"
 		
+	timeUnit = config.getStringConfig("window.time.unit")[0]
+	if timeUnit == "ms":
+		curTm *= 1000
+		pastTm *= 1000
+
 	#gaussian random
 	if op == "rg":
 		distr = config.getFloatListConfig("gr.distr")[0]
@@ -347,8 +380,63 @@ if __name__ == "__main__":
 				print(ouForm.format(dt, curVal))
 			sampTm += sampIntv
 			i += 1
-			
+	
+	# generates combination of multiple sinusoidal
+	elif op == "sine":
+		siParams = config.getFloatListConfig("si.params")[0]	
+		comps = sinComponents(siParams)
+					
+		#random component
+		items = config.getFloatListConfig("ts.random.params")[0]
+		tsRandMean = items[0]
+		tsRandStdDev = items[1]
+		rsampler = NormalSampler(tsRandMean, tsRandStdDev)
 
+		sampTm = pastTm
+		while (sampTm < curTm):
+			val = addSines(comps, sampTm)
+			val += rsampler.sample()
+			if tsValType == "int":
+				val = int(val)
+				
+			#date time
+			dt = getDateTime(sampTm, tsTimeFormat)
+				
+			print(ouForm.format(dt, val))
+			sampTm += sampIntv
+
+	# generates cross correlated time series
+	elif op == "ccorr":
+		refFile = config.getStringConfig("ccorr.file.path")[0]
+		refCol = config.getIntConfig("ccorr.file.col")[0]
+		cors = config.getFloatListConfig("ccorr.co.params")[0]
+
+		uncors = config.getFloatListConfig("ccorr.unco.params")[0]		
+		comps = sinComponents(uncors) if uncors is not None else None
+		
+		items = config.getFloatListConfig("ts.random.params")[0]
+		tsRandMean = items[0]
+		tsRandStdDev = items[1]
+		rsampler = NormalSampler(tsRandMean, tsRandStdDev)
+
+		ouForm = "{:."  + str(valPrecision) + "f}"
+		for rec in fileRecGen(refFile, ","):
+			sampTm = int(rec[0])
+			rval = float(rec[refCol])
+			nrec = rec.copy()
+			for c in cors:
+				cval = c * rval + rsampler.sample()
+				cval = str(int(cval)) if tsValType == "int" else ouForm.format(cval)
+				nrec.append(cval)
+				
+			if comps is not None:
+				cval = addSines(comps, sampTm) + rsampler.sample()
+				cval = str(int(cval)) if tsValType == "int" else ouForm.format(cval)
+				nrec.append(cval)
+					
+			nRec = ",".join(nrec)
+			print(nRec)
+	
 	# generates correlated time series
 	elif op == "corr":
 		refFile = config.getStringConfig("corr.file.path")[0]
