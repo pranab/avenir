@@ -51,6 +51,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.layer.data"] = (None, "missing layer data")
+		defValues["train.output.size"] = (None, "missing  output size")
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
 		defValues["train.num.iterations"] = (500, None)
@@ -71,6 +72,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["valid.accuracy.metric"] = (None, None)
 		defValues["predict.data.file"] = (None, None)
 		defValues["predict.use.saved.model"] = (True, None)
+		defValues["predict.output"] = ("binary", None)
+		defValues["predict.feat.pad.size"] = (60, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(FeedForwardNetwork, self).__init__()
@@ -84,7 +87,8 @@ class FeedForwardNetwork(torch.nn.Module):
 
 		self.verbose = self.config.getStringConfig("common.verbose")[0]
 		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
-		numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
+		#numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
+		self.outputSize = self.config.getIntConfig("train.output.size")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		#lossRed = self.config.getStringConfig("train.loss.reduction")[0]
 		#learnRate = self.config.getFloatConfig("train.opt.learning.rate")[0]
@@ -282,6 +286,33 @@ class FeedForwardNetwork(torch.nn.Module):
 			model.optimizer.load_state_dict(checkpoint["optim_dict"])
 
 	@staticmethod
+	def processClassifOutput(yPred, config):
+		"""
+		extracts probability label 1 or label with highest probability
+		"""
+		outType = config.getStringConfig("predict.output")[0]
+		if outType == "prob":
+			yPred = yPred[:, 1]
+			yPred = list(map(lambda v : "{:.3f}".format(v), yPred))
+		else:
+			yPred = np.argmax(yPred, axis=1)
+		return yPred
+		
+	@staticmethod
+	def printPrediction(yPred, config):
+		"""
+		prints input feature data and prediction
+		"""
+		i = 0
+		prDataFilePath = config.getStringConfig("predict.data.file")[0]
+		padWidth = config.getIntConfig("predict.feat.pad.size")[0]
+		for rec in fileRecGen(prDataFilePath, ","):
+			feat = (",".join(rec)).ljust(padWidth, " ")
+			rec = feat + "\t" + str(yPred[i])
+			print(rec)
+			i += 1
+
+	@staticmethod
 	def allTrain(model):
 		"""
 		train with all data
@@ -363,9 +394,10 @@ class FeedForwardNetwork(torch.nn.Module):
 		yPred = yPred.data.cpu().numpy()
 		yActual = model.validOutData
 		if model.verbose:
-			result = np.concatenate((yPred, yActual), axis = 1)
-			print("predicted  actual")
-			print(result)
+			vsize = yPred.shape[0]
+			print("\npredicted \t\t actual")
+			for i in range(vsize):
+				print(str(yPred[i]) + "\t" + str(yActual[i]))
 		
 		score = perfMetric(model.accMetric, yActual, yPred)
 		print(formatFloat(3, score, "perf score"))
@@ -379,7 +411,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			x = np.arange(len(trErr))
 			plt.plot(x,trErr,label = "training error")
 			plt.plot(x,vaErr,label = "validation error")
-			plt.xlabel("iteratiin")
+			plt.xlabel("iteration")
 			plt.ylabel("error")
 			plt.legend(["training error", "validation error"], loc='upper left')
 			plt.show()
@@ -405,7 +437,13 @@ class FeedForwardNetwork(torch.nn.Module):
 		model.eval()
 		yPred = model(featData)
 		yPred = yPred.data.cpu().numpy()
-		print(yPred)
+		
+		if model.outputSize == 2:
+			#classification
+			yPred = FeedForwardNetwork.processClassifOutput(yPred, model.config)
+			
+		# print prediction
+		FeedForwardNetwork.printPrediction(yPred, model.config)
 
 	@staticmethod
 	def evaluateModel(model):

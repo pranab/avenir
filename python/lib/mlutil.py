@@ -547,7 +547,7 @@ def binaryEcodeCategorical(values, value):
 
 def createLabeledSeq(inputData, tw):
 	"""
-	Creates feature, label pair from sequence data	
+	Creates feature, label pair from sequence data, where we have tw number of features followed by output
 	"""
 	features = list()
 	labels = list()
@@ -561,11 +561,27 @@ def createLabeledSeq(inputData, tw):
 
 def createLabeledSeq(filePath, delim, index, tw):
 	"""
-	Creates feature, label pair from sequence data in file	
+	Creates feature, label pair from 1D sequence data in file	
 	"""
 	seqData = getFileColumnAsFloat(filePath, delim, index)
 	return createLabeledSeq(seqData, tw)
+
+def fromMultDimSeqToTabular(data, inpSize, seqLen):
+	"""
+	Input shape (nrow, inpSize * seqLen) output shape(nrow * seqLen, inpSize)
+	"""	
+	nrow = data.shape[0]
+	assert data.shape[1] == inpSize * seqLen, "invalid input size or sequence length"
+	return data.reshape(nrow * seqLen, inpSize)
 	
+def fromTabularToMultDimSeq(data, inpSize, seqLen):
+	"""
+	Input shape (nrow * seqLen, inpSize)   output  shape (nrow, inpSize * seqLen) 
+	"""	
+	nrow = int(data.shape[0] / seqLen)
+	assert data.shape[1] == inpSize, "invalid input size"
+	return data.reshape(nrow,  seqLen * inpSize)
+
 def difference(data, interval=1):
 	"""
 	takes difference in time series data
@@ -630,4 +646,15 @@ def perfMetric(metric, yActual, yPred):
 		exitWithMsg("invalid prediction performance metric")
 	return score
 
-
+def scaleData(data, method):
+	"""
+	scales feature data column wise
+	"""
+	if method == "minmax":
+		scaler = preprocessing.MinMaxScaler()
+		data = scaler.fit_transform(data)
+	elif method == "zscale":
+		data = preprocessing.scale(data)	
+	else:
+		raise ValueError("invalid scaling method")	
+	return data

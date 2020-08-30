@@ -50,6 +50,7 @@ class LstmNetwork(nn.Module):
     	defValues["common.model.directory"] = ("model", None)
     	defValues["common.model.file"] = (None, None)
     	defValues["common.preprocessing"] = (None, None)
+    	defValues["common.scaling.method"] = ("zscale", None)
     	defValues["common.verbose"] = (False, None)
     	defValues["common.device"] = ("cpu", None)
     	defValues["train.data.file"] = (None, "missing training data file path")
@@ -86,6 +87,7 @@ class LstmNetwork(nn.Module):
     	defValues["predict.data.file"] = (None, None)
     	defValues["predict.use.saved.model"] = (True, None)
     	defValues["predict.output"] = ("binary", None)
+    	defValues["predict.feat.pad.size"] = (60, None)
 
     	self.config = Configuration(configFile, defValues)
   
@@ -142,13 +144,14 @@ class LstmNetwork(nn.Module):
     	loads data for file with one sequence per line and data can be a vector
     	"""
     	if targetCol >= 0:
+    		#include target column
     		cols = list(range(scolStart, scolEnd + 1, 1))
     		cols.append(targetCol)
     		data = np.loadtxt(filePath, delimiter=delim, usecols=cols)
     		#one output for whole sequence
     		sData = data[:, :-1]
     		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-    			sData = sk.preprocessing.scale(sData)
+    			sData = self.scaleSeqData(sData)
     		tData = data[:, -1]
     	
     		#target int (index into class labels)  for classification 
@@ -156,13 +159,14 @@ class LstmNetwork(nn.Module):
     		tData = tData.astype(np.float32) if self.outputSize == 1 else tData.astype(np.long)
     		exData =  (sData, tData)
     	else:
+    		#exclude target column
     		cols = list(range(scolStart, scolEnd + 1, 1))
     		data = np.loadtxt(filePath, delimiter=delim, usecols=cols)
 
     		#one output for whole sequence
     		sData = data
     		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-    			sData = sk.preprocessing.scale(sData)
+    			sData = self.scaleSeqData(sData)
     	
     		#target int (index into class labels)  for classification 
     		sData = sData.astype(np.float32)
@@ -170,7 +174,16 @@ class LstmNetwork(nn.Module):
     	
     	return exData
     	
-    	
+    def scaleSeqData(self, sData):
+    	"""
+    	scales data transforming non squence format
+    	"""
+    	scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+    	sData = fromMultDimSeqToTabular(sData, self.inputSize, self.seqLen)
+    	sData = scaleData(sData, scalingMethod)
+    	sData = fromTabularToMultDimSeq(sData, self.inputSize, self.seqLen)
+    	return sData
+    		
     def formattedBatchGenarator(self):
     	"""
     	transforms traing data from (dataSize, seqLength x inputSize) to (batch, seqLength, inputSize) tensor
@@ -353,21 +366,10 @@ class LstmNetwork(nn.Module):
     		
     	if self.outputSize == 2:
     		#classification
-    		outType = self.config.getStringConfig("predict.output")[0]
-    		if outType == "prob":
-    			yPred = yPred[:, 1]
-    			yPred = list(map(lambda v : "{:.3f}".format(v), yPred))
-    		else:
-    			yPred = np.argmax(yPred, axis=1)
+    		yPred = FeedForwardNetwork.processClassifOutput(yPred, self.config)
     	
-    	#for i in range(dsize):
-    		#print(str(pfData[i].data.cpu().numpy()) + "\t" + str(yPred[i]))
-    		
-    	i = 0
-    	for rec in fileRecGen(prDataFilePath, ","):
-    		rec = ",".join(rec) + "\t" + str(yPred[i])
-    		print(rec)
-    		i += 1
+    	# print prediction
+    	FeedForwardNetwork.printPrediction(yPred, self.config)
 
 			
 

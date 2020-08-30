@@ -488,10 +488,24 @@ class DataExplorer:
 		plots data
 		params:
 		ds: data set name or list or numpy array
+		yscale: y scale
 		"""
 		self.__printBanner("plotting data", ds)
 		data = self.getNumericData(ds)
 		drawLine(data, yscale)
+
+	def plotZoomed(self, ds, beg, end, yscale=None):
+		"""
+		plots zoomed data
+		params:
+		ds: data set name or list or numpy array
+		beg: begin offset
+		end: end offset
+		yscale: y scale
+		"""
+		self.__printBanner("plotting data", ds)
+		data = self.getNumericData(ds)
+		drawLine(data[beg:end], yscale)
 
 	def scatterPlot(self, ds1, ds2):
 		"""
@@ -851,7 +865,7 @@ class DataExplorer:
 		self.__printBanner("extracting trend, cycle and residue components of time series", ds)
 		assert model == "additive" or model == "multiplicative", "model must be additive or multiplicative"
 		data = self.getNumericData(ds)
-		res = seasonal_decompose(data, model=model, freq=freq)
+		res = seasonal_decompose(data, model=model, period=freq)
 		if doPlot:
 			res.plot()
 			plt.show()
