@@ -63,10 +63,6 @@ def border(args):
 	dem = int(args[i])
 	i += 1
 	pdem = int(args[i])
-	#i += 1
-	#year = int(args[i])
-	#i += 1
-	#month = int(args[i])
 	i += 1
 	dwntm = args[i]
 	i += 1
@@ -183,17 +179,30 @@ def infer(model, dataFile,  cindex , cvalues):
 
 	featData  = loadData(model, dataFile)
 	
-	#scaled values
+	#intervened column values
 	fc = featData[:,cindex]
-	me = np.mean(fc)
-	sd = np.std(fc)
-	print("me {:.3f}  sd {:.3f}".format(me, sd))
-	scvalues = list(map(lambda v : (v - me) / sd, cvalues))
 	
+	#scale intervened values
+	scalingMethod = model.config.getStringConfig("common.scaling.method")[0]
+	if scalingMethod == "zscale":
+		me = np.mean(fc)
+		sd = np.std(fc)
+		print("me {:.3f}  sd {:.3f}".format(me, sd))
+		scvalues = list(map(lambda v : (v - me) / sd, cvalues))
+	elif scalingMethod == "minmax":
+		vmin = fc.min()
+		vmax = fc.max()
+		vdiff = vmax - vmin
+		scvalues = list(map(lambda v : (v - vmin) / vdiff, cvalues))
+	else:
+		raise ValueError("invalid scaling method")
+		
+		
 	#scale all data
 	if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
-		featData = sk.preprocessing.scale(featData)
+		featData = scaleData(featData, scalingMethod)
 	
+	#predict with intervened values
 	model.eval()
 	for sv, v in zip(scvalues, cvalues):
 		#print(featData[:5,:])
@@ -216,8 +225,6 @@ if __name__ == "__main__":
 		simulator = MonteCarloSimulator(numIter, border, "./log/mcsim.log", "info")
 		simulator.registerNormalSampler(7000, 1000)
 		simulator.registerNormalSampler(7000, 1000)
-		#simulator.registerUniformSampler(1, 5)
-		#simulator.registerUniformSampler(1, 12)
 		simulator.registerGammaSampler(1.0, .05)
 		simulator.registerDiscreteRejectSampler(0.0, 0.20, 0.04, 25, 30, 18, 10, 5, 2)
 		simulator.run()

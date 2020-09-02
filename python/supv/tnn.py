@@ -45,6 +45,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
+		defValues["common.scaling.method"] = ("zscale", None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -241,11 +242,13 @@ class FeedForwardNetwork(torch.nn.Module):
 		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
 		featFieldIndices = strToIntArray(featFieldIndices, ",")
 
-		#training data
+		#all data and feature data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-			featData = sk.preprocessing.scale(featData)
+		    scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+		    featData = scaleData(featData, scalingMethod)
 		
+		# target data
 		if includeOutFld:
 			outFieldIndices = self.config.getStringConfig("train.data.out.fields")[0]
 			outFieldIndices = strToIntArray(outFieldIndices, ",")
