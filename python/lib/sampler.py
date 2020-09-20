@@ -33,6 +33,12 @@ def randomFloat(low, high):
 	"""
 	return random.random() * (high-low) + low
 
+def randomInt(min, max):
+	"""
+	sample int within range
+	"""
+	return randint(min, max)
+
 def randomUniformSampled(low, high):
 	"""
 	sample float within range
@@ -56,6 +62,13 @@ def randomNormSampledList(mean, sd, count):
 	sample float list from normal 
 	"""
 	return np.random.normal(mean, sd, count)
+
+def randomSampledList(sampler, size):
+	"""
+	sample list from given sampler 
+	"""
+	return list(map(lambda i : sampler.sample(), range(size)))
+	
 
 def minLimit(val, min):
 	"""

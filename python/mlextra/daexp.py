@@ -314,7 +314,9 @@ class DataExplorer:
 			assert isNumeric(ds), "data is not numeric"
 		else:
 			assert isBinary(ds), "data is not binary"
+		dtype = DataSetMetaData.dtypeNum if numeric else DataSetMetaData.dtypeBin
 		self.dataSets[name] = np.array(ds)
+		self.metaData[name] = DataSetMetaData(dtype)
 
 
 	def addFileCatData(self, filePath,  *columns):

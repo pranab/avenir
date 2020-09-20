@@ -742,7 +742,9 @@ def timeAlign(ts, unit):
 	boundary alignment of time
 	"""
 	alignedTs = 0
-	if unit == "m":
+	if unit == "s":
+		alignedTs = ts
+	elif unit == "m":
 		alignedTs = minuteAlign(ts)
 	elif unit == "h":
 		alignedTs = hourAlign(ts)
@@ -806,7 +808,8 @@ def mutateString(val, numMutate, ctype):
 	mutate string multiple times
 	"""
 	mutations = set()
-	for i in range(numMutate):
+	count = 0
+	while count < numMutate:
 		j = randint(0, len(val)-1)
 		if j not in mutations:
 			if ctype == "alpha":
@@ -817,7 +820,22 @@ def mutateString(val, numMutate, ctype):
 				ch = selectRandomFromList(tokens)
 			val = val[:j] + ch + val[j+1:]
 			mutations.add(j)
+			count += 1
 	return val
+
+def mutateList(values, numMutate, vmin, vmax):
+	"""
+	mutate list multiple times
+	"""
+	mutations = set()
+	count = 0
+	while count < numMutate:
+		j = randint(0, len(values)-1)
+		if j not in mutations:
+			values[j] = np.random.uniform(vmin, vmax)
+			count += 1
+	return values		
+	
 
 def swap(values, first, second):
 	"""
