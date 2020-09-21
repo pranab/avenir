@@ -89,9 +89,10 @@ if __name__ == "__main__":
 	
 	simulator.drawHist(twoSampStat + "2 sample stat", "stat", "distr")
 	print("mean {:.3f}  sd {:.3f}  min {:.3f}".format(simulator.getMean(), simulator.getStdDev(), simulator.getMin()))
-	cvalues = simulator.getLowerTailStat(0.5)
-	pp = pprint.PrettyPrinter(indent=4)
-	pp.pprint(cvalues)
+	cvalues = simulator.getUpperTailStat(0.5)
+	#pp = pprint.PrettyPrinter(indent=4)
+	#pp.pprint(cvalues)
+	printPairList(cvalues, "percentile", "value", 3)
 
 
 

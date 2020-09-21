@@ -405,7 +405,7 @@ def toStr(val, precision):
 	"""
 	converts any type to string	
 	"""
-	if type(val) is float:
+	if type(val) == float or type(val) == np.float64 or type(val) == np.float32:
 		format = "%" + ".%df" %(precision)
 		sVal = format %(val)
 	else:
@@ -916,6 +916,27 @@ def formatAny(value, label = None):
 	st = (label + " ") if label else ""
 	return st + str(value)
 
+def printMap(values, klab, vlab, precision, offset=16):
+	"""
+	pretty print hash map
+	"""
+	print(klab.ljust(offset, " ") + vlab)
+	for k in values.keys():
+		v = values[k]
+		ks = toStr(k, precision).ljust(offset, " ")
+		vs = toStr(v, precision)
+		print(ks +  vs)
+		
+def printPairList(values, lab1, lab2, precision, offset=16):
+	"""
+	pretty print list of pairs
+	"""
+	print(lab1.ljust(offset, " ") + lab2)
+	for (v1, v2) in values:
+		sv1 = toStr(v1, precision).ljust(offset, " ")
+		sv2 = toStr(v2, precision)
+		print(sv1 + sv2)
+		
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger
