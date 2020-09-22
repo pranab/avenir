@@ -678,6 +678,31 @@ def fileSelFieldsRecGen(dirPath, columns, delim=","):
 		extracted = extractList(rec, columns)
 		yield extracted
 
+def fileFiltRecGen(filePath, filt, delim = ","):
+	"""
+	file record generator with  row filter applied
+	"""
+	with open(filePath, "r") as fp:
+		for line in fp:	
+			line = line[:-1]
+			if delim is not None:
+				line = line.split(delim)
+			if filt(line):
+				yield line
+
+def fileFiltSelFieldsRecGen(filePath, filt, columns, delim = ","):
+	"""
+	file record generator with  row and column filter applied
+	"""
+	with open(filePath, "r") as fp:
+		for line in fp:	
+			line = line[:-1]
+			if delim is not None:
+				line = line.split(delim)
+			if filt(line):
+				selected = extractList(line, columns)
+				yield selected
+
 def asIntList(items):
 	"""
 	returns int list

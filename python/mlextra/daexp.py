@@ -1799,7 +1799,7 @@ class DataExplorer:
 
 		s2 = 0
 		for i in range(m):
-			t = rdata[i] - (i+1)	
+			t = rdata[i + n] - (i+1)	
 			s2 += (t * t)
 		s2 *= m
 

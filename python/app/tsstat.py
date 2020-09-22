@@ -47,9 +47,18 @@ def genStat(args):
 	nsamp = args[i]
 	
 	#generate second distr by mutating first
-	nmut = randomInt(0, 5)
+	nmut = randomInt(0, 7)
 	distr2 = distr1.copy()
-	mutateList(distr2, nmut, 10.0, 100.0)
+	if isEventSampled(10):
+		if isEventSampled(50):
+			#extreme mutation
+			distr2 = list(map(lambda v : 100.0 - v, distr2))
+		else:
+			#no mutation
+			pass
+	else:
+		#normal mutation
+		mutateList(distr2, nmut, 10.0, 100.0)
 	
 	sampler1 = NonParamRejectSampler(0, 10, distr1)
 	sampler1.sampleAsFloat()
@@ -68,6 +77,12 @@ def genStat(args):
 		res = expl.testTwoSampleAnderson("ds1", "ds2")
 	elif twoSampStat == "cvm":
 		res = expl.testTwoSampleCvm("ds1", "ds2")
+	elif twoSampStat == "zk":
+		res = expl.testTwoSampleZk("ds1", "ds2")
+	elif twoSampStat == "za":
+		res = expl.testTwoSampleZa("ds1", "ds2")
+	elif twoSampStat == "zc":
+		res = expl.testTwoSampleZc("ds1", "ds2")
 	else:
 		raise ValueError("invalid 2 sample statistic")
 		
@@ -90,8 +105,6 @@ if __name__ == "__main__":
 	simulator.drawHist(twoSampStat + "2 sample stat", "stat", "distr")
 	print("mean {:.3f}  sd {:.3f}  min {:.3f}".format(simulator.getMean(), simulator.getStdDev(), simulator.getMin()))
 	cvalues = simulator.getUpperTailStat(0.5)
-	#pp = pprint.PrettyPrinter(indent=4)
-	#pp.pprint(cvalues)
 	printPairList(cvalues, "percentile", "value", 3)
 
 
