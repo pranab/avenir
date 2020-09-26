@@ -112,7 +112,7 @@ def selectRandomFromList(list):
 
 def selectRandomSubListFromList(list, num):
 	"""
-	generates random sublist from a list
+	generates random sublist from a list without replacemment
 	"""
 	sel = selectRandomFromList(list)
 	selSet = {sel}
@@ -123,6 +123,12 @@ def selectRandomSubListFromList(list, num):
 			selSet.add(sel)
 			selList.append(sel)		
 	return selList
+
+def selectRandomSubListFromListWithRepl(values, num):
+	"""
+	generates random sublist from a list with replacemment
+	"""
+	return list(map(lambda i : selectRandomFromList(values), range(num)))
 
 def genIpAddress():
 	"""
@@ -258,6 +264,13 @@ def preturbVector(values, range):
 	"""
 	nValues = list(map(lambda va: preturbScalar(va, range), values))
 	return nValues
+
+def randomShiftVector(values, smin, smax):
+	"""
+	shifts  a list by a random quanity with a range
+	"""
+	shift = np.random.uniform(smin, smax)
+	return list(map(lambda va: va + shift, values))
 
 def floatRange(beg, end, incr):
 	"""

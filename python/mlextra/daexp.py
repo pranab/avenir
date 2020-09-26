@@ -539,7 +539,7 @@ class DataExplorer:
 			print("showing first 50 elements" )
 			print(data[:50])
 
-	def plotHist(self, ds, cumulative, density, nbins=None):
+	def plotHist(self, ds, cumulative, density, nbins=20):
 		"""
 		plots histogram
 		params:
@@ -563,7 +563,7 @@ class DataExplorer:
 		result = self.__printResult("monoIncreasing", monoIncreasing, "monoDecreasing", monoDecreasing)
 		return result
 
-	def getFeqDistr(self, ds,  nbins=10):
+	def getFreqDistr(self, ds,  nbins=20):
 		"""
 		get histogram
 		params:
@@ -577,7 +577,7 @@ class DataExplorer:
 		return result
 
 
-	def getCumFreqDistr(self, ds,  nbins=10):
+	def getCumFreqDistr(self, ds,  nbins=20):
 		"""
 		get cumulative freq distribution
 		params:
@@ -589,6 +589,33 @@ class DataExplorer:
 		cumFrequency, lowLimit, binsize, extraPoints = sta.cumfreq(data, numbins=nbins)
 		result = self.__printResult("cumFrequency", cumFrequency, "lowLimit", lowLimit, "binsize", binsize, "extraPoints", extraPoints)
 		return result
+
+	def getExtremeValue(self, ds,  ensamp, nsamp, polarity, doPlotDistr, nbins=20):
+		"""
+		get histogram
+		params:
+		ds: data set name or list or numpy array
+		ensamp: num of samples for extreme values
+		nsamp: num of samples
+		polarity: max or min
+		doPlotDistr: plot distr
+		nbins: num of bins
+		"""
+		self.__printBanner("getting extreme values", ds)
+		data = self.getNumericData(ds)
+		evalues = list()
+		for _ in range(ensamp):
+			values = selectRandomSubListFromListWithRepl(data, nsamp)
+			if polarity == "max":
+				evalues.append(max(values))
+			else:
+				evalues.append(min(values))
+		if doPlotDistr:
+			plt.hist(evalues, bins=nbins, cumulative=False, density=True)
+			plt.show()
+		result = self.__printResult("extremeValues", evalues)
+		return result
+
 
 	def getEntropy(self, ds,  nbins=10):
 		"""
