@@ -9,9 +9,15 @@ tnn_bo.properties file. Make changes as necessary
 
 Generate Data
 =============
+-training data
 ./back_order.py simu <num_recs> > bord_tr.txt
 where
 num_recs = number of records with weekly data e.g. 1000
+
+-test data
+./back_order.py simu <num_recs> > bord_va.txt
+where
+num_recs = number of records with weekly data e.g. 100
 
 Train neural network model
 ==========================
@@ -24,7 +30,11 @@ train.model.save=True
  
 Infer 
 =====
-./back_order.py infer 0,1000
+create data for inference
+./back_order.py simu <num_recs> > bord_if.txt
+num_recs = number of records  e.g. 500
+
+./back_order.py infer tnn_bo.properties bord_if.txt 0,1000
 
 The last argument is list of back order quantities. Make sue the following parameter is set 
 it will output expected per unit profit for te 2 back order quantities

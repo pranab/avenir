@@ -173,7 +173,7 @@ def infer(model, dataFile,  cindex , cvalues):
 	#train or restore model
 	useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
 	if useSavedModel:
-		model.restoreCheckpt()
+		FeedForwardNetwork.restoreCheckpt(model)
 	else:
 		FeedForwardNetwork.batchTrain(model) 
 
@@ -204,6 +204,7 @@ def infer(model, dataFile,  cindex , cvalues):
 	
 	#predict with intervened values
 	model.eval()
+	up = list()
 	for sv, v in zip(scvalues, cvalues):
 		#print(featData[:5,:])
 		featData[:,cindex] = sv
@@ -216,8 +217,13 @@ def infer(model, dataFile,  cindex , cvalues):
 		#print(yPred[:5])
 		av = yPred.mean()
 		print("back order {}\tunit profit {:.2f}".format(v, av))
+		up.append(av)
 
-
+	plt.plot(cvalues, up)
+	plt.xlabel("back order")
+	plt.ylabel("unit profit")
+	plt.show()
+	
 if __name__ == "__main__":
 	op = sys.argv[1]
 	if op == "simu":

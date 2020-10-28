@@ -64,6 +64,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2020/07/13/learn-about-your-data-with-about-seventy-data-exploration-functions-all-in-one-python-class/
 * https://pkghosh.wordpress.com/2020/07/28/semantic-search-with-pre-trained-neural-transformer-model-using-document-sentence-and-token-level-embedding/
 * https://pkghosh.wordpress.com/2020/08/18/predicting-individual-viral-infection-using-contact-data-with-lstm-neural-network/
+* https://pkghosh.wordpress.com/2020/10/28/causal-inference-with-deep-learning-using-manufacturing-supply-chain-optimization-as-an-example/
 
 
 ## Getting started
