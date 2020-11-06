@@ -48,9 +48,11 @@ class MonteCarloSimulator(object):
 		self.sd = None
 		self.replSamplers = dict()
 		self.prSamples = None
-
-		self.logger = createLogger(__name__, logFilePath, logLevName)
-		self.logger.info("******** stating new  session of MonteCarloSimulator")
+		
+		self.logger = None
+		if logFilePath is not None: 		
+			self.logger = createLogger(__name__, logFilePath, logLevName)
+			self.logger.info("******** stating new  session of MonteCarloSimulator")
 
 
 	def registerBernoulliTrialSampler(self, pr):
@@ -213,10 +215,17 @@ class MonteCarloSimulator(object):
 	
 	def getOutput(self):
 		"""
-		raw output
+		get raw output
 		"""
 		return self.output
 	
+	def setOutput(self, values):
+		"""
+		set raw output
+		"""
+		self.output = values
+		self.numIter = len(values)
+
 	def drawHist(self, myTitle, myXlabel, myYlabel):
 		"""
 		draw histogram
@@ -289,7 +298,7 @@ class MonteCarloSimulator(object):
 		tailEnd = mean - zvalue * sd
 		cvaCounts = self.cumDistr(tailStart, tailEnd, numIntPoints)
 		
-		reqConf = floatRange(0.0, 0.158, .01)	
+		reqConf = floatRange(0.0, 0.150, .01)	
 		msg = "p value outside interpolation range, reduce zvalue and try again {:.5f}  {:.5f}".format(reqConf[-1], cvaCounts[-1][1])
 		assert reqConf[-1] < cvaCounts[-1][1], msg
 		critValues = self.interpolateCritValues(reqConf, cvaCounts, True, tailStart, tailEnd)
@@ -335,7 +344,8 @@ class MonteCarloSimulator(object):
 				if v < cv:
 					count += 1
 			p = (cv, count/self.numIter)
-			self.logger.info("{:.3f}  {:.3f}".format(p[0], p[1]))
+			if self.logger is not None:
+				self.logger.info("{:.3f}  {:.3f}".format(p[0], p[1]))
 			cvaCounts.append(p)
 		return cvaCounts
 			
@@ -344,7 +354,8 @@ class MonteCarloSimulator(object):
 		interpolate for spefici confidence limits
 		"""
 		critValues = list()
-		self.logger.info("target conf limit " + str(reqConf))
+		if self.logger is not None:
+			self.logger.info("target conf limit " + str(reqConf))
 		reqConfSub = reqConf[1:] if lowertTail else reqConf[:-1]
 		for rc in reqConfSub:
 			for i in range(len(cvaCounts) -1):
@@ -353,7 +364,8 @@ class MonteCarloSimulator(object):
 					slope = (cvaCounts[i+1][0] - cvaCounts[i][0]) / (cvaCounts[i+1][1] - cvaCounts[i][1])
 					cval = cvaCounts[i][0] + slope * (rc - cvaCounts[i][1]) 
 					p = (rc, cval)
-					self.logger.debug("interpolated crit values {:.3f} {:.3f}".format(p[0], p[1]))
+					if self.logger is not None:
+						self.logger.debug("interpolated crit values {:.3f} {:.3f}".format(p[0], p[1]))
 					critValues.append(p)
 					break
 		if lowertTail:
