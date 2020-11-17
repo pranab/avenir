@@ -383,14 +383,14 @@ def arrayContains(arr, item):
 		contains = False
 	return contains
 
-def strToIntArray(line, delim):	
+def strToIntArray(line, delim=","):	
 	"""
 	int array from delim separated string
 	"""
 	arr = line.split(delim)
 	return [int(a) for a in arr]
 
-def strToFloatArray(line, delim):	
+def strToFloatArray(line, delim=","):	
 	"""
 	float array from delim separated string
 	"""
@@ -449,6 +449,13 @@ def toStrList(values, precision=None):
 	convert to string list
 	"""
 	return list(map(lambda va: toStr(va, precision), values))
+	
+def toIntFromBoolean(value):
+	"""
+	convert to int
+	"""
+	ival = 1 if value else 0
+	return ival
 
 def typedValue(val):
 	"""
@@ -585,6 +592,18 @@ def getFileAsFloatMatrix(dirPath, columns, delim=","):
 	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
 		mat.append(asFloatList(rec))
 	return mat
+	
+
+def getFileAsFiltFloatMatrix(dirPath, filt, columns, delim=","):
+	"""
+	extracts float matrix from csv file given row filter and column indices with each row being 
+	concatenation of  extracted column values row size = num of columns
+	"""
+	mat = list()
+	for rec in  fileFiltSelFieldsRecGen(dirPath, filt, columns, delim):
+		mat.append(asFloatList(rec))
+	return mat
+	
 		
 def getMultipleFileAsInttMatrix(dirPathWithCol,  delim=","):
 	"""
@@ -707,6 +726,7 @@ def fileFiltSelFieldsRecGen(filePath, filt, columns, delim = ","):
 	"""
 	file record generator with  row and column filter applied
 	"""
+	columns = strToIntArray(columns, delim)
 	with open(filePath, "r") as fp:
 		for line in fp:	
 			line = line[:-1]
