@@ -206,11 +206,15 @@ class MeetingScheduleCost(object):
 			fslots = list()
 			for d in meetByDay.keys():
 				dmeetings = meetByDay[d]
-				pend = 8 * secInHour
+				
+				#sec into week till beginning of the day
+				pend = (d - 1) * secInDay +  8 * secInHour
 				for dm in dmeetings:
 					ft = dm.start - pend
 					fslots.append(ft)
 					pend = dm.end
+					
+				#time after last meeting of the day
 				ft = 18 * secInHour - dmeetings[-1].end
 				fslots.append(ft)
 			avFt = mean(fslots)

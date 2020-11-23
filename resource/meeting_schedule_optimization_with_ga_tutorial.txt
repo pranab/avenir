@@ -1,0 +1,21 @@
+This tutorial is for optimum meeting schedules for meetings in week using genetic algorithms, given 
+the number of meetings  and participants in those meeting. More fragmented the the free blocks of time
+in betwwen higher the cost in the optimizer.
+
+
+Setup
+=====
+Make sure you have ../lib   ../mlextra  directories with all the python files in there wrt 
+where mesched.py is. All parameters are defined in  mesched.properties file. Make changes as 
+necessary
+
+Running the iptimizer
+=====================
+./mesched.py mesched.properties <num_meetings> <num_people> 
+
+num_meetings = number of ameetings in a week e.g. 15
+num_people = number of people people e.g. 10
+
+Make sure the following configuration is set as below
+opti.solution.size=x
+where x = 3 * num_meetings
