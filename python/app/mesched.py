@@ -14,7 +14,7 @@ import sys
 import random
 import jprops
 import numpy as np
-from statistics import mean
+import statistics 
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
 from util import *
@@ -187,6 +187,7 @@ class MeetingScheduleCost(object):
 		"""
 		cost
 		"""
+		secInWorkDay = 10 * 60 * 60
 		meetings = self.getMeetings(args)
 
 		#cost for each person
@@ -202,25 +203,37 @@ class MeetingScheduleCost(object):
 			for d in meetByDay.keys():
 				meetByDay[d].sort(key = lambda m : m.start)
 			
-			#free slots
+			#free slots for days with meetings
 			fslots = list()
 			for d in meetByDay.keys():
 				dmeetings = meetByDay[d]
 				
 				#sec into week till beginning of the day
-				pend = (d - 1) * secInDay +  8 * secInHour
+				secUptoDay = (d - 1) * secInDay
+				pend =  secUptoDay + 8 * secInHour
 				for dm in dmeetings:
 					ft = dm.start - pend
 					fslots.append(ft)
 					pend = dm.end
 					
 				#time after last meeting of the day
-				ft = 18 * secInHour - dmeetings[-1].end
+				ft = secUptoDay + 18 * secInHour - dmeetings[-1].end
 				fslots.append(ft)
-			avFt = mean(fslots)
+				
+			#days without meetings
+			frDay = 0
+			for d in range(1,5,1):
+				if not (d in meetByDay):
+					ft = secInWorkDay
+					fslots.append(ft)
+					frDay += 1
+				
+			avFt = statistics.median(fslots)
 			cost = 8 - avFt / secInHour
-			pcost[p] = cost
-		self.logger.debug("done per person cost")	
+			pcost[p] = cost		
+			self.logger.debug("person {}   cost {:.3f} free days {}".format(p, cost, frDay))	
+			
+		self.logger.debug("done per person cost person")	
 			
 		#overall cost
 		cwl = list(map(lambda p : (pcost[p], self.roleWt[p]) , self.partMeetigs.keys()))
@@ -247,20 +260,30 @@ if __name__ == "__main__":
 	numMeeting = int(sys.argv[2])
 	numPeople = int(sys.argv[3])
 	
+	#create optimizer
 	schedCost = MeetingScheduleCost(numMeeting, numPeople)
 	optimizer = GeneticAlgorithmOptimizer(optConfFile, schedCost)
-	schedCost.logger = optimizer.logger
+	schedCost.logger = optimizer.logger	
+	config = optimizer.getConfig()
+	csize = config.getIntConfig("opti.solution.comp.size")[0]
+	ssize = config.getIntListConfig("opti.solution.size")[0]
+	assert ssize[0] == numMeeting * csize, "solution size should be the product of num of meetings and and solution component size"
+	
+	#run optimizer
 	optimizer.run()
 	print("optimizer started, check log file for output details...")
 	
+	#best soln
 	print("\nbest solution found")
 	best = optimizer.getBest()
 	pritnSoln(best, schedCost)
 
+	#output soln tracker
 	if optimizer.trackingOn:
 		print("\nbest solution history")
 		print(str(optimizer.tracker))
-		
+	
+	#local search	
 	locBest = optimizer.getLocBest()
 	if locBest is not None:
 		print("\nbest solution after local search of global best solution")
