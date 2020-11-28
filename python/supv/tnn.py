@@ -135,13 +135,13 @@ class FeedForwardNetwork(torch.nn.Module):
 		
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
-		(featData, outData) = self.prepData(dataFile)
+		(featData, outData) = FeedForwardNetwork.prepData(self, dataFile)
 		self.featData = torch.from_numpy(featData)
 		self.outData = torch.from_numpy(outData)
 
 		#validation data
 		dataFile = self.config.getStringConfig("valid.data.file")[0]
-		(featDataV, outDataV) = self.prepData(dataFile)
+		(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataFile)
 		self.validFeatData = torch.from_numpy(featDataV)
 		self.validOutData = outDataV
 
@@ -232,25 +232,26 @@ class FeedForwardNetwork(torch.nn.Module):
 		y = self.layers(x)	
 		return y
 
-	def prepData(self, dataFile, includeOutFld=True):
+	@staticmethod
+	def prepData(model, dataFile, includeOutFld=True):
 		"""
 		loads and prepares  data
 		"""
 		# parameters
-		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
+		fieldIndices = model.config.getStringConfig("train.data.fields")[0]
 		fieldIndices = strToIntArray(fieldIndices, ",")
-		featFieldIndices = self.config.getStringConfig("train.data.feature.fields")[0]
+		featFieldIndices = model.config.getStringConfig("train.data.feature.fields")[0]
 		featFieldIndices = strToIntArray(featFieldIndices, ",")
 
 		#all data and feature data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
-		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-		    scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+		if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
+		    scalingMethod = model.config.getStringConfig("common.scaling.method")[0]
 		    featData = scaleData(featData, scalingMethod)
 		
 		# target data
 		if includeOutFld:
-			outFieldIndices = self.config.getStringConfig("train.data.out.fields")[0]
+			outFieldIndices = model.config.getStringConfig("train.data.out.fields")[0]
 			outFieldIndices = strToIntArray(outFieldIndices, ",")
 			outData = data[:,outFieldIndices]	
 			foData = (featData.astype(np.float32), outData.astype(np.float32))
@@ -435,7 +436,7 @@ class FeedForwardNetwork(torch.nn.Module):
 
 		#predict
 		dataFile = model.config.getStringConfig("predict.data.file")[0]
-		featData  = model.prepData(dataFile, False)
+		featData  = FeedForwardNetwork.prepData(model, dataFile, False)
 		featData = torch.from_numpy(featData)
 		model.eval()
 		yPred = model(featData)
