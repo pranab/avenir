@@ -1110,6 +1110,19 @@ def isCategorical(data):
 	"""
 	re = next((d for d in data if not (type(d) == int or type(d) == str)), None)
 	return (re is None)
+
+def assertWithinRange(value, vmin, vmax, msg):
+	"""
+	assert within range
+	"""
+	assert value >= vmin and value <= vmax, msg
+		
+def assertInList(value, values, msg):
+	"""
+	assert contains in a list
+	"""
+	assert value in values, msg
+
 	
 class StepFunction:
 	"""

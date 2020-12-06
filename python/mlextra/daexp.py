@@ -38,6 +38,8 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 from sklearn.covariance import EllipticEnvelope
+from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -918,6 +920,50 @@ class DataExplorer:
 			"residual", res.resid)
 		return result
 
+	def getGausianMixture(self, ncomp, cvType, ninit, *dsl):
+		"""
+		finds gaussian mixture parameters
+		params:
+		ncomp : num of gaussian componenets
+		ninit: num of intializations
+		dsl: list of data set name or list or numpy array
+		"""
+		self.__printBanner("getting gaussian mixture parameters", *dsl)
+		assertInList(cvType, ["full", "tied", "diag", "spherical"], "invalid covariance type")
+		dmat = self.__stackData(*dsl)
+		
+		gm = GaussianMixture(n_components=ncomp,  covariance_type=cvType, n_init=ninit)
+		gm.fit(dmat)
+		weights = gm.weights_
+		means = gm.means_
+		covars = gm.covariances_
+		converged = gm.converged_
+		niter = gm.n_iter_
+		aic = gm.aic(dmat)
+		result = self.__printResult("weights", weights, "mean", means, "covariance", covars, "converged", converged, "num iterations", niter, "aic", aic)
+		return result
+		
+	def getKmeansCluster(self, nclust, ninit, *dsl):
+		"""
+		finds gaussian mixture parameters
+		params:
+		ncomp : num of gaussian componenets
+		ninit: num of intializations
+		dsl: list of data set name or list or numpy array
+		"""
+		self.__printBanner("getting kmean cluster parameters", *dsl)
+		dmat = self.__stackData(*dsl)
+		nsamp = dmat.shape[0]
+		km = KMeans(n_clusters=nclust, n_init=ninit)
+		km.fit(dmat)
+		centers = km.cluster_centers_
+		avdist = sqrt(km.inertia_ / nsamp)
+		niter = km.n_iter_
+		score = km.score(dmat)
+		
+		result = self.__printResult("centers", centers, "average distance", avdist, "num iterations", niter, "score", score)
+		return result
+
 	def getOutliersWithIsoForest(self, contamination,  *dsl):
 		"""
 		finds outliers using isolation forest
@@ -926,10 +972,8 @@ class DataExplorer:
 		dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using isolation forest", *dsl)
-		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
-		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
-		dmat = np.column_stack(dlist)
+		dmat = self.__stackData(*dsl)
 
 		isf = IsolationForest(contamination=contamination, behaviour="new")
 		ypred = isf.fit_predict(dmat)
@@ -948,10 +992,8 @@ class DataExplorer:
 		dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using local outlier factor", *dsl)
-		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
-		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
-		dmat = np.column_stack(dlist)
+		dmat = self.__stackData(*dsl)
 
 		lof = LocalOutlierFactor(contamination=contamination)
 		ypred = lof.fit_predict(dmat)
@@ -970,10 +1012,8 @@ class DataExplorer:
 		dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using one class svm", *dsl)
-		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
-		self.ensureSameSize(dlist)
 		assert nu >= 0 and nu <= 0.5, "error upper bound outside valid range"
-		dmat = np.column_stack(dlist)
+		dmat = self.__stackData(*dsl)
 
 		svm = OneClassSVM(nu=nu)
 		ypred = svm.fit_predict(dmat)
@@ -992,10 +1032,8 @@ class DataExplorer:
 		dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using using covariance determinant", *dsl)
-		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
-		self.ensureSameSize(dlist)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
-		dmat = np.column_stack(dlist)
+		dmat = self.__stackData(*dsl)
 
 		lof = EllipticEnvelope(contamination=contamination)
 		ypred = lof.fit_predict(dmat)
@@ -1848,6 +1886,17 @@ class DataExplorer:
 				le = cle
 			else:
 				assert cle == le, "all data sets need to be of same size"
+				
+	def __stackData(self, *dsl):
+		"""
+		stacks collumd to create matrix
+		params:
+		dsl: data source list
+		"""
+		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
+		self.ensureSameSize(dlist)
+		dmat = np.column_stack(dlist)
+		return dmat	
 
 	def __printBanner(self, msg, *dsl):
 		"""
