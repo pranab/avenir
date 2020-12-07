@@ -40,6 +40,7 @@ from sklearn.svm import OneClassSVM
 from sklearn.covariance import EllipticEnvelope
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -945,7 +946,7 @@ class DataExplorer:
 		
 	def getKmeansCluster(self, nclust, ninit, *dsl):
 		"""
-		finds gaussian mixture parameters
+		gets cluster parameters
 		params:
 		ncomp : num of gaussian componenets
 		ninit: num of intializations
@@ -962,6 +963,26 @@ class DataExplorer:
 		score = km.score(dmat)
 		
 		result = self.__printResult("centers", centers, "average distance", avdist, "num iterations", niter, "score", score)
+		return result
+
+	def getPrincComp(self, ncomp, *dsl):
+		"""
+		finds pricipal componenet parameters
+		params:
+		ncomp : num of pricipal componenets
+		dsl: list of data set name or list or numpy array
+		"""
+		self.__printBanner("getting principal componenet parameters", *dsl)
+		dmat = self.__stackData(*dsl)
+		
+		pca = PCA(n_components=ncomp)
+		pca.fit(dmat)
+		comps = pca.components_
+		var = pca.explained_variance_
+		varr = pca.explained_variance_ratio_
+		svalues = pca.singular_values_
+		
+		result = self.__printResult("componenets", comps, "variance", var, "variance ratio", varr, "singular values", svalues)
 		return result
 
 	def getOutliersWithIsoForest(self, contamination,  *dsl):
