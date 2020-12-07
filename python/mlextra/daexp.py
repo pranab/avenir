@@ -955,13 +955,13 @@ class DataExplorer:
 		self.__printBanner("getting kmean cluster parameters", *dsl)
 		dmat = self.__stackData(*dsl)
 		nsamp = dmat.shape[0]
+		
 		km = KMeans(n_clusters=nclust, n_init=ninit)
 		km.fit(dmat)
 		centers = km.cluster_centers_
 		avdist = sqrt(km.inertia_ / nsamp)
 		niter = km.n_iter_
 		score = km.score(dmat)
-		
 		result = self.__printResult("centers", centers, "average distance", avdist, "num iterations", niter, "score", score)
 		return result
 
@@ -974,6 +974,9 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting principal componenet parameters", *dsl)
 		dmat = self.__stackData(*dsl)
+		nfeat = dmat.shape[1]
+		assertGreater(nfeat, 1, "requires multiple features")
+		assertLesserEqual(ncomp, nfeat, "num of componenets greater than num of features")
 		
 		pca = PCA(n_components=ncomp)
 		pca.fit(dmat)
@@ -981,7 +984,6 @@ class DataExplorer:
 		var = pca.explained_variance_
 		varr = pca.explained_variance_ratio_
 		svalues = pca.singular_values_
-		
 		result = self.__printResult("componenets", comps, "variance", var, "variance ratio", varr, "singular values", svalues)
 		return result
 

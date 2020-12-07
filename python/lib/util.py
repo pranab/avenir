@@ -1111,6 +1111,36 @@ def isCategorical(data):
 	re = next((d for d in data if not (type(d) == int or type(d) == str)), None)
 	return (re is None)
 
+def assertEqual(value, veq, msg):
+	"""
+	assert equal to
+	"""
+	assert value == veq , msg
+
+def assertGreater(value, vmin, msg):
+	"""
+	assert greater than 
+	"""
+	assert value > vmin , msg
+
+def assertGreaterEqual(value, vmin, msg):
+	"""
+	assert greater than 
+	"""
+	assert value >= vmin , msg
+
+def assertLesser(value, vmax, msg):
+	"""
+	assert less than
+	"""
+	assert value < vmax , msg
+
+def assertLesserEqual(value, vmax, msg):
+	"""
+	assert less than
+	"""
+	assert value <= vmax , msg
+
 def assertWithinRange(value, vmin, vmax, msg):
 	"""
 	assert within range
