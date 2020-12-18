@@ -563,14 +563,14 @@ def getFileColumnAsFloat(dirPath, index, delim=","):
 	get float fileds from a file
 	"""
 	#print("{}  {}".format(dirPath, index))
-	fields = getFileColumnAsString(dirPath, index, delim=",")
+	fields = getFileColumnAsString(dirPath, index, delim)
 	return list(map(lambda v:float(v), fields))
 	
 def getFileColumnAsInt(dirPath, index, delim=","):
 	"""
 	get float fileds from a file
 	"""
-	fields = getFileColumnAsString(dirPath, delim, index)
+	fields = getFileColumnAsString(dirPath, index, delim)
 	return list(map(lambda v:int(v), fields))
 
 def getFileAsIntMatrix(dirPath, columns, delim=","):
