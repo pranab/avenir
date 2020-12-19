@@ -1,4 +1,4 @@
-#!/Users/pranab/Tools/anaconda/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -110,3 +110,62 @@ class Histogram:
 		elif x > self.xmax:
 			x = self.xmax
 		return x
+
+class RunningStat:
+	"""
+	running stat class
+	"""
+	def __init__(self):
+		self.sum = 0.0
+		self.sumSq = 0.0
+		self.count = 0
+	
+	@staticmethod
+	def create(count, sum, sumSq):
+		rs = RunningStat()
+		rs.sum = sum
+		rs.sumSq = sumSq
+		rs.count = count
+		return rs
+		
+	def add(self, value):
+		"""
+		adds new value
+		"""
+		self.sum += value
+		self.sumSq += (value * value)
+		self.count += 1
+
+	def getStat(self):
+		"""
+		calculate mean and std deviation 
+		"""
+		mean = sum / count
+		t = self.sumSq / (self.count - 1) - mean * mean * self.count / (self.count - 1)
+		sd = math.sqrt(t)
+		re = (mean, sd)
+		return re
+
+	def addGetStat(self,value):
+		"""
+		calculate mean and std deviation with new value added
+		"""
+		self.add(value)
+		re = self.getStat()
+		return re
+	
+	def getCount(self):
+		"""
+		return count
+		"""
+		return self.count
+	
+	def getState(self):
+		"""
+		return state
+		"""
+		s = (self.count, self.sum. self.sumSq)
+		return s
+		
+		
+		
