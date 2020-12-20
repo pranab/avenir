@@ -140,7 +140,7 @@ class RunningStat:
 		"""
 		calculate mean and std deviation 
 		"""
-		mean = sum / count
+		mean = self.sum /self. count
 		t = self.sumSq / (self.count - 1) - mean * mean * self.count / (self.count - 1)
 		sd = math.sqrt(t)
 		re = (mean, sd)
@@ -164,7 +164,7 @@ class RunningStat:
 		"""
 		return state
 		"""
-		s = (self.count, self.sum. self.sumSq)
+		s = (self.count, self.sum, self.sumSq)
 		return s
 		
 		
