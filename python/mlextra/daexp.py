@@ -45,6 +45,7 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 from sampler import *
+from stats import *
 
 """
 Load  data from a CSV file, data frame, numpy array or list
@@ -826,7 +827,7 @@ class DataExplorer:
 		return stat
 
 
-	def getDifference(self, ds, order):
+	def getDifference(self, ds, order, doPlot=False):
 		"""
 		gets difference of given order
 		params:
@@ -836,7 +837,8 @@ class DataExplorer:
 		self.__printBanner("getting difference of given order", ds)
 		data = self.getNumericData(ds)
 		diff = difference(data, order)
-		drawLine(diff)
+		if doPlot:
+			drawLine(diff)
 		return diff
 
 	def getTrend(self, ds, doPlot=False):
@@ -857,13 +859,7 @@ class DataExplorer:
 		sc = model.score(X, data)
 		coef = model.coef_
 		intc = model.intercept_
-
-		result = dict()
-		result["coeff"] = coef
-		result["intercept"] = intc
-		result["r square error"] = sc
-		result["trend"] = trend
-		self.pp.pprint(result)
+		result = self.__printResult("coeff", coef, "intercept", intc,  "r square error", sc,  "trend", trend)
 		
 		if doPlot:
 			plt.plot(data)
@@ -871,6 +867,44 @@ class DataExplorer:
 			plt.show()
 		return result
 
+	def getDiffSdNoisiness(self, ds):
+		"""
+		get nisiness based on std dev of first order difference
+		params:
+		ds: data set name or list or numpy array
+		"""
+		diff = self.getDifference(ds, 1)
+		noise = np.std(np.array(diff))
+		result = self.__printResult("noisiness", noise)
+		return result
+		
+	def getMaRmseNoisiness(self, ds, wsize=5):
+		"""
+		get noisiness based on RMSE with moving average
+		params:
+		ds: data set name or list or numpy array
+		"""
+		data = self.getNumericData(ds)
+		wind = data[:wsize]
+		wstat = SlidingWindowStat.initialize(wind.tolist())
+		
+		whsize = int(wsize / 2)
+		beg = whsize
+		end = len(data) - whsize - 1
+		sumSq = 0.0
+		mean = wstat.getStat()[0]
+		diff = data[beg] - mean
+		sumSq += diff * diff
+		for i in range(beg + 1, end, 1):
+			mean = wstat.addGetStat(data[i + whsize])[0]
+			diff = data[i] - mean
+			sumSq += (diff * diff)
+			
+		noise = math.sqrt(sumSq / (len(data) - 2 * whsize))	
+		result = self.__printResult("noisiness", noise)
+		return result
+		
+		
 	def deTrend(self, ds, trend, doPlot=False):
 		"""
 		de trend

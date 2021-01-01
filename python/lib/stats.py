@@ -167,5 +167,74 @@ class RunningStat:
 		s = (self.count, self.sum, self.sumSq)
 		return s
 		
+
+class SlidingWindowStat:
+	"""
+	sliding window stat 
+	"""
+	def __init__(self):
+		self.sum = 0.0
+		self.sumSq = 0.0
+		self.count = 0
+		self.values = None
+	
+	@staticmethod
+	def create(values, sum, sumSq):
+		sws = SlidingWindowStat()
+		sws.sum = sum
+		sws.sumSq = sumSq
+		self.values = values.copy()
+		sws.count = len(self.values)
+		return sws
+		
+	@staticmethod
+	def initialize(values):
+		sws = SlidingWindowStat()
+		sws.values = values.copy()
+		for v in sws.values:
+			sws.sum += v
+			sws.sumSq += v * v		
+		sws.count = len(sws.values)
+		return sws
+
+	def add(self, value):
+		"""
+		adds new value
+		"""
+		self.values.append(value)
+		self.sum = self.sum + value - self.values[0]
+		self.sumSq = self.sumSq  + (value * value) - (self.values[0] * self.values[0])
+		self.values.pop(0)
+
+	def getStat(self):
+		"""
+		calculate mean and std deviation 
+		"""
+		mean = self.sum /self. count
+		t = self.sumSq / (self.count - 1) - mean * mean * self.count / (self.count - 1)
+		sd = math.sqrt(t)
+		re = (mean, sd)
+		return re
+
+	def addGetStat(self,value):
+		"""
+		calculate mean and std deviation with new value added
+		"""
+		self.add(value)
+		re = self.getStat()
+		return re
+	
+	def getCount(self):
+		"""
+		return count
+		"""
+		return self.count
+	
+	def getState(self):
+		"""
+		return state
+		"""
+		s = (self.count, self.sum, self.sumSq)
+		return s
 		
 		
