@@ -31,6 +31,7 @@ import matplotlib
 import random
 import jprops
 from random import randint
+from sklearn import metrics
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../supv"))
 from util import *
@@ -48,6 +49,7 @@ class AutoEncoder(nn.Module):
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
+		defValues["common.scaling.method"] = ("zscale", None)
 		defValues["common.verbose"] = (False, None)
 		defValues["common.device"] = ("cpu", None)
 		defValues["train.data.file"] = (None, "missing training data file")
@@ -56,22 +58,26 @@ class AutoEncoder(nn.Module):
 		defValues["train.num.hidden.units"] = (None, "missing number of hidden units for each layer")
 		defValues["train.encoder.activations"] = (None, "missing encoder activation")
 		defValues["train.decoder.activations"] = (None, "missing encoder activation")
+		defValues["train.batch.size"] = (50, None)
+		defValues["train.num.iterations"] = (500, None)
+		defValues["train.loss.reduction"] = ("mean", None)
+		defValues["train.lossFn"] = ("mse", None) 
 		defValues["train.optimizer"] = ("adam", None) 
 		defValues["train.opt.learning.rate"] = (.0001, None)
-		defValues["train.opt.weight.decay"] = (.00001, None)
-		defValues["train.opt.betas"] = ("0.9, 0.999", None)
-		defValues["train.opt.alpha"] = (0.99, None) 		
-		defValues["train.opt.eps"] = (1e-8, None)
-		defValues["train.opt.momentum"] = (0, None)
-		defValues["train.opt.dampening"] = (0, None)
-		defValues["train.batch.size"] = (128, None)
-		defValues["train.opt.momentum.nesterov"] = (False, None)
+		defValues["train.opt.weight.decay"] = (0, None)
+		defValues["train.opt.momentum"] = (0, None) 
+		defValues["train.opt.eps"] = (1e-08, None) 
+		defValues["train.opt.dampening"] = (0, None) 
+		defValues["train.opt.momentum.nesterov"] = (False, None) 
+		defValues["train.opt.betas"] = ([0.9, 0.999], None) 
+		defValues["train.opt.alpha"] = (0.99, None) 
 		defValues["train.noise.scale"] = (1.0, None)
-		defValues["train.num.iterations"] = (500, None) 
-		defValues["train.loss"] = ("mse", None) 
 		defValues["train.model.save"] = (False, None)
+		defValues["train.track.error"] = (False, None) 
+		defValues["train.batch.intv"] = (5, None) 
 		defValues["encode.use.saved.model"] = (True, None)
 		defValues["encode.data.file"] = (None, "missing enoding data file")
+		defValues["encode.feat.pad.size"] = (60, None)
 		self.config = Configuration(configFile, defValues)
 
 		super(AutoEncoder, self).__init__()
@@ -84,20 +90,24 @@ class AutoEncoder(nn.Module):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
+		torch.manual_seed(9999)
+		self.verbose = self.config.getStringConfig("common.verbose")[0]
 		self.device = self.config.getStringConfig("common.device")[0]
 		self.numinp = self.config.getIntConfig("train.num.input")[0]
-		self.numHidden = self.config.getStringConfig("train.num.hidden.units")[0].split(",")
-		self.numHidden = toIntList(self.numHidden)
+		self.numHidden = self.config.getIntListConfig("train.num.hidden.units")[0]
 		numLayers = len(self.numHidden)
-		self.encActivations = self.config.getStringConfig("train.encoder.activations")[0].split(",")
-		self.decActivations = self.config.getStringConfig("train.decoder.activations")[0].split(",")
+		self.encActivations = self.config.getStringListConfig("train.encoder.activations")[0]
+		self.decActivations = self.config.getStringListConfig("train.decoder.activations")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
 		self.noiseScale = self.config.getFloatConfig("train.noise.scale")[0]
 		self.numIter = self.config.getIntConfig("train.num.iterations")[0]
-		self.optimizer = self.config.getStringConfig("train.optimizer")[0]
-		self.loss = self.config.getStringConfig("train.loss")[0]
+		self.optimizerStr = self.config.getStringConfig("train.optimizer")[0]
+		self.optimizer = None
+		self.loss = self.config.getStringConfig("train.lossFn")[0]
 		self.modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
+		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
+		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
 		
 		#encoder
 		inSize = self.numinp
@@ -168,7 +178,21 @@ class AutoEncoder(nn.Module):
 		#print(type(featData))
 		return featData
 
-	def encode(self):
+	def getRegen(self):
+		"""
+		get regenerated data
+		"""
+		self.eval()
+			
+		teDataFile = self.config.getStringConfig("encode.data.file")[0]
+		enData = FeedForwardNetwork.prepData(self, teDataFile, False)
+		with torch.no_grad():
+			regenData = self(torch.from_numpy(enData))
+			regenData = regenData.data.cpu().numpy()
+		data = (enData, regenData)
+		return data
+		
+	def regen(self):
 		"""
 		encode
 		"""
@@ -177,18 +201,31 @@ class AutoEncoder(nn.Module):
 			FeedForwardNetwork.restoreCheckpt(self)
 		else:
 			#train
-			self.trainAe()
+			self.trainModel()
 		self.eval()
 			
 		teDataFile = self.config.getStringConfig("encode.data.file")[0]
 		enData = FeedForwardNetwork.prepData(self, teDataFile, False)
-		enData = torch.from_numpy(enData)
-		for x in enData:
-			y = x
-			for em in self.encoder:
-				y = em(y)
-			print(y)
-	
+		with torch.no_grad():
+			regenData = self(torch.from_numpy(enData))
+			regenData = regenData.data.cpu().numpy()
+		
+		#score = perfMetric(self.loss, enData, regenData)
+		#score = metrics.mean_squared_error(enData, regenData, multioutput="raw_values")
+		#print(enData.shape, regenData.shape, score.shape)
+		i = 0
+		padWidth = self.config.getIntConfig("encode.feat.pad.size")[0]
+		scores = list()
+		for rec in fileRecGen(teDataFile, ","):
+			score = perfMetric(self.loss, enData[i:], regenData[i:])
+			feat = (",".join(rec)).ljust(padWidth, " ")
+			rec = feat + "\t" + str(score)
+			print(rec)
+			i += 1
+			scores.append(score)
+		return scores
+
+		
 	def getParams(self):
 		"""
 		get model parameters
@@ -220,7 +257,7 @@ class AutoEncoder(nn.Module):
 		modelFilePath = modelDirectory + "/" + modelFile
 		return modelFilePath
 		
-	def trainAe(self):
+	def trainModel(self):
 		"""
 		train model
 		"""
@@ -233,21 +270,36 @@ class AutoEncoder(nn.Module):
 			model = self.cpu()
 			
 		# optimizer
-		optimizer = FeedForwardNetwork.createOptimizer(self, model.optimizer)
+		self.optimizer = FeedForwardNetwork.createOptimizer(self, self.optimizerStr)
 			
 		# loss function
 		criterion = FeedForwardNetwork.createLossFunction(self, self.loss)
 		
 		for it in range(model.numIter):
+			epochLoss = 0.0
 			for data in self.dataloader:
 				noisyData = data + model.noiseScale * torch.randn(*data.shape)
-				output = model(noisyData)
+				output = self(noisyData)
 				loss = criterion(output, data)
-				optimizer.zero_grad()
+				self.optimizer.zero_grad()
 				loss.backward()
-				optimizer.step()
-			print('epoch [{}/{}], loss {:.4f}'.format(it + 1, model.numIter, loss.data))
+				self.optimizer.step()
+				epochLoss += loss.item()
+			epochLoss /= len(self.dataloader)
+			print('epoch [{}-{}], loss {:.6f}'.format(it + 1, model.numIter, epochLoss))
 
+		self.evaluateModel()
+		
 		if model.modelSave:
 			FeedForwardNetwork.saveCheckpt(self)
+
+	def evaluateModel(self):
+		"""
+		train model
+		"""
+		(enData, regenData) = self.getRegen()
+		score = perfMetric(self.loss, enData, regenData)
+		print("test error {:.6f}".format(score))
+		
+		
 		
