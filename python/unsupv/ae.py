@@ -216,13 +216,14 @@ class AutoEncoder(nn.Module):
 		i = 0
 		padWidth = self.config.getIntConfig("encode.feat.pad.size")[0]
 		scores = list()
-		for rec in fileRecGen(teDataFile, ","):
+		for r in fileRecGen(teDataFile, ","):
 			score = perfMetric(self.loss, enData[i:], regenData[i:])
-			feat = (",".join(rec)).ljust(padWidth, " ")
+			feat = (",".join(r)).ljust(padWidth, " ")
 			rec = feat + "\t" + str(score)
 			print(rec)
 			i += 1
-			scores.append(score)
+			fr = ",".join(r) + "," + str(score)
+			scores.append(fr)
 		return scores
 
 		
