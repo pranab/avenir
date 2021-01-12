@@ -72,6 +72,7 @@ class AutoEncoder(nn.Module):
 		defValues["train.opt.betas"] = ([0.9, 0.999], None) 
 		defValues["train.opt.alpha"] = (0.99, None) 
 		defValues["train.noise.scale"] = (1.0, None)
+		defValues["train.tied.weights"] = (False, None)
 		defValues["train.model.save"] = (False, None)
 		defValues["train.track.error"] = (False, None) 
 		defValues["train.batch.intv"] = (5, None) 
@@ -104,6 +105,7 @@ class AutoEncoder(nn.Module):
 		self.optimizerStr = self.config.getStringConfig("train.optimizer")[0]
 		self.optimizer = None
 		self.loss = self.config.getStringConfig("train.lossFn")[0]
+		self.tiedWeights = self.config.getBooleanConfig("train.tied.weights")[0]
 		self.modelSave = self.config.getBooleanConfig("train.model.save")[0]
 		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
 		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
@@ -112,9 +114,15 @@ class AutoEncoder(nn.Module):
 		#encoder
 		inSize = self.numinp
 		enModules = list()
+		weights = list()
 		for i in range(numLayers):
 			outSize = self.numHidden[i]
-			enModules.append(nn.Linear(inSize, outSize))
+			lin = nn.Linear(inSize, outSize)
+			if self.tiedWeights:
+				wt = torch.randn(outSize, inSize)
+				weights.append(wt)
+				lin.weight = nn.Parameter(wt)
+			enModules.append(lin)
 			act = self.encActivations[i]
 			activation = FeedForwardNetwork.createActivation(act)
 			if activation:
@@ -131,7 +139,11 @@ class AutoEncoder(nn.Module):
 				outSize = self.numHidden[i-1]
 			else:
 				outSize = self.numinp
-			deModules.append(nn.Linear(inSize, outSize))
+			lin = nn.Linear(inSize, outSize)
+			if self.tiedWeights:
+				wt = weights[i]
+				lin.weight = nn.Parameter(wt.transpose(0,1))
+			deModules.append(lin)
 			act = self.decActivations[j]
 			j = j + 1
 			activation = FeedForwardNetwork.createActivation(act)
@@ -280,11 +292,11 @@ class AutoEncoder(nn.Module):
 			epochLoss = 0.0
 			for data in self.dataloader:
 				noisyData = data + model.noiseScale * torch.randn(*data.shape)
-				output = self(noisyData)
+				output = model(noisyData)
 				loss = criterion(output, data)
-				self.optimizer.zero_grad()
+				model.optimizer.zero_grad()
 				loss.backward()
-				self.optimizer.step()
+				model.optimizer.step()
 				epochLoss += loss.item()
 			epochLoss /= len(self.dataloader)
 			print('epoch [{}-{}], loss {:.6f}'.format(it + 1, model.numIter, epochLoss))
