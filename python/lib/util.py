@@ -974,6 +974,13 @@ def formatAny(value, label = None):
 	st = (label + " ") if label else ""
 	return st + str(value)
 
+def printList(values):
+	"""
+	pretty print list
+	"""
+	for v in values:
+		print(v)
+
 def printMap(values, klab, vlab, precision, offset=16):
 	"""
 	pretty print hash map

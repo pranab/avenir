@@ -197,14 +197,26 @@ class SlidingWindowStat:
 		sws.count = len(sws.values)
 		return sws
 
+	@staticmethod
+	def createEmpty(count):
+		sws = SlidingWindowStat()
+		sws.count = count
+		sws.values = list()
+		return sws
+
 	def add(self, value):
 		"""
 		adds new value
 		"""
-		self.values.append(value)
-		self.sum = self.sum + value - self.values[0]
-		self.sumSq = self.sumSq  + (value * value) - (self.values[0] * self.values[0])
-		self.values.pop(0)
+		self.values.append(value)		
+		if len(self.values) > self.count:
+			self.sum = self.sum + value - self.values[0]
+			self.sumSq = self.sumSq  + (value * value) - (self.values[0] * self.values[0])
+			self.values.pop(0)
+		else:
+			self.sum = self.sum + value
+			self.sumSq = self.sumSq  + (value * value)
+		
 
 	def getStat(self):
 		"""
@@ -230,6 +242,12 @@ class SlidingWindowStat:
 		"""
 		return self.count
 	
+	def getCurSize(self):
+		"""
+		return count
+		"""
+		return len(self.values)
+		
 	def getState(self):
 		"""
 		return state

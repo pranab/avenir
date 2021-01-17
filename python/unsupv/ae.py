@@ -37,6 +37,7 @@ sys.path.append(os.path.abspath("../supv"))
 from util import *
 from mlutil import *
 from tnn import FeedForwardNetwork
+from stats import *
 
 class AutoEncoder(nn.Module):
 	def __init__(self, configFile):
@@ -76,6 +77,8 @@ class AutoEncoder(nn.Module):
 		defValues["train.model.save"] = (False, None)
 		defValues["train.track.error"] = (False, None) 
 		defValues["train.batch.intv"] = (5, None) 
+		defValues["train.loss.av.window"] = (-1, None) 
+		defValues["train.loss.diff.threshold"] = (0.05, None) 
 		defValues["encode.use.saved.model"] = (True, None)
 		defValues["encode.data.file"] = (None, "missing enoding data file")
 		defValues["encode.feat.pad.size"] = (60, None)
@@ -288,6 +291,13 @@ class AutoEncoder(nn.Module):
 		# loss function
 		criterion = FeedForwardNetwork.createLossFunction(self, self.loss)
 		
+		# loss running average
+		trLossAvWindowSz = self.config.getIntConfig("train.loss.av.window")[0]
+		trLossDiffTh= self.config.getFloatConfig("train.loss.diff.threshold")[0]
+		
+		lossStat = SlidingWindowStat.createEmpty(trLossAvWindowSz) if trLossAvWindowSz > 0 else None
+		peMean = None
+		done = False
 		for it in range(model.numIter):
 			epochLoss = 0.0
 			for data in self.dataloader:
@@ -300,7 +310,21 @@ class AutoEncoder(nn.Module):
 				epochLoss += loss.item()
 			epochLoss /= len(self.dataloader)
 			print('epoch [{}-{}], loss {:.6f}'.format(it + 1, model.numIter, epochLoss))
-
+			if lossStat is not None:
+				lossStat.add(epochLoss)
+				if lossStat.getCurSize() == trLossAvWindowSz:
+					(eMean, eSd) = lossStat.getStat()
+					print("epoch loss average {:.6f}  std dev {:.6f}".format(eMean, eSd))
+					if peMean is None:
+						peMean = eMean
+					else:
+						ediff = abs(eMean - peMean)
+						done =  ediff < (trLossDiffTh * eMean)
+						peMean = eMean
+			if done:
+				print("traing loss converged")
+				break
+				
 		self.evaluateModel()
 		
 		if model.modelSave:
