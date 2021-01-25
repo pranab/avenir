@@ -43,7 +43,7 @@ class BiasDetector(object):
 		self.fpath = fpath
 		self.ftypes = ftypes
 	
-	def extLift(self, fe, pfe, cl):
+	def extLift(self, pfe, cl, fe = None):
 		"""
 		exyended lift
 		"""
@@ -53,7 +53,8 @@ class BiasDetector(object):
 		afeCnt = 0
 		afeClCnt = 0
 		for rec in fileTypedRecGen(self.fpath, self.ftypes):
-			if self.__isMatched(rec, fe):
+			feMatched = True if fe is None else self.__isMatched(rec, fe)
+			if feMatched:
 				feCnt += 1
 				clMatched = self.__isMatched(rec, cl)
 				if clMatched:
@@ -72,7 +73,7 @@ class BiasDetector(object):
 		res = createMap("normal featurre conf", feConf, "all feature conf", afeConf, "extended lift", elift)
 		return res
 			
-	def contrLift(self, fe, pfe, cl):
+	def contrLift(self, pfe, cl, fe = None):
 		"""
 		contrasted lift
 		"""
@@ -86,7 +87,8 @@ class BiasDetector(object):
 		pfeTwo.append(pfe[0])
 		pfeTwo.append(pfe[2])
 		for rec in fileTypedRecGen(self.fpath, self.ftypes):
-			if self.__isMatched(rec, fe):
+			feMatched = True if fe is None else self.__isMatched(rec, fe)
+			if feMatched:
 				clMatched = self.__isMatched(rec, cl)
 				(afeCntOne, afeClCntOne) = self.__protFeatMatchCount(rec, pfeOne, clMatched, afeCntOne, afeClCntOne)
 				(afeCntTwo, afeClCntTwo) = self.__protFeatMatchCount(rec, pfeTwo, clMatched, afeCntTwo, afeClCntTwo)
@@ -98,7 +100,68 @@ class BiasDetector(object):
 		res = createMap("protected featurre value one conf", afeConfOne, "protected featurre value two conf", afeConfTwo, 
 		"contrasted lift", clift)
 		return res
+	
+	def odds(self, pfe, cl, fe = None):
+		"""
+		odds ratio
+		"""
+		allCnt = 0
+		afeCnt = 0
+		afeClCnt = 0
+		for rec in fileTypedRecGen(self.fpath, self.ftypes):
+			feMatched = True if fe is None else self.__isMatched(rec, fe)
+			if feMatched:
+				clMatched = self.__isMatched(rec, cl)
+				if self.__isMatched(rec, pfe):
+					afeCnt += 1
+					if 	clMatched:
+						afeClCnt += 1
+			allCnt += 1
 		
+		#unprotected feature and all feature confidence	
+		afeConf = afeClCnt / afeCnt
+		odds = afeConf / (1.0 - afeConf)
+		res = createMap("all feature conf", afeConf, "odds", odds)
+		return res
+
+	def olift(self, pfe, cl, fe = None):
+		"""
+		odds lift
+		"""
+		pfeOne = pfe[:2]
+		pfeTwo = list()
+		pfeTwo.append(pfe[0])
+		pfeTwo.append(pfe[2])
+		oddsOne = self.odds(pfeOne, cl, fe)["odds"]
+		oddsTwo = self.odds(pfeTwo, cl, fe)["odds"]
+		olift = oddsOne / oddsTwo
+		res = createMap("odds one", oddsOne, "odds two", oddsTwo, "odds lift", olift)
+		return res
+		
+
+	def statParity(self, pfe, cl):
+		"""
+		exyended lift
+		"""
+		allCnt = 0
+		clCnt = 0
+		pfeCnt = 0
+		pfeClCnt = 0
+		for rec in fileTypedRecGen(self.fpath, self.ftypes):
+			allCnt += 1
+			pfeMatched = self.__isMatched(rec, pfe)
+			if pfeMatched:
+				pfeCnt += 1
+			if self.__isMatched(rec, cl):
+				clCnt += 1
+				if pfeMatched:
+					pfeClCnt += 1
+		etarget = clCnt / allCnt
+		ebtarget = pfeClCnt / pfeCnt
+		
+		parity = ebtarget / etarget
+		res = createMap("statistical parity", parity)
+		return res				
 		
 	def __protFeatMatchCount(self, rec, pfe, clMatched, afeCnt, afeClCnt):
 		"""

@@ -37,6 +37,9 @@ if __name__ == "__main__":
 
 
 	if op == "gen":
+		"""
+		generate data
+		"""
 		numSample = int(sys.argv[2])
 		noise = float(sys.argv[3])
 	
@@ -96,6 +99,9 @@ if __name__ == "__main__":
 			print(rec)
 
 	elif op == "bias":
+		"""
+		add human bias
+		"""
 		fpath = sys.argv[2]
 		bias = int(sys.argv[3])
 		for rec in fileRecGen(fpath):
@@ -105,15 +111,73 @@ if __name__ == "__main__":
 			print(",".join(rec))
 
 	elif op == "elift":
+		"""
+		extended lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		ftypes = [3, "int", 4, "int", 5, "int"]
+		bd = BiasDetector(fpath, ftypes)
+		fe = [2, "B"] if incFeat else None
+		pfe = [1, "M"]
+		cl = [6, "T"]
+		re = bd.extLift(pfe, cl, fe)
+		printMap(re, "item", "value", 3, 24)
+		
+	elif op == "clift":
+		"""
+		extended lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		ftypes = [3, "int", 4, "int", 5, "int"]
+		bd = BiasDetector(fpath, ftypes)
+		fe = [2, "B"] if incFeat else None
+		pfe = [1, "M", "F"]
+		cl = [6, "T"]
+		re = bd.contrLift(pfe, cl, fe)
+		printMap(re, "item", "value", 3, 40)
+
+	elif op == "odds":
+		"""
+		extended lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		ftypes = [3, "int", 4, "int", 5, "int"]
+		bd = BiasDetector(fpath, ftypes)
+		fe = [2, "B"] if incFeat else None
+		pfe = [1, "M"]
+		cl = [6, "T"]
+		re = bd.odds(pfe, cl, fe)
+		printMap(re, "item", "value", 3, 24)
+
+	elif op == "olift":
+		"""
+		extended lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		ftypes = [3, "int", 4, "int", 5, "int"]
+		bd = BiasDetector(fpath, ftypes)
+		fe = [2, "B"] if incFeat else None
+		pfe = [1, "M", "F"]
+		cl = [6, "T"]
+		re = bd.olift(pfe, cl, fe)
+		printMap(re, "item", "value", 3, 24)
+
+	elif op == "sparity":
+		"""
+		statistical parity
+		"""
 		fpath = sys.argv[2]
 		ftypes = [3, "int", 4, "int", 5, "int"]
 		bd = BiasDetector(fpath, ftypes)
-		fe = [2, "B"]
 		pfe = [1, "M"]
 		cl = [6, "T"]
-		re = bd.extLift(fe, pfe, cl)
-		printMap(re, "item", "value", 3, offset=24)
-		
+		re = bd.statParity(pfe, cl)
+		printMap(re, "item", "value", 3, 24)
+
 	else:
 		exitWithMsg("invalid command")
 		
