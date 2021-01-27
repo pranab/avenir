@@ -40,8 +40,18 @@ class BiasDetector(object):
 	bias detection
 	"""
 	def __init__(self, fpath, ftypes):
+		"""
+		initializer
+		"""
+		self.reset(fpath, ftypes)
+	
+	def reset(self, fpath, ftypes):
+		"""
+		reset
+		"""
 		self.fpath = fpath
 		self.ftypes = ftypes
+		
 	
 	def extLift(self, pfe, cl, fe = None):
 		"""
@@ -65,12 +75,18 @@ class BiasDetector(object):
 						afeClCnt += 1
 			allCnt += 1
 		
-		print("feCnt {}   feClCnt {}   afeCnt {}   afeClCnt {}".format(feCnt, feClCnt, afeCnt, afeClCnt))
+		#print("feCnt {}   feClCnt {}   afeCnt {}   afeClCnt {}".format(feCnt, feClCnt, afeCnt, afeClCnt))
 		#unprotected feature and all feature confidence	
 		feConf = feClCnt / feCnt
 		afeConf = afeClCnt / afeCnt
 		elift = afeConf / feConf
-		res = createMap("normal featurre conf", feConf, "all feature conf", afeConf, "extended lift", elift)
+		edlift = afeConf - feConf
+		self.afeClCnt = afeClCnt
+		self.afeCnt = afeCnt
+		self.feClCnt = feClCnt
+		self.feCnt = feCnt
+		res = createMap("normal featurre conf", feConf, "all feature conf", afeConf, "extended lift", elift, 
+		"extended difference lift", edlift)
 		return res
 			
 	def contrLift(self, pfe, cl, fe = None):
@@ -97,8 +113,9 @@ class BiasDetector(object):
 		afeConfOne = afeClCntOne / afeCntOne
 		afeConfTwo = afeClCntTwo / afeCntTwo
 		clift = afeConfOne / afeConfTwo
+		cdlift = afeConfOne - afeConfTwo
 		res = createMap("protected featurre value one conf", afeConfOne, "protected featurre value two conf", afeConfTwo, 
-		"contrasted lift", clift)
+		"contrasted lift", clift, "contrasted difference lift", cdlift)
 		return res
 	
 	def odds(self, pfe, cl, fe = None):
@@ -137,7 +154,21 @@ class BiasDetector(object):
 		olift = oddsOne / oddsTwo
 		res = createMap("odds one", oddsOne, "odds two", oddsTwo, "odds lift", olift)
 		return res
-		
+	
+	def proxyExtLift(self, fpathProxy, ftypesProxy, fpath, ftypes, pfe, ppfe, cl, fe):
+		"""
+		exyended lift based on protected feature proxy
+		"""
+		(b1,b2) = self. __proxyConf(fpathProxy, ftypesProxy, pfe, ppfe, fe)
+		self.reset(fpath, ftypes)
+		self.extLift(ppfe, cl, fe)
+		p1Min = (b2 + self.afeClCnt / self.afeCnt - 1.0) * b1 / b2
+		p1Max = 1.0 - b1 + (elf.afeClCnt / self.afeCnt) * (b1 / b2)
+		p = self.feClCnt / self.feCnt
+		eliftMin = p1Min / p
+		eliftMax = p1Max / p
+		res = createMap("extended lift min", eliftMin, "extended lift max", eliftMax)
+		return res	
 
 	def statParity(self, pfe, cl):
 		"""
@@ -163,7 +194,17 @@ class BiasDetector(object):
 		res = createMap("statistical parity", parity)
 		return res				
 		
+	def __proxyConf(self, fpathProxy, ftypes, pfe, ppfe, fe):
+		"""
+		proxy confidence
+		"""
+		self.reset(fpathProxy, ftypes)
+		b1 = self.extLift(pfe, ppfe, fe)["all feature conf"]
+		b2 = self.extLift(ppfe, pfe, fe)["all feature conf"]
+		return (b1,b2)
+
 	def __protFeatMatchCount(self, rec, pfe, clMatched, afeCnt, afeClCnt):
+
 		"""
 		protected feature match
 		"""

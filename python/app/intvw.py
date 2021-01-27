@@ -28,12 +28,22 @@ from hbias import *
 """
 candidate phone interview
 """
+def setParam(incFeat, pfeCol):
+	"""
+	set up 
+	"""
+	fe = [2, "B"] if incFeat else None
+	pfe = [1, "M"] if pfeCol == 1 else [4, "L"]
+	cl = [6, "T"]
+	return (fe, pfe, cl)
+
 if __name__ == "__main__":
 
 	op = sys.argv[1]
 	classes = ["T", "F"]
 	sex = ["M", "F"]
 	education = ["H", "B", "M"]
+	ftypes = [3, "int", 5, "int"]
 
 
 	if op == "gen":
@@ -70,12 +80,12 @@ if __name__ == "__main__":
 		distr = NonParamRejectSampler(1, 1, 25, 30, 15, 10, 5)
 		featCondDister[key] = distr
 		
-		#rmployment gap
+		#employment gap
 		key = ("T", 3)
-		distr = NormalSampler(2.0, 0.8)
+		distr = CategoricalRejectSampler(("L", 80), ("H", 20))
 		featCondDister[key] = distr
 		key = ("F", 3)
-		distr = NormalSampler(6.0, 1.6)
+		distr = CategoricalRejectSampler(("L", 30), ("H", 70))
 		featCondDister[key] = distr
 
 		#phone interview
@@ -87,17 +97,28 @@ if __name__ == "__main__":
 		featCondDister[key] = distr
 
 		sampler = AncestralSampler(selDistr, featCondDister, 5)
+		egsampler = dict()
+		egsampler["M"] = CategoricalRejectSampler(("L", 80), ("H", 20))
+		egsampler["F"] = CategoricalRejectSampler(("L", 30), ("H", 70))
 
 		for i in range(numSample):
 			(claz, features) = sampler.sample()
-			gap = int(features[3])
-			gap = 0 if gap < 0 else gap
-			features[3] = gap
+			egap = egsampler[features[0]].sample()
+			features[3] = egap
 			claz = addNoiseCat(claz, classes, noise)
 			strFeatures = list(map(lambda f : toStr(f, 3), features))
 			rec =  genID(10) + "," + ",".join(strFeatures) + "," + claz
 			print(rec)
 
+	elif op == "rgen":
+		"""
+		removes gender
+		"""
+		fpath = sys.argv[2]
+		columns = [0,2,3,4,5,6]
+		for rec in fileSelFieldsRecGen(fpath, columns):
+			print(",".join(rec))
+		
 	elif op == "bias":
 		"""
 		add human bias
@@ -116,13 +137,11 @@ if __name__ == "__main__":
 		"""
 		fpath = sys.argv[2]
 		incFeat = sys.argv[3] == "f"
-		ftypes = [3, "int", 4, "int", 5, "int"]
+		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
-		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M"]
-		cl = [6, "T"]
+		(fe, pfe, cl) = setParam(incFeat, pfeCol)
 		re = bd.extLift(pfe, cl, fe)
-		printMap(re, "item", "value", 3, 24)
+		printMap(re, "item", "value", 3, 32)
 		
 	elif op == "clift":
 		"""
@@ -130,10 +149,10 @@ if __name__ == "__main__":
 		"""
 		fpath = sys.argv[2]
 		incFeat = sys.argv[3] == "f"
-		ftypes = [3, "int", 4, "int", 5, "int"]
+		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
 		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M", "F"]
+		pfe = [1, "M", "F"] if if pfeCol == 1 else [4, "L", "H"]
 		cl = [6, "T"]
 		re = bd.contrLift(pfe, cl, fe)
 		printMap(re, "item", "value", 3, 40)
@@ -144,13 +163,11 @@ if __name__ == "__main__":
 		"""
 		fpath = sys.argv[2]
 		incFeat = sys.argv[3] == "f"
-		ftypes = [3, "int", 4, "int", 5, "int"]
+		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
-		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M"]
-		cl = [6, "T"]
+		(fe, pfe, cl) = setParam(incFeat, pfeCol)
 		re = bd.odds(pfe, cl, fe)
-		printMap(re, "item", "value", 3, 24)
+		printMap(re, "item", "value", 3, 32)
 
 	elif op == "olift":
 		"""
@@ -158,25 +175,22 @@ if __name__ == "__main__":
 		"""
 		fpath = sys.argv[2]
 		incFeat = sys.argv[3] == "f"
-		ftypes = [3, "int", 4, "int", 5, "int"]
+		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
-		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M", "F"]
-		cl = [6, "T"]
+		(fe, pfe, cl) = setParam(incFeat, pfeCol)
 		re = bd.olift(pfe, cl, fe)
-		printMap(re, "item", "value", 3, 24)
+		printMap(re, "item", "value", 3, 32)
 
 	elif op == "sparity":
 		"""
 		statistical parity
 		"""
 		fpath = sys.argv[2]
-		ftypes = [3, "int", 4, "int", 5, "int"]
 		bd = BiasDetector(fpath, ftypes)
 		pfe = [1, "M"]
 		cl = [6, "T"]
 		re = bd.statParity(pfe, cl)
-		printMap(re, "item", "value", 3, 24)
+		printMap(re, "item", "value", 3, 32)
 
 	else:
 		exitWithMsg("invalid command")
