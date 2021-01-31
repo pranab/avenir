@@ -143,19 +143,47 @@ if __name__ == "__main__":
 		re = bd.extLift(pfe, cl, fe)
 		printMap(re, "item", "value", 3, 32)
 		
+	elif op == "pelift":
+		"""
+		proxy extended lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		pfeCol = int(sys.argv[4])
+		bd = BiasDetector(fpath, ftypes)
+		(fe, pfe, cl) = setParam(incFeat, pfeCol)
+		ppfe = [4, "L"]
+		re = bd.proxyExtLift(fpath, ftypes, fpath, ftypes, pfe, ppfe, cl, fe)
+		printMap(re, "item", "value", 3, 32)
+
 	elif op == "clift":
 		"""
-		extended lift
+		contrasted lift
 		"""
 		fpath = sys.argv[2]
 		incFeat = sys.argv[3] == "f"
 		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
 		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M", "F"] if if pfeCol == 1 else [4, "L", "H"]
+		pfe = [1, "M", "F"] if pfeCol == 1 else [4, "L", "H"]
 		cl = [6, "T"]
 		re = bd.contrLift(pfe, cl, fe)
 		printMap(re, "item", "value", 3, 40)
+
+	elif op == "pclift":
+		"""
+		proxy contrasted lift
+		"""
+		fpath = sys.argv[2]
+		incFeat = sys.argv[3] == "f"
+		pfeCol = int(sys.argv[4])
+		bd = BiasDetector(fpath, ftypes)
+		fe = [2, "B"] if incFeat else None
+		pfe = [1, "M", "F"] if pfeCol == 1 else [4, "L", "H"]
+		cl = [6, "T"]
+		ppfe = [4, "L", "H"]
+		re = bd.proxyContrLift(fpath, ftypes, fpath, ftypes, pfe, ppfe, cl, fe)
+		printMap(re, "item", "value", 3, 32)
 
 	elif op == "odds":
 		"""

@@ -98,10 +98,7 @@ class BiasDetector(object):
 		afeClCntOne = 0
 		afeCntTwo = 0
 		afeClCntTwo = 0
-		pfeOne = pfe[:2]
-		pfeTwo = list()
-		pfeTwo.append(pfe[0])
-		pfeTwo.append(pfe[2])
+		(pfeOne, pfeTwo) = self.__splitValues(pfe)
 		for rec in fileTypedRecGen(self.fpath, self.ftypes):
 			feMatched = True if fe is None else self.__isMatched(rec, fe)
 			if feMatched:
@@ -114,6 +111,10 @@ class BiasDetector(object):
 		afeConfTwo = afeClCntTwo / afeCntTwo
 		clift = afeConfOne / afeConfTwo
 		cdlift = afeConfOne - afeConfTwo
+		self.afeClCntOne = afeClCntOne
+		self.afeCntOne = afeCntOne
+		self.afeClCntTwo = afeClCntTwo
+		self.afeCntTwo = afeCntTwo
 		res = createMap("protected featurre value one conf", afeConfOne, "protected featurre value two conf", afeConfTwo, 
 		"contrasted lift", clift, "contrasted difference lift", cdlift)
 		return res
@@ -163,12 +164,38 @@ class BiasDetector(object):
 		self.reset(fpath, ftypes)
 		self.extLift(ppfe, cl, fe)
 		p1Min = (b2 + self.afeClCnt / self.afeCnt - 1.0) * b1 / b2
-		p1Max = 1.0 - b1 + (elf.afeClCnt / self.afeCnt) * (b1 / b2)
+		p1Max = 1.0 - b1 + (self.afeClCnt / self.afeCnt) * (b1 / b2)
 		p = self.feClCnt / self.feCnt
 		eliftMin = p1Min / p
 		eliftMax = p1Max / p
-		res = createMap("extended lift min", eliftMin, "extended lift max", eliftMax)
+		res = createMap("beta1", b1, "beta2", b2, "extended lift min", eliftMin, "extended lift max", eliftMax)
 		return res	
+
+	def proxyContrLift(self, fpathProxy, ftypesProxy, fpath, ftypes, pfe, ppfe, cl, fe):
+		"""
+		contrasted lift based on protected feature proxy
+		"""
+		(pfeOne, pfeTwo) = self.__splitValues(pfe)
+		(ppfeOne, ppfeTwo) = self.__splitValues(ppfe)
+		(b1,b2) = self. __proxyConf(fpathProxy, ftypesProxy, pfeOne, ppfeOne, fe)
+		(b1p,b2p) = self. __proxyConf(fpathProxy, ftypesProxy, pfeTwo, ppfeTwo, fe)
+		
+		self.reset(fpath, ftypes)
+		self.contrLift(ppfe, cl, fe)
+		r = self.afeClCntOne / self.afeCntOne		
+		p1Min = (b2 + r - 1.0) * b1 / b2
+		p1Max = 1.0 - b1 + r * (b1 / b2)
+		
+		r = self.afeClCntTwo / self.afeCntTwo
+		p2Min = (b2p + r - 1.0) * b1p / b2p
+		p2Max = 1.0 - b1p + r * (b1p / b2p)
+		#print("p1  {:.3f} {:.3f}   p2  {:.3f} {:.3f}".format(p1Min, p1Max, p2Min, p2Max))
+		cliftMin = p1Min / p2Max
+		cliftMax = p1Max / p2Min
+		res = createMap("beta1", b1, "beta2", b2, "beta1p", b1p, "beta2p", b2p, 
+		"contrasted lift min", cliftMin, "contrasted lift max", cliftMax)
+		return res			
+		
 
 	def statParity(self, pfe, cl):
 		"""
@@ -193,6 +220,14 @@ class BiasDetector(object):
 		parity = ebtarget / etarget
 		res = createMap("statistical parity", parity)
 		return res				
+	
+	def __splitValues(self, va):
+		"""
+		split into 2 indexed list
+		"""
+		vaOne = [va[0], va[1]]
+		vaTwo = [va[0], va[2]]
+		return (vaOne, vaTwo)
 		
 	def __proxyConf(self, fpathProxy, ftypes, pfe, ppfe, fe):
 		"""
