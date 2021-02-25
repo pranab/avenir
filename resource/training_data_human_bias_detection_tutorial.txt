@@ -1,0 +1,36 @@
+This tutorial is for detecting and measuring human bias in job cand idate short listing data,
+which is planned to be used to builda predictive model
+
+Setup
+=====
+Make sure you have ../lib  ../mlextra directories with all the python files in there wrt 
+where intvw.py is. 
+
+Generate data
+=============
+./intvw.py gen <nsamp>  <noise> > intvw.txt
+nsamp = num of samples e.g 2000
+noise = noise level e.g. 0.1
+
+Add human bias 
+./intvw.py bias intvw.txt <bias> > intvwb.txt
+bias = bias level e.g. 40
+
+Sample executions
+=================
+extended lift
+./intvw.py elift intvwb.txt n 1
+
+contrasted lift
+./intvw.py clift intvwb.txt n 1
+
+odds lift
+./intvw.py olift intvwb.txt n 1
+
+conditional contrasted lift
+./intvw.py clift intvwb.txt f 1
+
+proxy extended lift
+./intvw.py pelift intvwb.txt n 1
+
+

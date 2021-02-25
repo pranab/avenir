@@ -37,6 +37,15 @@ def setParam(incFeat, pfeCol):
 	cl = [6, "T"]
 	return (fe, pfe, cl)
 
+def setContrParam(incFeat, pfeCol):
+	"""
+	set up for contrasting metric
+	"""
+	fe = [2, "B"] if incFeat else None
+	pfe = [1, "M", "F"] if pfeCol == 1 else [4, "L", "H"]
+	cl = [6, "T"]
+	return (fe, pfe, cl)
+
 if __name__ == "__main__":
 
 	op = sys.argv[1]
@@ -164,9 +173,7 @@ if __name__ == "__main__":
 		incFeat = sys.argv[3] == "f"
 		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
-		fe = [2, "B"] if incFeat else None
-		pfe = [1, "M", "F"] if pfeCol == 1 else [4, "L", "H"]
-		cl = [6, "T"]
+		(fe, pfe, cl) = setContrParam(incFeat, pfeCol)
 		re = bd.contrLift(pfe, cl, fe)
 		printMap(re, "item", "value", 3, 40)
 
@@ -205,7 +212,7 @@ if __name__ == "__main__":
 		incFeat = sys.argv[3] == "f"
 		pfeCol = int(sys.argv[4])
 		bd = BiasDetector(fpath, ftypes)
-		(fe, pfe, cl) = setParam(incFeat, pfeCol)
+		(fe, pfe, cl) = setContrParam(incFeat, pfeCol)
 		re = bd.olift(pfe, cl, fe)
 		printMap(re, "item", "value", 3, 32)
 
