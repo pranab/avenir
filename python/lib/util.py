@@ -603,8 +603,69 @@ def getFileAsFiltFloatMatrix(dirPath, filt, columns, delim=","):
 	for rec in  fileFiltSelFieldsRecGen(dirPath, filt, columns, delim):
 		mat.append(asFloatList(rec))
 	return mat
+
+def getFileAsTypedRecords(dirPath, types, delim=","):
+	"""
+	extracts typed records from csv file with each row being concatenation of  
+	extracted column values 
+	"""
+	(dtypes, cvalues) = extractTypesFromString(types)	
+	tdata = list()
+	for rec in  fileRecGen(dirPath, delim):
+		trec = list()
+		for index, value in enumerate(rec):
+			value = __convToTyped(index, value, dtypes)
+			trec.append(value)
+		tdata.append(trec)
+	return tdata
 	
-		
+def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
+	"""
+	extracts typed records from csv file given column indices with each row being concatenation of  
+	extracted column values 
+	"""
+	(dtypes, cvalues) = extractTypesFromString(types)	
+	tdata = list()
+	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
+		trec = list()
+		for index, value in enumerate(rec):
+			value = __convToTyped(index, value, dtypes)
+			trec.append(value)
+		tdata.append(trec)
+	return tdata
+
+def __convToTyped(index, value, dtypes):
+	"""
+	convert to typed value 
+	"""
+	dtype = dtypes[index]
+	if dtype == "int":
+		value = int(value)
+	elif dtype == "float":
+		value = float(value)
+	elif dtype == "cat":
+		pass
+	return value
+	
+	
+
+def extractTypesFromString(types):
+	"""
+	extracts column data types and set values for categorical variables 
+	"""
+	ftypes = types.split(",")
+	dtypes = dict()
+	cvalues = dict()
+	for ftype in ftypes:
+		items = ftype.split(":") 
+		cindex = int(items[0])
+		dtype = items[1]
+		dtypes[cindex] = dtype
+		if len(items) == 3:
+			sitems = items[2].split()
+			cvalues[cindex] = sitems
+	return (dtypes, cvalues)
+	
 def getMultipleFileAsInttMatrix(dirPathWithCol,  delim=","):
 	"""
 	extracts float matrix from from csv files given column index for each file. 
@@ -690,7 +751,7 @@ def removeNan(values):
 	"""
 	return list(filter(lambda v: not math.isnan(v), values))
 	
-def fileRecGen(filePath, delim = None):
+def fileRecGen(filePath, delim = ","):
 	"""
 	file record generator
 	"""
@@ -736,6 +797,26 @@ def fileFiltSelFieldsRecGen(filePath, filt, columns, delim = ","):
 				selected = extractList(line, columns)
 				yield selected
 
+def fileTypedRecGen(filePath, ftypes, delim = ","):
+	"""
+	file typed record generator
+	"""
+	with open(filePath, "r") as fp:
+		for line in fp:	
+			line = line[:-1]
+			line = line.split(delim)
+			for i in range(0, len(ftypes), 2):
+				ci = ftypes[i]
+				dtype = ftypes[i+1]
+				assertLesser(ci, len(line), "index out of bound")
+				if dtype == "int":
+					line[ci] = int(line[ci])
+				elif dtype == "float":
+					line[ci] = float(line[ci])
+				else:
+					exitWithMsg("invalid data type")
+			yield line
+
 def asIntList(items):
 	"""
 	returns int list
@@ -760,7 +841,7 @@ def pastTime(interval, unit):
 	elif unit == "m":
 		pastTime = curTime - interval * secInMinute
 	else:
-		raise ValueError("invalid time unit")
+		raise ValueError("invalid time unit " + unit)
 	return (curTime, pastTime)
 
 def minuteAlign(ts):
@@ -1001,7 +1082,34 @@ def printPairList(values, lab1, lab2, precision, offset=16):
 		sv1 = toStr(v1, precision).ljust(offset, " ")
 		sv2 = toStr(v2, precision)
 		print(sv1 + sv2)
-		
+
+def createMap(*values):
+	"""
+	create disctionary with results
+	"""
+	result = dict()
+	for i in range(0, len(values), 2):
+		result[values[i]] = values[i+1]
+	return result
+
+def getColMinMax(table, col):
+	"""
+	return min, max values of a column
+	"""
+	vmin = None
+	vmax = None
+	for rec in table:
+		value = rec[col]
+		if vmin is None:
+			vmin = value
+			vmax = value
+		else:
+			if value < vmin:
+				vmin = value
+			elif value > vmax:
+				vmax = value
+	return (vmin, vmax)
+			
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger

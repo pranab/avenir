@@ -658,3 +658,58 @@ def scaleData(data, method):
 	else:
 		raise ValueError("invalid scaling method")	
 	return data
+	
+def getDataPartitions(tdata, types, columns = None):
+	"""
+	partitions data with the given columns and random split point
+	"""
+	(dtypes, cvalues) = extractTypesFromString(types)
+	if columns is None:
+		ncol = len(data[0])
+		columns = list(range(ncol))
+	ncol = len(columns)
+		
+	# partition predicates
+	partitions = None
+	for c in columns:
+		dtype = dtypes[c]
+		pred = list()
+		if dtype == "int" or dtype == "float":
+			(vmin, vmax) = getColMinMax(tdata, c)
+			r = vmax - vmin
+			rmin = vmin + .2 * r
+			rmax = vmax - .2 * r
+			sp = randomFloat(rmin, rmax)
+			if dtype == "int":
+				sp = int(sp)
+				sp = str(sp)
+			else:
+				sp = "{:.3f}".format(sp)
+			pred.append([c, "LT", sp])
+			pred.append([c, "GE", sp])
+		elif dtype == "cat":
+			cv = cvalues[c]
+			card = len(cv) 
+			if card < 3:
+				num = 1
+			else:
+				num = randomInt(1, card - 1)
+			sp = selectRandomSubListFromList(cv, num)
+			sp = " ".join(sp)
+			pred.append([c, "IN", sp])
+			pred.append([c, "NOTIN", sp])
+		
+		if partitions is None:
+			partitions = pred
+		else:
+			tparts = list()
+			for p in partitions:
+				l1 = p.copy().extend(pred[0])
+				l2 = p.copy().extend(pred[1])
+				tparts.extend(l1)
+				tparts.extend(l2)
+			partitions = tparts	
+		
+	return partitions			
+		
+			

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -21,6 +21,7 @@ from random import randint
 import time
 sys.path.append(os.path.abspath("../lib"))
 from util import *
+from mlutil import *
 from sampler import *
 
 op = sys.argv[1]
@@ -171,5 +172,69 @@ elif op == "genDummyVar":
 		newRow = dummyVarGen.processRow(row)
 		print(newRow.strip())
 	fp.close()
+
+elif op == "addNoise":
+	filePath = sys.argv[2]
+	for rec in fileRecGen(filePath, ","):
+		rec[8] = str(int(addNoiseNum(int(rec[8]), UniformNumericSampler(-0.4, 0.4))))
+		rec[9] = str(int(addNoiseNum(int(rec[9]), UniformNumericSampler(-0.5, 0.5))))
+		print(",".join(rec))
+				
+elif op == "spuriousFeatures":
+	filePath = sys.argv[2]
+	numYearsInJobDistr  = GaussianRejectSampler(8, 3)
+	incomeDistr = GaussianRejectSampler(100, 40)
+	for rec in fileRecGen(filePath, ","):
+		newRec = rec[:-1]
+		clAttr = int(rec[-1])
 	
+		#num of years in job
+		numYr = int(numYearsInJobDistr.sample())
+		numYr = 0 if numYr < 0 else numYr
+		newRec.append(str(numYr))
+	
+		#income
+		income = int(incomeDistr.sample())
+		income = 20 if income < 20 else income
+		newRec.append(str(income))
+	
+		newRec.append(rec[-1])
+		print(",".join(newRec))
+
+elif op == "accuracyByPartition":
+	filePath = sys.argv[2]
+	types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
+	tdata = getFileAsTypedRecords(dirPath, types)
+	columns = list(range(11))
+	partitions = getDataPartitions(tdata, types, columns)
+	pdata = list(map(lambda i : list(), range(len(partitions))))
+	
+	for rec in tdata:
+		matched = True
+		for (pi, part) in enumerate(partitions):
+			matched = True
+			for i in range(0, len(part), 3):
+				c = part[i]
+				op = part[i+1]
+				pval = part[i+2]
+				dval = rec[c]
+				if op == "LT":
+					matched = matched and dval < pval
+				elif op == "GE":
+					matched = matched and dval >= pval
+				elif op == "IN":
+					pval = pval.split()
+					matched = matched and dval in pval
+				elif op == "NOTIN":
+					pval = pval.split()
+					matched = matched and dval not in pval
+				if  not matched:
+					break
+			if matched:
+				pdata[pi].append(rec)
+				break				
+		assert	matched, "no matching partition found"
+
+else:
+	exitWithMsg("inbvalid command")	
 	
