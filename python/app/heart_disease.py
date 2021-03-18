@@ -20,9 +20,11 @@ import sys
 from random import randint
 import time
 sys.path.append(os.path.abspath("../lib"))
+sys.path.append(os.path.abspath("../supv"))
 from util import *
 from mlutil import *
 from sampler import *
+from tnn import *
 
 op = sys.argv[1]
 keyLen  = None
@@ -201,14 +203,23 @@ elif op == "spuriousFeatures":
 		newRec.append(rec[-1])
 		print(",".join(newRec))
 
-elif op == "accuracyByPartition":
-	filePath = sys.argv[2]
+elif op == "nnTrain":
+	prFile = sys.argv[2]
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	FeedForwardNetwork.batchTrain(clflier)
+
+elif op == "nnAccuracyByPartition":
+	prFile = sys.argv[2]
+
+	filePath = sys.argv[3]
 	types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
 	tdata = getFileAsTypedRecords(dirPath, types)
 	columns = list(range(11))
 	partitions = getDataPartitions(tdata, types, columns)
 	pdata = list(map(lambda i : list(), range(len(partitions))))
 	
+	#create data partitions
 	for rec in tdata:
 		matched = True
 		for (pi, part) in enumerate(partitions):
@@ -234,6 +245,17 @@ elif op == "accuracyByPartition":
 				pdata[pi].append(rec)
 				break				
 		assert	matched, "no matching partition found"
+	
+	#performance score for each data partition	
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	scores = list()
+	for pd in pdata:
+		score = FeedForwardNetwork.validateModel(clflier, pd)
+		scores.append(score)
+	print(scores)
+		
+	
 
 else:
 	exitWithMsg("inbvalid command")	

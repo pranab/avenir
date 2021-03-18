@@ -148,8 +148,15 @@ class FeedForwardNetwork(torch.nn.Module):
 		# loss function and optimizer
 		self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
 		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
-
- 
+		
+	def setValidationData(self, dataSource):
+		"""
+		sets validation data
+		"""
+		(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataSource)
+		self.validFeatData = torch.from_numpy(featDataV)
+		self.validOutData = outDataV
+ 	
 	@staticmethod
 	def createActivation(actName):
 		"""
@@ -176,11 +183,11 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		config = model.config
 		lossRed = config.getStringConfig("train.loss.reduction")[0]
-		if lossFnName == "mse":
+		if lossFnName == "ltwo" or lossFnName == "mse":
 			lossFunc = torch.nn.MSELoss(reduction=lossRed)
 		elif lossFnName == "ce":
 			lossFunc = torch.nn.CrossEntropyLoss(reduction=lossRed)
-		elif lossFnName == "lone":
+		elif lossFnName == "lone" or lossFnName == "mae":
 			lossFunc = torch.nn.L1Loss(reduction=lossRed)
 		elif lossFnName == "bce":
 			lossFunc = torch.nn.BCELoss(reduction=lossRed)
@@ -233,7 +240,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		return y
 
 	@staticmethod
-	def prepData(model, dataFile, includeOutFld=True):
+	def prepData(model, dataSource, includeOutFld=True):
 		"""
 		loads and prepares  data
 		"""
@@ -244,7 +251,14 @@ class FeedForwardNetwork(torch.nn.Module):
 		featFieldIndices = strToIntArray(featFieldIndices, ",")
 
 		#all data and feature data
-		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
+		isDataFile = isinstance(dataSource, str)
+		if isDataFile:
+			(data, featData) = loadDataFile(dataSource, ",", fieldIndices, featFieldIndices)
+		else:
+			data = tableSelFieldsFilter(dataSource, fieldIndices)
+			featData = tableSelFieldsFilter(data, featFieldIndices)
+			featData = np.array(featData)
+			
 		if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
 		    scalingMethod = model.config.getStringConfig("common.scaling.method")[0]
 		    featData = scaleData(featData, scalingMethod)
@@ -253,7 +267,11 @@ class FeedForwardNetwork(torch.nn.Module):
 		if includeOutFld:
 			outFieldIndices = model.config.getStringConfig("train.data.out.fields")[0]
 			outFieldIndices = strToIntArray(outFieldIndices, ",")
-			outData = data[:,outFieldIndices]	
+			if isDataFile:
+				outData = data[:,outFieldIndices]
+			else:
+				outData = tableSelFieldsFilter(data, outFieldIndices)
+				outData = np.array(outData)
 			foData = (featData.astype(np.float32), outData.astype(np.float32))
 		else:
 			foData = featData.astype(np.float32)
@@ -371,17 +389,22 @@ class FeedForwardNetwork(torch.nn.Module):
 		for t in range(model.numIter):
 			#batch
 			b = 0
+			epochLoss = 0.0
 			for xBatch, yBatch in trainDataLoader:
 	
 				# Forward pass: Compute predicted y by passing x to the model
 				yPred = model(xBatch)
-
+				
 				# Compute and print loss
 				loss = model.lossFn(yPred, yBatch)
 				if model.verbose and t % 50 == 0 and b % 5 == 0:
 					print("epoch {}  batch {}  loss {:.6f}".format(t, b, loss.item()))
-					
-				if model.trackErr and b % model.batchIntv == 0:
+				
+				if model.trackErr and model.batchIntv == 0:
+					epochLoss += loss.item()
+				
+				#error tracking at batch level
+				if model.trackErr and model.batchIntv > 0 and b % model.batchIntv == 0:
 					trErr.append(loss.item())
 					vloss = FeedForwardNetwork.evaluateModel(model)
 					vaErr.append(vloss)
@@ -391,7 +414,14 @@ class FeedForwardNetwork(torch.nn.Module):
 				loss.backward()
 				model.optimizer.step()    	
 				b += 1
-
+			
+			#error tracking at epoch level
+			if model.trackErr and model.batchIntv == 0:
+				epochLoss /= len(trainDataLoader)
+				trErr.append(epochLoss)
+				vloss = FeedForwardNetwork.evaluateModel(model)
+				vaErr.append(vloss)
+			
 		#validate
 		model.eval()
 		yPred = model(model.validFeatData)
@@ -423,7 +453,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		return score
 
 	@staticmethod
-	def predict(model):
+	def predict(model, dataSource = None):
 		"""
 		predict
 		"""
@@ -435,8 +465,9 @@ class FeedForwardNetwork(torch.nn.Module):
 			FeedForwardNetwork.batchTrain(model) 
 
 		#predict
-		dataFile = model.config.getStringConfig("predict.data.file")[0]
-		featData  = FeedForwardNetwork.prepData(model, dataFile, False)
+		if dataSource is None:
+			dataSource = model.config.getStringConfig("predict.data.file")[0]
+		featData  = FeedForwardNetwork.prepData(model, dataSource, False)
 		featData = torch.from_numpy(featData)
 		model.eval()
 		yPred = model(featData)
@@ -448,6 +479,8 @@ class FeedForwardNetwork(torch.nn.Module):
 			
 		# print prediction
 		FeedForwardNetwork.printPrediction(yPred, model.config)
+		
+		return yPred
 
 	@staticmethod
 	def evaluateModel(model):
@@ -463,4 +496,19 @@ class FeedForwardNetwork(torch.nn.Module):
 		model.train()
 		return score
     	
+	@staticmethod
+	def validateModel(model, dataSource):
+		"""
+		evaluate model
+		"""
+		#train or restore model
+		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			FeedForwardNetwork.restoreCheckpt(model)
+		else:
+			FeedForwardNetwork.batchTrain(model)
+			
+		model.setValidationData(dataSource)
+		score = FeedForwardNetwork.evaluateModel(model)
+		return score
     	
