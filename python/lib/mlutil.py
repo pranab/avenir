@@ -612,7 +612,7 @@ def asNumpyArray(data):
 	"""
 	return np.array(data)
 
-def perfMetric(metric, yActual, yPred):
+def perfMetric(metric, yActual, yPred, clabels=None):
 	"""
 	predictive model accuracy metric
 	"""
@@ -640,10 +640,15 @@ def perfMetric(metric, yActual, yPred):
 	elif metric == "clarep":
 		yPred = np.argmax(yPred, axis=1)
 		score = metrics.classification_report(yActual, yPred)
+	elif metric == "bce":
+		if clabels is None:
+			clabels = [0, 1]
+		score = metrics.log_loss(yActual, yPred, labels=clabels)
 	elif metric == "ce":
-		score = metrics.log_loss(yActual, yPred, labels=[0, 1])
+		assert clabels is not None, "labels must be provided"
+		score = metrics.log_loss(yActual, yPred, labels=clabels)
 	else:
-		exitWithMsg("invalid prediction performance metric")
+		exitWithMsg("invalid prediction performance metric " + metric)
 	return score
 
 def scaleData(data, method):
