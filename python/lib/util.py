@@ -817,6 +817,17 @@ def fileTypedRecGen(filePath, ftypes, delim = ","):
 					exitWithMsg("invalid data type")
 			yield line
 
+def tableSelFieldsFilter(tdata, columns):
+	"""
+	gets tabular data for selected columns 
+	"""
+	ntdata = list()
+	for rec in tdata:
+		nrec = extractList(rec, columns)
+		ntdata.append(nrec)
+	return ntdata	
+	
+
 def asIntList(items):
 	"""
 	returns int list
@@ -1166,6 +1177,16 @@ def drawLine(data, yscale=None):
 		step = int(step / 10) * 10
 		plt.yticks(range(0, yscale, step))
 	plt.show()
+
+def drawHist(ldata, myTitle, myXlabel, myYlabel):
+	"""
+	draw histogram
+	"""
+	plt.hist(ldata, density=True)
+	plt.title(myTitle)
+	plt.xlabel(myXlabel)
+	plt.ylabel(myYlabel)
+	plt.show()	
 	
 def saveObject(obj, filePath):
 	"""

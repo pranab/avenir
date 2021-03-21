@@ -68,6 +68,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.opt.alpha"] = (0.99, None) 
 		defValues["train.save.model"] = (False, None) 
 		defValues["train.track.error"] = (False, None) 
+		defValues["train.epoch.intv"] = (5, None) 
 		defValues["train.batch.intv"] = (5, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
@@ -378,6 +379,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		trainData = TensorDataset(model.featData, model.outData)
 		trainDataLoader = DataLoader(dataset=trainData, batch_size=model.batchSize, shuffle=True)
+		epochIntv = model.config.getIntConfig("train.epoch.intv")[0]
 
 		# train mode
 		model.train()
@@ -397,7 +399,7 @@ class FeedForwardNetwork(torch.nn.Module):
 				
 				# Compute and print loss
 				loss = model.lossFn(yPred, yBatch)
-				if model.verbose and t % 50 == 0 and b % 5 == 0:
+				if model.verbose and t % epochIntv == 0 and b % model.batchIntv == 0:
 					print("epoch {}  batch {}  loss {:.6f}".format(t, b, loss.item()))
 				
 				if model.trackErr and model.batchIntv == 0:

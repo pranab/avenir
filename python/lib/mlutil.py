@@ -673,10 +673,12 @@ def getDataPartitions(tdata, types, columns = None):
 		ncol = len(data[0])
 		columns = list(range(ncol))
 	ncol = len(columns)
+	#print(columns)
 		
 	# partition predicates
 	partitions = None
 	for c in columns:
+		#print(c)
 		dtype = dtypes[c]
 		pred = list()
 		if dtype == "int" or dtype == "float":
@@ -687,9 +689,9 @@ def getDataPartitions(tdata, types, columns = None):
 			sp = randomFloat(rmin, rmax)
 			if dtype == "int":
 				sp = int(sp)
-				sp = str(sp)
 			else:
 				sp = "{:.3f}".format(sp)
+				sp = float(sp)
 			pred.append([c, "LT", sp])
 			pred.append([c, "GE", sp])
 		elif dtype == "cat":
@@ -704,17 +706,31 @@ def getDataPartitions(tdata, types, columns = None):
 			pred.append([c, "IN", sp])
 			pred.append([c, "NOTIN", sp])
 		
+		#print(pred)
 		if partitions is None:
-			partitions = pred
+			partitions = pred.copy()
+			#print("initial")
+			#print(partitions)
 		else:
+			#print("extension")
 			tparts = list()
 			for p in partitions:
-				l1 = p.copy().extend(pred[0])
-				l2 = p.copy().extend(pred[1])
-				tparts.extend(l1)
-				tparts.extend(l2)
+				#print(p)
+				l1 = p.copy()
+				l1.extend(pred[0])
+				l2 = p.copy()
+				l2.extend(pred[1])
+				#print("after extension")
+				#print(l1)
+				#print(l2)
+				tparts.append(l1)
+				tparts.append(l2)
 			partitions = tparts	
-		
+			#print("extending")
+			#print(partitions)
+	
+	#for p in partitions:
+		#print(p)	
 	return partitions			
 		
 			
