@@ -81,6 +81,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		super(FeedForwardNetwork, self).__init__()
     	
 
+	def setVerbose(self, verbose):
+		self.verbose = verbose
+		
 	def buildModel(self):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
@@ -100,6 +103,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
 		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
 		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
+		self.restored = False
 		
 		#build network
 		layers = list()
@@ -436,6 +440,8 @@ class FeedForwardNetwork(torch.nn.Module):
 				print(str(yPred[i]) + "\t" + str(yActual[i]))
 		
 		score = perfMetric(model.accMetric, yActual, yPred)
+		print(yActual)
+		print(yPred)
 		print(formatFloat(3, score, "perf score"))
 
 		#save
@@ -499,18 +505,35 @@ class FeedForwardNetwork(torch.nn.Module):
 		return score
     	
 	@staticmethod
-	def validateModel(model, dataSource):
+	def prepValidate(model, dataSource):
 		"""
-		evaluate model
+		prepare for validation
 		"""
 		#train or restore model
-		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
-		if useSavedModel:
-			FeedForwardNetwork.restoreCheckpt(model)
-		else:
-			FeedForwardNetwork.batchTrain(model)
+		if not model.restored:
+			useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+			if useSavedModel:
+				FeedForwardNetwork.restoreCheckpt(model)
+			else:
+				FeedForwardNetwork.batchTrain(model)
+			model.restored = True
 			
 		model.setValidationData(dataSource)
-		score = FeedForwardNetwork.evaluateModel(model)
-		return score
-    	
+ 
+	@staticmethod
+	def validateModel(model):
+ 		model.eval()
+ 		yPred = model(model.validFeatData)
+ 		yPred = yPred.data.cpu().numpy()
+ 		yActual = model.validOutData
+ 		if model.verbose:
+ 			vsize = yPred.shape[0]
+ 			print("\npredicted \t\t actual")
+ 			for i in range(vsize):
+ 				print(str(yPred[i]) + "\t" + str(yActual[i]))
+ 				
+ 		score = perfMetric(model.accMetric, yActual, yPred)
+ 		print(formatFloat(3, score, "perf score"))
+ 		return score
+ 		
+   	

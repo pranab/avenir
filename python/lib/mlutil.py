@@ -623,6 +623,9 @@ def perfMetric(metric, yActual, yPred, clabels=None):
 	elif metric == "mse":
 		score = metrics.mean_squared_error(yActual, yPred)
 	elif metric == "acc":
+		yPred = np.rint(yPred)
+		score = metrics.accuracy_score(yActual, yPred)
+	elif metric == "mlAcc":
 		yPred = np.argmax(yPred, axis=1)
 		score = metrics.accuracy_score(yActual, yPred)
 	elif metric == "prec":

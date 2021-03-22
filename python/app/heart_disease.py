@@ -352,9 +352,14 @@ elif op == "nnAccuracyByPartition":
 	clflier = FeedForwardNetwork(prFile)
 	clflier.buildModel()
 	scores = list()
+	clflier.setVerbose(False)
 	for pd in pdata:
-		score = FeedForwardNetwork.validateModel(clflier, pd)
-		scores.append(score)
+		print("partition size {}".format(len(pd)))
+		if len(pd) > 10:
+			score = FeedForwardNetwork.prepValidate(clflier, pd)
+			score = FeedForwardNetwork.validateModel(clflier)
+			scores.append(score)
+		
 	print(scores)
 	mscore = statistics.mean(scores)
 	sdscore = statistics.stdev(scores, xbar=mscore)

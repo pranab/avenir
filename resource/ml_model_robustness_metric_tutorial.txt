@@ -1,0 +1,76 @@
+This tutorial is for calulating robustness materic of machine learning models based on data partitioning.
+A neural neuwork model for predicting heart disease is used for this purpose
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where heart_disease.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Generate training data
+======================
+raw data
+./heart_disease.py generate <bsamp> <noise> <key_len> > hd.txt
+where
+nsamp = num of samples e.g. 5000
+noise = noise level e.g 0.0
+key_len = key length e.g. 10
+
+add partition based noise
+./heart_disease.py adLocdNoise hd.txt <noise> > hdn.txt
+where
+noise = noise level e.g 0.15
+
+encode categorical data
+./heart_disease.py genDummyVar hdn.txt <key_len> > hd_5000.txt
+where
+key_len = key length e.g. 10
+
+Generate validation data
+========================
+raw data
+./heart_disease.py generate <bsamp> <noise> <key_len> > hdv.txt
+where
+nsamp = num of samples e.g. 500
+noise = noise level e.g 0.0
+key_len = key length e.g. 10
+
+add partition based noise
+./heart_disease.py adLocdNoise hdv.txt <noise> > hdvn.txt
+where
+noise = noise level e.g 0.15
+
+encode categorical data
+./heart_disease.py genDummyVar hdvn.txt <key_len> > hd_500.txt
+where
+key_len = key length e.g. 10
+
+Train model
+===========
+./heart_disease.py nnTrain tnn_hd.properties
+
+Generate test data
+==================
+raw data
+./heart_disease.py generate <bsamp> <noise> <key_len> > hdt.txt
+where
+nsamp = num of samples e.g. 5000
+noise = noise level e.g 0.0
+key_len = key length e.g. 10
+
+add partition based noise
+./heart_disease.py adLocdNoise hd.txt <noise> > hdtn.txt
+where
+noise = noise level e.g 0.15
+
+encode categorical data
+./heart_disease.py genDummyVar hdtn.txt <key_len> > hdt_5000.txt
+where
+key_len = key length e.g. 10
+
+Calculate robustness
+====================
+./heart_disease.py nnAccuracyByPartition tnn_hd.properties  hdtn.txt <key_len>
+where
+key_len = key length e.g. 10
+ 
