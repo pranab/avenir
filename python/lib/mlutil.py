@@ -736,4 +736,61 @@ def getDataPartitions(tdata, types, columns = None):
 		#print(p)	
 	return partitions			
 		
+	
+class ShiftedDataGenerator:
+	"""
+	transforms data for distribution shift
+	"""
+	def __init__(self, types, tdata, addFact, multFact):
+		(self.dtypes, self.cvalues) = extractTypesFromString(types)
+		
+		self.limits = dict()
+		for k,v in self.dtypes.items():
+			if v == "int" or v == "false":
+				(vmax, vmin) = getColMinMax(tdata, k)
+				self.limits[k] = vmax - vmin
+		self.addMin = - addFact / 2
+		self.addMax =  addFact / 2
+		self.multMin = 1.0 - multFact / 2
+		self.multMax = 1.0 + multFact / 2
+		
+		
+		
+	
+	def transform(self, tdata):
+		"""
+		linear transforms data to create  distribution shift
+		"""
+		transforms = dict()
+		for k,v in self.dtypes.items():
+			if v == "int" or v == "false":				
+				shift = randomFloat(self.addMin, self.addMax) * self.limits[k] 
+				scale = randomFloat(self.multMin, self.multMax)
+				trns = (shift, scale)
+				transforms[k] = trns
+			elif v == "cat":
+				transforms[k] = isEventSampled(50)
+				
+		ttdata = list()
+		for rec in tdata:
+			nrec = rec.copy()
+			for c in range(len(rec)):
+				if c in self.dtypes:
+					dtype = self.dtypes[c]
+					if dtype == "int" or dtype == "float":
+						(shift, scale) = transforms[c]
+						nval = shift +  rec[c] * scale
+						if dtype == "int":
+							nrec[c] = int(nval)
+						else:
+							nrec[c] = nval
+					elif dtype == "cat":
+						cv = self.cvalues[c]
+						if transforms[c]:
+							nval = selectOtherRandomFromList(cv, rec[c])
+							nrec[c] = nval
+					
+			ttdata.append(nrec)
 			
+		return ttdata
+		

@@ -103,6 +103,28 @@ def createCatEncoder(keyLen):
 	dummyVarGen = DummyVarGenerator(rs, catVars, "1", "0", ",")
 	return dummyVarGen
 
+def encodeCat(encoder, rec):
+	"""
+	encode cat fields
+	"""
+	srec = list(map(lambda v : toStr(v,3), rec))
+	srec = ",".join(srec)
+	srec = encoder.processRow(srec)
+	return srec.split(",")
+	
+
+def showAccuracies(scores):
+	"""
+	displays accuracies
+	"""
+	print("scores")
+	print(scores)
+	mscore = statistics.mean(scores)
+	sdscore = statistics.stdev(scores, xbar=mscore)
+	print("accuracy mean {:.3f}  std dev {:.3f}".format(mscore, sdscore))
+	drawHist(scores, "Accuracy distr", "accuracy", "frequency")
+
+
 if op == "generate":
 	"""
 	generate data
@@ -253,6 +275,7 @@ elif op == "genDummyVar":
 		print(newRow.strip())
 	fp.close()
 
+
 elif op == "addNoise":
 	"""
 	add additional noise
@@ -325,7 +348,7 @@ elif op == "nnTrain":
 
 elif op == "nnAccuracyByPartition":
 	"""
-	generate data partitions
+	accuracies for partitioned data
 	"""
 	prFile = sys.argv[2]
 	filePath = sys.argv[3]
@@ -356,7 +379,7 @@ elif op == "nnAccuracyByPartition":
 	for pd in pdata:
 		print("partition size {}".format(len(pd)))
 		if len(pd) > 10:
-			score = FeedForwardNetwork.prepValidate(clflier, pd)
+			FeedForwardNetwork.prepValidate(clflier, pd)
 			score = FeedForwardNetwork.validateModel(clflier)
 			scores.append(score)
 		
@@ -364,8 +387,39 @@ elif op == "nnAccuracyByPartition":
 	mscore = statistics.mean(scores)
 	sdscore = statistics.stdev(scores, xbar=mscore)
 	print("accuracy mean {:.3f}  std dev {:.3f}".format(mscore, sdscore))
-	drawHist(scores, "Accuracy distr", "partitions", "accuracy")
+	drawHist(scores, "Accuracy distr", "accuracy", "frequency")
 
+elif op == "nnAccuracyByShift":
+	"""
+	acciracies for shifted data
+	"""
+	prFile = sys.argv[2]
+	filePath = sys.argv[3]
+	keyLen = int(sys.argv[4])
+	nshift = int(sys.argv[5])
+	maxShift = float(sys.argv[6])
+	maxScale = float(sys.argv[7])
+	types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
+	tdata = getFileAsTypedRecords(filePath, types)
+	ftypes = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA"
+	dgen = ShiftedDataGenerator(ftypes, tdata, maxShift, maxScale)
+	
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	scores = list()
+	clflier.setVerbose(False)
+	encoder = createCatEncoder(keyLen)
+
+	for _ in range(nshift):
+		ttdata = dgen.transform(tdata)
+		ettdata = list(map(lambda r : encodeCat(encoder, r), ttdata))
+			
+		FeedForwardNetwork.prepValidate(clflier, ettdata)
+		score = FeedForwardNetwork.validateModel(clflier)
+		scores.append(score)
+		
+	showAccuracies(scores)	
+	
 else:
 	exitWithMsg("inbvalid command")	
 	

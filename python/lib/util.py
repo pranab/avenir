@@ -104,21 +104,30 @@ def genPhoneNum(arCode):
 	phNum = genNumID(7)
 	return arCode + str(phNum)
 
-def selectRandomFromList(list):
+def selectRandomFromList(ldata):
 	"""
 	select an element randomly from a lis
 	"""
-	return list[randint(0, len(list)-1)]
+	return ldata[randint(0, len(ldata)-1)]
 
-def selectRandomSubListFromList(list, num):
+def selectOtherRandomFromList(ldata, cval):
+	"""
+	select an element randomly from a list excluding the given one
+	"""
+	nval = selectRandomFromList(ldata)
+	while nval == cval:
+		nval = selectRandomFromList(ldata)
+	return nval
+	
+def selectRandomSubListFromList(ldata, num):
 	"""
 	generates random sublist from a list without replacemment
 	"""
-	sel = selectRandomFromList(list)
+	sel = selectRandomFromList(ldata)
 	selSet = {sel}
 	selList = [sel]
 	while (len(selSet) < num):
-		sel = selectRandomFromList(list)
+		sel = selectRandomFromList(ldata)
 		if (sel not in selSet):
 			selSet.add(sel)
 			selList.append(sel)		
@@ -368,7 +377,9 @@ def extractList(data, indices):
 	extracts list from another list, given indices
 	"""
 	exList = list()
+	le = len(data)
 	for i in indices:
+		assert i < le , "index {} out of bound {}".format(i, le)
 		exList.append(data[i])
 	return exList
 	

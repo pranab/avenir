@@ -66,6 +66,8 @@ of detail documentation
 * https://pkghosh.wordpress.com/2020/08/18/predicting-individual-viral-infection-using-contact-data-with-lstm-neural-network/
 * https://pkghosh.wordpress.com/2020/10/28/causal-inference-with-deep-learning-using-manufacturing-supply-chain-optimization-as-an-example/
 * https://pkghosh.wordpress.com/2020/11/26/meeting-schedule-optimization-with-genetic-algorithm-in-python/
+* https://pkghosh.wordpress.com/2021/02/26/detecting-and-measuring-human-bias-in-machine-learning-models/
+* https://pkghosh.wordpress.com/2021/03/25/robustness-measurement-of-machine-learning-models-with-examples-in-python/
 
 
 ## Getting started
