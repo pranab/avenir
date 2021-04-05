@@ -52,14 +52,14 @@ Train model
 Generate test data
 ==================
 raw data
-./heart_disease.py generate <bsamp> <noise> <key_len> > hdt.txt
+./heart_disease.py generate <bsamp> <noise> <key_len> > hd.txt
 where
 nsamp = num of samples e.g. 5000
 noise = noise level e.g 0.0
 key_len = key length e.g. 10
 
 add partition based noise
-./heart_disease.py adLocdNoise hd.txt <noise> > hdtn.txt
+./heart_disease.py adLocdNoise hdt.txt <noise> > hdtn.txt
 where
 noise = noise level e.g 0.15
 

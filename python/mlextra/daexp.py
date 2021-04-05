@@ -41,6 +41,7 @@ from sklearn.covariance import EllipticEnvelope
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+import hurst
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -869,7 +870,7 @@ class DataExplorer:
 
 	def getDiffSdNoisiness(self, ds):
 		"""
-		get nisiness based on std dev of first order difference
+		get noisiness based on std dev of first order difference
 		params:
 		ds: data set name or list or numpy array
 		"""
@@ -880,10 +881,11 @@ class DataExplorer:
 		
 	def getMaRmseNoisiness(self, ds, wsize=5):
 		"""
-		get noisiness based on RMSE with moving average
+		gets noisiness based on RMSE with moving average
 		params:
 		ds: data set name or list or numpy array
 		"""
+		assert wsize % 2 == 1, "window size must be odd"
 		data = self.getNumericData(ds)
 		wind = data[:wsize]
 		wstat = SlidingWindowStat.initialize(wind.tolist())
@@ -1377,6 +1379,31 @@ class DataExplorer:
 		partAutoCorr, confIntv  = stt.pacf(data, nlags=lags, alpha=alpha)
 		result = self.__printResult("partAutoCorr", partAutoCorr, "confIntv", confIntv)
 		return result
+
+	def getHurstExp(self, ds, kind, doPlot=True):
+		"""
+		gets Hurst exponent
+		params:
+		ds: data set name or list or numpy array
+		doPlot: True for plot
+		"""
+		self.__printBanner("getting Hurst exponent", ds)
+		data = self.getNumericData(ds)
+		h, c, odata = hurst.compute_Hc(data, kind=kind, simplified=False)
+		if doPlot:
+			f, ax = plt.subplots()
+			ax.plot(odata[0], c * odata[0] ** h, color="deepskyblue")
+			ax.scatter(odata[0], odata[1], color="purple")
+			ax.set_xscale("log")
+			ax.set_yscale("log")
+			ax.set_xlabel("time interval")
+			ax.set_ylabel("cum dev range and std dev ratio")
+			ax.grid(True)
+			plt.show()
+			
+		result = self.__printResult("hurstExponent", h, "hurstConstant", c)
+		return result
+		
 
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
 		"""
