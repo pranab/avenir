@@ -1382,9 +1382,10 @@ class DataExplorer:
 
 	def getHurstExp(self, ds, kind, doPlot=True):
 		"""
-		gets Hurst exponent
+		gets Hurst exponent of time series
 		params:
 		ds: data set name or list or numpy array
+		kind: kind of data change, random_walk, price
 		doPlot: True for plot
 		"""
 		self.__printBanner("getting Hurst exponent", ds)
@@ -1404,7 +1405,40 @@ class DataExplorer:
 		result = self.__printResult("hurstExponent", h, "hurstConstant", c)
 		return result
 		
-
+	def approxEntropy(self, ds, m, r):
+		"""
+		gets apprx entroty of time series
+		params:
+		ds: data set name or list or numpy array
+		m:  length of compared run of data
+		r: filtering level
+		"""
+		self.__printBanner("getting approximate entropy", ds)
+		ldata = self.getNumericData(ds)
+		aent = abs(self.__phi(ldata, m + 1, r) - self.__phi(ldata, m, r))
+		result = self.__printResult("approxEntropy", aent)
+		return result
+		
+	def __phi(self, ldata, m, r):
+		"""
+		phi function for approximate entropy
+		ldata: data array
+		m:  length of compared run of data
+		r: filtering level
+		"""
+		le = len(ldata)
+		x = [[ldata[j] for j in range(i, i + m - 1 + 1)] for i in range(le - m + 1)]
+		lex = len(x)
+		c = list()
+		for i in range(lex):
+			cnt = 0
+			for j in range(lex):
+				cnt += (1 if maxListDist(x[i], x[j]) <= r else 0)
+			cnt /= (le - m + 1.0)
+			c.append(cnt)
+		return sum(np.log(c)) / (le - m + 1.0)
+		
+	
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
 		"""
 		plots cross correlation 
