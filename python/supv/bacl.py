@@ -43,34 +43,47 @@ class BaseClassifier(object):
 		self.featData = None
 		self.clsData = None
 		self.classifier = None
+		self.trained = False
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		logFilePath = self.config.getStringConfig("common.logging.file")[0]
 		logLevName = self.config.getStringConfig("common.logging.level")[0]
 		self.logger = createLogger(mname, logFilePath, logLevName)
 		self.logger.info("********* starting session")
 	
-	#initialize config	
 	def initConfig(self, configFile, defValues):
+		"""
+		initialize config	
+		"""
 		self.config = Configuration(configFile, defValues)
 	
-	# get config object
 	def getConfig(self):
+		"""
+		get config object
+		"""
 		return self.config
 	
-	#set config param
 	def setConfigParam(self, name, value):
+		"""
+		set config param
+		"""
 		self.config.setParam(name, value)
 	
-	#get mode
 	def getMode(self):
+		"""
+		get mode
+		"""
 		return self.config.getStringConfig("common.mode")[0]
 		
-	#get search parameter
 	def getSearchParamStrategy(self):
+		"""
+		get search parameter
+		"""
 		return self.config.getStringConfig("train.search.param.strategy")[0]
 
-	# train model	
 	def train(self):
+		"""
+		train model
+		"""
 		#build model
 		self.buildModel()
 		
@@ -107,10 +120,13 @@ class BaseClassifier(object):
 			self.logger.info("...saving model")
 			modelFilePath = self.getModelFilePath()
 			joblib.dump(self.classifier, modelFilePath) 
+		self.trained = True
 		return result
 		
-	#train with k fold validation
 	def trainValidate(self):
+		"""
+		train with k fold validation
+		"""
 		#build model
 		self.buildModel()
 
@@ -130,8 +146,10 @@ class BaseClassifier(object):
 		result = self.reportResult(avScore, successCriterion, scoreMethod)
 		return result
 		
-	#train with k fold validation and search parameter space for optimum
 	def trainValidateSearch(self):
+		"""
+		train with k fold validation and search parameter space for optimum
+		"""
 		self.logger.info("...starting train validate with parameter search")
 		searchStrategyName = self.getSearchParamStrategy()
 		if searchStrategyName is not None:
@@ -206,8 +224,10 @@ class BaseClassifier(object):
 		self.logger.info("{}\t{:06.3f}".format(paramStr, bestSolution[1]))
 		return bestSolution
 			
-	#predict
 	def validate(self):
+		"""
+		predict
+		"""
 		# create model
 		useSavedModel = self.config.getBooleanConfig("validate.use.saved.model")[0]
 		if useSavedModel:
@@ -217,7 +237,8 @@ class BaseClassifier(object):
 			self.classifier = joblib.load(modelFilePath)
 		else:
 			# train model
-			self.train()
+			if not self.trained:
+				self.train()
 		
 		# prepare test data
 		(featData, clsDataActual) = self.prepValidationData()
@@ -239,8 +260,10 @@ class BaseClassifier(object):
 			self.logger.info(confMatrx)
 
 	 
-	#predict
 	def predictx(self):
+		"""
+		predict
+		"""
 		# create model
 		self.prepModel()
 		
@@ -252,8 +275,10 @@ class BaseClassifier(object):
 		clsData = self.classifier.predict(featData) 
 		self.logger.info(clsData)
 	
-	#predict with in memory data
 	def predict(self, recs=None):
+		"""
+		predict with in memory data
+		"""
 		# create model
 		self.prepModel()
 		
@@ -272,12 +297,16 @@ class BaseClassifier(object):
 		clsData = self.classifier.predict(featData) 
 		return clsData
 		
-	#predict probability with in memory data
 	def predictProb(self, recs):
+		"""
+		predict probability with in memory data
+		"""
 		raise ValueError("can not predict class probability")
 		
-	#preparing model
 	def prepModel(self):
+		"""
+		preparing model
+		"""
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if (useSavedModel and not self.classifier):
 			# load saved model
@@ -286,10 +315,13 @@ class BaseClassifier(object):
 			self.classifier = joblib.load(modelFilePath)
 		else:
 			# train model
-			self.train()
+			if not self.trained:
+				self.train()
 	
-	#loads and prepares training data
 	def prepTrainingData(self):
+		"""
+		loads and prepares training data
+		"""
 		# parameters
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		fieldIndices = self.config.getStringConfig("train.data.fields")[0]
@@ -308,8 +340,10 @@ class BaseClassifier(object):
 		clsData = np.array([int(a) for a in clsData])
 		return (featData, clsData)
 
-	#loads and prepares training data
 	def prepValidationData(self):
+		"""
+		loads and prepares training data
+		"""
 		# parameters
 		dataFile = self.config.getStringConfig("validate.data.file")[0]
 		fieldIndices = self.config.getStringConfig("validate.data.fields")[0]
@@ -328,8 +362,10 @@ class BaseClassifier(object):
 		clsData = [int(a) for a in clsData]
 		return (featData, clsData)
 
-	#loads and prepares training data
 	def prepPredictData(self):
+		"""
+		loads and prepares training data
+		"""
 		# parameters
 		dataFile = self.config.getStringConfig("predict.data.file")[0]
 		if dataFile is None:
@@ -348,14 +384,18 @@ class BaseClassifier(object):
 		
 		return featData
 	
-	#prepare string predict data
 	def prepStringPredictData(self, recs):
+		"""
+		prepare string predict data
+		"""
 		frecs = StringIO(recs)
 		featData = np.loadtxt(frecs, delimiter=',')
 		return featData
 	
-	# get model file path
 	def getModelFilePath(self):
+		"""
+		get model file path
+		"""
 		modelDirectory = self.config.getStringConfig("common.model.directory")[0]
 		modelFile = self.config.getStringConfig("common.model.file")[0]
 		if modelFile is None:
@@ -363,8 +403,10 @@ class BaseClassifier(object):
 		modelFilePath = modelDirectory + "/" + modelFile
 		return modelFilePath
 	
-	# report result
 	def reportResult(self, score, successCriterion, scoreMethod):
+		"""
+		report result
+		"""
 		if successCriterion == "accuracy":
 			self.logger.info("average " + scoreMethod + " with k fold cross validation {:06.3f}".format(score))
 			result = score
@@ -376,8 +418,10 @@ class BaseClassifier(object):
 			raise ValueError("invalid success criterion")
 		return result
 	
-	#auto train	
 	def autoTrain(self):
+		"""
+		auto train	
+		"""
 		maxTestErr = self.config.getFloatConfig("train.auto.max.test.error")[0]
 		maxErr = self.config.getFloatConfig("train.auto.max.error")[0]
 		maxErrDiff = self.config.getFloatConfig("train.auto.max.error.diff")[0]
