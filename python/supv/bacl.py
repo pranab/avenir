@@ -335,7 +335,9 @@ class BaseClassifier(object):
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-			featData = sk.preprocessing.scale(featData)
+		    scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+		    featData = scaleData(featData, scalingMethod)
+			
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = np.array([int(a) for a in clsData])
 		return (featData, clsData)
@@ -357,7 +359,8 @@ class BaseClassifier(object):
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-			featData = sk.preprocessing.scale(featData)
+		    scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+		    featData = scaleData(featData, scalingMethod)
 		clsData = extrColumns(data, classFieldIndex)
 		clsData = [int(a) for a in clsData]
 		return (featData, clsData)
@@ -380,7 +383,8 @@ class BaseClassifier(object):
 		#training data
 		(data, featData) = loadDataFile(dataFile, ",", fieldIndices, featFieldIndices)
 		if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
-			featData = sk.preprocessing.scale(featData)
+		    scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+		    featData = scaleData(featData, scalingMethod)
 		
 		return featData
 	

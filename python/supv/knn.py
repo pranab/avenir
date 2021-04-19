@@ -40,6 +40,7 @@ class NearestNeighbor(BaseClassifier):
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
+		defValues["common.scaling.method"] = ("zscale", None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -57,6 +58,7 @@ class NearestNeighbor(BaseClassifier):
 		defValues["predict.data.file"] = (None, None)
 		defValues["predict.data.fields"] = (None, "missing data field ordinals")
 		defValues["predict.data.feature.fields"] = (None, "missing data feature field ordinals")
+		defValues["predict.use.saved.model"] = (False, None)
 		
 		super(NearestNeighbor, self).__init__(configFile, defValues, __name__)
 
@@ -77,7 +79,7 @@ class NearestNeighbor(BaseClassifier):
 		self.classifier = model
 		return self.classifier
 		
-	def predictProb(self, recs):
+	def predictProb(self, recs=None):
 		"""
 		predict probability
 		"""
@@ -85,12 +87,15 @@ class NearestNeighbor(BaseClassifier):
 		self.prepModel()
 		
 		#input record
-		if type(recs) is str:
-			featData = self.prepStringPredictData(recs)
+		if recs is None:
+			featData = self.prepPredictData()
 		else:
-			featData = recs
-		if (featData.ndim == 1):
-			featData = featData.reshape(1, -1)
+			if type(recs) is str:
+				featData = self.prepStringPredictData(recs)
+			else:
+				featData = recs
+			if (featData.ndim == 1):
+				featData = featData.reshape(1, -1)
 		
 		#predict
 		self.logger.info("...predicting class probability")
