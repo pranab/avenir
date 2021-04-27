@@ -122,7 +122,6 @@ def showAccuracies(scores):
 	mscore = statistics.mean(scores)
 	sdscore = statistics.stdev(scores, xbar=mscore)
 	print("accuracy mean {:.3f}  std dev {:.3f}".format(mscore, sdscore))
-	drawHist(scores, "Accuracy distr", "accuracy", "frequency")
 
 
 if op == "generate":
@@ -389,9 +388,9 @@ elif op == "nnAccuracyByPartition":
 	print("accuracy mean {:.3f}  std dev {:.3f}".format(mscore, sdscore))
 	drawHist(scores, "Accuracy distr", "accuracy", "frequency")
 
-elif op == "nnAccuracyByShift":
+elif op == "nnAccuracyByShiftScale":
 	"""
-	acciracies for shifted data
+	acciracies for shifted and scaled data
 	"""
 	prFile = sys.argv[2]
 	filePath = sys.argv[3]
@@ -418,7 +417,46 @@ elif op == "nnAccuracyByShift":
 		score = FeedForwardNetwork.validateModel(clflier)
 		scores.append(score)
 		
-	showAccuracies(scores)	
+	showAccuracies(scores)
+	drawHist(scores, "Accuracy distr", "accuracy", "frequency")
+
+	
+elif op == "nnAccuracyByShift":
+	"""
+	acciracies for shifted data
+	"""
+	prFile = sys.argv[2]
+	filePath = sys.argv[3]
+	keyLen = int(sys.argv[4])
+	minShift = float(sys.argv[5])
+	dshift = float(sys.argv[6])
+	nshift = int(sys.argv[7])
+	scale = float(sys.argv[8])
+	types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
+	tdata = getFileAsTypedRecords(filePath, types)
+	ftypes = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA"
+	dgen = ShiftedDataGenerator(ftypes, tdata, 0, 1.0)
+	
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	scores = list()
+	clflier.setVerbose(False)
+	encoder = createCatEncoder(keyLen)
+
+	shift = minShift
+	s = list()
+	for _ in range(nshift):
+		s.append(shift)
+		ttdata = dgen.transformSpecified(tdata, shift, scale)
+		ettdata = list(map(lambda r : encodeCat(encoder, r), ttdata))
+			
+		FeedForwardNetwork.prepValidate(clflier, ettdata)
+		score = FeedForwardNetwork.validateModel(clflier)
+		scores.append(score)
+		shift += dshift
+		
+	showAccuracies(scores)
+	drawPlot(s, scores, "normalized shift", "accuracy")
 	
 else:
 	exitWithMsg("inbvalid command")	

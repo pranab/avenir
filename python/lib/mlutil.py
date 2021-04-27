@@ -759,7 +759,7 @@ class ShiftedDataGenerator:
 	
 	def transform(self, tdata):
 		"""
-		linear transforms data to create  distribution shift
+		linear transforms data to create  distribution shift with random shift and scale
 		"""
 		transforms = dict()
 		for k,v in self.dtypes.items():
@@ -793,4 +793,46 @@ class ShiftedDataGenerator:
 			ttdata.append(nrec)
 			
 		return ttdata
+		
+	def transformSpecified(self, tdata, sshift, scale):
+		"""
+		linear transforms data to create  distribution shift shift specified shift and scale
+		"""
+		transforms = dict()
+		for k,v in self.dtypes.items():
+			if v == "int" or v == "false":				
+				shift = sshift * self.limits[k] 
+				trns = (shift, scale)
+				transforms[k] = trns
+			elif v == "cat":
+				transforms[k] = isEventSampled(50)
+				
+		ttdata = self.__scaleShift(tdata, transforms)
+		return ttdata
+		
+	def __scaleShift(self, tdata, transforms):
+		ttdata = list()
+		for rec in tdata:
+			nrec = rec.copy()
+			for c in range(len(rec)):
+				if c in self.dtypes:
+					dtype = self.dtypes[c]
+					if dtype == "int" or dtype == "float":
+						(shift, scale) = transforms[c]
+						nval = shift + rec[c] * scale
+						if dtype == "int":
+							nrec[c] = int(nval)
+						else:
+							nrec[c] = nval
+					elif dtype == "cat":
+						cv = self.cvalues[c]
+						if transforms[c]:
+							#nval = selectOtherRandomFromList(cv, rec[c])
+							#nrec[c] = nval
+							pass
+					
+			ttdata.append(nrec)
+		return ttdata
+		
+
 		
