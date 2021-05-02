@@ -631,7 +631,7 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting entropy", ds)
 		data = self.getNumericData(ds)
-		result = self .getFeqDistr(data, nbins)
+		result = self.getFreqDistr(data, nbins)
 		entropy = sta.entropy(result["frequency"])
 		result = self.__printResult("entropy", entropy)
 		return result
@@ -1126,16 +1126,20 @@ class DataExplorer:
 		return result
 
 
-	def fitLinearReg(self, ds, doPlot=False):
+	def fitLinearReg(self, dsx, ds, doPlot=False):
 		"""
 		fit  linear regression 
 		params:
+		dsx: x data set name or None
 		ds: data set name or list or numpy array
 		doPlot: true if plotting needed
 		"""
 		self.__printBanner("fitting linear regression", ds)
 		data = self.getNumericData(ds)
-		x = np.arange(len(data))
+		if dsx is None:
+			x = np.arange(len(data))
+		else:
+			x = self.getNumericData(dsx)
 		slope, intercept, rvalue, pvalue, stderr = sta.linregress(x, data)
 		result = self.__printResult("slope", slope, "intercept", intercept, "rvalue", rvalue, "pvalue", pvalue, "stderr", stderr)
 		if doPlot:
@@ -1186,6 +1190,25 @@ class DataExplorer:
 		ax.plot(x, y, "b.")
 		ax.plot(x, intercept + slope * x, "r-")
 		plt.show()
+
+	def getRegFit(self, xvalues, yvalues, slope, intercept):
+		"""
+		gets fitted line and residue
+		params:
+		x : x values
+		y : y values
+		slope : regression slope
+		intercept : regressiob intercept
+		"""
+		yfit = list()
+		residue = list()
+		for x,y in zip(xvalues, yvalues):
+			yf = x * slope + intercept
+			yfit.append(yf)
+			r = y - yf
+			residue.append(r)
+		result = self.__printResult("fitted line", yfit, "residue", residue)
+		return result
 
 	def getCovar(self, *dsl):
 		"""
@@ -1407,7 +1430,7 @@ class DataExplorer:
 		
 	def approxEntropy(self, ds, m, r):
 		"""
-		gets apprx entroty of time series
+		gets apprx entroty of time series (ref: wikipedia)
 		params:
 		ds: data set name or list or numpy array
 		m:  length of compared run of data
@@ -1437,6 +1460,29 @@ class DataExplorer:
 			cnt /= (le - m + 1.0)
 			c.append(cnt)
 		return sum(np.log(c)) / (le - m + 1.0)
+		
+
+	def oneSpaceEntropy(self, ds, scaMethod="zscale"):
+		"""
+		gets one space  entroty  (ref:  Estimating mutual information by Kraskov)
+		params:
+		ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting one space entropy", ds)
+		data = self.getNumericData(ds)
+		sdata = sorted(data)
+		sdata = scaleData(sdata, scaMethod)
+		su = 0
+		n = len(sdata)
+		for i in range(1, n, 1):
+			t = abs(sdata[i] - sdata[i-1])
+			if t > 0:
+				su += log(t)
+		su /= (n -1)
+		#print(su)
+		ose = digammaFun(n) - digammaFun(1) + su
+		result = self.__printResult("entropy", ose)
+		return result
 		
 	
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
@@ -2053,9 +2099,10 @@ class DataExplorer:
 		"""
 		print results
 		params:
-
+		flattened kay and value pairs
 		"""
 		result = dict()
+		assert len(values) % 2 == 0, "key value list should have even number of items"
 		for i in range(0, len(values), 2):
 			result[values[i]] = values[i+1]
 		if self.verbose:
