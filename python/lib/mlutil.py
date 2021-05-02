@@ -666,7 +666,23 @@ def scaleData(data, method):
 	else:
 		raise ValueError("invalid scaling method")	
 	return data
+
+def harmonicNum(n):
+	"""
+	harmonic number
+	"""
+	h = 0
+	for i in range(1, n+1, 1):
+		h += 1.0 / i
+	return h
 	
+def digammaFun(n):
+	"""
+	figamma function
+	"""
+	ec = 0.577216
+	return harmonicNum(n - 1) - ec
+			
 def getDataPartitions(tdata, types, columns = None):
 	"""
 	partitions data with the given columns and random split point
