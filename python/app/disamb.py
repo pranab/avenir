@@ -40,17 +40,17 @@ def mutStr(st):
 	mutate a char in string
 	"""
 	l = len(st)
-	if l > 1:
-		ci = randomInt(0, l - 1)
-		cv = st[ci]
-		if isdigit(cv):
-			st[ci] = selectRandomFromList(dig)
-		elif isupper(cv):
-			st[ci] = selectRandomFromList(ucc)
-		else:
-			st[ci] = selectRandomFromList(lcc)
-		
-	return st
+	ci = randomInt(0, l - 1)
+	cv = st[ci]
+	if cv.isdigit():
+		r = selectRandomFromList(dig)
+	elif cv.isupper():
+		r = selectRandomFromList(ucc)
+	else:
+		r = selectRandomFromList(lcc)
+	
+	nst = st[:ci] + r + st[ci+1:] if l > 1 else r
+	return nst
 
 def createPosMatch(rec, fi):
 	"""
@@ -65,7 +65,7 @@ def createPosMatch(rec, fi):
 		if isEventSampled(50):
 			nfv = nc[0] + " " +  selectRandomFromList(ucc) + " " +  nc[1]
 		else:
-			mutStr(nc[1])
+			nc[1] = mutStr(nc[1])
 			nfv = nc[0] + " "  + nc[1]
 	elif fi == 1:
 		#address
@@ -85,30 +85,30 @@ def createPosMatch(rec, fi):
 				mutated = False
 
 		if not mutated:
-			si = selectRandomFromList(0, 1)
-			mutStr(nc[si])
+			si = randomInt(0, 1)
+			nc[si] = mutStr(nc[si])
 		nfv = " ".join(nc)
 	
 	elif fi == 2:
 		#city
-		si = selectRandomFromList(0, le - 1) if le > 1 else 0
-		mutStr(nc[si])
+		si = randomInt(0, le - 1) if le > 1 else 0
+		nc[si] = mutStr(nc[si])
 		nfv = " ".join(nc) if le > 1 else nc[0]
 	
 	elif fi == 3:
 		#state
-		mutStr(nc[0])
+		nc[0] = mutStr(nc[0])
 		nfv = nc[0]
 		
 	elif fi == 4:
 		#zip
-		mutStr(nc[0])
+		nc[0] = mutStr(nc[0])
 		nfv = nc[0]
 
 	elif fi == 5:
 		#email
 		if isEventSampled(60):
-			mutStr(nc[0])
+			nc[0] = mutStr(nc[0])
 			nfv = nc[0]
 		else:
 			nfv = genLowCaseID(randomInt(4, 10)) + "@" + selectRandomFromList(emailDoms)
@@ -116,6 +116,11 @@ def createPosMatch(rec, fi):
 	mrec[fi] = nfv
 	return  mrec
 
+def printNgramVec(ngv):
+	print("ngram vector")
+	for i in range(len(ngv)):
+		if ngv[i] > 0:
+			print("{} {}".format(i, ngv[i]))
 def createNegMatch(tdata, ri):
 	"""
 	create negative match by randomly selecting another record
@@ -139,7 +144,10 @@ if __name__ == "__main__":
 				nrec.append(rec[-9][1:-1])
 				nrec.append(rec[-8][1:-1])
 				nrec.append(rec[-6][1:-1])
-				nrec.append(rec[-5])
+				z = rec[-5]
+				if len(z) == 7:
+					z = z[1:-1]
+				nrec.append(z)
 				nrec.append(rec[-2][1:-1])
 				print(",".join(nrec))
 			i += 1
@@ -164,21 +172,30 @@ if __name__ == "__main__":
 				
 			ri += 1
 
-	elif op == "sosim":
+	elif op == "sim":
 		srcFilePath = sys.argv[2]
 		cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
-		spc = ["@", "#", "_", "-"]
-		ngc.addSpChar(spc)
-		ngc.setWsRepl("$")
+		spc = ["@", "#", "_", "-", "."]
+		cng.addSpChar(spc)
+		cng.setWsRepl("$")
+		c = 0
 		for rec in fileRecGen(srcFilePath, ","):
+			#print(",".join(rec))
 			sim = list()
 			for i in range(0,5):
-				ngv1 = ngc.toMgramCount(rec[i])
-				ngv2 = ngc.toMgramCount(rec[i+6])
-				s = cosineSimilarity(ngv1, ngv2)
+				#print("field " + str(i))
+				if i == 3:
+					s = jaccardSimilarityX(list(rec[i]),list(rec[i+6]))
+				else:
+					ngv1 = cng.toMgramCount(rec[i])
+					ngv2 = cng.toMgramCount(rec[i+6])
+					#printNgramVec(ngv1)
+					#printNgramVec(ngv2)
+					s = cosineSimilarity(ngv1, ngv2)
 				sim.append(s)
-			ss = toStrFromList(sim, 3)
+			ss = toStrFromList(sim, 6)
 			print(ss + "," + rec[-1])
+			c += 1
 				
 				
 	

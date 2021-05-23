@@ -372,7 +372,9 @@ class CharNGram:
 		initialize
 		"""
 		self.chDomain = list()
-		for d in domanins:
+		self.ws = "#"
+		self.chDomain.append(self.ws)
+		for d in domains:
 			if d == "lcc":
 				self.chDomain.extend(lcc)
 			elif d == "ucc":
@@ -385,7 +387,6 @@ class CharNGram:
 				raise ValueError("invalid character type " + d)
 				
 		self.ngsize = ngsize
-		self.ws = "#"
 		self.radixPow = None
 		self.ngCounts = None
 		self.totNgCount = None
@@ -401,24 +402,25 @@ class CharNGram:
 		set white space replacement charater
 		"""
 		self.ws = ws
+		self.chDomain[0] = self.ws
 			
 	def toMgramCount(self, text):
 		"""
 		get ngram count list
 		"""
-		domSize = len(self.chDomain) + 1
+		domSize = len(self.chDomain)
+		cntVecSize = int(math.pow(domSize, self.ngsize))
+		self.ngCounts = [0] *  cntVecSize
 		if self.radixPow is None:
 			self.radixPow = list()
-			for i in range(self.ngsize-1, 1, -1):
+			for i in range(self.ngsize-1, 0, -1):
 				self.radixPow.append(int(math.pow(domSize, i)))
 			self.radixPow.append(1)
-			cntVecSize = int(math.pow(domSize, self.ngsize))
-			self.ngCounts = [0] *  cntVecSize
 				
 		ngram = list()
 		self.totNgCount  = 0
 		for ch in text:
-			if (str(ch)).isspace():
+			if ch.isspace():
 				l = len(ngram)
 				if l == 0 or ngram[l-1] != self.ws:
 					ngram.append(self.ws)
@@ -427,6 +429,7 @@ class CharNGram:
 				
 			if len(ngram) == self.ngsize:
 				i = self.__getNgramIndex(ngram)
+				assert i < cntVecSize, "ngram index out of range index " + str(i) + " size " + str(cntVecSize) 
 				self.ngCounts[i] += 1
 				ngram.clear()
 				self.totNgCount += 1
