@@ -33,6 +33,7 @@ from txproc import *
 """
 causality analysis 
 """
+emailDoms = ["yahoo.com", "gmail.com", "hotmail.com", "aol.com"]
 
 def mutStr(st):
 	"""
@@ -64,12 +65,13 @@ def createPosMatch(rec, fi):
 		if isEventSampled(50):
 			nfv = nc[0] + " " +  selectRandomFromList(ucc) + " " +  nc[1]
 		else:
-			ci = randomInt(1, len(nc[1]))
-			nc[1][ci] = selectRandomFromList(lcc)
+			mutStr(nc[1])
 			nfv = nc[0] + " "  + nc[1]
 	elif fi == 1:
 		#address
+		mutated = False
 		if isEventSampled(50):
+			mutated = True
 			s = nc[-1]
 			if s == "Rd":
 				nc[-1] = "Road"
@@ -79,12 +81,12 @@ def createPosMatch(rec, fi):
 				nc[-1] = "Street"
 			elif s == "Dr":
 				nc[-1] = "Drive"
-		else:
-			if isEventSampled(50):
-				mutStr(nc[0])
 			else:
-				si = selectRandomFromList(1, len(nc)-2)
-				mutStr(nc[si])
+				mutated = False
+
+		if not mutated:
+			si = selectRandomFromList(0, 1)
+			mutStr(nc[si])
 		nfv = " ".join(nc)
 	
 	elif fi == 2:
@@ -105,11 +107,14 @@ def createPosMatch(rec, fi):
 
 	elif fi == 5:
 		#email
-		mutStr(nc[0])
-		nfv = nc[0]
+		if isEventSampled(60):
+			mutStr(nc[0])
+			nfv = nc[0]
+		else:
+			nfv = genLowCaseID(randomInt(4, 10)) + "@" + selectRandomFromList(emailDoms)
 	
 	mrec[fi] = nfv
-	return mrec
+	return  mrec
 
 def createNegMatch(tdata, ri):
 	"""
@@ -158,3 +163,22 @@ if __name__ == "__main__":
 				print(",".join(rec) + "," + mrec + "," + "0")
 				
 			ri += 1
+
+	elif op == "sosim":
+		srcFilePath = sys.argv[2]
+		cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
+		spc = ["@", "#", "_", "-"]
+		ngc.addSpChar(spc)
+		ngc.setWsRepl("$")
+		for rec in fileRecGen(srcFilePath, ","):
+			sim = list()
+			for i in range(0,5):
+				ngv1 = ngc.toMgramCount(rec[i])
+				ngv2 = ngc.toMgramCount(rec[i+6])
+				s = cosineSimilarity(ngv1, ngv2)
+				sim.append(s)
+			ss = toStrFromList(sim, 3)
+			print(ss + "," + rec[-1])
+				
+				
+	

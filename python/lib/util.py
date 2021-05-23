@@ -139,6 +139,15 @@ def selectRandomSubListFromListWithRepl(values, num):
 	"""
 	return list(map(lambda i : selectRandomFromList(values), range(num)))
 
+def selectRandomFromDict(ddata):
+	"""
+	select an element randomly from a dictionary
+	"""
+	dkeys = list(ddata.keys())
+	dk = selectRandomFromList(dkeys)
+	el = (dk, ddata[dk])
+	return el
+	
 def genIpAddress():
 	"""
 	generates IP address
@@ -544,7 +553,7 @@ def getFileLines(dirPath):
 	get lines from a file
 	"""
 	lines = list()
-	for li in fileRecGen(dirPath):
+	for li in fileRecGen(dirPath, None):
 		lines.append(li)		
 	return lines
 
@@ -1189,6 +1198,15 @@ def drawLine(data, yscale=None):
 		plt.yticks(range(0, yscale, step))
 	plt.show()
 
+def drawPlot(x, y, xlabel, ylabel):
+	"""
+	line plot
+	"""
+	plt.plot(x,y)
+	plt.xlabel(xlabel)
+	plt.ylabel(ylabel)
+	plt.show()
+
 def drawHist(ldata, myTitle, myXlabel, myYlabel):
 	"""
 	draw histogram
@@ -1300,6 +1318,12 @@ def assertInList(value, values, msg):
 	"""
 	assert value in values, msg
 
+def maxListDist(l1, l2):
+	"""
+	maximum list element difference
+	"""
+	dist = max(list(map(lambda v : abs(v[0] - v[1]), zip(l1, l2))))	
+	return dist
 	
 class StepFunction:
 	"""
@@ -1325,7 +1349,6 @@ class StepFunction:
 				y = self.points[l-1][2]
 		return y
 		
-	
 
 class DummyVarGenerator:
 	"""
