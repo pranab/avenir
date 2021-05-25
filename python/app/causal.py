@@ -50,24 +50,31 @@ def getEntropy(expl, d1, d2, algo="norm"):
 if __name__ == "__main__":
 	op = sys.argv[1]
 	if op == "disc":
-		dist1 = NormalSampler(1200, 3)	
+		dist1 = NormalSampler(1200, 10)	
 		dist2 = NormalSampler(800, 3)
-		noise = NormalSampler(20, 5)
+		noise = NormalSampler(0, 60)
+		noiseX = NormalSampler(0, 20)
 	
 		d1 = list()
 		d2 = list()
 		qu = 1200
 		for i in range(100):
-			s = randomFloat(2,5)
-			qu += s
-			#delta = i * s + i * i * .02
-			#qu = dist1.sample() + delta
+			#s = randomFloat(8,12) + noiseX.sample()
+			#qu += s
+			
+			delta = i * randomFloat(6,10) 
+			qu = dist1.sample() + delta
+			
 			d1.append(qu)
 			d2.append(2000 - qu + noise.sample())
 		
+		 
 		expl = DataExplorer(False)
 		expl.addListNumericData(d1, "d1")
 		expl.addListNumericData(d2, "d2")
+
+		#expl.plotHist("d1", False, True)
+		#expl.plotHist( "d2", False, True)
 
 		print("** forward case")
 		re = expl.fitLinearReg("d1", "d2")
@@ -82,6 +89,9 @@ if __name__ == "__main__":
 		expl.addListNumericData(res, "res")
 		
 		ex, er = getEntropy(expl, "d1", "res", algo="onsp") 
+		e1 = ex["entropy"]
+		e2 = er["entropy"]
+		#print("{:.6f} {:.6f}".format(e1,e2))
 		print("total entropy {:.6f}".format(ex["entropy"] + er["entropy"]))
 		
 		print("** reverse case")
@@ -97,4 +107,7 @@ if __name__ == "__main__":
 		expl.addListNumericData(res, "res")
 
 		ex, er = getEntropy(expl, "d2", "res", algo="onsp") 
+		e1 = ex["entropy"]
+		e2 = er["entropy"]
+		#print("{:.6f} {:.6f}".format(e1,e2))
 		print("total entropy {:.6f}".format(ex["entropy"] + er["entropy"]))
