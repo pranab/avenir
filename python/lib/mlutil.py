@@ -28,6 +28,7 @@ import random
 from math import *
 from decimal import Decimal
 import jprops
+from Levenshtein import distance as ld
 from util import *
 from sampler import *
 
@@ -128,12 +129,20 @@ class Configuration:
 		get int list param
 		"""
 		delSepStr = self.getStringConfig(name)
+		intList = None
+		
+		#specified as range
+		ra = delSepStr[0].split(":")
+		if len(ra) > 1:
+			intList = list(range(int(ra[0]), int(ra[1]) + 1, 1))
+			
 		if self.isNone(name):
 			val = (None, False)
 		elif self.isDefault(name):
 			val = (self.handleDefault(name), True)
 		else:
-			intList = strToIntArray(delSepStr[0], delim)
+			if intList is None:
+				intList = strToIntArray(delSepStr[0], delim)
 			val =(intList, delSepStr[1])
 		return val
 	
@@ -465,6 +474,17 @@ def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
 	unionCardinality = len(sx.union(sy))
 	return intCardinality/float(intCardinality + wx * len(sxIntDiff) + wy * len(syIntDiff))
 
+def levenshteinSimilarity(s1, s2):
+	"""
+	Levenshtein similarity for strings
+	"""
+	assert type(s1) == str and type(s2) == str,  "Levenshtein similarity is for string only"
+	d = ld(s1,s2)
+	#print(d)
+	l = max(len(s1),len(s2))
+	d = 1.0 - min(d/l, 1.0)
+	return d	
+
 def norm(values, po=2):
 	"""
 	norm
@@ -680,6 +700,7 @@ def digammaFun(n):
 	"""
 	figamma function
 	"""
+	#Euler Mascheroni constant
 	ec = 0.577216
 	return harmonicNum(n - 1) - ec
 			

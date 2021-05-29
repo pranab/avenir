@@ -35,12 +35,12 @@ from mlutil import *
 
 
 class FeedForwardNetwork(torch.nn.Module):
-	def __init__(self, configFile):
+	def __init__(self, configFile, addDefValues=None):
 		"""
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
 		"""
-		defValues = dict()
+		defValues = dict() if addDefValues is None else addDefValues.copy()
 		defValues["common.mode"] = ("training", None)
 		defValues["common.model.directory"] = ("model", None)
 		defValues["common.model.file"] = (None, None)
@@ -91,7 +91,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		torch.manual_seed(9999)
 
 		self.verbose = self.config.getStringConfig("common.verbose")[0]
-		numinp = len(self.config.getStringConfig("train.data.feature.fields")[0].split(","))
+		numinp = len(self.config.getIntListConfig("train.data.feature.fields")[0])
 		#numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.outputSize = self.config.getIntConfig("train.output.size")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
@@ -250,10 +250,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		loads and prepares  data
 		"""
 		# parameters
-		fieldIndices = model.config.getStringConfig("train.data.fields")[0]
-		fieldIndices = strToIntArray(fieldIndices, ",")
-		featFieldIndices = model.config.getStringConfig("train.data.feature.fields")[0]
-		featFieldIndices = strToIntArray(featFieldIndices, ",")
+		fieldIndices = model.config.getIntListConfig("train.data.fields")[0]
+		featFieldIndices = model.config.getIntListConfig("train.data.feature.fields")[0]
 
 		#all data and feature data
 		isDataFile = isinstance(dataSource, str)

@@ -185,7 +185,7 @@ if __name__ == "__main__":
 			for i in range(0,5):
 				#print("field " + str(i))
 				if i == 3:
-					s = jaccardSimilarityX(list(rec[i]),list(rec[i+6]))
+					s = levenshteinSimilarity(rec[i],rec[i+6])
 				else:
 					ngv1 = cng.toMgramCount(rec[i])
 					ngv2 = cng.toMgramCount(rec[i+6])
@@ -197,5 +197,13 @@ if __name__ == "__main__":
 			print(ss + "," + rec[-1])
 			c += 1
 				
+	elif op == "nnTrain":
+		"""
+		tran neural network model
+		"""
+		prFile = sys.argv[2]
+		regr = FeedForwardNetwork(prFile)
+		regr.buildModel()
+		FeedForwardNetwork.batchTrain(regr)
 				
 	
