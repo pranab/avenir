@@ -80,6 +80,17 @@ class FeedForwardNetwork(torch.nn.Module):
 		
 		super(FeedForwardNetwork, self).__init__()
     	
+	def setConfigParam(self, name, value):
+		"""
+		set config param
+		"""
+		self.config.setParam(name, value)
+
+	def getConfig(self):
+		"""
+		get config object
+		"""
+		return self.config
 
 	def setVerbose(self, verbose):
 		self.verbose = verbose
@@ -112,6 +123,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		for ld in trData:
 			lde = ld.split(":")
 			assert len(lde) == 5, "expecting 5 items for layer data"
+			
+			#num of units, activation, whether batch normalize, whether batch normalize after activation, dropout fraction
 			nunit = int(lde[0])
 			actStr = lde[1]
 			act = FeedForwardNetwork.createActivation(actStr) if actStr != "none"  else None

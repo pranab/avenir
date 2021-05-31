@@ -128,20 +128,18 @@ class Configuration:
 		"""
 		get int list param
 		"""
-		delSepStr = self.getStringConfig(name)
-		intList = None
-		
-		#specified as range
-		ra = delSepStr[0].split(":")
-		if len(ra) > 1:
-			intList = list(range(int(ra[0]), int(ra[1]) + 1, 1))
-			
 		if self.isNone(name):
 			val = (None, False)
 		elif self.isDefault(name):
 			val = (self.handleDefault(name), True)
 		else:
-			if intList is None:
+			delSepStr = self.getStringConfig(name)
+		
+			#specified as range
+			ra = delSepStr[0].split(":")
+			if len(ra) > 1:
+				intList = list(range(int(ra[0]), int(ra[1]) + 1, 1))
+			else:
 				intList = strToIntArray(delSepStr[0], delim)
 			val =(intList, delSepStr[1])
 		return val
