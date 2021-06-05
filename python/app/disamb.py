@@ -153,6 +153,7 @@ if __name__ == "__main__":
 			i += 1
 			
 	elif op == "genpn":
+		""" generate pos pos and pos neg paire """
 		srcFilePath = sys.argv[2]
 		tdata = getFileLines(srcFilePath)
 		
@@ -182,7 +183,7 @@ if __name__ == "__main__":
 		for rec in fileRecGen(srcFilePath, ","):
 			#print(",".join(rec))
 			sim = list()
-			for i in range(0,5):
+			for i in range(6):
 				#print("field " + str(i))
 				if i == 3:
 					s = levenshteinSimilarity(rec[i],rec[i+6])

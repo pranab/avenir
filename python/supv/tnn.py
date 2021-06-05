@@ -70,6 +70,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.track.error"] = (False, None) 
 		defValues["train.epoch.intv"] = (5, None) 
 		defValues["train.batch.intv"] = (5, None) 
+		defValues["train.print.weights"] = (False, None) 
 		defValues["valid.data.file"] = (None, None)
 		defValues["valid.accuracy.metric"] = (None, None)
 		defValues["predict.data.file"] = (None, None)
@@ -468,7 +469,11 @@ class FeedForwardNetwork(torch.nn.Module):
 			plt.ylabel("error")
 			plt.legend(["training error", "validation error"], loc='upper left')
 			plt.show()
-			
+		
+		if model.config.getBooleanConfig("train.print.weights")[0]:
+			print("model weights")
+			for param in model.parameters():
+				print(param.data)
 		return score
 
 	@staticmethod
