@@ -388,8 +388,7 @@ class CharNGram:
 				
 		self.ngsize = ngsize
 		self.radixPow = None
-		self.ngCounts = None
-		self.totNgCount = None
+		self.cntVecSize = None
 
 	def addSpChar(self, spChar):
 		"""
@@ -403,22 +402,28 @@ class CharNGram:
 		"""
 		self.ws = ws
 		self.chDomain[0] = self.ws
-			
-	def toMgramCount(self, text):
+	
+	def finalize(self):
 		"""
-		get ngram count list
-		"""
+		final setup
+		"""		
 		domSize = len(self.chDomain)
-		cntVecSize = int(math.pow(domSize, self.ngsize))
-		self.ngCounts = [0] *  cntVecSize
+		self.cntVecSize = int(math.pow(domSize, self.ngsize))
 		if self.radixPow is None:
 			self.radixPow = list()
 			for i in range(self.ngsize-1, 0, -1):
 				self.radixPow.append(int(math.pow(domSize, i)))
 			self.radixPow.append(1)
-				
+		
+		
+	def toMgramCount(self, text):
+		"""
+		get ngram count list
+		"""
+		ngCounts = [0] *  self.cntVecSize
+		
 		ngram = list()
-		self.totNgCount  = 0
+		totNgCount  = 0
 		for ch in text:
 			if ch.isspace():
 				l = len(ngram)
@@ -429,12 +434,12 @@ class CharNGram:
 				
 			if len(ngram) == self.ngsize:
 				i = self.__getNgramIndex(ngram)
-				assert i < cntVecSize, "ngram index out of range index " + str(i) + " size " + str(cntVecSize) 
-				self.ngCounts[i] += 1
+				assert i < self.cntVecSize, "ngram index out of range index " + str(i) + " size " + str(self.cntVecSize) 
+				ngCounts[i] += 1
 				ngram.clear()
-				self.totNgCount += 1
+				totNgCount += 1
 				
-		return self.ngCounts
+		return ngCounts
 		
 	def __getNgramIndex(self, ngram):
 		"""

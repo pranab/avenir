@@ -559,12 +559,12 @@ def getFileContent(path, verbose):
 			docComplete.append(content)
 	return (docComplete, filePaths)
 
-def getFileLines(dirPath):
+def getFileLines(dirPath, delim=","):
 	"""
 	get lines from a file
 	"""
 	lines = list()
-	for li in fileRecGen(dirPath, None):
+	for li in fileRecGen(dirPath, delim):
 		lines.append(li)		
 	return lines
 

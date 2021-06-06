@@ -22,6 +22,9 @@ import random
 import statistics 
 import numpy as np
 import matplotlib.pyplot as plt 
+import threading
+import time
+import queue
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../supv"))
 sys.path.append(os.path.abspath("../text"))
@@ -117,10 +120,14 @@ def createPosMatch(rec, fi):
 	return  mrec
 
 def printNgramVec(ngv):
+	"""
+	print ngram vector
+	"""
 	print("ngram vector")
 	for i in range(len(ngv)):
 		if ngv[i] > 0:
 			print("{} {}".format(i, ngv[i]))
+			
 def createNegMatch(tdata, ri):
 	"""
 	create negative match by randomly selecting another record
@@ -129,10 +136,54 @@ def createNegMatch(tdata, ri):
 	while nri == ri:
 		nri = randomInt(0, len(tdata)-1)
 	return tdata[nri]
+
+
+def getSim(rec):
+	""" get rec pair similarity """
+	sim = list()
+	for i in range(6):
+		#print("field " + str(i))
+		if i == 3:
+			s = levenshteinSimilarity(rec[i],rec[i+6])
+		else:
+			ngv1 = cng.toMgramCount(rec[i])
+			ngv2 = cng.toMgramCount(rec[i+6])
+			#printNgramVec(ngv1)
+			#printNgramVec(ngv2)
+			s = cosineSimilarity(ngv1, ngv2)
+		sim.append(s)
+	ss = toStrFromList(sim, 6)
+	srec = ss + "," + rec[-1]
+	return srec
+	
+class SimThread (threading.Thread):
+	""" multi threaded similarity calculation """
+	
+	def __init__(self, tName, cng, qu):
+		""" initialize """
+		threading.Thread.__init__(self)
+		self.tName = tName
+		self.cng = cng
+		self.qu = qu
+
+	def run(self):
+		""" exeution """
+		while not exitFlag:
+			quLock.acquire()
+			if not self.qu.empty():
+				rec = self.qu.get()
+				quLock.release()
+			
+				srec = getSim(rec)
+				print(srec)
+			else:
+				quLock.release()
+			
 	
 if __name__ == "__main__":
 	op = sys.argv[1]
 	if op == "gen":
+		""" generate data from from source file"""
 		srcFilePath = sys.argv[2]
 		i = 0
 		for rec in fileRecGen(srcFilePath, ","):
@@ -152,10 +203,28 @@ if __name__ == "__main__":
 				print(",".join(nrec))
 			i += 1
 			
+	if op == "genad":
+		""" generate additional data by swapping name and address with another random record"""
+		srcFilePath = sys.argv[2]
+		nrec = int(sys.argv[3])
+		tdata = getFileLines(srcFilePath)
+		
+		for _ in range(nrec):
+			r1 = selectRandomFromList(tdata)
+			#print(",".join(r1))
+			r2 = selectRandomFromList(tdata)
+			nm =  r2[0]
+			r1[0] = nm
+			r1[1] = r2[1]
+			email = nm.split()[0].lower() + "@" + r1[5].split("@")[1]
+			r1[5] = email
+			print(",".join(r1))
+
+
 	elif op == "genpn":
 		""" generate pos pos and pos neg paire """
 		srcFilePath = sys.argv[2]
-		tdata = getFileLines(srcFilePath)
+		tdata = getFileLines(srcFilePath, None) if len(sys.argv) == 3 else getFileLines(sys.argv[3], None)
 		
 		ri = 0
 		for rec in fileRecGen(srcFilePath, ","):
@@ -174,34 +243,63 @@ if __name__ == "__main__":
 			ri += 1
 
 	elif op == "sim":
+		""" create field pair similarity """
 		srcFilePath = sys.argv[2]
 		cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
 		spc = ["@", "#", "_", "-", "."]
 		cng.addSpChar(spc)
 		cng.setWsRepl("$")
+		cng.finalize()
 		c = 0
 		for rec in fileRecGen(srcFilePath, ","):
 			#print(",".join(rec))
-			sim = list()
-			for i in range(6):
-				#print("field " + str(i))
-				if i == 3:
-					s = levenshteinSimilarity(rec[i],rec[i+6])
-				else:
-					ngv1 = cng.toMgramCount(rec[i])
-					ngv2 = cng.toMgramCount(rec[i+6])
-					#printNgramVec(ngv1)
-					#printNgramVec(ngv2)
-					s = cosineSimilarity(ngv1, ngv2)
-				sim.append(s)
-			ss = toStrFromList(sim, 6)
-			print(ss + "," + rec[-1])
+			srec = getSim(rec)
+			print(srec)
 			c += 1
 				
+	elif op == "msim":
+		""" create field pair similarity in parallel"""
+		srcFilePath = sys.argv[2]
+		nworker = int(sys.argv[3])
+		
+		cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
+		spc = ["@", "#", "_", "-", "."]
+		cng.addSpChar(spc)
+		cng.setWsRepl("$")
+		cng.finalize()
+		c = 0
+		
+		#create threads
+		quLock = threading.Lock()
+		qSize = 100
+		workQu = queue.Queue(qSize)
+		threadList = list(map(lambda i : "Thread-" + str(i+1), range(nworker)))
+		threads = list()
+		exitFlag = False
+		for tName in threadList:
+			thread = SimThread(tName, cng, workQu)
+			thread.start()
+			threads.append(thread)
+			
+		for rec in fileRecGen(srcFilePath, ","):
+			queued = False
+			while not queued:
+				quLock.acquire()
+				if workQu.qsize() < qSize - 1:
+					workQu.put(rec)
+					queued = True
+				quLock.release()
+				time.sleep(1)
+		
+		#wrqp up
+		while not workQu.empty():
+			pass
+		exitFlag = True
+		for t in threads:
+			t.join()
+			
 	elif op == "nnTrain":
-		"""
-		tran neural network model
-		"""
+		""" train neural network model """
 		prFile = sys.argv[2]
 		regr = FeedForwardNetwork(prFile)
 		regr.buildModel()
