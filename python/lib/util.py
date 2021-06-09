@@ -134,13 +134,15 @@ def selectRandomSubListFromList(ldata, num):
 	"""
 	generates random sublist from a list without replacemment
 	"""
-	sel = selectRandomFromList(ldata)
-	selSet = {sel}
+	i = randint(0, len(ldata)-1)
+	sel = ldata[i]
+	selSet = {i}
 	selList = [sel]
 	while (len(selSet) < num):
-		sel = selectRandomFromList(ldata)
-		if (sel not in selSet):
-			selSet.add(sel)
+		i = randint(0, len(ldata)-1)
+		if (i not in selSet):
+			sel = ldata[i]
+			selSet.add(i)
 			selList.append(sel)		
 	return selList
 
@@ -158,7 +160,20 @@ def selectRandomFromDict(ddata):
 	dk = selectRandomFromList(dkeys)
 	el = (dk, ddata[dk])
 	return el
-	
+
+def setListRandomFromList(ldata, ldataRepl):
+	"""
+	sets some elents in the first list randomly with elements from the second list
+	"""
+	l = len(ldata)
+	selSet = set()
+	for d in ldataRepl:
+		i = randint(0, l-1)
+		while i in selSet:
+			i = randint(0, l-1)
+		ldata[i] = d
+		selSet.add(i)
+		
 def genIpAddress():
 	"""
 	generates IP address
@@ -396,11 +411,16 @@ def extractList(data, indices):
 	"""
 	extracts list from another list, given indices
 	"""
-	exList = list()
-	le = len(data)
-	for i in indices:
-		assert i < le , "index {} out of bound {}".format(i, le)
-		exList.append(data[i])
+	if areAllFieldsIncluded(data, indices):
+		exList = data.copy()
+		print("all indices")
+	else:
+		exList = list()
+		le = len(data)
+		for i in indices:
+			assert i < le , "index {} out of bound {}".format(i, le)
+			exList.append(data[i])
+	
 	return exList
 	
 def arrayContains(arr, item):
@@ -566,6 +586,16 @@ def getFileLines(dirPath, delim=","):
 	lines = list()
 	for li in fileRecGen(dirPath, delim):
 		lines.append(li)		
+	return lines
+
+def getFileSampleLines(dirPath, percen, delim=","):
+	"""
+	get sampled lines from a file
+	"""
+	lines = list()
+	for li in fileRecGen(dirPath, delim):
+		if randint(0, 100) < percen:
+			lines.append(li)		
 	return lines
 
 def getFileColumnAsString(dirPath, index, delim=","):
@@ -852,13 +882,24 @@ def tableSelFieldsFilter(tdata, columns):
 	"""
 	gets tabular data for selected columns 
 	"""
-	ntdata = list()
-	for rec in tdata:
-		nrec = extractList(rec, columns)
-		ntdata.append(nrec)
+	if areAllFieldsIncluded(tdata[0], columns):
+		ntdata = tdata
+	else:
+		ntdata = list()
+		for rec in tdata:
+			print(rec)
+			print(columns)
+			nrec = extractList(rec, columns)
+			ntdata.append(nrec)
 	return ntdata	
 	
 
+def areAllFieldsIncluded(ldata, columns):
+	"""
+	return True id all indexes are in the columns
+	"""
+	return list(range(len(ldata))) == columns
+	
 def asIntList(items):
 	"""
 	returns int list

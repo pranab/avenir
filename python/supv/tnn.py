@@ -77,6 +77,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["predict.use.saved.model"] = (True, None)
 		defValues["predict.output"] = ("binary", None)
 		defValues["predict.feat.pad.size"] = (60, None)
+		defValues["predict.print.output"] = (True, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(FeedForwardNetwork, self).__init__()
@@ -269,10 +270,13 @@ class FeedForwardNetwork(torch.nn.Module):
 
 		#all data and feature data
 		isDataFile = isinstance(dataSource, str)
-		if isDataFile:
-			(data, featData) = loadDataFile(dataSource, ",", fieldIndices, featFieldIndices)
+		selFieldIndices = fieldIndices if includeOutFld else fieldIndices[:-1]
+		if isDataFile: 
+			#source file path 
+			(data, featData) = loadDataFile(dataSource, ",", selFieldIndices, featFieldIndices)
 		else:
-			data = tableSelFieldsFilter(dataSource, fieldIndices)
+			# tabular data
+			data = tableSelFieldsFilter(dataSource, selFieldIndices)
 			featData = tableSelFieldsFilter(data, featFieldIndices)
 			featData = np.array(featData)
 			
@@ -338,19 +342,28 @@ class FeedForwardNetwork(torch.nn.Module):
 		return yPred
 		
 	@staticmethod
-	def printPrediction(yPred, config):
+	def printPrediction(yPred, config, dataSource):
 		"""
 		prints input feature data and prediction
 		"""
-		i = 0
-		prDataFilePath = config.getStringConfig("predict.data.file")[0]
+		#prDataFilePath = config.getStringConfig("predict.data.file")[0]
 		padWidth = config.getIntConfig("predict.feat.pad.size")[0]
-		for rec in fileRecGen(prDataFilePath, ","):
-			feat = (",".join(rec)).ljust(padWidth, " ")
-			rec = feat + "\t" + str(yPred[i])
-			print(rec)
-			i += 1
-
+		i = 0
+		if type(dataSource) == str:
+			for rec in fileRecGen(dataSource, ","):
+				feat = (",".join(rec)).ljust(padWidth, " ")
+				rec = feat + "\t" + str(yPred[i])
+				print(rec)
+				i += 1
+		else:
+			for rec in dataSource:
+				srec = toStrList(rec, 6)
+				feat = (",".join(srec)).ljust(padWidth, " ")
+				srec = feat + "\t" + str(yPred[i])
+				print(srec)
+				i += 1
+			
+			
 	@staticmethod
 	def allTrain(model):
 		"""
@@ -502,7 +515,8 @@ class FeedForwardNetwork(torch.nn.Module):
 			yPred = FeedForwardNetwork.processClassifOutput(yPred, model.config)
 			
 		# print prediction
-		FeedForwardNetwork.printPrediction(yPred, model.config)
+		if model.config.getBooleanConfig("predict.print.output")[0]:
+			FeedForwardNetwork.printPrediction(yPred, model.config, dataSource)
 		
 		return yPred
 

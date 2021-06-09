@@ -138,8 +138,19 @@ def createNegMatch(tdata, ri):
 	return tdata[nri]
 
 
-def getSim(rec):
+def createNgramCreator():
+	""" create ngram creator """
+	cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
+	spc = ["@", "#", "_", "-", "."]
+	cng.addSpChar(spc)
+	cng.setWsRepl("$")
+	cng.finalize()
+	return cng
+	
+		
+def getSim(rec, incOutput=True):
 	""" get rec pair similarity """
+	#print(rec)
 	sim = list()
 	for i in range(6):
 		#print("field " + str(i))
@@ -153,35 +164,74 @@ def getSim(rec):
 			s = cosineSimilarity(ngv1, ngv2)
 		sim.append(s)
 	ss = toStrFromList(sim, 6)
-	srec = ss + "," + rec[-1]
+	srec = ss + "," + rec[-1] if incOutput else ss
 	return srec
 	
 class SimThread (threading.Thread):
 	""" multi threaded similarity calculation """
 	
-	def __init__(self, tName, cng, qu):
+	def __init__(self, tName, cng, qu, incOutput, outQu, outQuSize):
 		""" initialize """
 		threading.Thread.__init__(self)
 		self.tName = tName
 		self.cng = cng
 		self.qu = qu
+		self.incOutput = incOutput
+		self.outQu = outQu
+		self.outQuSize = outQuSize
 
 	def run(self):
 		""" exeution """
 		while not exitFlag:
-			quLock.acquire()
-			if not self.qu.empty():
-				rec = self.qu.get()
-				quLock.release()
+			rec = dequeue(self.qu, workQuLock)
+			if rec is not None:
+				srec = getSim(rec, self.incOutput)
+				if outQu is None:
+					print(srec)
+				else:
+					enqueue(srec, self.outQu, outQuLock, self.outQuSize)
 			
-				srec = getSim(rec)
-				print(srec)
-			else:
-				quLock.release()
-			
+def createThreads(nworker, cng, workQu, incOutput, outQu, outQuSize):
+	"""create worker threads """
+	threadList = list(map(lambda i : "Thread-" + str(i+1), range(nworker)))
+	threads = list()
+	for tName in threadList:
+		thread = SimThread(tName, cng, workQu, incOutput, outQu, outQuSize)
+		thread.start()
+		threads.append(thread)
+	return threads
+
+
+def enqueue(rec, qu, quLock, qSize): 
+	""" enqueue record """
+	queued = False
+	while not queued:
+		quLock.acquire()
+		if qu.qsize() < qSize - 1:
+			qu.put(rec)
+			queued = True
+		quLock.release()
+		time.sleep(1)
+
+def dequeue(qu, quLock): 
+	""" dequeue record """
+	rec = None
+	quLock.acquire()
+	if not qu.empty():
+		rec = qu.get()
+	quLock.release()
+	
+	return rec
 	
 if __name__ == "__main__":
 	op = sys.argv[1]
+
+	#multi threading related
+	workQuLock = threading.Lock()
+	outQuLock = threading.Lock()
+	exitFlag = False
+	
+
 	if op == "gen":
 		""" generate data from from source file"""
 		srcFilePath = sys.argv[2]
@@ -213,6 +263,10 @@ if __name__ == "__main__":
 			r1 = selectRandomFromList(tdata)
 			#print(",".join(r1))
 			r2 = selectRandomFromList(tdata)
+			while r1[0] == r2[0]:
+				r1 = selectRandomFromList(tdata)
+				r2 = selectRandomFromList(tdata)
+			
 			nm =  r2[0]
 			r1[0] = nm
 			r1[1] = r2[1]
@@ -220,6 +274,33 @@ if __name__ == "__main__":
 			r1[5] = email
 			print(",".join(r1))
 
+	if op == "gendup":
+		""" replace some records in first file  with reccords from another file"""
+		srcFilePath = sys.argv[2]
+		dupFilePath = sys.argv[3]
+		ndup = int(sys.argv[4])
+		
+		tdata = getFileLines(srcFilePath, None)
+		
+		percen = 10
+		tdataSec =  list()
+		while len(tdataSec) < ndup:
+			tdataSec = getFileSampleLines(dupFilePath, percen)
+			percen = int(percen * ndup / len(tdataSec) + 2)
+		
+		tdataSec = selectRandomSubListFromList(tdataSec, ndup)
+		drecs = list()
+		for rec in tdataSec:
+			fi = randomInt(0, 5)
+			mrec = createPosMatch(rec, fi)
+			if isEventSampled(30):
+				fi = randomInt(0, 5)
+				mrec = createPosMatch(mrec, fi)
+			drecs.append(",".join(mrec))
+			
+		setListRandomFromList(tdata, drecs)
+		for r in tdata:
+			print(r)
 
 	elif op == "genpn":
 		""" generate pos pos and pos neg paire """
@@ -262,34 +343,16 @@ if __name__ == "__main__":
 		srcFilePath = sys.argv[2]
 		nworker = int(sys.argv[3])
 		
-		cng = CharNGram(["lcc", "ucc", "dig"], 3, True)
-		spc = ["@", "#", "_", "-", "."]
-		cng.addSpChar(spc)
-		cng.setWsRepl("$")
-		cng.finalize()
+		cng = createNgramCreator()
 		c = 0
 		
 		#create threads
-		quLock = threading.Lock()
 		qSize = 100
 		workQu = queue.Queue(qSize)
-		threadList = list(map(lambda i : "Thread-" + str(i+1), range(nworker)))
-		threads = list()
-		exitFlag = False
-		for tName in threadList:
-			thread = SimThread(tName, cng, workQu)
-			thread.start()
-			threads.append(thread)
+		threads = createThreads(nworker, cng, workQu, True, None, None)
 			
 		for rec in fileRecGen(srcFilePath, ","):
-			queued = False
-			while not queued:
-				quLock.acquire()
-				if workQu.qsize() < qSize - 1:
-					workQu.put(rec)
-					queued = True
-				quLock.release()
-				time.sleep(1)
+			enqueue(rec, workQu, qSize)
 		
 		#wrqp up
 		while not workQu.empty():
@@ -305,4 +368,56 @@ if __name__ == "__main__":
 		regr.buildModel()
 		FeedForwardNetwork.batchTrain(regr)
 				
+	elif op == "nnPred":
+		""" predict with neural network model """
+		newFilePath = sys.argv[2]
+		existFilePath = sys.argv[3]
+		nworker = int(sys.argv[4])
+		prFile = sys.argv[5]
+		
+		regr = FeedForwardNetwork(prFile)
+		regr.buildModel()
+		cng = createNgramCreator()
+
+		#create threads
+		qSize = 100
+		workQu = queue.Queue(qSize)
+		outQu = queue.Queue(qSize)
+		threads = createThreads(nworker, cng, workQu, False, outQu, qSize)
+		
+		for nrec in fileRecGen(newFilePath):
+			srecs = list()
+			ecount = 0
+			#print("processing ", nrec)
+			for erec in fileRecGen(existFilePath):
+				rec = nrec.copy()
+				rec.extend(erec)
+				#print(rec)
+				enqueue(rec, workQu, workQuLock, qSize)
+				srec = dequeue(outQu, outQuLock)
+				if srec is not None:
+					srecs.append(strToFloatArray(srec))
+				ecount += 1
+			
+			#wait til workq queue is drained
+			while not workQu.empty():
+				pass
+			
+			#drain out queue	
+			while len(srecs) < ecount:
+				srec = dequeue(outQu, outQuLock)
+				if srec is not None:
+					srecs.append(strToFloatArray(srec))
+				time.sleep(1)
+				
+			#predict
+			simMax = 0
+			sims = FeedForwardNetwork.predict(regr, srecs)
+			sims = sims.reshape(sims.shape[0])
+			print("{}  {:.3f}".format(nrec, max(sims)))
+			
+		exitFlag = True
+		for t in threads:
+			t.join()
+
 	
