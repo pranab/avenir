@@ -1,0 +1,76 @@
+This tutorial is for finding  fuzzy duplicate of tabular records using neural network.
+Uses char ngram histogram to tokenize text fields. There are two main tasks, creating training data
+and training a model followed by creating prediction data and doing prediction using trained model.
+
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where disamb.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Generate training data
+======================
+extract only required fields from the downloaded file
+./disam.py gen us-500.csv > pers.txt
+
+generate positively and negatively matched recod pairs
+./disam.py genpn pers.txt > ppers.txt
+
+generate similarity records, which is the training data
+./disamb.py msim ppers.txt <num_workers> > spers_train.txt
+
+where
+num_workers = num of workers based on the num of CPU cores
+
+Generate validation data
+========================
+generate additional data by swapping fields
+./disamb.py genad pers.txt <num_recs> > pers1.txt
+
+where
+num_recs = number of records e.g 25
+
+generate postive and negative match pair
+./disamb.py genpn pers1.txt pers.txt > ppers1.txt
+
+generate similarity records, which is the validation data
+./disamb.py msim ppers1.txt <num_workers> > spers_va.txt
+
+Train model
+===========
+./disamb.py nnTrain tnn_disamb.properties
+
+Generate prediction data
+========================
+We simulate a scenario where we have some existing data set and a new data set.
+The new data set will have some near duplicates with the esisting data set. Then we will
+check if the neural network detects those near duplicates.
+
+create  existing data set
+head -n 20 pers.txt > pers_exist.txt
+
+create new data set
+./disamb.py genad pers.txt  <num_recs> > pers_new.txt
+
+where
+num_recs = number of records e.g 10
+
+add near duplocate records in new data set
+./disamb.py gendup pers_new.txt pers_exist.txt <num_dups> > pers_new_dup.txt 
+
+where
+num_dups = number of duplicate records e.g 2
+
+Detect near duplicates
+======================
+./disamb.py nnPred pers_new_dup.txt pers_exist1.txt <num_workers> tnn_disamb.properties
+
+where
+num_workers = num of workers based on the num of CPU cores
+
+it will show each record in pers_new_dup.txt along with similarity scores.
+A score close to 1.0 indicates duplicates
+
+
+

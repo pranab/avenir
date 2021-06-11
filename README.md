@@ -68,6 +68,7 @@ of detail documentation
 * https://pkghosh.wordpress.com/2020/11/26/meeting-schedule-optimization-with-genetic-algorithm-in-python/
 * https://pkghosh.wordpress.com/2021/02/26/detecting-and-measuring-human-bias-in-machine-learning-models/
 * https://pkghosh.wordpress.com/2021/03/25/robustness-measurement-of-machine-learning-models-with-examples-in-python/
+* https://pkghosh.wordpress.com/2021/05/25/data-driven-causal-relationship-discovery-with-python-example-code/
 
 
 ## Getting started
