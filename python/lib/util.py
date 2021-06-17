@@ -458,11 +458,11 @@ def strListOrRangeToIntArray(line):
 	else:
 		vrange = line.split(":")
 		if (len(vrange) == 2):
-			lo = int(varr[0])
-			hi = int(varr[1])
+			lo = int(vrange[0])
+			hi = int(vrange[1])
 			iarr = list(range(lo, hi+1))
 		else:
-			raise ValueError("failed to generate list")
+			raise ValueError("failed to generate list from range")
 	return iarr
 				
 def toStr(val, precision):

@@ -22,6 +22,9 @@ import random
 import statistics 
 import numpy as np
 import matplotlib.pyplot as plt 
+import pandas as pd
+import cdt
+import networkx as nx
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
 sys.path.append(os.path.abspath("../supv"))
@@ -50,6 +53,7 @@ def getEntropy(expl, d1, d2, algo="norm"):
 if __name__ == "__main__":
 	op = sys.argv[1]
 	if op == "disc":
+		"""  pair wise causal discovery with additive noise model """
 		dist1 = NormalSampler(1200, 10)	
 		dist2 = NormalSampler(800, 3)
 		noise = NormalSampler(0, 60)
@@ -111,3 +115,26 @@ if __name__ == "__main__":
 		e2 = er["entropy"]
 		#print("{:.6f} {:.6f}".format(e1,e2))
 		print("total entropy {:.6f}".format(ex["entropy"] + er["entropy"]))
+
+	elif op == "ges":
+		"""   causal graph discovery with GES """
+		dataFilePath = sys.argv[2]
+		cols = strListOrRangeToIntArray(sys.argv[3])
+		df = pd.read_csv(dataFilePath, header=None, usecols=cols)
+		
+		glasso = cdt.independence.graph.Glasso()
+		skeleton = glasso.predict(df)
+		print("co variance")
+		print(nx.adjacency_matrix(skeleton).todense())
+		
+		#remove indirect links
+		newSkeleton = cdt.utils.graph.remove_indirect_links(skeleton, alg="aracne")
+		print("after removing indirect dependency")
+		print(nx.adjacency_matrix(newSkeleton).todense())
+		
+		#discovery
+		model = cdt.causality.graph.GES()
+		outputGraph = model.predict(df, newSkeleton)
+		print("causal graph")
+		print(nx.adjacency_matrix(outputGraph).todense())
+		

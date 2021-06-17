@@ -136,11 +136,7 @@ class Configuration:
 			delSepStr = self.getStringConfig(name)
 		
 			#specified as range
-			ra = delSepStr[0].split(":")
-			if len(ra) > 1:
-				intList = list(range(int(ra[0]), int(ra[1]) + 1, 1))
-			else:
-				intList = strToIntArray(delSepStr[0], delim)
+			intList = strListOrRangeToIntArray(delSepStr[0])
 			val =(intList, delSepStr[1])
 		return val
 	
