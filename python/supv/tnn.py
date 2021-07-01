@@ -568,9 +568,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		yActual = model.validOutData
 		if model.verbose:
 			vsize = yPred.shape[0]
-			print("\npredicted \t\t actual")
+			print("\npredicted \t actual")
 			for i in range(vsize):
-				print(str(yPred[i]) + "\t" + str(yActual[i]))
+				print("{:.3f}\t\t{:.3f}".format(yPred[i][0], yActual[i][0]))
 			
 		score = perfMetric(model.accMetric, yActual, yPred)
 		print(formatFloat(3, score, "perf score"))
@@ -586,6 +586,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		
 		yPred = model.yPred.flatten()
 		yActual = model.validOutData.flatten()
+		nsamp = len(yActual)
+		
 		#print(yPred.shape)
 		#print(yActual.shape)
 		
@@ -613,6 +615,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		 
 		x = list()
 		y = list()
+		yideal = list()
+		ece = 0
+		mce = 0
 		
 		# per bin confidence and accuracy
 		for plist in blist:
@@ -628,9 +633,20 @@ class FeedForwardNetwork(torch.nn.Module):
 				 
 			acc = ypcount / len(plist)
 			y.append(acc)
+			yideal.append(ypm)
 			
-		drawPlot(x, y, "confidence", "accuracy")
+			ce = abs(ypm - acc)
+			ece += len(plist) * ce
+			if ce > mce:
+				mce = ce
 		
+		#calibration plot	
+		drawPairPlot(x, y, yideal, "confidence", "accuracy", "actual", "ideal")
+		
+		#expected calibration error
+		ece /= nsamp
+		print("expected calibration error\t{:.3f}".format(ece))
+		print("maximum calibration error\t{:.3f}".format(mce))
 				
 			
 	
