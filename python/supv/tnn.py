@@ -29,6 +29,7 @@ import matplotlib
 import random
 import jprops
 from random import randint
+import statistics
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -78,6 +79,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["predict.output"] = ("binary", None)
 		defValues["predict.feat.pad.size"] = (60, None)
 		defValues["predict.print.output"] = (True, None)
+		defValues["calibrate.num.bins"] = (10, None)
+		defValues["calibrate.pred.prob.thresh"] = (0.5, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(FeedForwardNetwork, self).__init__()
@@ -168,6 +171,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		# loss function and optimizer
 		self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
 		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
+		
+		self.yPred  = None
 		
 	def setValidationData(self, dataSource):
 		"""
@@ -535,7 +540,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		return score
     	
 	@staticmethod
-	def prepValidate(model, dataSource):
+	def prepValidate(model, dataSource=None):
 		"""
 		prepare for validation
 		"""
@@ -548,22 +553,86 @@ class FeedForwardNetwork(torch.nn.Module):
 				FeedForwardNetwork.batchTrain(model)
 			model.restored = True
 			
-		model.setValidationData(dataSource)
+		if 	dataSource is not None:
+			model.setValidationData(dataSource)
  
 	@staticmethod
 	def validateModel(model):
- 		model.eval()
- 		yPred = model(model.validFeatData)
- 		yPred = yPred.data.cpu().numpy()
- 		yActual = model.validOutData
- 		if model.verbose:
- 			vsize = yPred.shape[0]
- 			print("\npredicted \t\t actual")
- 			for i in range(vsize):
- 				print(str(yPred[i]) + "\t" + str(yActual[i]))
- 				
- 		score = perfMetric(model.accMetric, yActual, yPred)
- 		print(formatFloat(3, score, "perf score"))
- 		return score
+		"""
+		pmodel validation
+		"""
+		model.eval()
+		yPred = model(model.validFeatData)
+		yPred = yPred.data.cpu().numpy()
+		model.yPred = yPred
+		yActual = model.validOutData
+		if model.verbose:
+			vsize = yPred.shape[0]
+			print("\npredicted \t\t actual")
+			for i in range(vsize):
+				print(str(yPred[i]) + "\t" + str(yActual[i]))
+			
+		score = perfMetric(model.accMetric, yActual, yPred)
+		print(formatFloat(3, score, "perf score"))
+		return score
  		
+	@staticmethod
+	def calibrateModel(model):
+		"""
+		pmodel calibration
+		"""
+		FeedForwardNetwork.prepValidate(model)
+		FeedForwardNetwork.validateModel(model)
+		
+		yPred = model.yPred.flatten()
+		yActual = model.validOutData.flatten()
+		#print(yPred.shape)
+		#print(yActual.shape)
+		
+		nBins = model.config.getIntConfig("calibrate.num.bins")[0]
+		prThreshhold = model.config.getFloatConfig("calibrate.pred.prob.thresh")[0]
+		
+		minConf = yPred.min()
+		maxConf = yPred.max()
+		bsize = (maxConf - minConf) / nBins
+		#print("minConf {:.3f}  maxConf {:.3f}  bsize {:.3f}".format(minConf, maxConf, bsize))
+		blist = list(map(lambda i : None, range(nBins)))
+		
+		#binning
+		for yp, ya in zip(yPred, yActual):
+			indx = int((yp - minConf) / bsize)
+			if indx == nBins:
+				indx = nBins - 1
+			#print("yp {:.3f}  indx {}".format(yp, indx))
+			pair = (yp, ya)
+			plist  = blist[indx]
+			if plist is None:
+				plist = list()
+				blist[indx] = plist 
+			plist.append(pair)
+		 
+		x = list()
+		y = list()
+		
+		# per bin confidence and accuracy
+		for plist in blist:
+			ypl = list(map(lambda p : p[0], plist))
+			ypm = statistics.mean(ypl)
+			x.append(ypm)
+			
+			ypcount = 0
+			for p in plist:
+				yp = 1 if p[0] > prThreshhold else 0
+				if (yp == 1 and p[1] == 1):
+					ypcount += 1
+				 
+			acc = ypcount / len(plist)
+			y.append(acc)
+			
+		drawPlot(x, y, "confidence", "accuracy")
+		
+				
+			
+	
+		
    	

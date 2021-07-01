@@ -28,6 +28,8 @@ from sampler import *
 from tnn import *
 
 op = sys.argv[1]
+print("executing " + op)
+
 keyLen  = None
 
 classes = ["1", "0"]
@@ -458,6 +460,16 @@ elif op == "nnAccuracyByShift":
 	showAccuracies(scores)
 	drawPlot(s, scores, "normalized shift", "accuracy")
 	
+elif op == "calibrate":
+	"""
+	calibrate
+	"""
+	prFile = sys.argv[2]
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	FeedForwardNetwork.calibrateModel(clflier)
+
+
 else:
 	exitWithMsg("inbvalid command")	
 	
