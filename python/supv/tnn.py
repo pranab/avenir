@@ -25,6 +25,7 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, TensorDataset
 from torch.utils.data import DataLoader
 import sklearn as sk
+from sklearn.neighbors import KDTree
 import matplotlib
 import random
 import jprops
@@ -81,6 +82,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["predict.print.output"] = (True, None)
 		defValues["calibrate.num.bins"] = (10, None)
 		defValues["calibrate.pred.prob.thresh"] = (0.5, None)
+		defValues["calibrate.num.nearest.neighbors"] = (10, None)
 		self.config = Configuration(configFile, defValues)
 		
 		super(FeedForwardNetwork, self).__init__()
@@ -649,6 +651,50 @@ class FeedForwardNetwork(torch.nn.Module):
 		print("maximum calibration error\t{:.3f}".format(mce))
 				
 			
+	@staticmethod
+	def calibrateModelLocal(model):
+		"""
+		pmodel calibration based k nearest neghbors
+		"""
+		FeedForwardNetwork.prepValidate(model)
+		FeedForwardNetwork.validateModel(model)
+		
+		yPred = model.yPred.flatten()
+		yActual = model.validOutData.flatten()
+		nsamp = len(yActual)
+		
+		neighborCnt =  model.config.getIntConfig("calibrate.num.nearest.neighbors")[0]
+		prThreshhold = model.config.getFloatConfig("calibrate.pred.prob.thresh")[0]
+		fData = model.validFeatData.numpy()
+		tree = KDTree(fData, leaf_size=4)
+		
+		dist, ind = tree.query(fData, k=neighborCnt)
+		calibs = list()
+		#all data
+		for si, ni in enumerate(ind):
+			conf = 0
+			ypcount = 0
+			#all neighbors
+			for i in ni:
+				conf += yPred[i]
+				yp = 1 if yPred[i] > prThreshhold else 0
+				if (yp == 1 and yActual[i] == 1):
+					ypcount += 1
+			conf /= neighborCnt
+			acc = ypcount / neighborCnt
+			calib = (si, conf, acc)
+			calibs.append(calib)
+			
+		#descending sort by difference between confidence and accuracy
+		calibs = sorted(calibs, key=lambda c : abs(c[1] - c[2]), reverse=True)
+		print("local calibration")
+		print("conf\taccu\trecord")
+		for i in range(19):
+			si, conf, acc = calibs[i]
+			rec = toStrFromList(fData[si], 3)
+			print("{:.3f}\t{:.3f}\t{}".format(conf, acc, rec))
+		
+		
 	
 		
    	

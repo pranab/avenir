@@ -460,7 +460,7 @@ elif op == "nnAccuracyByShift":
 	showAccuracies(scores)
 	drawPlot(s, scores, "normalized shift", "accuracy")
 	
-elif op == "calibrate":
+elif op == "calib":
 	"""
 	calibrate
 	"""
@@ -468,6 +468,15 @@ elif op == "calibrate":
 	clflier = FeedForwardNetwork(prFile)
 	clflier.buildModel()
 	FeedForwardNetwork.calibrateModel(clflier)
+
+elif op == "calibLoc":
+	"""
+	calibrate
+	"""
+	prFile = sys.argv[2]
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	FeedForwardNetwork.calibrateModelLocal(clflier)
 
 
 else:
