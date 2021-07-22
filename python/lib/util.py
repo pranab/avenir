@@ -1259,11 +1259,22 @@ def drawPlot(x, y, xlabel, ylabel):
 	plt.ylabel(ylabel)
 	plt.show()
 
-def drawHist(ldata, myTitle, myXlabel, myYlabel):
+def drawPairPlot(x, y1, y2, xlabel,ylabel, y1label, y2label):
+	"""
+	line plot of 2 lines
+	"""
+	plt.plot(x, y1, label = y1label)
+	plt.plot(x, y2, label = y2label)
+	plt.xlabel(xlabel)
+	plt.ylabel(ylabel)
+	plt.legend()
+	plt.show()
+
+def drawHist(ldata, myTitle, myXlabel, myYlabel, nbins=10):
 	"""
 	draw histogram
 	"""
-	plt.hist(ldata, density=True)
+	plt.hist(ldata, bins=nbins, density=True)
 	plt.title(myTitle)
 	plt.xlabel(myXlabel)
 	plt.ylabel(myYlabel)
@@ -1376,7 +1387,14 @@ def maxListDist(l1, l2):
 	"""
 	dist = max(list(map(lambda v : abs(v[0] - v[1]), zip(l1, l2))))	
 	return dist
-	
+
+def fileLineCount(fPath):
+	""" number of lines ina file """
+	with open(fPath) as f:
+		for i, li in enumerate(f):
+			pass
+	return (i + 1)
+		
 class StepFunction:
 	"""
 	step function
