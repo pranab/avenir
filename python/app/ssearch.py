@@ -24,6 +24,10 @@ import numpy
 import statistics 
 import math
 from numpy.testing import assert_almost_equal
+import matplotlib.pyplot as plt
+import enquiries
+sys.path.append(os.path.abspath("../lib"))
+from util import *
 
 """
 Semantic search with BERT pre trained transformer model. Embedding at various levels are used,
@@ -52,17 +56,27 @@ def tokSimMax(qu, doc):
 				msi = si
 	return msi
 	
-def tokSimAvMax(qu, doc):
+def tokSimAvMax(qu, doc, verbose=False):
 	"""
 	token max then average
 	"""
 	qts = list()
 	for t1 in qu:
 		msi = 0
+		dts = list()
+		dtm = None
 		for t2 in doc:
 			si = t1.similarity(t2)
+			if verbose and not math.isnan(si):
+				dts.append(si)
 			if not math.isnan(si) and si > msi:
 				msi = si
+				if verbose:
+					dtm = t2.text
+		if verbose:
+			print("query term " + t1.text)
+			print("max matched doc term " + dtm)
+			drawHist(dts, "doc term similarity", "similarity", "frequeency")
 		qts.append(msi)
 		
 	amsi = numpy.mean(numpy.array(qts))
@@ -91,6 +105,8 @@ def tokSimAv(qu, doc):
 	token pair wise average
 	"""
 	qts = tokSim(qu, doc)
+	#plt.hist(qts, bins=10)
+	#plt.show()
 	asi = numpy.mean(qts)	
 	return asi
 
@@ -134,7 +150,12 @@ def sentSimMax(qu, doc):
 	"""
 	sentence wise average
 	"""
+	print("shapes")
+	print(qu.tensor.shape)
+	print(doc.tensor.shape)
+	#anlyzeDoc(doc)
 	sil = sentSim(qu, doc)
+	print("num of CLS {}".format(len(sil)))
 	asi = numpy.max(sil)			
 	return asi	
 
@@ -146,12 +167,26 @@ def sentSim(qu, doc):
 	dstr = doc._.trf_word_pieces_
 	dte = zip(dstr, doc._.trf_last_hidden_state)
 	sil = list()
+	i = 0
 	for t, v in dte:
 		if t == "[CLS]":
 			si = 20 - numpy.linalg.norm(qe - v)
 			sil.append(si)
+		i += 1
 	return numpy.array(sil)
 
+def anlyzeDoc(doc):
+	dstr = doc._.trf_word_pieces_
+	dte = zip(dstr, doc._.trf_last_hidden_state)
+	print("terms and encodings")
+	for t, v in dte:
+		print(t + "\t" + str(v[:4]))
+
+def tokSimTest(qu, doc):
+	for q in qu.tensor:
+		for d in doc.tensor:
+			pass
+			
 def printAlgo(algo):
 	"""
 	print similarity algo
@@ -174,6 +209,8 @@ def printAlgo(algo):
 		print("using sentence median similarity")
 	elif algo == "ssma":
 		print("using sentence max similarity")
+	elif algo == "test":
+		print("testing")
 	else:
 		raise ValueError("invalid semilarity algo")
 		
@@ -293,11 +330,43 @@ if __name__ == "__main__":
 	recommended daily needs.
 	"""
 	
-	dnames = ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10"]
-	dtexts = [doc1, doc2, doc3, doc4, doc5, doc6, doc7, doc8, doc9, doc10]
-	
 	print("loading BERT transformer model")
 	nlp = spacy.load("en_trf_bertbaseuncased_lg")
+	if algo == "test":
+		algo = sys.argv[2]
+		opts = ["doc file path", "doc content", "query", "find match", "quit"]
+		de = None
+		qe = None
+		while True:
+			ch = enquiries.choose("choose from below: ", opts)
+			if ch == "doc file path":
+				docFilePath = input("enter doc file path: ")
+				with open(docFilePath, 'r') as contentFile:
+					docStr = contentFile.read()
+				de = nlp(docStr)
+			elif ch == "doc content":
+				docStr = input("enter doc content: ")
+				de = nlp(docStr)
+			elif ch == "query":
+				inp = input("enter search query: ")
+				qe = nlp(inp)
+			elif ch == "find match":
+				assert (de is not None and qe is not None) , "doc or query not set"
+				if algo == "tsavm":
+					si = tokSimAvMax(qe, de, True)
+				else:
+					raise ValueError("invalid semilarity algo")
+				print("match score {:.3f}".format(si))
+			elif ch == "quit":
+				break
+			else:
+				pass
+		
+		exitWithMsg("done testing")
+	
+	dnames = ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10"]
+	dtexts = [doc1, doc2, doc3, doc4, doc5, doc6, doc7, doc8, doc9, doc10]
+
 	print("encoding all docs")
 	dvecs = list(map(lambda d : nlp(d), dtexts))
 	kvecs = dict(zip(dnames, dvecs))
@@ -307,7 +376,7 @@ if __name__ == "__main__":
 		if inp == "q":
 			break
 		vinp = nlp(inp)
-		print("\nsearch result")
+		#print("\nsearch result")
 		res = list()
 		for dn, dv in kvecs.items():
 			if algo == "ds":
@@ -331,7 +400,7 @@ if __name__ == "__main__":
 			else:
 				raise ValueError("invalid semilarity algo")
 			
-			print("{} score {:.6f}".format(dn, si))
+			#print("{} score {:.6f}".format(dn, si))
 			r = (dn, si)
 			res.append(r)
 		
