@@ -44,21 +44,21 @@ def docAv(qu, doc):
 	"""
 	return qu.similarity(doc)
 
-def tokSimMax(qu, doc):
+def tokSimMax(qu, doc, verbose=False):
 	"""
-	token pair wise max
+	token pair wise max (tsma)
 	"""
 	msi = 0
 	for t1 in qu:
 		for t2 in doc:
 			si = t1.similarity(t2)
-			if si > msi:
+			if not math.isnan(si) and si > msi:
 				msi = si
 	return msi
 	
 def tokSimAvMax(qu, doc, verbose=False):
 	"""
-	token max then average
+	token max then average (tsavm)
 	"""
 	qts = list()
 	for t1 in qu:
@@ -82,7 +82,31 @@ def tokSimAvMax(qu, doc, verbose=False):
 	amsi = numpy.mean(numpy.array(qts))
 	return amsi
 		
-def tokSimMaxAv(qu, doc):
+def tokSimAvMaxTop(qu, doc, verbose=False):
+	"""
+	token topn average  then average
+	"""
+	qts = list()
+	for t1 in qu:
+		msi = 0
+		dts = list()
+		for t2 in doc:
+			si = t1.similarity(t2)
+			if not math.isnan(si):
+				dts.append(si)
+		if verbose:
+			print("query term " + t1.text)
+			drawHist(dts, "doc term similarity", "similarity", "frequeency")
+		dts.sort(reverse=True)
+		msi = numpy.mean(numpy.array(dts[:3]))
+		qts.append(msi)
+	
+	if verbose:	
+		print("query term scores " + str(qts))
+	amsi = numpy.mean(numpy.array(qts))
+	return amsi
+
+def tokSimMaxAv(qu, doc, verbose=False):
 	"""
 	token average and then max
 	"""
@@ -100,7 +124,7 @@ def tokSimMaxAv(qu, doc):
 			masi = av
 	return masi
 
-def tokSimAv(qu, doc):
+def tokSimAv(qu, doc, verbose=False):
 	"""
 	token pair wise average
 	"""
@@ -110,7 +134,7 @@ def tokSimAv(qu, doc):
 	asi = numpy.mean(qts)	
 	return asi
 
-def tokSimMed(qu, doc):
+def tokSimMed(qu, doc, verbose=False):
 	"""
 	token pair wise average
 	"""
@@ -130,7 +154,7 @@ def tokSim(qu, doc):
 				qts.append(si)
 	return numpy.array(qts)
 	
-def sentSimAv(qu, doc):
+def sentSimAv(qu, doc, verbose=False):
 	"""
 	sentence wise average
 	"""
@@ -138,7 +162,7 @@ def sentSimAv(qu, doc):
 	asi = numpy.mean(sil)			
 	return asi	
 
-def sentSimMed(qu, doc):
+def sentSimMed(qu, doc, verbose=False):
 	"""
 	sentence wise median
 	"""
@@ -146,16 +170,18 @@ def sentSimMed(qu, doc):
 	asi = numpy.median(sil)			
 	return asi	
 
-def sentSimMax(qu, doc):
+def sentSimMax(qu, doc, verbose=False):
 	"""
-	sentence wise average
+	sentence wise average (ssma)
 	"""
-	print("shapes")
-	print(qu.tensor.shape)
-	print(doc.tensor.shape)
+	if verbose:
+		print("shapes")
+		print(qu.tensor.shape)
+		print(doc.tensor.shape)
 	#anlyzeDoc(doc)
 	sil = sentSim(qu, doc)
-	print("num of CLS {}".format(len(sil)))
+	if verbose:
+		print("num of CLS {}".format(len(sil)))
 	asi = numpy.max(sil)			
 	return asi	
 
@@ -333,6 +359,7 @@ if __name__ == "__main__":
 	print("loading BERT transformer model")
 	nlp = spacy.load("en_trf_bertbaseuncased_lg")
 	if algo == "test":
+		#console loop
 		algo = sys.argv[2]
 		opts = ["doc file path", "doc content", "query", "find match", "quit"]
 		de = None
@@ -353,7 +380,9 @@ if __name__ == "__main__":
 			elif ch == "find match":
 				assert (de is not None and qe is not None) , "doc or query not set"
 				if algo == "tsavm":
-					si = tokSimAvMax(qe, de, True)
+					si = tokSimAvMax(qe, de)
+				elif algo == "tsavmt":
+					si = tokSimAvMaxTop(qe, de)
 				else:
 					raise ValueError("invalid semilarity algo")
 				print("match score {:.3f}".format(si))
@@ -361,54 +390,88 @@ if __name__ == "__main__":
 				break
 			else:
 				pass
-		
-		exitWithMsg("done testing")
-	
-	dnames = ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10"]
-	dtexts = [doc1, doc2, doc3, doc4, doc5, doc6, doc7, doc8, doc9, doc10]
-
-	print("encoding all docs")
-	dvecs = list(map(lambda d : nlp(d), dtexts))
-	kvecs = dict(zip(dnames, dvecs))
-	
-	while True:
-		inp = input("enter a search query or q to quit: ")
-		if inp == "q":
-			break
-		vinp = nlp(inp)
-		#print("\nsearch result")
-		res = list()
-		for dn, dv in kvecs.items():
-			if algo == "ds":
-				si = docAv(vinp, dv)
-			elif algo == "tsma":
-				si = tokSimMax(vinp, dv)
-			elif algo == "tsavm":
-				si = tokSimAvMax(vinp, dv)
-			elif algo == "tsmav":
-				si = tokSimMaxAv(vinp, dv)
-			elif algo == "tsa":
-				si = tokSimAv(vinp, dv)
-			elif algo == "tsme":
-				si = tokSimMed(vinp, dv)
-			elif algo == "ssa":
-				si = sentSimAv(vinp, dv)
-			elif algo == "ssme":
-				si = sentSimMed(vinp, dv)
-			elif algo == "ssma":
-				si = sentSimMax(vinp, dv)
+	else:
+		#search list of documents
+		if len(sys.argv) == 3:
+			#file path provided
+			fPaths = sys.argv[2].split(",")
+			if len(fPaths) == 1:
+				if os.path.isfile(fPaths[0]):
+					#one file
+					print("one file")
+					dnames = fpaths
+					docStr = getOneFileContent(fPaths[0])
+					dtexts = [docStr]
+				else:
+					#all files under directory
+					print("all files under directory")
+					dtexts, dnames = getFileContent(fPaths[0])
+					print("found following files")
+					for dt, dn in zip(dtexts, dnames):
+						print(dn + "\t" + dt[:40])
 			else:
-				raise ValueError("invalid semilarity algo")
+				#list of files
+				print("list of files")
+				dnames = fpaths
+				dtexts = list(map(getOneFileContent, fpaths))
 			
-			#print("{} score {:.6f}".format(dn, si))
-			r = (dn, si)
-			res.append(r)
+		else:
+			#in code test data
+			dnames = ["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10"]
+			dtexts = [doc1, doc2, doc3, doc4, doc5, doc6, doc7, doc8, doc9, doc10]
+
+		print("encoding all docs")
+		dvecs = list(map(lambda d : nlp(d), dtexts))
+		kvecs = dict(zip(dnames, dvecs))
+	
+		opts = ["enter query", "enter matching technique", "find match", "quit"]
+		vinp = None
+		while True:
+			ch = enquiries.choose("choose from below: ", opts)
+
+			if ch == "enter query":
+				inp = input("query: ")
+				vinp = nlp(inp)
+
+			elif ch == "enter matching technique":
+				algo = input("matching technique: ")
+
+			elif ch == "find match":
+				#print("\nsearch result")
+				res = list()
+				for dn, dv in kvecs.items():
+					if algo == "ds":
+						si = docAv(vinp, dv)
+					elif algo == "tsma":
+						si = tokSimMax(vinp, dv)
+					elif algo == "tsavm":
+						si = tokSimAvMax(vinp, dv)
+					elif algo == "tsmav":
+						si = tokSimMaxAv(vinp, dv)
+					elif algo == "tsa":
+						si = tokSimAv(vinp, dv)
+					elif algo == "tsme":
+						si = tokSimMed(vinp, dv)
+					elif algo == "ssa":
+						si = sentSimAv(vinp, dv)
+					elif algo == "ssme":
+						si = sentSimMed(vinp, dv)
+					elif algo == "ssma":
+						si = sentSimMax(vinp, dv)
+					else:
+						raise ValueError("invalid semilarity algo")
+			
+					#print("{} score {:.6f}".format(dn, si))
+					r = (dn, si)
+					res.append(r)
 		
-		res.sort(key=lambda r : r[1], reverse=True)
-		print("\nsorted search result")
-		for r in res:
-			print("{} score {:.6f}".format(r[0], r[1]))
+				res.sort(key=lambda r : r[1], reverse=True)
+				print("\nsorted search result")
+				for r in res:
+					print("{} score {:.3f}".format(r[0], r[1]))
 		
+			elif ch == "quit":
+				break
 		
 		
 		
