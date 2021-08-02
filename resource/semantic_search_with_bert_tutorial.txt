@@ -12,8 +12,9 @@ https://github.com/explosion/spacy-models/releases/download/en_trf_bertbaseuncas
 
 Executing search
 ================
-./ssearch <sim_algo>
+./ssearch <sim_algo> [doc_dir_path]
 
+where
 sim_algo is the similarity algorithm to be used. Choices are as follows
 
 ds: 	doc avrage similarity
@@ -26,9 +27,19 @@ ssa: 	sentence average similarity
 ssme: 	sentence median similarity
 ssma: 	sentence max similarity
 
+doc_dir_path is an optional argument. If provided all files in the directory are used,
+otherwise har coded text for documents are used
+
+If enters a console loop with the following choices. Use up and down arrow keys to make choices
+
+1. enter query 
+2. enter query file path
+3. enter matching technique
+4. find match 
+5. quit
+
 Corpus
 ======
-Only a smal corpus has been used. All text is hard coded in the python script. You probably 
-want to change the script so that you can load your corpus from some external storage e.g file 
-system or database
+Only a smal corpus has been used. All text is hard coded in the python script. You have the option
+of specifying a directory path for files to be used.
 

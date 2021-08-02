@@ -28,6 +28,8 @@ import matplotlib.pyplot as plt
 import enquiries
 sys.path.append(os.path.abspath("../lib"))
 from util import *
+from mlutil import *
+
 
 """
 Semantic search with BERT pre trained transformer model. Embedding at various levels are used,
@@ -196,10 +198,36 @@ def sentSim(qu, doc):
 	i = 0
 	for t, v in dte:
 		if t == "[CLS]":
-			si = 20 - numpy.linalg.norm(qe - v)
+			#si = 20 - numpy.linalg.norm(qe - v)
+			si = cosineSimilarity(qe, v)
 			sil.append(si)
 		i += 1
 	return numpy.array(sil)
+
+
+
+def sentEnc(qu, doc):
+	"""
+	sentence encoding from each
+	"""
+
+	qstr = qu._.trf_word_pieces_
+	qte = zip(qstr, qu._.trf_last_hidden_state)
+	qse = list()	
+	for t, v in qte:
+		if t == "[CLS]":
+			qse.append(v)
+	
+	
+	dstr = doc._.trf_word_pieces_
+	dte = zip(dstr, doc._.trf_last_hidden_state)
+	dse = list()
+	for t, v in dte:
+		if t == "[CLS]":
+			dse.append(v)
+			
+	enp = (numpy.array(qse), numpy.array(dse))		
+	return enp
 
 def anlyzeDoc(doc):
 	dstr = doc._.trf_word_pieces_
@@ -223,6 +251,8 @@ def printAlgo(algo):
 		print("using token max similarity")
 	elif algo == "tsavm":
 		print("using token average of max similarity")
+	elif algo == "tsavmt":
+		print("using token average of top max avearge similarity")
 	elif algo == "tsmav":
 		print("using token max of average similarity")
 	elif algo == "tsa":
@@ -361,9 +391,11 @@ if __name__ == "__main__":
 	if algo == "test":
 		#console loop
 		algo = sys.argv[2]
-		opts = ["doc file path", "doc content", "query", "find match", "quit"]
+		opts = ["doc file path", "doc content", "query", "merge", "find match", "quit"]
 		de = None
 		qe = None
+		dstr = None
+		qstr = None
 		while True:
 			ch = enquiries.choose("choose from below: ", opts)
 			if ch == "doc file path":
@@ -372,11 +404,17 @@ if __name__ == "__main__":
 					docStr = contentFile.read()
 				de = nlp(docStr)
 			elif ch == "doc content":
-				docStr = input("enter doc content: ")
-				de = nlp(docStr)
+				dstr = input("enter doc content: ")
+				de = nlp(dstr)
 			elif ch == "query":
-				inp = input("enter search query: ")
-				qe = nlp(inp)
+				qstr = input("enter search query: ")
+				qe = nlp(qstr)
+			elif ch == "merge":
+				tstr = qstr + "." + dstr
+				te = nlp(tstr)
+				ql = len(qstr)
+				qe = te[:ql]
+				de = te[ql:]
 			elif ch == "find match":
 				assert (de is not None and qe is not None) , "doc or query not set"
 				if algo == "tsavm":
@@ -424,14 +462,20 @@ if __name__ == "__main__":
 		dvecs = list(map(lambda d : nlp(d), dtexts))
 		kvecs = dict(zip(dnames, dvecs))
 	
-		opts = ["enter query", "enter matching technique", "find match", "quit"]
-		vinp = None
+		opts = ["enter query", "enter query file path", "enter matching technique", "find match", "quit"]
+		qv = None
+		qstr = None
 		while True:
 			ch = enquiries.choose("choose from below: ", opts)
 
 			if ch == "enter query":
-				inp = input("query: ")
-				vinp = nlp(inp)
+				qstr = input("query: ")
+				qv = nlp(qstr)
+
+			elif ch == "enter query file path":
+				fpath = input("query file path: ")
+				qstr = getOneFileContent(fpath)
+				qv = nlp(qstr)
 
 			elif ch == "enter matching technique":
 				algo = input("matching technique: ")
@@ -441,25 +485,28 @@ if __name__ == "__main__":
 				res = list()
 				for dn, dv in kvecs.items():
 					if algo == "ds":
-						si = docAv(vinp, dv)
+						si = docAv(qv, dv)
 					elif algo == "tsma":
-						si = tokSimMax(vinp, dv)
+						si = tokSimMax(qv, dv)
 					elif algo == "tsavm":
-						si = tokSimAvMax(vinp, dv)
+						si = tokSimAvMax(qv, dv)
+					elif algo == "tsavmt":
+						si = tokSimAvMaxTop(qv, dv)
 					elif algo == "tsmav":
-						si = tokSimMaxAv(vinp, dv)
+						si = tokSimMaxAv(qv, dv)
 					elif algo == "tsa":
-						si = tokSimAv(vinp, dv)
+						si = tokSimAv(qv, dv)
 					elif algo == "tsme":
-						si = tokSimMed(vinp, dv)
+						si = tokSimMed(qv, dv)
 					elif algo == "ssa":
-						si = sentSimAv(vinp, dv)
+						si = sentSimAv(qv, dv)
 					elif algo == "ssme":
-						si = sentSimMed(vinp, dv)
+						si = sentSimMed(qv, dv)
 					elif algo == "ssma":
-						si = sentSimMax(vinp, dv)
+						si = sentSimMax(qv, dv)
 					else:
-						raise ValueError("invalid semilarity algo")
+						si = -1.0
+						print("invalid semilarity algo")
 			
 					#print("{} score {:.6f}".format(dn, si))
 					r = (dn, si)
@@ -467,6 +514,7 @@ if __name__ == "__main__":
 		
 				res.sort(key=lambda r : r[1], reverse=True)
 				print("\nsorted search result")
+				print("query: {}     matching algo: {}".format(qstr, algo))
 				for r in res:
 					print("{} score {:.3f}".format(r[0], r[1]))
 		

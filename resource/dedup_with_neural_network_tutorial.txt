@@ -64,7 +64,7 @@ num_dups = number of duplicate records e.g 2
 
 Detect near duplicates
 ======================
-./disamb.py nnPred pers_new_dup.txt pers_exist1.txt <num_workers> tnn_disamb.properties
+./disamb.py nnPred pers_new_dup.txt pers_exist.txt <num_workers> tnn_disamb.properties
 
 where
 num_workers = num of workers based on the num of CPU cores
