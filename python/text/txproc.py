@@ -34,6 +34,8 @@ from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import LancasterStemmer, WordNetLemmatizer
 from nltk.tag import StanfordNERTagger
 from nltk.tokenize import word_tokenize, sent_tokenize
+import spacy
+import torch
 from collections import defaultdict
 import pickle
 import numpy as np
@@ -420,6 +422,7 @@ class CharNGram:
 		"""
 		get ngram count list
 		"""
+		#print(text)
 		ngCounts = [0] *  self.cntVecSize
 		
 		ngram = list()
@@ -804,6 +807,7 @@ class WordVectorContainer:
 		if not self.similarityAlgo == "jaccard":
 			if self.numWordVectors is None:
 				self.numWordVectors = list(map(lambda wv: self.termTable.getVector(wv, byCount, normalized), self.wordVectors))
+
 
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
