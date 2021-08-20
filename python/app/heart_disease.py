@@ -26,6 +26,7 @@ from util import *
 from mlutil import *
 from sampler import *
 from tnn import *
+from mcalib import *
 
 op = sys.argv[1]
 print("executing " + op)
@@ -467,7 +468,8 @@ elif op == "calib":
 	prFile = sys.argv[2]
 	clflier = FeedForwardNetwork(prFile)
 	clflier.buildModel()
-	FeedForwardNetwork.calibrateModel(clflier)
+	#FeedForwardNetwork.calibrateModel(clflier)
+	ModelCalibration.findModelCalibration(clflier)
 
 elif op == "calibLoc":
 	"""
@@ -476,8 +478,17 @@ elif op == "calibLoc":
 	prFile = sys.argv[2]
 	clflier = FeedForwardNetwork(prFile)
 	clflier.buildModel()
-	FeedForwardNetwork.calibrateModelLocal(clflier)
-
+	#FeedForwardNetwork.calibrateModelLocal(clflier)
+	ModelCalibration.findModelCalibrationLocal(clflier)
+	
+elif op == "sharpness":
+	"""
+	calibrate
+	"""
+	prFile = sys.argv[2]
+	clflier = FeedForwardNetwork(prFile)
+	clflier.buildModel()
+	ModelCalibration.findModelSharpness(clflier)
 
 else:
 	exitWithMsg("inbvalid command")	
