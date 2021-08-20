@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
 
 # avenir-python: Machine Learning
 # Author: Pranab Ghosh
@@ -21,17 +21,28 @@ from random import randint
 import time
 from array import *
 sys.path.append(os.path.abspath("../lib"))
+sys.path.append(os.path.abspath("../supv"))
 from mlutil import *
 from util import *
 from sampler import *
+from tnn import *
+from mcalib import *
+
+
+NFEAT = 11
+NFEAT_EXT = 14
 
 class LoanApprove:
-	def __init__(self, numLoans):
+	def __init__(self, numLoans=None):
 		self.numLoans = numLoans
 		self.marStatus = ["married", "single", "divorced"]
 		self.loanTerm = ["7", "15", "30"]
+		self.addExtra = False
 		
 	def initOne(self):
+		"""
+		initialize samplers
+		"""
 		self.threshold = 118
 		self.margin = 5
 
@@ -70,8 +81,10 @@ class LoanApprove:
 		(800, 850, 31))
 		self.zipRateScore = {"high" : 17, "average" : 15, "low" : 11}
 
-	# ad hoc
 	def generateOne(self):
+		"""
+		sample
+		"""
 		self.initOne()
 		posCount = 0
 		for i in range(self.numLoans):
@@ -139,6 +152,9 @@ class LoanApprove:
 		#print "positive count " + str(posCount)
 		
 	def initTwo(self):
+		"""
+		initialize samplers
+		"""
 		self.approvDistr = CategoricalRejectSampler(("1", 60), ("0", 40))
 		self.featCondDister = {}
 		
@@ -231,32 +247,62 @@ class LoanApprove:
 		distr = GaussianRejectSampler(500,50)
 		self.featCondDister[key] = distr
 		
+		if self.addExtra:
+			# saving
+			key = ("1", 11)
+			distr = NormalSampler(80,10)
+			self.featCondDister[key] = distr
+			key = ("0", 11)
+			distr = NormalSampler(60,8)
+			self.featCondDister[key] = distr
+			
+			# retirement
+			zDistr = NormalSampler(0, 0)
+			key = ("1", 12)
+			sDistr = DiscreteRejectSampler(0,1,1,20,80)
+			nzDistr = NormalSampler(100,20)
+			distr = DistrMixtureSampler(sDistr, zDistr, nzDistr)
+			self.featCondDister[key] = distr
+			key = ("0", 12)
+			sDistr = DiscreteRejectSampler(0,1,1,50,50)
+			nzDistr = NormalSampler(40,10)
+			distr = DistrMixtureSampler(sDistr, zDistr, nzDistr)
+			self.featCondDister[key] = distr
 		
-	#ancestral sampling
-	def generateTwo(self, noise, keyLen):
+			#num od prior mortgae loans
+			key = ("1", 13)
+			distr = DiscreteRejectSampler(0,3,1,20,60,40,15)
+			self.featCondDister[key] = distr
+			key = ("0", 13)
+			distr = DiscreteRejectSampler(0,1,1,70,30)
+			self.featCondDister[key] = distr
+			
+		
+	def generateTwo(self, noise, keyLen, addExtra):
+		"""
+		ancestral sampling
+		"""
+		self.addExtra = addExtra
 		self.initTwo()
 		
 		#error
 		erDistr = GaussianRejectSampler(0, noise)
 	
 		#sampler
-		sampler = AncestralSampler(self.approvDistr, self.featCondDister, 11)
+		numChildren = NFEAT_EXT if self.addExtra else NFEAT
+		sampler = AncestralSampler(self.approvDistr, self.featCondDister, numChildren)
 
 		for i in range(self.numLoans):
 			(claz, features) = sampler.sample()
 		
 			# add noise
-			features[0] = addNoiseCat(features[0], self.marStatus, noise)
-			features[1] = addNoiseCat(features[1], ["1", "2", "3"], noise)
-			features[2] = addNoiseCat(features[2], ["1", "2", "3"], noise)
-			features[3] = addNoiseCat(features[3], ["0", "1"], noise)
-			features[4] = int(addNoiseNum(features[4], erDistr))
-			features[5] = float(addNoiseNum(features[5], erDistr))
-			features[6] = float(addNoiseNum(features[6], erDistr))
-			features[7] = int(addNoiseNum(features[7], erDistr))
-			features[8] = int(addNoiseNum(features[8], erDistr))
-			features[9] = addNoiseCat(features[9], self.loanTerm, noise)
-			features[10] = int(addNoiseNum(features[10], erDistr))
+			features[4] = int(features[4])
+			features[7] = int(features[7])
+			features[8] = int(features[8])
+			features[10] = int(features[10])
+			if self.addExtra:
+				features[11] = int(features[11])
+				features[12] = int(features[12])
 
 			claz = addNoiseCat(claz, ["0", "1"], noise)
 
@@ -264,47 +310,68 @@ class LoanApprove:
 			rec =  genID(keyLen) + "," + ",".join(strFeatures) + "," + claz
 			print (rec)
 
-	# dummy var encoding
-	def encodeDummy(self, fileName):
+	def encodeDummy(self, fileName, extra):
+		"""
+		dummy var encoding
+		"""
 		catVars = {}
 		catVars[1] = self.marStatus
 		catVars[10] = self.loanTerm
-		rSize = 13
+		rSize = NFEAT_EXT if extra else NFEAT
+		rSize += 2
 		dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0", ",")
-		for row in fileRecGen(fileName):
+		for row in fileRecGen(fileName, None):
 			newRow = dummyVarGen.processRow(row)
 			print (newRow)
 
-	# label encoding
 	def encodeLabel(self, fileName):
+		"""
+		label encoding
+		"""
 		catVars = {}
 		catVars[1] = self.marStatus
 		catVars[10] = self.loanTerm
 		encoder = CatLabelGenerator(catVars, ",")
-		for row in fileRecGen(fileName):
+		for row in fileRecGen(fileName, None):
 			newRow = encoder.processRow(row)
 			print (newRow)
 
 ##########################################################################################
 if __name__ == "__main__":
 	op = sys.argv[1]
-	numLoans = int(sys.argv[2])
-	loan = LoanApprove(numLoans)
 
 	if op == "generate" or op == "genOne" :
+		"""  generate data """
+		numLoans = int(sys.argv[2])
+		loan = LoanApprove(numLoans)
 		loan.generateOne()
 	elif op == "genTwo":
+		"""  generate data """
+		numLoans = int(sys.argv[2])
+		loan = LoanApprove(numLoans)
 		noise = float(sys.argv[3])
 		keyLen = int(sys.argv[4])
-		loan.generateTwo(noise, keyLen)
+		addExtra = True if len(sys.argv) == 6 and sys.argv[5] == "extra" else False
+		loan.generateTwo(noise, keyLen, addExtra)
 	elif op == "encDummy":
-		fileName = sys.argv[3]
-		loan.encodeDummy(fileName)
+		""" encode binary """
+		fileName = sys.argv[2]
+		extra = True if len(sys.argv) == 4 and sys.argv[3] == "extra" else False
+		loan = LoanApprove(numLoans)
+		loan.encodeDummy(fileName, extra)
 	elif op == "encLabel":
-		fileName = sys.argv[3]
+		""" encode label """
+		fileName = sys.argv[2]
+		loan = LoanApprove(numLoans)
 		loan.encodeLabel(fileName)
+	elif op == "nnTrain":
+		""" tran neural network model """
+		prFile = sys.argv[2]
+		clflier = FeedForwardNetwork(prFile)
+		clflier.buildModel()
+		FeedForwardNetwork.batchTrain(clflier)
 	else:
-		print ("unknow operation")
+		exitWithMsg("unknow operation")
 
 
 
