@@ -1,0 +1,47 @@
+This tutorial is for finding how well  calibrated a model is. A neural neuwork model for predicting 
+heart disease is used for this purpose
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where heart_disease.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Generate training data
+======================
+raw data
+./heart_disease.py generate <bsamp> <noise> <key_len> > hd.txt
+where
+nsamp = num of samples e.g. 5000
+noise = noise level e.g 0.1
+key_len = key length e.g. 10
+
+encode categorical data
+./heart_disease.py genDummyVar hdn.txt <key_len> > hd_5000.txt
+where
+key_len = key length e.g. 10
+
+Generate validation data
+========================
+raw data
+./heart_disease.py generate <bsamp> <noise> <key_len> > hdv.txt
+where
+nsamp = num of samples e.g. 500
+noise = noise level e.g 0.1
+key_len = key length e.g. 10
+
+encode categorical data
+./heart_disease.py genDummyVar hdvn.txt <key_len> > hd_500.txt
+where
+key_len = key length e.g. 10
+
+Train model
+===========
+Make sure you have the setting  train.model.save=True so that the trained model is saved
+./heart_disease.py nnTrain tnn_hd.properties
+
+
+Find calibration and draw reliability diagram
+=============================================
+./heart_disease.py calib tnn_hd.properties
+ 
