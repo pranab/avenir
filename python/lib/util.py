@@ -561,14 +561,13 @@ def getAllFiles(dirPath):
 	filePaths.sort()
 	return filePaths
 
-def getFileContent(path, verbose):
+def getFileContent(fpath, verbose=False):
 	"""
 	get file contents in directory
 	"""
 	# dcument list
 	docComplete  = []
-	filePaths = getAllFiles(path)
-	filePaths
+	filePaths = getAllFiles(fpath)
 
 	# read files
 	for filePath in filePaths:
@@ -579,6 +578,14 @@ def getFileContent(path, verbose):
 			docComplete.append(content)
 	return (docComplete, filePaths)
 
+def getOneFileContent(fpath):
+	"""
+	get one file contents
+	"""
+	with open(fpath, 'r') as contentFile:
+		docStr = contentFile.read()
+	return docStr
+	
 def getFileLines(dirPath, delim=","):
 	"""
 	get lines from a file
@@ -695,6 +702,27 @@ def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
 		tdata.append(trec)
 	return tdata
 
+def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
+	"""
+	extracts numeric matrix from csv file given column indices. For each column return min and max
+	"""
+	dtypes = [dtype] * len(columns)
+	tdata = getFileColsAsTypedRecords(dirPath, columns, dtypes, delim)
+	minMax = list()
+	ncol = len(tdata[0])
+	
+	for ci in range(ncol):	
+		vmin = sys.float_info.max
+		vmax = sys.float_info.min
+		for r in tdata:
+			cv = r[ci]
+			vmin = cv if cv < vmin else vmin
+			vmax = cv if cv > vmax else vmax
+		mm = (vmin, vmax)
+		minMax.append(mm)
+
+	return minMax
+	
 def __convToTyped(index, value, dtypes):
 	"""
 	convert to typed value 

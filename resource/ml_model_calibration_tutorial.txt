@@ -44,4 +44,13 @@ Make sure you have the setting  train.model.save=True so that the trained model 
 Find calibration and draw reliability diagram
 =============================================
 ./heart_disease.py calib tnn_hd.properties
+
+Find local calibration
+======================
+./heart_disease.py calibLoc tnn_hd.properties
+
+Find  sharpness
+===============
+./heart_disease.py sharpness tnn_hd.properties
+
  

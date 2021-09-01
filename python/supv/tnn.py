@@ -48,6 +48,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
 		defValues["common.scaling.method"] = ("zscale", None)
+		defValues["common.scaling.minrows"] = (50, None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -289,7 +290,12 @@ class FeedForwardNetwork(torch.nn.Module):
 			
 		if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
 		    scalingMethod = model.config.getStringConfig("common.scaling.method")[0]
-		    featData = scaleData(featData, scalingMethod)
+		    
+		    #scale only if there are enough rows
+		    nrow = featData.shape[0]
+		    minrows = model.config.getIntConfig("common.scaling.minrows")[0]
+		    if nrow > minrows:
+		    	featData = scaleData(featData, scalingMethod)
 		
 		# target data
 		if includeOutFld:
@@ -578,122 +584,6 @@ class FeedForwardNetwork(torch.nn.Module):
 		print(formatFloat(3, score, "perf score"))
 		return score
  		
-	@staticmethod
-	def calibrateModel(model):
-		"""
-		pmodel calibration
-		"""
-		FeedForwardNetwork.prepValidate(model)
-		FeedForwardNetwork.validateModel(model)
-		
-		yPred = model.yPred.flatten()
-		yActual = model.validOutData.flatten()
-		nsamp = len(yActual)
-		
-		#print(yPred.shape)
-		#print(yActual.shape)
-		
-		nBins = model.config.getIntConfig("calibrate.num.bins")[0]
-		prThreshhold = model.config.getFloatConfig("calibrate.pred.prob.thresh")[0]
-		
-		minConf = yPred.min()
-		maxConf = yPred.max()
-		bsize = (maxConf - minConf) / nBins
-		#print("minConf {:.3f}  maxConf {:.3f}  bsize {:.3f}".format(minConf, maxConf, bsize))
-		blist = list(map(lambda i : None, range(nBins)))
-		
-		#binning
-		for yp, ya in zip(yPred, yActual):
-			indx = int((yp - minConf) / bsize)
-			if indx == nBins:
-				indx = nBins - 1
-			#print("yp {:.3f}  indx {}".format(yp, indx))
-			pair = (yp, ya)
-			plist  = blist[indx]
-			if plist is None:
-				plist = list()
-				blist[indx] = plist 
-			plist.append(pair)
-		 
-		x = list()
-		y = list()
-		yideal = list()
-		ece = 0
-		mce = 0
-		
-		# per bin confidence and accuracy
-		for plist in blist:
-			ypl = list(map(lambda p : p[0], plist))
-			ypm = statistics.mean(ypl)
-			x.append(ypm)
-			
-			ypcount = 0
-			for p in plist:
-				yp = 1 if p[0] > prThreshhold else 0
-				if (yp == 1 and p[1] == 1):
-					ypcount += 1
-				 
-			acc = ypcount / len(plist)
-			y.append(acc)
-			yideal.append(ypm)
-			
-			ce = abs(ypm - acc)
-			ece += len(plist) * ce
-			if ce > mce:
-				mce = ce
-		
-		#calibration plot	
-		drawPairPlot(x, y, yideal, "confidence", "accuracy", "actual", "ideal")
-		
-		#expected calibration error
-		ece /= nsamp
-		print("expected calibration error\t{:.3f}".format(ece))
-		print("maximum calibration error\t{:.3f}".format(mce))
-				
-			
-	@staticmethod
-	def calibrateModelLocal(model):
-		"""
-		pmodel calibration based k nearest neghbors
-		"""
-		FeedForwardNetwork.prepValidate(model)
-		FeedForwardNetwork.validateModel(model)
-		
-		yPred = model.yPred.flatten()
-		yActual = model.validOutData.flatten()
-		nsamp = len(yActual)
-		
-		neighborCnt =  model.config.getIntConfig("calibrate.num.nearest.neighbors")[0]
-		prThreshhold = model.config.getFloatConfig("calibrate.pred.prob.thresh")[0]
-		fData = model.validFeatData.numpy()
-		tree = KDTree(fData, leaf_size=4)
-		
-		dist, ind = tree.query(fData, k=neighborCnt)
-		calibs = list()
-		#all data
-		for si, ni in enumerate(ind):
-			conf = 0
-			ypcount = 0
-			#all neighbors
-			for i in ni:
-				conf += yPred[i]
-				yp = 1 if yPred[i] > prThreshhold else 0
-				if (yp == 1 and yActual[i] == 1):
-					ypcount += 1
-			conf /= neighborCnt
-			acc = ypcount / neighborCnt
-			calib = (si, conf, acc)
-			calibs.append(calib)
-			
-		#descending sort by difference between confidence and accuracy
-		calibs = sorted(calibs, key=lambda c : abs(c[1] - c[2]), reverse=True)
-		print("local calibration")
-		print("conf\taccu\trecord")
-		for i in range(19):
-			si, conf, acc = calibs[i]
-			rec = toStrFromList(fData[si], 3)
-			print("{:.3f}\t{:.3f}\t{}".format(conf, acc, rec))
-		
 		
 	
 		

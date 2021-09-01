@@ -19,7 +19,6 @@
 import os
 import sys
 import numpy as np
-import sklearn as sk
 from sklearn import preprocessing
 from sklearn import metrics
 from sklearn.datasets import make_blobs
@@ -242,7 +241,7 @@ class CatLabelGenerator:
 		self.catValues = catValues
 		self.delim = delim
 		for k in self.catValues.keys():	
-			le = sk.preprocessing.LabelEncoder()	
+			le = preprocessing.LabelEncoder()	
 			le.fit(self.catValues[k])
 			self.encoders[k] = le
 
@@ -681,6 +680,17 @@ def scaleData(data, method):
 		raise ValueError("invalid scaling method")	
 	return data
 
+def scaleMinMax(rdata, minMax):
+	"""
+	scales feature data column wise using min max values for each field
+	"""
+	srdata = list()
+	for i in range(len(rdata)):
+		d = rdata[i]
+		sd = (d - minMax[i][0]) / (minMax[i][1] - minMax[i][0])
+		srdata.append(sd)
+	return srdata
+	
 def harmonicNum(n):
 	"""
 	harmonic number
