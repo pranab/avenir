@@ -27,9 +27,11 @@ from numpy.testing import assert_almost_equal
 import matplotlib.pyplot as plt
 import enquiries
 sys.path.append(os.path.abspath("../lib"))
+sys.path.append(os.path.abspath("../text"))
 from util import *
 from mlutil import *
-
+from txproc import *
+from nlm import *
 
 """
 Semantic search with BERT pre trained transformer model. Embedding at various levels are used,
@@ -271,8 +273,7 @@ def printAlgo(algo):
 		raise ValueError("invalid semilarity algo")
 		
 if __name__ == "__main__":
-	algo = sys.argv[1]
-	printAlgo(algo)
+	opcode = sys.argv[1]
 
 	is_using_gpu = spacy.prefer_gpu()
 	if is_using_gpu:
@@ -386,53 +387,97 @@ if __name__ == "__main__":
 	recommended daily needs.
 	"""
 	
-	print("loading BERT transformer model")
-	nlp = spacy.load("en_trf_bertbaseuncased_lg")
-	if algo == "test":
+	
+	
+	if opcode == "test":
 		#console loop
-		algo = sys.argv[2]
+		print("loading BERT transformer model")
+		#nlp = spacy.load("en_trf_bertbaseuncased_lg")
+		nlp = spacy.load("en_core_web_lg")
+
+		algo = sys.argv[2] if len(sys.argv) == 3 else None
 		opts = ["doc file path", "doc content", "query", "merge", "find match", "quit"]
 		de = None
 		qe = None
 		dstr = None
 		qstr = None
+		docFilePath =None
 		while True:
 			ch = enquiries.choose("choose from below: ", opts)
 			if ch == "doc file path":
 				docFilePath = input("enter doc file path: ")
 				with open(docFilePath, 'r') as contentFile:
-					docStr = contentFile.read()
-				de = nlp(docStr)
+					dstr = contentFile.read()
 			elif ch == "doc content":
 				dstr = input("enter doc content: ")
-				de = nlp(dstr)
 			elif ch == "query":
 				qstr = input("enter search query: ")
-				qe = nlp(qstr)
 			elif ch == "merge":
-				tstr = qstr + "." + dstr
-				te = nlp(tstr)
-				ql = len(qstr)
-				qe = te[:ql]
-				de = te[ql:]
-			elif ch == "find match":
-				assert (de is not None and qe is not None) , "doc or query not set"
-				if algo == "tsavm":
-					si = tokSimAvMax(qe, de)
-				elif algo == "tsavmt":
-					si = tokSimAvMaxTop(qe, de)
+				if dstr is not None and qstr is not None:
+					tstr = qstr + "." + dstr
+					te = nlp(tstr)
+					ql = len(qstr)
+					qe = te[:ql]
+					de = te[ql:]
 				else:
-					raise ValueError("invalid semilarity algo")
-				print("match score {:.3f}".format(si))
+					print("error: doc or query not set")
+			elif ch == "find match":
+				if dstr is not None and qstr is not None:
+					if de is None and  algo != "sspan":
+						de = nlp(dstr)
+					if qe is None:
+						qe = nlp(qstr)
+					if algo == "tsavm":
+						si = tokSimAvMax(qe, de)
+					elif algo == "tsma":
+						si = tokSimMax(qe, de)
+					elif algo == "tsavmt":
+						si = tokSimAvMaxTop(qe, de)
+					elif algo == "sspan":
+						ds = DocSentences(docFilePath, 3, False)
+						sents = ds.getSentences()
+						print("no of sentences {}".format(len(sents)))
+						span = 3
+						maxSim = -1
+						soff = -1
+						for i in range(0, len(sents) - span, 1):
+							seSpan = ""
+							for j in range(span):
+								seSpan = seSpan + ". " + sents[i + j] 
+							de = nlp(seSpan)
+							sim = tokSimAvMax(qe, de)	
+							print("similarity{:.3f}  sentence offset {}".format(sim, i))
+							if sim > maxSim:
+								maxSim = sim
+								soff = i
+						print("max similarity {:.3f}  sentence offset {}".format(maxSim, soff))
+						for i in range(soff, soff + span, 1):
+							print(sents[i])
+						si = maxSim
+							
+					else:
+						si = -1.0
+						print("error: invalid semilarity algo")
+					
+					if si > 0:	
+						print("match score {:.3f}".format(si))
+				else:
+					print("error: doc or query not set")
+					
 			elif ch == "quit":
 				break
 			else:
 				pass
-	else:
-		#search list of documents
-		if len(sys.argv) == 3:
+	elif opcode == "bienc":
+		#search list of documents with bi encoders
+		print("loading BERT transformer model")
+		#nlp = spacy.load("en_trf_bertbaseuncased_lg")
+		nlp = spacy.load("en_core_web_lg")
+		
+		algo = sys.argv[2]
+		if len(sys.argv) == 4:
 			#file path provided
-			fPaths = sys.argv[2].split(",")
+			fPaths = sys.argv[3].split(",")
 			if len(fPaths) == 1:
 				if os.path.isfile(fPaths[0]):
 					#one file
@@ -521,6 +566,32 @@ if __name__ == "__main__":
 			elif ch == "quit":
 				break
 		
+	elif opcode == "crenc":		
+		#search list of documents with cross encoders
+		algo = sys.argv[2]
+		fPaths = sys.argv[3]
+		qstr = None
+		matcher = SemanticSimilaityCrossEnc()
 		
-		
-	
+		#query and document
+		opts = ["enter query", "enter matching technique",  "quit"]
+		while True:
+			ch = enquiries.choose("choose from below: ", opts)
+
+			if ch == "enter query":
+				qstr = input("query: ")
+			
+			elif ch == "enter matching technique":
+				algo = input("matching technique: ")
+				if qstr is None:
+					print("finding match netween 2 docs")
+				else:
+					print("finding match netween query and doc")
+					
+				if algo == "savm":
+					matcher.paraSimilarity(qstr, fPaths, 2)
+					score = matcher.avMaxScore()
+
+			elif ch == "quit":
+				break
+			
