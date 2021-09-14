@@ -26,7 +26,10 @@ import spacy
 import torch
 from collections import defaultdict
 import pickle
-import numpy as np
+import numpy 
+import re
+from sentence_transformers import CrossEncoder
+
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -35,15 +38,50 @@ from mlutil import *
 neural language model
 """
 
+class NeuralLangModel(object):
+	def __init__(self, fragmentor):
+		"""
+		initialize
+		"""
+		self.dexts = None
+		self.fragmentor = fragmentor
+		self.fragments = None
+		
+	def loadDocs(self, fpaths):
+		"""
+		loads documents from one file
+		"""
+		self.fragments = self.fragmentor.generateFragments(fpaths)
+
+#Encoded doc
+class EncodedDoc:
+	def __init__(self, dtext, dname, drank=None):
+		"""
+		initialize
+		"""
+		self.dtext = dtext
+		self.dname = dname
+		self.drank = drank
+		self.denc = None
+		self.score = None
+		
+	def encode(self, nlp):
+		"""
+		encode
+		"""
+		self.denc = nlp(self.dtext)
+
 #similarity at token and sentence level for BERT encoding
-class SemanticSearch:
-	def __init__(self, docs=None):
+class SemanticSimilaityBiEnc(NeuralLangModel):
+	def __init__(self, fragmentor, docs=None):
 		"""
 		initialize
 		"""
 		print("loading BERT transformer model")
-		self.nlp = spacy.load("en_trf_bertbaseuncased_lg")
-		self.docs = docs
+		#self.nlp = spacy.load("en_trf_bertbaseuncased_lg")
+		self.nlp = spacy.load("en_core_web_lg")
+		self.docs = docs if docs is not None else list()
+		super(SemanticSimilaityBiEnc, self).__init__(fragmentor)
 		
 	def docAv(self,qu, doc):
 		"""
@@ -215,12 +253,21 @@ class SemanticSearch:
 		"""
 		return list(map(lambda t: t.tensor, toks))
 		
-	def setDocs(self, docs):
+	def addEncodedDocs(self, docs):
 		"""
 		add named doc content
 		"""
-		self.docs = docs
+		self.docs.extend(docs)
 	
+	def loadFileDocs(self, fpaths):
+		"""
+		loads documents from one file
+		"""
+		self.loadDocs(fpaths)
+				
+		docs = list(map(lambda dnt : EncodedDoc(dnt[1], dnt[0]), self.fragments))
+		self.docs.extend(docs)
+		
 	def search(self, qstr, algo, gdranks=None):
 		"""
 		tensors from tokens
@@ -283,3 +330,68 @@ class SemanticSearch:
 					i += 1
 			ro = count / len(gdranks)
 			print("rank order {:.3f}".format(ro))	
+
+#similarity at passage or paragraph level using sbertcross encoder
+class SemanticSimilaityCrossEnc(NeuralLangModel):
+
+	def __init__(self, docs=None):
+		self.dparas = None
+		self.scores = None
+		print("loading cross encoder")
+		self.model = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L-2")
+		print("done loading cross encoder")
+		super(SemanticSimilaityCrossEnc, self).__init__()
+		
+	def paraSimilarity(self, dtext, fpaths, minParNl=1):
+		"""
+		returns paragarph pair similarity across 2 documents
+		"""
+		dtexts, dnames = self.loadDocs(fpaths)
+		if dtext is None:
+			assertEqual(len(dtexts), 2, "exactly 2 files needed")
+			self.dtexts = dtexts
+		else:
+			assertEqual(len(dtexts), 1, "exactly 1 file needed")
+			self.dtexts = list()
+			self.dtexts.append(dtext)
+			self.dtexts.append(dtexts[0])
+			
+		
+		self.dparas = list()
+		for text in self.dtexts:
+			regx = "\n+" if minParNl == 1 else "\n{2,}"
+			paras = re.split(regx, text.replace("\r\n", "\n"))
+			print("no of paras {}".format(len(paras)))
+			self.dparas.append(paras)
+		
+		tinp = list()
+		for para1 in self.dparas[0]:
+			inp = list(map(lambda para2: [para1, para2], self.dparas[1]))
+			tinp.extend(inp)
+
+		print("input shape " + str(numpy.array(tinp).shape))
+		scores = self.model.predict(tinp)
+		print("score shape " + str(numpy.array(scores).shape))
+		#assertEqual(len(scores), len(self.dparas[0]) * len(self.dparas[1]), "no of scores don't match no of paragraph pairs")
+		print(scores)
+		
+		i = 0
+		print("text paragraph pair wise similarity")
+		for para1 in self.dparas[0]:
+			for para2 in self.dparas[1]:
+				print("first: {}\t  second: {}\t  score: {:.6f}".format(para1[:20], para2[:20], scores[i]))
+				i += 1
+			
+		self.scores = scores
+	
+	def avMaxScore(self):
+		"""
+		"""
+		pass		
+			
+def ner(text, nlp):
+	#nlp = spacy.load("en_core_web_md")
+	doc = nlp(text)
+	for ent in doc.ents:
+		print(ent.text, ent.start_char, ent.end_char, ent.label_)
+		

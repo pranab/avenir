@@ -468,7 +468,7 @@ if __name__ == "__main__":
 				break
 			else:
 				pass
-	elif opcode == "bienc":
+	elif opcode == "biencl":
 		#search list of documents with bi encoders
 		print("loading BERT transformer model")
 		#nlp = spacy.load("en_trf_bertbaseuncased_lg")
@@ -565,11 +565,47 @@ if __name__ == "__main__":
 		
 			elif ch == "quit":
 				break
+
+	elif opcode == "bienc":
+		#search list of documents with bi encoders
+		algo = sys.argv[2]
+		fPaths = sys.argv[3]
+		fragLevel = sys.argv[4]
+		minParNl = 2
+		passageSize = 0
+		if fragLevel == "passage":
+			if len(sys.argv) == 6:
+				passageSize = int(sys.argv[5])
+			else:
+				exitWithMsg("for passage passage size must be provided")
+			
+		qstr = None
+		fr = TextFragmentGenerator(fragLevel, minParNl, passageSize)
+		matcher = SemanticSimilaityBiEnc(fr)
+		matcher.loadFileDocs(fPaths)
+		
+		#query and document
+		opts = ["enter query", "enter matching technique",  "quit"]
+		while True:
+			ch = enquiries.choose("choose from below: ", opts)
+
+			if ch == "enter query":
+				qstr = input("query: ")
+			
+			elif ch == "enter matching technique":
+				algo = input("matching technique: ")
+				matcher.search(qstr, algo)
+
+			elif ch == "quit":
+				break
+			
+		
 		
 	elif opcode == "crenc":		
 		#search list of documents with cross encoders
 		algo = sys.argv[2]
 		fPaths = sys.argv[3]
+		
 		qstr = None
 		matcher = SemanticSimilaityCrossEnc()
 		
