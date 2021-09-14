@@ -39,6 +39,8 @@ import torch
 from collections import defaultdict
 import pickle
 import numpy as np
+import re
+
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -808,9 +810,118 @@ class WordVectorContainer:
 			if self.numWordVectors is None:
 				self.numWordVectors = list(map(lambda wv: self.termTable.getVector(wv, byCount, normalized), self.wordVectors))
 
+# fragments documents into whole doc, paragraph or passages
+class TextFragmentGenerator:
+	def __init__(self, level,  minParNl, passSize, verbose=False):
+		"""
+		initialize
+		"""
+		self.level = level
+		self.minParNl = minParNl
+		self.passSize = passSize
+		self.fragments = None
+		self.verbose = verbose
+		
+	def loadDocs(self, fpaths):
+		"""
+		loads documents from one file, multiple files or all files under directory
+		"""
+		fPaths = fpaths.split(",")
+		if len(fPaths) == 1:
+			if os.path.isfile(fPaths[0]):
+				#one file
+				if self.verbose:
+					print("got one file from path")
+				dnames = fPaths
+				docStr = getOneFileContent(fPaths[0])
+				dtexts = [docStr]
+			else:
+				#all files under directory
+				if self.verbose:
+					print("got all files under directory from path")
+				dtexts, dnames = getFileContent(fPaths[0])
+				if self.verbose:
+					print("found {} files".format(len(dtexts)))
+		else:
+			#list of files
+			if self.verbose: 
+				print("got list of files from path")
+			dnames = fPaths
+			dtexts = list(map(getOneFileContent, fpaths))
+			if self.verbose:
+				print("found {} files".format(len(dtexts)))
+	
+		ndocs = (dtexts, dnames)	
+		if self.verbose:
+			print("docs")
+			for dn, dt in zip(dnames, dtexts):
+				print(dn + "\t" + dt[:40])
+
+		return ndocs
+	
+	def generateFragments(self, fpaths):
+		"""
+		fragments documents into whole doc, paragraph or passages
+		"""
+		dtexts, dnames = self.loadDocs(fpaths)
+		
+		if self.level == "para" or self.level == "passage":
+			#split paras
+			dptexts = list()
+			dpnames = list()
+			for dt, dn in zip(dtexts, dnames):
+				paras = getParas(dt, self.minParNl)
+				if self.verbose:
+					print("no of paras {}".format(len(paras)))
+				dptexts.extend(paras)
+				pnames = list(map(lambda i : dn + "-" + str(i), range(len(paras))))
+				dpnames.extend(pnames)
+			dtexts = dptexts
+			dnames = dpnames
+		
+		if self.level == "passage":
+			#split each para into passages
+			dptexts = list()
+			dpnames = list()
+			for dt, dn in zip(dtexts, dnames):
+				sents = sent_tokenize(dt.strip())			
+				if self.verbose:
+					print("no of sentences {}".format(len(sents)))
+				span = self.passSize
+				if len(sents) <= span:
+					pass
+				else:
+					for i in range(0, len(sents) - span, 1):
+						dptext = None
+						for j in range(span):
+							if dptext is None:
+								dptext = sents[i + j] +  ". "
+							else:
+								dptext = dptext + sents[i + j] + ". " 
+						dpname = dn + "-" + str(i)
+						dptexts.append(dptext)
+						dpnames.append(dpname)
+				
+			dtexts = dptexts
+			dnames = dpnames
+			
+		self.fragments = zip(dnames, dtexts)
+		return self.fragments
+			
+	def showFragments(self):
+		"""
+		show fragments
+		"""
+		print("showing all " + self.level + " for the first 40 characters")
+		for dn, dt in self.fragments:
+			print(dn + "\t" + dt[:40])
+		
 
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
+	"""
+	text pre process
+	"""
 	if verbose:
 		print ("--raw doc")
 		print (doc)
@@ -831,9 +942,19 @@ def clean(doc, preprocessor, verbose):
 
 # get sentences
 def getSentences(filePath):
+	"""
+	text pre process
+	"""
 	with open(filePath, 'r') as contentFile:
 		content = contentFile.read()
 		sentences = content.split('.')
 	return sentences
 
+def getParas(text, minParNl=2):
+	"""
+	split into paras
+	"""
+	regx = "\n+" if minParNl == 1 else "\n{2,}"
+	paras = re.split(regx, text.replace("\r\n", "\n"))
+	return paras
 
