@@ -874,7 +874,7 @@ class TextFragmentGenerator:
 				if self.verbose:
 					print("no of paras {}".format(len(paras)))
 				dptexts.extend(paras)
-				pnames = list(map(lambda i : dn + "-" + str(i), range(len(paras))))
+				pnames = list(map(lambda i : dn + ":" + str(i), range(len(paras))))
 				dpnames.extend(pnames)
 			dtexts = dptexts
 			dnames = dpnames
@@ -898,14 +898,14 @@ class TextFragmentGenerator:
 								dptext = sents[i + j] +  ". "
 							else:
 								dptext = dptext + sents[i + j] + ". " 
-						dpname = dn + "-" + str(i)
+						dpname = dn + ":" + str(i)
 						dptexts.append(dptext)
 						dpnames.append(dpname)
 				
 			dtexts = dptexts
 			dnames = dpnames
 			
-		self.fragments = zip(dnames, dtexts)
+		self.fragments = list(zip(dnames, dtexts))
 		return self.fragments
 			
 	def showFragments(self):
@@ -916,7 +916,12 @@ class TextFragmentGenerator:
 		for dn, dt in self.fragments:
 			print(dn + "\t" + dt[:40])
 		
-
+	def isDocLevel(self):
+		"""
+		true if fragment is at doc level
+		"""
+		return self.level != "para" and self.level != "passage"
+	
 # clean doc to create term array
 def clean(doc, preprocessor, verbose):
 	"""

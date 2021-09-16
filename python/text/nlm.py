@@ -29,6 +29,7 @@ import pickle
 import numpy 
 import re
 from sentence_transformers import CrossEncoder
+import statistics
 
 sys.path.append(os.path.abspath("../lib"))
 from util import *
@@ -334,61 +335,91 @@ class SemanticSimilaityBiEnc(NeuralLangModel):
 #similarity at passage or paragraph level using sbertcross encoder
 class SemanticSimilaityCrossEnc(NeuralLangModel):
 
-	def __init__(self, docs=None):
+	def __init__(self, fragmentor, docs=None):
 		self.dparas = None
 		self.scores = None
 		print("loading cross encoder")
 		self.model = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L-2")
 		print("done loading cross encoder")
-		super(SemanticSimilaityCrossEnc, self).__init__()
+		super(SemanticSimilaityCrossEnc, self).__init__(fragmentor)
 		
-	def paraSimilarity(self, dtext, fpaths, minParNl=1):
+	def loadFileDocs(self, fpaths):
+		"""
+		loads documents from one file
+		"""
+		self.loadDocs(fpaths)
+
+	def search(self, qstr, algo):
 		"""
 		returns paragarph pair similarity across 2 documents
 		"""
-		dtexts, dnames = self.loadDocs(fpaths)
-		if dtext is None:
-			assertEqual(len(dtexts), 2, "exactly 2 files needed")
-			self.dtexts = dtexts
-		else:
-			assertEqual(len(dtexts), 1, "exactly 1 file needed")
-			self.dtexts = list()
-			self.dtexts.append(dtext)
-			self.dtexts.append(dtexts[0])
-			
-		
-		self.dparas = list()
-		for text in self.dtexts:
-			regx = "\n+" if minParNl == 1 else "\n{2,}"
-			paras = re.split(regx, text.replace("\r\n", "\n"))
-			print("no of paras {}".format(len(paras)))
-			self.dparas.append(paras)
-		
-		tinp = list()
-		for para1 in self.dparas[0]:
-			inp = list(map(lambda para2: [para1, para2], self.dparas[1]))
-			tinp.extend(inp)
+		qdpairs = list(map(lambda dnt : [qstr, dnt[1]], self.fragments))
+		qdnt = list(map(lambda dnt : [qstr, dnt[0], dnt[1]],  self.fragments))
 
-		print("input shape " + str(numpy.array(tinp).shape))
-		scores = self.model.predict(tinp)
+		print("fragments")
+		for n, t in self.fragments:
+			print(n + "\t" +  t[:20])
+
+		print("input shape " + str(numpy.array(qdpairs).shape))
+		scores = self.model.predict(qdpairs)
 		print("score shape " + str(numpy.array(scores).shape))
 		#assertEqual(len(scores), len(self.dparas[0]) * len(self.dparas[1]), "no of scores don't match no of paragraph pairs")
 		print(scores)
 		
-		i = 0
-		print("text paragraph pair wise similarity")
-		for para1 in self.dparas[0]:
-			for para2 in self.dparas[1]:
-				print("first: {}\t  second: {}\t  score: {:.6f}".format(para1[:20], para2[:20], scores[i]))
-				i += 1
-			
+		print("query text fragment pair wise similarity")
+		for fs in zip(qdnt, scores):
+			print("query: {}\t  doc name: {}\t  doc fragment: {}\t score: {:.6f}".format(fs[0][0][:20], fs[0][1], fs[0][2][:20], fs[1]))
 		self.scores = scores
-	
-	def avMaxScore(self):
-		"""
-		"""
-		pass		
+		
+		if not self.fragmentor.isDocLevel():
+			if algo == "sa":
+				agScores = self.aggregateScore("av")
+			elif algo == "sme":	
+				agScores = self.aggregateScore("med")
+			elif algo == "smax":	
+				agScores = self.aggregateScore("max")
+			else:
+				exitWithMsg("invalid matching score aggregator")
+		
+			print("aggregate doc scores")
+			for dn, ags in agScores:
+				print("{}\t{:.6f}".format(dn, ags))
 			
+	def aggregateScore(self, aggr):
+		"""
+		aggregagte fragment scores for each document
+		"""
+		dnp = None
+		agScores = list()
+		scores = list()
+		for fs in zip(self.fragments, self.scores):
+			dn = fs[0][0].split(":")[0]
+			if dnp is not None and dn != dnp:
+				ags = self.aggrgeate(aggr, scores)
+				ds = (dnp, ags)
+				agScores.append(ds)
+				scores.clear()
+				dnp = dn
+			else:
+				if dnp is None:
+					dnp = dn
+				scores.append(fs[1])	
+			
+		ags = self.aggrgeate(aggr, scores)
+		ds = (dnp, ags)
+		agScores.append(ds)
+		return agScores		
+		
+	def aggrgeate(self, aggr, scores):
+		if aggr == "av":
+			ags = statistics.mean(scores)
+		elif aggr == "med":
+			ags = statistics.median(scores)
+		elif aggr == "max":
+			ags = max(scores)
+		return ags
+		
+		
 def ner(text, nlp):
 	#nlp = spacy.load("en_core_web_md")
 	doc = nlp(text)

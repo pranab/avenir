@@ -271,6 +271,47 @@ def printAlgo(algo):
 		print("testing")
 	else:
 		raise ValueError("invalid semilarity algo")
+
+def semMatch(argv, encType):
+	"""
+	
+	"""
+	algo = argv[2]
+	fPaths = argv[3]
+	fragLevel = argv[4]
+	minParNl = 2
+	passageSize = 0
+	if fragLevel == "passage":
+		if len(argv) == 6:
+			passageSize = int(argv[5])
+		else:
+			exitWithMsg("for passage passage size must be provided")
+			
+	qstr = None
+	fr = TextFragmentGenerator(fragLevel, minParNl, passageSize)
+	if encType == "bienc":
+		matcher = SemanticSimilaityBiEnc(fr)
+	else:
+		matcher = SemanticSimilaityCrossEnc(fr)
+	
+	matcher.loadFileDocs(fPaths)
+		
+	#query and document
+	opts = ["enter query", "enter matching technique",  "quit"]
+	while True:
+		ch = enquiries.choose("choose from below: ", opts)
+
+		if ch == "enter query":
+			qstr = input("query: ")
+			
+		elif ch == "enter matching technique":
+			algo = input("matching technique: ")
+			matcher.search(qstr, algo)
+
+		elif ch == "quit":
+			break
+
+
 		
 if __name__ == "__main__":
 	opcode = sys.argv[1]
@@ -603,31 +644,5 @@ if __name__ == "__main__":
 		
 	elif opcode == "crenc":		
 		#search list of documents with cross encoders
-		algo = sys.argv[2]
-		fPaths = sys.argv[3]
-		
-		qstr = None
-		matcher = SemanticSimilaityCrossEnc()
-		
-		#query and document
-		opts = ["enter query", "enter matching technique",  "quit"]
-		while True:
-			ch = enquiries.choose("choose from below: ", opts)
-
-			if ch == "enter query":
-				qstr = input("query: ")
-			
-			elif ch == "enter matching technique":
-				algo = input("matching technique: ")
-				if qstr is None:
-					print("finding match netween 2 docs")
-				else:
-					print("finding match netween query and doc")
-					
-				if algo == "savm":
-					matcher.paraSimilarity(qstr, fPaths, 2)
-					score = matcher.avMaxScore()
-
-			elif ch == "quit":
-				break
+		semMatch(sys.argv, "crenc")
 			
