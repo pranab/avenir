@@ -311,7 +311,34 @@ def semMatch(argv, encType):
 		elif ch == "quit":
 			break
 
+class SegmentSearch(object):
+	def __init__(self, passageSize = 4):
+		"""
+		initialize
+		"""
+		self.minParNl = 2
+		fr = TextFragmentGenerator("passage", self.minParNl, passageSize, False)
+		self.matcher = SemanticSimilaityBiEnc(fr, False)
 
+	def passageSearch(self, query, docs):
+		"""
+		passage search for long text query
+		"""
+		self.matcher.clear()
+		self.matcher.addNamedText(docs)
+
+		qparas = getParas(query, self.minParNl)
+		for qp in qparas:
+			self.matcher.search(qp, "tsavm")	
+	
+		res = self.matcher.getFragDocMatches()
+		return res
+		
+	def getPassages(self, dname):
+		"""
+		get matched passages from a document
+		"""
+		return self.matcher.getMatchedSegments(dname)
 		
 if __name__ == "__main__":
 	opcode = sys.argv[1]
@@ -639,10 +666,27 @@ if __name__ == "__main__":
 
 			elif ch == "quit":
 				break
-			
 		
 		
 	elif opcode == "crenc":		
 		#search list of documents with cross encoders
 		semMatch(sys.argv, "crenc")
 			
+	elif opcode == "segs":
+		#passage based search for full text query
+		qpath = sys.argv[2]
+		fpaths = sys.argv[3].split(",")
+		
+		query = getOneFileContent(qpath)
+		ndocs = list(map(lambda fp : [fp, getOneFileContent(fp)], fpaths))
+		searcher = SegmentSearch(3)
+		res = searcher.passageSearch(query, ndocs)
+		print("documents with score") 
+		for r in res:
+			print(r)
+		passages = searcher.getPassages(fpaths[1])
+		print("document num passages: {}".format(len(passages)))
+		for p in passages:
+			print(p)
+		
+				

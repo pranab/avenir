@@ -40,20 +40,136 @@ neural language model
 """
 
 class NeuralLangModel(object):
-	def __init__(self, fragmentor):
+	def __init__(self, fragmentor, verbose=False):
 		"""
 		initialize
 		"""
 		self.dexts = None
 		self.fragmentor = fragmentor
 		self.fragments = None
+		self.matches = list()
+		self.dmatches = list()
+		self.verbose = verbose
 		
-	def loadDocs(self, fpaths):
+	def loadDocs(self, docs):
 		"""
 		loads documents from one file
 		"""
-		self.fragments = self.fragmentor.generateFragments(fpaths)
+		if type(docs) == str:
+			#file path, directory path or coma separated file paths
+			if self.verbose:
+				print("loading files")
+			self.fragments = self.fragmentor.generateFragmentsFromFiles(docs)
+		else:
+			#list of named text
+			if self.verbose:
+				print("loading named text list")
+			self.fragments = self.fragmentor.generateFragmentsFromNamedDocs(docs)
+		
+		if self.verbose:
+			print("num fragments {}".format(len(self.fragments)))
+			for dn, dt in self.fragments:
+				print(dn + "\t" + dt[:20])
+			
 
+	def clear(self):
+		"""
+		"""
+		self.matches.clear()
+		self.dmatches.clear()
+		
+	def getFragDocMatches(self):
+		"""
+		get top matches across all queries
+		"""
+		if self.verbose:
+			print("\naggregated doc scores")
+		for query, res in self.matches:
+			qres = list()
+			dnp = None
+			scores = list()
+			if self.verbose:
+				print("query: " + query[:20])
+			for dname, score in res:
+				if self.verbose:
+					print("fragment {}  \t{:.3f}".format(dname, score))
+				dn = dname.split(":")[0]
+				if self.verbose:
+					print("dnp {}   \tdn {}".format(dnp, dn))
+				if dnp is not None and dn != dnp:
+					#max score from all fragments
+					mscore = max(scores)
+					if self.verbose:
+						print("doc {}  \t{:.3f}".format(dnp, mscore))
+					r = (dnp, mscore)
+					qres.append(r)
+					
+					scores.clear()
+					scores.append(score)
+					dnp = dn
+				else:
+					if dnp is None:
+						dnp = dn
+					scores.append(score)	
+			
+			#remaining
+			mscore = max(scores)
+			if self.verbose:
+				print("doc {}  \t{:.3f}".format(dn, mscore))
+			r = (dn, mscore)
+			qres.append(r)
+			
+			#all docs for a query
+			qr = (query, qres)
+			if self.verbose:
+				print("doc scores for query: " + query[:20])
+				for dn, sc in qres:
+					print("doc {}\tscore {:.3f}".format(dn, sc))
+					
+			self.dmatches.append(qr)
+		
+		# doc score for all queries
+		dscores = dict()
+		for query, qres in self.dmatches:
+			for dn, score in qres:
+				appendKeyedList(dscores, dn, score)
+		if self.verbose:
+			print("doc scores across all queries")
+			for dn in dscores:
+				print(dn)
+				print(dscores[dn])
+				
+		
+		# average doc score across all queries
+		res = list(map(lambda dn : (dn, statistics.mean(dscores[dn])),  dscores))
+		return sorted(res, key=lambda r : r[1], reverse=True)
+	
+	def getMatchedSegments(self, dname):
+		"""
+		get doc fragments with score
+		"""
+		result = list()
+		for query, res in self.matches:
+			for dfname, score in res:
+				dn = dfname.split(":")[0]
+				if dn == dname:
+					dftext = self.getFragmentText(dfname)
+					r = (dftext, score)
+					result.append(r)
+		
+		return sorted(result, key=lambda r : r[1], reverse=True)
+	
+	def getFragmentText(self, dfname):
+		"""
+		"""
+		dftext = None
+		for dn, dt in  self.fragments:
+			if dn == dfname:
+				dftext = dt
+				break
+		return dftext
+				
+			
 #Encoded doc
 class EncodedDoc:
 	def __init__(self, dtext, dname, drank=None):
@@ -74,15 +190,15 @@ class EncodedDoc:
 
 #similarity at token and sentence level for BERT encoding
 class SemanticSimilaityBiEnc(NeuralLangModel):
-	def __init__(self, fragmentor, docs=None):
+	def __init__(self, fragmentor, verbose=False):
 		"""
 		initialize
 		"""
 		print("loading BERT transformer model")
 		#self.nlp = spacy.load("en_trf_bertbaseuncased_lg")
 		self.nlp = spacy.load("en_core_web_lg")
-		self.docs = docs if docs is not None else list()
-		super(SemanticSimilaityBiEnc, self).__init__(fragmentor)
+		self.docs = list()
+		super(SemanticSimilaityBiEnc, self).__init__(fragmentor, verbose)
 		
 	def docAv(self,qu, doc):
 		"""
@@ -260,12 +376,19 @@ class SemanticSimilaityBiEnc(NeuralLangModel):
 		"""
 		self.docs.extend(docs)
 	
+	def addNamedText(self, ndocs):
+		"""
+		add named doc content list
+		"""
+		self.loadDocs(ndocs)
+		edocs = list(map(lambda dnt : EncodedDoc(dnt[1], dnt[0]), self.fragments))
+		self.docs.extend(edocs)
+
 	def loadFileDocs(self, fpaths):
 		"""
 		loads documents from one file
 		"""
 		self.loadDocs(fpaths)
-				
 		docs = list(map(lambda dnt : EncodedDoc(dnt[1], dnt[0]), self.fragments))
 		self.docs.extend(docs)
 		
@@ -312,12 +435,29 @@ class SemanticSimilaityBiEnc(NeuralLangModel):
 			res.append(r)
 
 		#search score for each document
-		res.sort(key=lambda r : r[1], reverse=True)
-		print("\nsorted search result")
-		print("query: {}     matching algo: {}".format(qstr, algo))
-		for r in res:
-			print("{} score {:.3f}".format(r[0], r[1]))
+		sres = sorted(res, key=lambda r : r[1], reverse=True)
+		if self.verbose:
+			print("\nsorted search result")
+			print("query: " + qstr)
+			print("matching algo: " + algo)
+			for r in sres:
+				print("{} score {:.3f}".format(r[0], r[1]))
 		
+		 
+		#print top match
+		if self.verbose:
+			print("\ntop 3 matches")
+			for i in range(3):
+				tname = sres[i][0]
+				for dname, dtext in self.fragments:
+					if tname == dname:
+						print("\nNo {}\t doc name: {}  score: {:.3f}".format(i+1, dname, sres[i][1]))
+						print(dtext[:400])
+		
+		#save  matches 
+		qres = [qstr[:40], res]
+		self.matches.append(qres)
+			
 		#rank order if gold truuth rank provided	
 		if gdranks is not None:
 			i = 0
@@ -335,13 +475,13 @@ class SemanticSimilaityBiEnc(NeuralLangModel):
 #similarity at passage or paragraph level using sbertcross encoder
 class SemanticSimilaityCrossEnc(NeuralLangModel):
 
-	def __init__(self, fragmentor, docs=None):
+	def __init__(self, fragmentor, verbose=False):
 		self.dparas = None
 		self.scores = None
 		print("loading cross encoder")
 		self.model = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L-2")
 		print("done loading cross encoder")
-		super(SemanticSimilaityCrossEnc, self).__init__(fragmentor)
+		super(SemanticSimilaityCrossEnc, self).__init__(fragmentor, verbose)
 		
 	def loadFileDocs(self, fpaths):
 		"""

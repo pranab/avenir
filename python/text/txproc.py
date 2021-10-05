@@ -859,12 +859,29 @@ class TextFragmentGenerator:
 
 		return ndocs
 	
-	def generateFragments(self, fpaths):
+	def generateFragmentsFromFiles(self, fpaths):
 		"""
 		fragments documents into whole doc, paragraph or passages
 		"""
 		dtexts, dnames = self.loadDocs(fpaths)
-		
+		return self.generateFragments(dtexts, dnames)
+	
+
+	def generateFragmentsFromNamedDocs(self, ndocs):
+		"""
+		fragments documents into whole doc, paragraph or passages
+		"""
+		dtexts = list(map(lambda nd : nd[1], ndocs))
+		dnames = list(map(lambda nd : nd[0], ndocs))
+		#for i in range(len(dtexts)):
+		#	print(dnames[i])
+		#	print(dtexts[i][:40])
+		return self.generateFragments(dtexts, dnames)
+
+	def generateFragments(self, dtexts, dnames):
+		"""
+		fragments documents into whole doc, paragraph or passages
+		"""
 		if self.level == "para" or self.level == "passage":
 			#split paras
 			dptexts = list()
@@ -872,6 +889,7 @@ class TextFragmentGenerator:
 			for dt, dn in zip(dtexts, dnames):
 				paras = getParas(dt, self.minParNl)
 				if self.verbose:
+					print(dn)
 					print("no of paras {}".format(len(paras)))
 				dptexts.extend(paras)
 				pnames = list(map(lambda i : dn + ":" + str(i), range(len(paras))))
@@ -886,6 +904,7 @@ class TextFragmentGenerator:
 			for dt, dn in zip(dtexts, dnames):
 				sents = sent_tokenize(dt.strip())			
 				if self.verbose:
+					print(dn)
 					print("no of sentences {}".format(len(sents)))
 				span = self.passSize
 				if len(sents) <= span:
@@ -906,6 +925,8 @@ class TextFragmentGenerator:
 			dnames = dpnames
 			
 		self.fragments = list(zip(dnames, dtexts))
+		#if self.verbose:
+		#	print("num fragments {}".format(len(self.fragments)))
 		return self.fragments
 			
 	def showFragments(self):
