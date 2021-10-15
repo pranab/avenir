@@ -22,15 +22,44 @@ import time
 from array import *
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../supv"))
+sys.path.append(os.path.abspath("../mlextra"))
+
 from mlutil import *
 from util import *
 from sampler import *
 from tnn import *
 from mcalib import *
+from optpopu import *
+from daexp import *
 
 
 NFEAT = 11
 NFEAT_EXT = 14
+
+class LoanCounterFacCost(object):
+	"""
+	optimize with evolutionary search
+	"""
+	def __init__(self, baseData, fieldMap):
+		"""
+		intialize
+		"""
+		self.logger = None
+
+	def isValid(self, args):
+		"""
+		candidate validation
+		"""
+		return True
+		
+	def evaluate(self, args):
+		"""
+		cost
+		"""
+		cost = 0
+		
+		return cost
+			
 
 class LoanApprove:
 	def __init__(self, numLoans=None):
@@ -336,6 +365,25 @@ class LoanApprove:
 			newRow = encoder.processRow(row)
 			print (newRow)
 
+def mutatorOne(r):
+	""" shifts and scales data  """
+	inc = int(int(r[7]) * 0.9 - 10)
+	r[7] = str(inc)
+	
+	debt = int(int(r[10]) * 1.6 + 20)
+	r[10] = str(debt)
+	return r
+	
+def mutatorTwo(r):
+	cl = int(r[19])	
+	idistr = GaussianRejectSampler(180,17) if cl == 1 else  GaussianRejectSampler(80,12)
+	inc = int(idistr.sample())
+	oinc = int(r[7])
+	#print("current {}  new {}".format(oinc, inc))
+	r[7] = str(inc)
+	
+	return r
+	
 ##########################################################################################
 if __name__ == "__main__":
 	op = sys.argv[1]
@@ -345,6 +393,7 @@ if __name__ == "__main__":
 		numLoans = int(sys.argv[2])
 		loan = LoanApprove(numLoans)
 		loan.generateOne()
+	
 	elif op == "genTwo":
 		"""  generate data """
 		numLoans = int(sys.argv[2])
@@ -353,23 +402,67 @@ if __name__ == "__main__":
 		keyLen = int(sys.argv[4])
 		addExtra = True if len(sys.argv) == 6 and sys.argv[5] == "extra" else False
 		loan.generateTwo(noise, keyLen, addExtra)
+	
 	elif op == "encDummy":
 		""" encode binary """
 		fileName = sys.argv[2]
 		extra = True if len(sys.argv) == 4 and sys.argv[3] == "extra" else False
 		loan = LoanApprove(numLoans)
 		loan.encodeDummy(fileName, extra)
+	
 	elif op == "encLabel":
 		""" encode label """
 		fileName = sys.argv[2]
 		loan = LoanApprove(numLoans)
 		loan.encodeLabel(fileName)
+	
 	elif op == "nnTrain":
 		""" tran neural network model """
 		prFile = sys.argv[2]
 		clflier = FeedForwardNetwork(prFile)
 		clflier.buildModel()
 		FeedForwardNetwork.batchTrain(clflier)
+	
+	elif op == "calib":
+		""" calibrate """
+		prFile = sys.argv[2]
+		clflier = FeedForwardNetwork(prFile)
+		clflier.buildModel()
+		ModelCalibration.findModelCalibration(clflier)
+		
+	elif op == "clsep":
+		""" class separation performance metric using KS 2 sample"""
+		prFile = sys.argv[2]
+		clflier = FeedForwardNetwork(prFile)
+		clflier.buildModel()
+		
+		FeedForwardNetwork.prepValidate(clflier)
+		FeedForwardNetwork.validateModel(clflier)
+		yPred = clflier.yPred.flatten()
+		yPredNeg = list(map(lambda y : 1.0 - y, yPred))
+		print(yPred[:4])
+		print(yPredNeg[:4])
+		print(type(yPred))
+
+		expl = DataExplorer()
+		expl.addListNumericData(yPred.tolist(),  "yp")
+		expl.addListNumericData(yPredNeg,  "yn")
+		expl.testTwoSampleKs("yp", "yn")
+	
+	elif op == "shsc":
+		""" shift and scale data"""
+		fpath = sys.argv[2]
+		for rec in fileMutatedFieldsRecGen(fpath, mutatorTwo):
+			print(",".join(rec))
+			
+	elif op == "presc":
+		""" prescriptive analytic """
+		optConfFile = sys.argv[1]
+		mlConfFile = sys.argv[2]
+		cfcCost = LoanCounterFacCost()
+		optimizer = GeneticAlgorithmOptimizer(optConfFile, cfcCost)
+
+
 	else:
 		exitWithMsg("unknow operation")
 

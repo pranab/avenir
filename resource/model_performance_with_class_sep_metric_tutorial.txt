@@ -1,0 +1,46 @@
+This tutorial is measuring model performance with class separation metric. A neural neuwork model for 
+predicting  loan approval is used for this purpose
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where loan_approve.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Generate training data
+======================
+raw data
+./loan_approve.py genTwo <num_loans> <noise> <key_len>  extra > lo.txt
+where
+num_loans = num of loans e.g. 5000
+noise = noise level e.g 0.1
+key_len = key length e.g. 10
+
+encode categorical data
+./loan_approve.py encDummy lo.txt extra > lo_5000.txt
+
+
+Generate validation data
+========================
+raw data
+./loan_approve.py genTwo <num_loans> <noise> <key_len>  extra > lo.txt
+
+where
+nsamp = num of samples e.g. 500
+noise = noise level e.g 0.1
+key_len = key length e.g. 10
+
+encode categorical data
+./loan_approve.py encDummy lo.txt extra > lo_500.txt
+
+Train model
+===========
+Make sure you have the setting  train.model.save=True so that the trained model is saved
+./loan_approve.py nnTrain tnn_lo.properties
+
+Find class sepration KS metric
+=============================
+./loan_approve.py clsep tnn_lo.properties
+
+
+ 

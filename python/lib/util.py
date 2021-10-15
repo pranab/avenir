@@ -906,6 +906,14 @@ def fileTypedRecGen(filePath, ftypes, delim = ","):
 					exitWithMsg("invalid data type")
 			yield line
 
+def fileMutatedFieldsRecGen(dirPath, mutator, delim=","):
+	"""
+	file record generator with some columns mutated 
+	"""
+	for rec in fileRecGen(dirPath, delim):
+		mutated = mutator(rec)
+		yield mutated
+
 def tableSelFieldsFilter(tdata, columns):
 	"""
 	gets tabular data for selected columns 
