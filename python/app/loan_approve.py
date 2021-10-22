@@ -462,7 +462,18 @@ if __name__ == "__main__":
 		cfcCost = LoanCounterFacCost()
 		optimizer = GeneticAlgorithmOptimizer(optConfFile, cfcCost)
 
-
+	elif op == "lrobust":
+		""" local robustness """
+		prFile = sys.argv[2]
+		clflier = FeedForwardNetwork(prFile)
+		clflier.buildModel()
+		
+		fpath = sys.argv[3]
+		nsamp = int(sys.argv[4])
+		ncount = int(sys.argv[5])
+		mr = ModelRobustness()
+		mr.localPerformance(clflier, fpath, nsamp, ncount)
+				
 	else:
 		exitWithMsg("unknow operation")
 

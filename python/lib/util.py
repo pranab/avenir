@@ -1455,12 +1455,12 @@ class StepFunction:
 				y = self.points[l-1][2]
 		return y
 		
-
+	 
 class DummyVarGenerator:
 	"""
 	dummy variable generator for categorical variable
 	"""
-	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim):
+	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim=None):
 		self.rowSize = rowSize
 		self.catValues = catValues
 		numCatVar = len(catValues)
@@ -1475,7 +1475,11 @@ class DummyVarGenerator:
 	
 	def processRow(self, row):	
 		#print (row)
-		rowArr = row.split(self.delim)
+		if self.delim is not None:
+			rowArr = row.split(self.delim)
+		else:
+			rowArr = row
+			
 		assert len(rowArr) == self.rowSize, "row does not have expected number of columns " + str(len(rowArr))
 		newRowArr = []
 		for i in range(len(rowArr)):
@@ -1491,6 +1495,7 @@ class DummyVarGenerator:
 			else:
 				newRowArr.append(curVal)
 		assert len(newRowArr) == self.newRowSize, "invalid new row size " + str(len(newRowArr))
-		return self.delim.join(newRowArr)
+		encRow = self.delim.join(newRowArr) if self.delim is not None else newRowArr
+		return encRow
 		
 		

@@ -177,13 +177,17 @@ class FeedForwardNetwork(torch.nn.Module):
 		
 		self.yPred  = None
 		
-	def setValidationData(self, dataSource):
+	def setValidationData(self, dataSource, prep=True):
 		"""
 		sets validation data
 		"""
-		(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataSource)
-		self.validFeatData = torch.from_numpy(featDataV)
-		self.validOutData = outDataV
+		if prep:
+			(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataSource)
+			self.validFeatData = torch.from_numpy(featDataV)
+			self.validOutData = outDataV
+		else:
+			self.validFeatData = torch.from_numpy(dataSource[0])
+			self.validOutData = dataSource[1]		
  	
 	@staticmethod
 	def createActivation(actName):

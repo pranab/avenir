@@ -20,6 +20,7 @@ import random
 import time
 import math
 import numpy as np
+import statistics 
 
 
 # histogram class
@@ -255,4 +256,13 @@ class SlidingWindowStat:
 		s = (self.count, self.sum, self.sumSq)
 		return s
 		
+
+def basicStat(ldata):
+	"""
+	mean and std dev
+	"""
+	m = statistics.mean(ldata)
+	s = statistics.stdev(ldata, xbar=m)
+	r = (m, s)
+	return r
 		

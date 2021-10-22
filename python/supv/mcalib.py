@@ -31,6 +31,7 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 from tnn import *
+from stats import *
 
 """
 neural model calibration
@@ -83,28 +84,43 @@ class ModelCalibration(object):
 		mce = 0
 		
 		# per bin confidence and accuracy
+		b = 0
 		for plist in blist:
-			ypl = list(map(lambda p : p[0], plist))
-			ypm = statistics.mean(ypl)
-			x.append(ypm)
+			if plist is not None:
+				#confidence
+				ypl = list(map(lambda p : p[0], plist))
+				ypm = statistics.mean(ypl)
+				x.append(ypm)
 			
-			ypcount = 0
-			for p in plist:
-				yp = 1 if p[0] > prThreshhold else 0
-				if (yp == 1 and p[1] == 1):
-					ypcount += 1
+				#accuracy
+				ypcount = 0
+				for p in plist:
+					yp = 1 if p[0] > prThreshhold else 0
+					if (yp == 1 and p[1] == 1):
+						ypcount += 1
 				 
-			acc = ypcount / len(plist)
-			y.append(acc)
-			yideal.append(ypm)
+				acc = ypcount / len(plist)
+				y.append(acc)
+				yideal.append(ypm)
 			
-			ce = abs(ypm - acc)
-			ece += len(plist) * ce
-			if ce > mce:
-				mce = ce
-		
+				ce = abs(ypm - acc)
+				ece += len(plist) * ce
+				if ce > mce:
+					mce = ce
+			else:
+				ypm = minConf + (b + 0.5) * bsize
+				x.append(ypm)
+				yideal.append(ypm)
+				y.append(0)
+			b += 1
+				
 		#calibration plot	
 		drawPairPlot(x, y, yideal, "confidence", "accuracy", "actual", "ideal")
+		
+		print("confidence\taccuracy")
+		for z in zip(x,y):
+			print("{:.3f}\t{:.3f}".format(z[0], z[1]))
+		
 		
 		#expected calibration error
 		ece /= nsamp
@@ -219,3 +235,52 @@ class ModelCalibration(object):
 		contrast = list(map(lambda acc : abs(acc - accg), y))
 		contrast = statistics.mean(contrast)
 		print("contrast {:.3f}".format(contrast))
+
+"""
+neural model robustness
+"""
+class ModelRobustness(object):
+	def __init__(self):
+		pass
+		
+	def localPerformance(self, model, fpath, nsamp, neighborCnt):
+		"""
+		local performnance sampling
+		"""
+		
+		#load data
+		fData, oData = FeedForwardNetwork.prepData(model, fpath)
+		#print(type(fData))
+		#print(type(oData))
+		#print(fData.shape)
+		dsize = fData.shape[0]
+		ncol = fData.shape[1]
+		
+		#kdd 
+		tree = KDTree(fData, leaf_size=4)		
+
+		scores = list()
+		for _ in range(nsamp):
+			indx = randomInt(0, dsize - 1)
+			frow = fData[indx]
+			frow = np.reshape(frow, (1, ncol))
+			dist, ind = tree.query(frow, k=neighborCnt)
+			
+			ind = ind[0]
+			vfData = fData[ind]	
+			voData = oData[ind]	
+			
+			#print(type(vfData))
+			#print(vfData.shape)
+			#print(type(voData))
+			#print(voData.shape)
+			
+			model.setValidationData((vfData, voData), False)
+			score = FeedForwardNetwork.validateModel(model)
+			scores.append(score)
+		
+		m, s = basicStat(scores)
+		print("model performance:   mean {:.3f}\tstd dev {:.3f}".format(m,s))	
+		drawHist(scores, "model accuracy", "accuracy", "frequency")
+			
+		
