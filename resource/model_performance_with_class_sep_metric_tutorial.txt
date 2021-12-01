@@ -1,5 +1,5 @@
-This tutorial is measuring model performance with class separation metric. A neural neuwork model for 
-predicting  loan approval is used for this purpose
+This tutorial is measuring model performance with class separation metric and model local performance 
+based robustness. A neural neuwork model for predicting  loan approval is used for this purpose
 
 Setup
 =====
@@ -41,6 +41,18 @@ Make sure you have the setting  train.model.save=True so that the trained model 
 Find class sepration KS metric
 =============================
 ./loan_approve.py clsep tnn_lo.properties
+
+Local performance based robustness
+==================================
+Train and validate model as before. Prepare test data as for training data. Call this file
+lo_5000_1.txt
+
+Get local performance based robustness
+./loan_approve.py lrobust tnn_lo.properties lo_500_1.txt <num_sample_neighborhood> <neighborhood_size>
+where 
+num_sample_neighborhood = number of neighborhood samples e.g 200
+neighborhood_size = number of nearest neighbors e.g 50
+
 
 
  
