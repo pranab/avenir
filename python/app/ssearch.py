@@ -311,14 +311,52 @@ def semMatch(argv, encType):
 		elif ch == "quit":
 			break
 
+def profileSearch(jobdesc, profiles, verbose=False):
+	"""
+	profle search for JD
+	params:
+	jobdesc - job desc paragraphs sepearted by \n\n
+	profiles - list of tuples, one for each profile. First element of tuple is profile ID, second element is 
+	paragrpahs for a profile  sepearted by \n\n
+	output:
+	returned as hash map. First element list of profile name with score. second element 
+	"""
+
+	#rest is same
+	sres = dict()
+	
+	searcher = SegmentSearch(3, verbose)
+	
+	#profile with scores
+	res = searcher.passageSearch(jobdesc, profiles)
+	sres["profileScore"] = res
+	print("profiles with score") 
+	if verbose:
+		for r in res:
+			print(r)
+	
+	plist = list()
+	for pr in profiles:
+		#profile passages with score
+		passages = searcher.getPassages(pr[0])
+		plist.append(passages)
+		if verbose:
+			print("profile {}  num passages: {}".format(pr[0], len(passages)))
+			for p in passages:
+				print(p)
+	sres["passageScore"] = plist
+	return sres
+	
+
 class SegmentSearch(object):
-	def __init__(self, passageSize = 4):
+	def __init__(self, passageSize, verbose=False):
 		"""
 		initialize
 		"""
 		self.minParNl = 2
-		fr = TextFragmentGenerator("passage", self.minParNl, passageSize, False)
-		self.matcher = SemanticSimilaityBiEnc(fr, False)
+		fr = TextFragmentGenerator("passage", self.minParNl, passageSize, verbose)
+		self.matcher = SemanticSimilaityBiEnc(fr, verbose)
+		self.verbose = verbose
 
 	def passageSearch(self, query, docs):
 		"""
@@ -328,7 +366,11 @@ class SegmentSearch(object):
 		self.matcher.addNamedText(docs)
 
 		qparas = getParas(query, self.minParNl)
+		if self.verbose:
+			print("no of qiery paragraphs {}".format(len(qparas)))
 		for qp in qparas:
+			if self.verbose:
+				print("query paragrap: {}".format(qp))
 			self.matcher.search(qp, "tsavm")	
 	
 		res = self.matcher.getFragDocMatches()
@@ -689,4 +731,5 @@ if __name__ == "__main__":
 		for p in passages:
 			print(p)
 		
-				
+	else:
+		exitWithMsg("invalid operation")			
