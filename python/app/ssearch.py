@@ -26,6 +26,7 @@ import math
 from numpy.testing import assert_almost_equal
 import matplotlib.pyplot as plt
 import enquiries
+from nltk.tokenize import word_tokenize, sent_tokenize
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../text"))
 from util import *
@@ -319,7 +320,8 @@ def profileSearch(jobdesc, profiles, verbose=False):
 	profiles - list of tuples, one for each profile. First element of tuple is profile ID, second element is 
 	paragrpahs for a profile  sepearted by \n\n
 	output:
-	returned as hash map. First element list of profile name with score. second element 
+	returned as hash map. First element list of profile name with score. second element is list of list 
+	of passages with score
 	"""
 
 	#rest is same
@@ -726,10 +728,32 @@ if __name__ == "__main__":
 		print("documents with score") 
 		for r in res:
 			print(r)
-		passages = searcher.getPassages(fpaths[1])
+		passages = searcher.getPassages(fpaths[0])
 		print("document num passages: {}".format(len(passages)))
 		for p in passages:
 			print(p)
+	
+	elif opcode == "segsx":
+		#passage based search for full text query
+		qpath = sys.argv[2]
+		fpaths = sys.argv[3].split(",")
+		
+		query = getOneFileContent(qpath)
+		ndocs = list(map(lambda fp : [fp, getOneFileContent(fp)], fpaths))
+		res = profileSearch(query, ndocs)
+		print(res)
+		
+
+	elif opcode == "psver":
+		""" paragraph and sentence verification """
+		fpath = sys.argv[2]
+		fcontent = getOneFileContent(fpath)
+		paras = fcontent.split("\n\n")
+		print("no of paragraphs {}".format(len(paras)))
+		for i, pa in enumerate(paras):
+			sents = sent_tokenize(pa.strip())
+			print("para {}    no of sentences {}".format(i+1, len(sents)))
+		
 		
 	else:
 		exitWithMsg("invalid operation")			
