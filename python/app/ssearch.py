@@ -312,6 +312,37 @@ def semMatch(argv, encType):
 		elif ch == "quit":
 			break
 
+def vaidateParas(sdata):
+	"""
+	validate paragraphs and sentences
+	"""
+	status = {}
+	paras = sdata.split("\n\n")
+	print("no of paragraphs {}".format(len(paras)))
+	for pa in paras:
+		toks = word_tokenize(pa.strip())
+		ntok = len(toks)
+		print("no of tokens in paragraph {}".format(ntok))
+		if (ntok < 4):
+			status["status"] = "invalid"
+			status["message"] = "paragraph has too few tokens"
+			return status
+			
+	for i, pa in enumerate(paras):
+		sents = sent_tokenize(pa.strip())
+		nsent = len(sents)
+		print("para {}    no of sentences {}".format(i+1, nsent))
+		for se in sents:
+			toks = word_tokenize(se.strip())
+			ntok = len(toks)
+			if (ntok < 2):
+				status["status"] = "invalid"
+				status["message"] = "sentence has too few tokens"
+				return status
+				  
+	status["status"] = "valid"
+	return status
+	
 def profileSearch(jobdesc, profiles, verbose=False):
 	"""
 	profle search for JD
@@ -324,9 +355,16 @@ def profileSearch(jobdesc, profiles, verbose=False):
 	of passages with score
 	"""
 
-	#rest is same
-	sres = dict()
+	status = vaidateParas(jobdesc)
+	if "invalid" in status:
+		return status
+
+	for pn, pt in profiles:
+		status = vaidateParas(pt)
+		if "invalid" in status:
+			return status
 	
+	sres = dict()
 	searcher = SegmentSearch(3, verbose)
 	
 	#profile with scores
@@ -754,6 +792,15 @@ if __name__ == "__main__":
 			sents = sent_tokenize(pa.strip())
 			print("para {}    no of sentences {}".format(i+1, len(sents)))
 		
+	elif opcode == "psverx":
+		""" paragraph and sentence verification """
+		arg = sys.argv[2]
+		if len(arg) < 20:
+			content = getOneFileContent(arg)
+		else:
+			content = arg
+		st = vaidateParas(content)
+		print(st)
 		
 	else:
 		exitWithMsg("invalid operation")			
