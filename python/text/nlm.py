@@ -89,7 +89,9 @@ class NeuralLangModel(object):
 			dnp = None
 			scores = list()
 			if self.verbose:
-				print("query: " + query[:20])
+				print("query: " + query[:40])
+				print("result size {}".format(len(res)))
+				
 			for dname, score in res:
 				if self.verbose:
 					print("fragment {}  \t{:.3f}".format(dname, score))
@@ -113,16 +115,18 @@ class NeuralLangModel(object):
 					scores.append(score)	
 			
 			#remaining
-			mscore = max(scores)
-			if self.verbose:
-				print("doc {}  \t{:.3f}".format(dn, mscore))
-			r = (dn, mscore)
-			qres.append(r)
+			if (len(scores) > 0):
+				mscore = max(scores)
+				if self.verbose:
+					print("doc {}  \t{:.3f}".format(dn, mscore))
+				r = (dn, mscore)
+				qres.append(r)
 			
 			#all docs for a query
 			qr = (query, qres)
 			if self.verbose:
-				print("doc scores for query: " + query[:20])
+				print("doc scores for query: " + query[:40])
+				print("no of fragment scores {}".format(len(qres)))
 				for dn, sc in qres:
 					print("doc {}\tscore {:.3f}".format(dn, sc))
 					
@@ -446,8 +450,9 @@ class SemanticSimilaityBiEnc(NeuralLangModel):
 		 
 		#print top match
 		if self.verbose:
-			print("\ntop 3 matches")
-			for i in range(3):
+			ntm = 3 if len(sres) >= 3 else len(sres)
+			print("\ntop {} matches".format(ntm))
+			for i in range(ntm):
 				tname = sres[i][0]
 				for dname, dtext in self.fragments:
 					if tname == dname:
