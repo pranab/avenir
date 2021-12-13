@@ -1,0 +1,106 @@
+{
+	"fields" :
+	[
+		{
+			"index" : 0,
+			"type" : "id",
+			"action" : "fixed"
+		},
+		{
+			"index" : 1,
+			"type" : "cat",
+			"action" : "fixed"
+		},
+		{
+			"index" : 2,
+			"type" : "num",
+			"action" : "fixed"
+		},
+		{
+			"index" : 3,
+			"type" : "ranked",
+			"action" : "fixed",
+		},
+		{
+			"index" : 4,
+			"type" : "cat",
+			"action" : "change",
+			"cost" : [[0, 1, 20], [1, 0, 0]]
+		},
+		{
+			"index" : 5,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 10.0,
+			"cost" : 100.0
+		},
+		{
+			"index" : 6,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 1.0,
+			"cost" : 10.0
+		},
+		{
+			"index" : 7,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 1.0,
+			"cost" : 15.0
+		},
+		{
+			"index" : 8,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "neg",
+			"unit" : 10.0,
+			"cost" : 60.0
+		},
+		{
+			"index" : 9,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "neg",
+			"unit" : 10.0,
+			"cost" : 80.0
+		},
+		{
+			"index" : 10,
+			"type" : "cat",
+			"action" : "fixed"
+		},
+		{
+			"index" : 11,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 10.0,
+			"cost" : 100.0
+		},
+		{
+			"index" : 12,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 10.0,
+			"cost" : 70.0
+		},
+		{
+			"index" : 13,
+			"type" : "num",
+			"action" : "change",
+			"direction" : "pos",
+			"unit" : 10.0,
+			"cost" : 80.0
+		},
+		{
+			"index" : 14,
+			"type" : "num",
+			"action" : "fixed"
+		}
+	]
+
+}
