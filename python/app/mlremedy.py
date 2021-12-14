@@ -68,12 +68,22 @@ class RemedyCost(object):
 			if fl["action"] == "change":
 				bval = self.instance[i]
 				nval = v
-				chdir = fl["direction"]
-				if chdir == "pos" and nval <= bval:
+				if (type(fld["cost"]) == list):
 					valid = False
-					break
-				elif chdir == "neg" and nval >= bval:
-					valid = False
+					for ch in fld["cost"]:
+						if ch[0] == bval and ch[1] == nval:
+							valid = True
+							break
+					if not valid:
+						break
+				else:
+					chdir = fl["direction"]
+					if chdir == "pos" and nval <= bval:
+						valid = False
+						break
+					elif chdir == "neg" and nval >= bval:
+						valid = False
+						break
 			else:
 				exitWithMsg("field action is not change")
 				
@@ -88,15 +98,23 @@ class RemedyCost(object):
 			fld = self.costConfig["fields"][i]
 			bval = self.instance[i]
 			nval = v
-			chdir = fl["direction"]
-			unit = fld["unit"]
-			crate = fld["cost"]
-			if chdir == "pos":
-				diff = nval - bval
-				cost += diff * crate / unit
-			elif chdir == "neg":
-				diff = bval - nval
-				cost += diff * crate / unit
+			
+			if (type(fld["cost"]) == list):
+				for ch in fld["cost"]:
+					if ch[0] == bval and ch[1] == nval:
+						cost += ch[2]
+						break
+			else:
+				chdir = fl["direction"]
+				unit = fld["unit"]
+				crate = fld["cost"]
+				if chdir == "pos":
+					diff = nval - bval
+					cost += diff * crate / unit
+				elif chdir == "neg":
+					diff = bval - nval
+					cost += diff * crate / unit
+
 		return cost
 	
 
