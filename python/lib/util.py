@@ -413,7 +413,7 @@ def extractList(data, indices):
 	"""
 	if areAllFieldsIncluded(data, indices):
 		exList = data.copy()
-		print("all indices")
+		#print("all indices")
 	else:
 		exList = list()
 		le = len(data)
@@ -508,46 +508,61 @@ def toIntFromBoolean(value):
 	ival = 1 if value else 0
 	return ival
 
-def typedValue(val):
+def typedValue(val, dtype=None):
 	"""
 	return typed value given string
 	"""
 	tVal = None
-	if type(val) == str:
-		lVal = val.lower()
-		
-		#int
-		done = True
-		try:
+	
+	if dtype is not None:
+		if dtype == "num":
+			dtype = "int" if dtype.find(".") == -1 else "float"
+			
+		if dtype == "int":
 			tVal = int(val)
-		except ValueError:
-			done = False
+		elif dtype == "float":
+			tVal = float(val)
+		elif dtype == "bool":
+			tVal = bool(val)
+		else:
+			tVal = val
+	else:
+		if type(val) == str:
+			lVal = val.lower()
 		
-		#float
-		if not done:	
+			#int
 			done = True
 			try:
-				tVal = float(val)
+				tVal = int(val)
 			except ValueError:
 				done = False
+		
+			#float
+			if not done:	
+				done = True
+				try:
+					tVal = float(val)
+				except ValueError:
+					done = False
 				
-		#boolean
-		if not done:
-			done = True
-			if lVal == "true":
-				tVal = True
-			elif lVal == "false":
-				tVal = False
-			else:
-				done = False
-		#None		
-		if not done:
-			if lVal == "none":
-				tVal = None
-			else:
-				tVal = val
-	else:
-		tVal = val		
+			#boolean
+			if not done:
+				done = True
+				if lVal == "true":
+					tVal = True
+				elif lVal == "false":
+					tVal = False
+				else:
+					done = False
+			#None		
+			if not done:
+				if lVal == "none":
+					tVal = None
+				else:
+					tVal = val
+		else:
+			tVal = val		
+	
 	return tVal
 	
 def getAllFiles(dirPath):
@@ -686,6 +701,7 @@ def getFileAsTypedRecords(dirPath, types, delim=","):
 			trec.append(value)
 		tdata.append(trec)
 	return tdata
+
 	
 def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
 	"""
@@ -722,7 +738,21 @@ def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
 		minMax.append(mm)
 
 	return minMax
-	
+
+
+def getRecAsTypedRecord(rec, types, delim=None):
+	"""
+	converts record to  typed records 
+	"""	
+	if delim is not None:
+		rec = rec.split(delim)
+	(dtypes, cvalues) = extractTypesFromString(types)	
+	trec = list()
+	for ind, value in enumerate(rec):
+		value = __convToTyped(ind, value, dtypes)
+		trec.append(value)
+	return trec
+		
 def __convToTyped(index, value, dtypes):
 	"""
 	convert to typed value 
@@ -732,7 +762,7 @@ def __convToTyped(index, value, dtypes):
 		value = int(value)
 	elif dtype == "float":
 		value = float(value)
-	elif dtype == "cat":
+	elif dtype == "str" or dtype == "cat":
 		pass
 	return value
 	
@@ -923,8 +953,8 @@ def tableSelFieldsFilter(tdata, columns):
 	else:
 		ntdata = list()
 		for rec in tdata:
-			print(rec)
-			print(columns)
+			#print(rec)
+			#print(columns)
 			nrec = extractList(rec, columns)
 			ntdata.append(nrec)
 	return ntdata	
@@ -1119,7 +1149,13 @@ def safeAppend(values, value):
 	"""
 	if value is not None:
 		values.append(value)
-		
+
+def getAllIndex(ldata, fldata):
+	"""
+	get ALL INDEXES OF LIST ELEMENTS
+	"""
+	return list(map(lambda e : fldata.index(e), ldata))
+
 def findIntersection(lOne, lTwo):
 	"""
 	find intersection elements between 2 lists
@@ -1477,10 +1513,11 @@ class DummyVarGenerator:
 		#print (row)
 		if self.delim is not None:
 			rowArr = row.split(self.delim)
+			msg = "row does not have expected number of columns found " + str(len(rowArr)) + " expected " + str(self.rowSize)
+			assert len(rowArr) == self.rowSize, msg
 		else:
 			rowArr = row
 			
-		assert len(rowArr) == self.rowSize, "row does not have expected number of columns " + str(len(rowArr))
 		newRowArr = []
 		for i in range(len(rowArr)):
 			curVal = rowArr[i]
@@ -1494,7 +1531,7 @@ class DummyVarGenerator:
 					newRowArr.append(newVal)
 			else:
 				newRowArr.append(curVal)
-		assert len(newRowArr) == self.newRowSize, "invalid new row size " + str(len(newRowArr))
+		assert len(newRowArr) == self.newRowSize, "invalid new row size " + str(len(newRowArr)) + " expected " + str(self.newRowSize)
 		encRow = self.delim.join(newRowArr) if self.delim is not None else newRowArr
 		return encRow
 		

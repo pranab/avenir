@@ -3,7 +3,7 @@
 	[
 		{
 			"index" : 0,
-			"type" : "id",
+			"type" : "str",
 			"action" : "fixed"
 		},
 		{
@@ -13,23 +13,23 @@
 		},
 		{
 			"index" : 2,
-			"type" : "num",
+			"type" : "int",
 			"action" : "fixed"
 		},
 		{
 			"index" : 3,
-			"type" : "ranked",
+			"type" : "int",
 			"action" : "fixed",
 		},
 		{
 			"index" : 4,
 			"type" : "cat",
 			"action" : "change",
-			"cost" : [[0, 1, 20], [1, 0, 0]]
+			"cost" : [[0, 1, 20], [1, 0, 0], [0, 0, 0], [1, 1, 0]]
 		},
 		{
 			"index" : 5,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 10.0,
@@ -37,7 +37,7 @@
 		},
 		{
 			"index" : 6,
-			"type" : "num",
+			"type" : "float",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 1.0,
@@ -45,7 +45,7 @@
 		},
 		{
 			"index" : 7,
-			"type" : "num",
+			"type" : "float",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 1.0,
@@ -53,7 +53,7 @@
 		},
 		{
 			"index" : 8,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "neg",
 			"unit" : 10.0,
@@ -61,7 +61,7 @@
 		},
 		{
 			"index" : 9,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "neg",
 			"unit" : 10.0,
@@ -74,7 +74,7 @@
 		},
 		{
 			"index" : 11,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 10.0,
@@ -82,7 +82,7 @@
 		},
 		{
 			"index" : 12,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 10.0,
@@ -90,7 +90,7 @@
 		},
 		{
 			"index" : 13,
-			"type" : "num",
+			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
 			"unit" : 10.0,
@@ -98,7 +98,7 @@
 		},
 		{
 			"index" : 14,
-			"type" : "num",
+			"type" : "int",
 			"action" : "fixed"
 		}
 	]

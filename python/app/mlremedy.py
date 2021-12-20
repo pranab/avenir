@@ -45,15 +45,23 @@ class RemedyCost(object):
 		with open(costConfigFile, 'r') as contentFile:
 			self.costConfig = json.load(contentFile)
 		
-		#get typed fields	
+		types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
+		tdata = getFileAsTypedRecords(filePath, types)
+
+
 		self.instance = instanceData.split(",")
+		
+		#make all fields typed
+		typeSpec = ""
 		self.varFiledIndexes = list()
-		for fl in self.costConfig["fields"]:
+		for i, fl in enumerate(self.costConfig["fields"]):
+			sp = str(i) + ":" + fl["type"]
+			typeSpec += sp
 			if fl["action"] == "change":
-				ind = fl["index"]
-				dtype = fl["type"]
-				self.instance[ind] = getTyped(self.instance[ind], dtype)
-				self.varFiledIndexes.append(ind)
+				self.varFiledIndexes.append(i)
+				
+		typeSpec = typeSpec[:-1]
+		self.instance = getRecAsTypedRecord(self.instance, typeSpec, ",")
 		self.numvarFld = len(self.varFiledIndexes)
 				
 	def isValid(self, args):
@@ -63,12 +71,13 @@ class RemedyCost(object):
 		assertEqual(self.numvarFld, len(args), 
 		"no of fields in the candidate don't match with no of variable fields expected {} found {}".format(self.numvarFld, len(args)))
 		valid = True
-		for i , v in enumerate(args):
-			fld = self.costConfig["fields"][i]
+		minst = self.__getMutatedInstance(args)
+		for i , vfi in enumerate(self.varFiledIndexes):
+			fl = self.costConfig["fields"][vfi]
 			if fl["action"] == "change":
-				bval = self.instance[i]
-				nval = v
-				if (type(fld["cost"]) == list):
+				bval = self.instance[vfi]
+				nval = args[i]
+				if (type(fl["cost"]) == list):
 					valid = False
 					for ch in fld["cost"]:
 						if ch[0] == bval and ch[1] == nval:
@@ -94,10 +103,11 @@ class RemedyCost(object):
 		get cost
 		"""
 		cost = 0.0
-		for i , v in enumerate(args):
-			fld = self.costConfig["fields"][i]
-			bval = self.instance[i]
-			nval = v
+		minst = self.__getMutatedInstance(args)
+		for i , vfi in enumerate(self.varFiledIndexes):
+			fl = self.costConfig["fields"][vfi]
+			bval = self.instance[vfi]
+			nval = args[i]
 			
 			if (type(fld["cost"]) == list):
 				for ch in fld["cost"]:
@@ -106,8 +116,8 @@ class RemedyCost(object):
 						break
 			else:
 				chdir = fl["direction"]
-				unit = fld["unit"]
-				crate = fld["cost"]
+				unit = fl["unit"]
+				crate = fl["cost"]
 				if chdir == "pos":
 					diff = nval - bval
 					cost += diff * crate / unit
@@ -117,7 +127,68 @@ class RemedyCost(object):
 
 		return cost
 	
+	def printSoln(self, cand):
+		"""
+		
+		"""
+		fsoln = __getMutatedInstance(self, cand.soln)
+		print(fsoln)
+		
+	
+	def __getMutatedInstance(self, args):
+		"""
+		create instance with mutated field string values
+		"""
+		instance = self.instance.copy()
+		i = 0
+		for fl in self.costConfig["fields"]:
+			if fl["action"] == "change":
+				ind = fl["index"]
+				instance[ind] = str(arg[i])
+				i += 1
+		return instance
+		
 
+if __name__ == "__main__":
+	assert len(sys.argv) == 6, "wrong command line args"
+	optConfFile = sys.argv[1]
+	mlConfFile = sys.argv[2]
+	modelType  = sys.argv[3]
+	instanceData =  sys.argv[4]
+	costConfFile = sys.argv[5]
+	
+	#create optimizer
+	remCost = RemedyCost(costConfFile, mlConfFile, modelType, instanceData)
+	optimizer = GeneticAlgorithmOptimizer(optConfFile, remCost)
+	remCost.logger = optimizer.logger	
+	config = optimizer.getConfig()
+	
+	#run optimizer
+	optimizer.run()
+	print("optimizer started, check log file for output details...")
+	
+	#best soln
+	print("\nbest solution found")
+	best = optimizer.getBest()
+	remCost.pritnSoln(best)
+
+	#output soln tracker
+	if optimizer.trackingOn:
+		print("\nbest solution history")
+		print(str(optimizer.tracker))
+	
+	#local search	
+	locBest = optimizer.getLocBest()
+	if locBest is not None:
+		print("\nbest solution after local search of global best solution")
+		pritnSoln(locBest, schedCost)
+	
+		if (locBest.cost < best.cost):
+			print("\nlocally search solution is best overall")
+		else:
+			print("\nlocal search failed to find a better solution")
 		
-		
-		
+	print("\ntotal solution count {}  invalid solution count {}".format(schedCost.solnCount, schedCost.invalidSonlCount))
+	
+	
+			
