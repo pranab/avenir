@@ -536,7 +536,13 @@ class FeedForwardNetwork(torch.nn.Module):
 			FeedForwardNetwork.printPrediction(yPred, model.config, dataSource)
 		
 		return yPred
-
+	
+	def predict(self, dataSource = None):
+		"""
+		predict
+		"""
+		return FeedForwardNetwork.predict(self, dataSource)
+		
 	@staticmethod
 	def evaluateModel(model):
 		"""

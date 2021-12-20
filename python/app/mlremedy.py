@@ -18,10 +18,12 @@ import statistics
 import json
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../mlextra"))
+sys.path.append(os.path.abspath("../supv"))
 from util import *
 from optpopu import *
 from optsolo import *
 from sampler import *
+from tnn import *
 
 """
 Remedial action or prescriptive analytic with counter factuals and machine learning models
@@ -45,9 +47,6 @@ class RemedyCost(object):
 		with open(costConfigFile, 'r') as contentFile:
 			self.costConfig = json.load(contentFile)
 		
-		types = "0:string,1:cat:M F,2:int,3:int,4:int,5:int,6:cat:NS SS SM,7:cat:BA AV GO,8:int,9:int,10:cat:WH BL SA EA,11:int"
-		tdata = getFileAsTypedRecords(filePath, types)
-
 
 		self.instance = instanceData.split(",")
 		
@@ -63,6 +62,7 @@ class RemedyCost(object):
 		typeSpec = typeSpec[:-1]
 		self.instance = getRecAsTypedRecord(self.instance, typeSpec, ",")
 		self.numvarFld = len(self.varFiledIndexes)
+		self.prediction = dict()
 				
 	def isValid(self, args):
 		"""
@@ -71,7 +71,6 @@ class RemedyCost(object):
 		assertEqual(self.numvarFld, len(args), 
 		"no of fields in the candidate don't match with no of variable fields expected {} found {}".format(self.numvarFld, len(args)))
 		valid = True
-		minst = self.__getMutatedInstance(args)
 		for i , vfi in enumerate(self.varFiledIndexes):
 			fl = self.costConfig["fields"][vfi]
 			if fl["action"] == "change":
@@ -95,7 +94,15 @@ class RemedyCost(object):
 						break
 			else:
 				exitWithMsg("field action is not change")
-				
+		
+		if valid:
+			minst = self.__getMutatedInstance(args)
+			pr = self.model.predict(minst)
+			self.prediction[tuple(args)] = pr
+			
+			if pr < 0.5:
+				valid = False
+			
 		return valid
 		
 	def evaluate(self, args):
@@ -103,7 +110,8 @@ class RemedyCost(object):
 		get cost
 		"""
 		cost = 0.0
-		minst = self.__getMutatedInstance(args)
+		
+		#features
 		for i , vfi in enumerate(self.varFiledIndexes):
 			fl = self.costConfig["fields"][vfi]
 			bval = self.instance[vfi]
@@ -125,6 +133,22 @@ class RemedyCost(object):
 					diff = bval - nval
 					cost += diff * crate / unit
 
+		#target
+		targs = tuple(args)
+		if targs in self.prediction:
+			pr = self.prediction.pop(targs)
+		else:
+			minst = self.__getMutatedInstance(args)
+			pr = self.model.predict(minst)
+		
+		target = self.costConfig["target"]
+		cintc = target["intc"]
+		unit = target["unit"]	
+		crate = target["cost"]
+		diff = pr - 0.5
+		tcost = cintc + diff * crate / unit
+		cost += tcost
+		
 		return cost
 	
 	def printSoln(self, cand):
@@ -144,7 +168,7 @@ class RemedyCost(object):
 		for fl in self.costConfig["fields"]:
 			if fl["action"] == "change":
 				ind = fl["index"]
-				instance[ind] = str(arg[i])
+				instance[ind] = arg[i]
 				i += 1
 		return instance
 		

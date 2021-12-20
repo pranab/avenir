@@ -101,6 +101,13 @@
 			"type" : "int",
 			"action" : "fixed"
 		}
-	]
+	],
+	
+	"target" : 
+	{
+		"intc" : 100.0,
+		"unit" : 0.1,
+		"cost" : -20.0
+	}
 
 }
