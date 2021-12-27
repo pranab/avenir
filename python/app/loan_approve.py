@@ -298,7 +298,7 @@ class LoanApprove:
 			distr = DistrMixtureSampler(sDistr, zDistr, nzDistr)
 			self.featCondDister[key] = distr
 		
-			#num od prior mortgae loans
+			#num of prior mortgae loans
 			key = ("1", 13)
 			distr = DiscreteRejectSampler(0,3,1,20,60,40,15)
 			self.featCondDister[key] = distr
@@ -407,7 +407,7 @@ if __name__ == "__main__":
 		""" encode binary """
 		fileName = sys.argv[2]
 		extra = True if len(sys.argv) == 4 and sys.argv[3] == "extra" else False
-		loan = LoanApprove(numLoans)
+		loan = LoanApprove()
 		loan.encodeDummy(fileName, extra)
 	
 	elif op == "encLabel":
@@ -466,6 +466,7 @@ if __name__ == "__main__":
 		""" local robustness """
 		prFile = sys.argv[2]
 		clflier = FeedForwardNetwork(prFile)
+		clflier.setVerbose(False)
 		clflier.buildModel()
 		
 		fpath = sys.argv[3]
@@ -473,6 +474,14 @@ if __name__ == "__main__":
 		ncount = int(sys.argv[5])
 		mr = ModelRobustness()
 		mr.localPerformance(clflier, fpath, nsamp, ncount)
+		
+	elif op == "nnPred":
+		""" tran neural network model """
+		prFile = sys.argv[2]
+		clflier = FeedForwardNetwork(prFile)
+		clflier.buildModel()
+		yp = FeedForwardNetwork.modelPredict(clflier)
+
 				
 	else:
 		exitWithMsg("unknow operation")

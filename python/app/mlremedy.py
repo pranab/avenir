@@ -48,21 +48,26 @@ class RemedyCost(object):
 			self.costConfig = json.load(contentFile)
 		
 
-		self.instance = instanceData.split(",")
+		self.instance = instanceData
+		rSize = len(self.instance.split(","))
 		
 		#make all fields typed
 		typeSpec = ""
 		self.varFiledIndexes = list()
+		catVars = dict()
 		for i, fl in enumerate(self.costConfig["fields"]):
-			sp = str(i) + ":" + fl["type"]
+			sp = str(i) + ":" + fl["type"] + ","
 			typeSpec += sp
 			if fl["action"] == "change":
 				self.varFiledIndexes.append(i)
+			if fl["type"] == "cat" and "values" in fl:
+				catVars[i] = fl["values"]
 				
 		typeSpec = typeSpec[:-1]
 		self.instance = getRecAsTypedRecord(self.instance, typeSpec, ",")
 		self.numvarFld = len(self.varFiledIndexes)
 		self.prediction = dict()
+		self.dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0")
 				
 	def isValid(self, args):
 		"""
@@ -78,7 +83,7 @@ class RemedyCost(object):
 				nval = args[i]
 				if (type(fl["cost"]) == list):
 					valid = False
-					for ch in fld["cost"]:
+					for ch in fl["cost"]:
 						if ch[0] == bval and ch[1] == nval:
 							valid = True
 							break
@@ -96,11 +101,14 @@ class RemedyCost(object):
 				exitWithMsg("field action is not change")
 		
 		if valid:
+			#mutate variable fields and encode categorical fields
 			minst = self.__getMutatedInstance(args)
-			pr = self.model.predict(minst)
-			self.prediction[tuple(args)] = pr
+			minst = self.dummyVarGen.processRow(minst)
 			
-			if pr < 0.5:
+			pr = self.model.predict(minst)
+			if pr >=  0.5:
+				self.prediction[tuple(args)] = pr
+			else:
 				valid = False
 			
 		return valid
@@ -136,9 +144,12 @@ class RemedyCost(object):
 		#target
 		targs = tuple(args)
 		if targs in self.prediction:
+			#prediction from cache
 			pr = self.prediction.pop(targs)
 		else:
+			#mutate variable fields and encode categorical fields
 			minst = self.__getMutatedInstance(args)
+			minst = self.dummyVarGen.processRow(minst)
 			pr = self.model.predict(minst)
 		
 		target = self.costConfig["target"]
@@ -178,8 +189,8 @@ if __name__ == "__main__":
 	optConfFile = sys.argv[1]
 	mlConfFile = sys.argv[2]
 	modelType  = sys.argv[3]
-	instanceData =  sys.argv[4]
-	costConfFile = sys.argv[5]
+	costConfFile = sys.argv[4]
+	instanceData =  sys.argv[5]
 	
 	#create optimizer
 	remCost = RemedyCost(costConfFile, mlConfFile, modelType, instanceData)

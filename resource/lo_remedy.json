@@ -9,7 +9,8 @@
 		{
 			"index" : 1,
 			"type" : "cat",
-			"action" : "fixed"
+			"action" : "fixed",
+			"values" : ["married", "single", "divorced"]
 		},
 		{
 			"index" : 2,
@@ -19,7 +20,7 @@
 		{
 			"index" : 3,
 			"type" : "int",
-			"action" : "fixed",
+			"action" : "fixed"
 		},
 		{
 			"index" : 4,
@@ -70,7 +71,8 @@
 		{
 			"index" : 10,
 			"type" : "cat",
-			"action" : "fixed"
+			"action" : "fixed",
+			"values" : ["7", "15", "30"]
 		},
 		{
 			"index" : 11,
