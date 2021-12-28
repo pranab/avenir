@@ -419,9 +419,9 @@ if __name__ == "__main__":
 	elif op == "nnTrain":
 		""" tran neural network model """
 		prFile = sys.argv[2]
-		clflier = FeedForwardNetwork(prFile)
-		clflier.buildModel()
-		FeedForwardNetwork.batchTrain(clflier)
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		FeedForwardNetwork.batchTrain(loModel)
 	
 	elif op == "calib":
 		""" calibrate """
@@ -482,6 +482,19 @@ if __name__ == "__main__":
 		clflier.buildModel()
 		yp = FeedForwardNetwork.modelPredict(clflier)
 
+	elif op == "amtarg":
+		""" make loan amount the target for approved cases turning into a regression data set """
+		fileName = sys.argv[2]
+		for rec in fileRecGen(fileName):
+			if rec[19] == "1":
+				amt = int(rec[11])
+				income = int(rec[7])
+				amt = int(0.5 * 2.5 * income + 0.5 * amt)
+				nrec = list(rec[:11])
+				nrec.extend(rec[12:19])
+				nrec.append(str(amt))
+				print(",".join(nrec))
+			
 				
 	else:
 		exitWithMsg("unknow operation")

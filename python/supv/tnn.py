@@ -507,7 +507,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		return score
 
 	@staticmethod
-	def predict(model, dataSource = None):
+	def modelPredict(model, dataSource = None):
 		"""
 		predict
 		"""
@@ -541,7 +541,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		predict
 		"""
-		return FeedForwardNetwork.predict(self, dataSource)
+		return FeedForwardNetwork.modelPredict(self, dataSource)
 		
 	@staticmethod
 	def evaluateModel(model):
@@ -575,7 +575,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			model.setValidationData(dataSource)
  
 	@staticmethod
-	def validateModel(model):
+	def validateModel(model, retPred=False):
 		"""
 		pmodel validation
 		"""
@@ -584,15 +584,21 @@ class FeedForwardNetwork(torch.nn.Module):
 		yPred = yPred.data.cpu().numpy()
 		model.yPred = yPred
 		yActual = model.validOutData
+		vsize = yPred.shape[0]
 		if model.verbose:
-			vsize = yPred.shape[0]
 			print("\npredicted \t actual")
 			for i in range(vsize):
 				print("{:.3f}\t\t{:.3f}".format(yPred[i][0], yActual[i][0]))
 			
 		score = perfMetric(model.accMetric, yActual, yPred)
 		print(formatFloat(3, score, "perf score"))
-		return score
+		
+		if retPred:
+			y = list(map(lambda i : (yPred[i][0], yActual[i][0]), range(vsize)))
+			ret = (y, score)
+			return ret
+		else:	
+			return score
  		
 		
 	
