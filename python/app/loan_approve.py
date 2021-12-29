@@ -478,9 +478,10 @@ if __name__ == "__main__":
 	elif op == "nnPred":
 		""" tran neural network model """
 		prFile = sys.argv[2]
-		clflier = FeedForwardNetwork(prFile)
-		clflier.buildModel()
-		yp = FeedForwardNetwork.modelPredict(clflier)
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		yp = FeedForwardNetwork.modelPredict(loModel)
+		print(yp[:4])
 
 	elif op == "amtarg":
 		""" make loan amount the target for approved cases turning into a regression data set """
@@ -494,8 +495,50 @@ if __name__ == "__main__":
 				nrec.extend(rec[12:19])
 				nrec.append(str(amt))
 				print(",".join(nrec))
-			
+	
+	elif op == "confcal":
+		""" calibration for conformal prediction """	
+		prFile = sys.argv[2]
+		confBound = float(sys.argv[3])
+		calibFile = sys.argv[4]
+		
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		FeedForwardNetwork.prepValidate(loModel)
+		res = FeedForwardNetwork.validateModel(loModel, True)
+		ypair = res[0]
+		print(ypair[:8])
+		conPred = ConformalRegressionPrediction()
+		conPred.calibrate(ypair, confBound)
+		conPred.saveCalib(calibFile)
+		
+	elif op == "addnoiseic":
+		""" add  noise to income and creditt score """
+		filePath = sys.argv[2]
+		ncount = 0
+		for rec in fileRecGen(filePath):
+			if isEventSampled(20):
+				#rec[7] = str(int(addNoiseNum(int(rec[7]), UniformNumericSampler(-0.7, -0.4))))
+				rec[7] = str(int(addNoiseNum(int(rec[7]), UniformNumericSampler(0.4, 0.8))))
+				rec[14] = str(int(addNoiseNum(int(rec[14]), UniformNumericSampler(-0.4, -0.1))))
+				ncount += 1
+			print(",".join(rec))
+		#print(ncount)
 				
+	elif op == "confpred":
+		"""  conformal prediction  """
+		prFile = sys.argv[2]
+		calibFile = sys.argv[3]
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		yp = FeedForwardNetwork.modelPredict(loModel)
+		
+		conPred = ConformalRegressionPrediction()
+		conPred.restoreCalib(calibFile)
+		for y in yp:
+			res = conPred.getPredRange(y[0])
+			print("{:.3f}\t{:.3f}\t{:.3f}\t{}\t{:.3f}".format(y[0], res["predRangeMin"], res["predRangeMax"], res["status"], res["confidence"]))
+
 	else:
 		exitWithMsg("unknow operation")
 

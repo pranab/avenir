@@ -260,8 +260,10 @@ class ModelRobustness(object):
 		tree = KDTree(fData, leaf_size=4)		
 
 		scores = list()
+		indices = list()
 		for _ in range(nsamp):
 			indx = randomInt(0, dsize - 1)
+			indices.append(indx)
 			frow = fData[indx]
 			frow = np.reshape(frow, (1, ncol))
 			dist, ind = tree.query(frow, k=neighborCnt)
@@ -279,8 +281,104 @@ class ModelRobustness(object):
 			score = FeedForwardNetwork.validateModel(model)
 			scores.append(score)
 		
+		#performance distribution
 		m, s = basicStat(scores)
 		print("model performance:   mean {:.3f}\tstd dev {:.3f}".format(m,s))	
 		drawHist(scores, "model accuracy", "accuracy", "frequency")
+		
+		#worst performance 
+		lscores = sorted(zip(indices, scores), key=lambda s : s[1])
+		print(lscores[:5])
+		
+		lines = getFileLines(fpath, None)
+		print("worst performing features regions")
+		for i,s in lscores[:5]:
+			print("score {:.3f}\t{}".format(s, lines[i]))
+			
+
+"""
+conformal prediction for regression
+"""
+class ConformalRegressionPrediction(object):
+	def __init__(self):
+		self.calibration = dict()
+		
+	def calibrate(self, ypair, confBound):
+		""" n
+		calibration for conformal prediction
+		"""
+		cscores = list()
+		ymax = None
+		ymin = None
+		for yp, ya  in ypair:
+			cscore = abs(yp - ya) / ya
+			cscores.append(cscore)
+			if ymax is None:
+				ymax = ya
+				ymin = ya
+			else:
+				ymax = ya if ya > ymax else ymax
+				ymin = ya if ya < ymin else ymin
+		
+		cscores.sort()
+		drawHist(cscores, "conformal score distribution", "conformal score",  "frequency", 20)
+		cbi = int(confBound * len(cscores))
+		scoreConfBound = cscores[cbi]
+		self.calibration["scoreConfBound"] = scoreConfBound
+		self.calibration["ymin"] = ymin
+		self.calibration["ymax"] = ymax
+		print(self.calibration)
+	
+	def saveCalib(self, fPath):
+		"""
+		saves scoformal score calibration
+		"""
+		saveObject(self.calibration, fPath)
+		
+	def restoreCalib(self, fPath):
+		"""
+		saves scoformal score calibration
+		"""
+		self.calibration = restoreObject(fPath)
+		print(self.calibration)
+	
+	def getPredRange(self, yp, nstep=100):
+		"""
+		get prediction range and related data
+		"""
+		ymin = self.calibration["ymin"]
+		ymax = self.calibration["ymax"]
+		step = (ymax - ymin) / nstep
+		scoreConfBound = self.calibration["scoreConfBound"]
+		
+		rmin = None
+		rmax = None
+		rcount = 0
+		#print(ymin, ymax, step)
+		for ya in np.arange(ymin, ymax, step):
+			cscore = abs(yp - ya) / ya
+			if cscore < scoreConfBound:
+				if rmin is None:
+					#lower bound
+					rmin = ya
+					rmax = ya
+				else:
+					#keep updating upper bound
+					rmax = ya if ya > rmax else rmax
+					rcount += 1
+			else:
+				if rmax is not None	and rcount > 0:
+					#past upper bound
+					break
+		
+		res = dict()
+		res["predRangeMin"] = rmin
+		res["predRangeMax"] = rmax
+		accepted = yp >= rmin and yp <= rmax
+		res["status"] = "accepted" if accepted else "rejected"
+		conf = 1.0 - (rmax - rmin) / (ymax - ymin)
+		res["confidence"] = conf
+		
+		return res
 			
 		
