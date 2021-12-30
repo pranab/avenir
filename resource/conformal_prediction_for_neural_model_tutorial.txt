@@ -1,0 +1,51 @@
+This tutorial is for conformal prediction of neural regression model.  A neural neuwork model for predicting  
+loan amount is used for this purpose
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where loan_approve.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Preparing training data
+=======================
+Use instriction in model_performance_with_class_sep_metric_tutorial.txt.Create 8000 samples
+
+Use of 
+./loan_approve.py amtarg <file_path>t  > loam_tr.txt
+
+file_path = file created from from earlier 
+
+Preparing validation data
+=========================
+Use steps as before for training data with 2000 samples. Call it loam_va.txt
+
+Preparing prediction data
+=========================
+Use steps as before for training data with 200 samples. Call it loam_pr.txt
+
+Add noise to prediction data
+./loan_approve.py addnoiseic loam_pr.txt > lp.txt
+mv lp.txt loam_pr.txt
+
+Train neural regression model
+=============================
+./loan_approve.py nnTrain tnn_loam.properties
+
+Create conformal prediction calibration model
+=============================================
+./loan_approve.py confcal  tnn_loam.properties <conf_bound>  <cal_file>
+where
+conf_bound = confidence bound e.g 0.9
+cal_file = file path where calibration result is saved e.g for my case ./model/tnn/confcal.mo 
+
+Make conformal prediction
+=========================
+./loan_approve.py confpred  tnn_loam.properties  <cal_file>
+where
+cal_file = file path where calibration result was saved
+
+
+
+
+
