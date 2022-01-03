@@ -462,7 +462,7 @@ def strListOrRangeToIntArray(line):
 			hi = int(vrange[1])
 			iarr = list(range(lo, hi+1))
 		else:
-			raise ValueError("failed to generate list from range")
+			iarr = [int(line)]
 	return iarr
 				
 def toStr(val, precision):
@@ -747,24 +747,26 @@ def getRecAsTypedRecord(rec, types, delim=None):
 	if delim is not None:
 		rec = rec.split(delim)
 	(dtypes, cvalues) = extractTypesFromString(types)	
+	#print(types)
+	#print(dtypes)
 	trec = list()
 	for ind, value in enumerate(rec):
-		value = __convToTyped(ind, value, dtypes)
-		trec.append(value)
+		tvalue = __convToTyped(ind, value, dtypes)
+		trec.append(tvalue)
 	return trec
 		
 def __convToTyped(index, value, dtypes):
 	"""
 	convert to typed value 
 	"""
+	#print(index, value)
 	dtype = dtypes[index]
+	tvalue = value
 	if dtype == "int":
-		value = int(value)
+		tvalue = int(value)
 	elif dtype == "float":
-		value = float(value)
-	elif dtype == "str" or dtype == "cat":
-		pass
-	return value
+		tvalue = float(value)
+	return tvalue
 	
 	
 

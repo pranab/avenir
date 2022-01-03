@@ -38,6 +38,12 @@ def randomInt(min, max):
 	sample int within range
 	"""
 	return randint(min, max)
+	
+def randIndex(lData):
+	"""
+	random index of a list
+	"""
+	return randint(0, len(lData)-1)
 
 def randomUniformSampled(low, high):
 	"""
@@ -159,8 +165,10 @@ def addNoiseCat(value, values, noise):
 	"""
 	newValue = value
 	threshold = int(noise * 100)
-	if (isEventSampled(threshold)):
+	if (isEventSampled(threshold)):		
 		newValue = selectRandomFromList(values)
+		while newValue == value:
+			newValue = selectRandomFromList(values)
 	return newValue
 
 
@@ -285,12 +293,19 @@ class NormalSampler:
 	def __init__(self, mean, stdDev):
 		self.mean = mean
 		self.stdDev = stdDev
+		self.sampleAsInt = False
 
 	def isNumeric(self):
 		return True
 
+	def sampleAsIntValue(self):
+		self.sampleAsInt = True
+		
 	def sample(self):
-		return np.random.normal(self.mean, self.stdDev)
+		samp =  np.random.normal(self.mean, self.stdDev)
+		if self.sampleAsInt:
+			samp = int(samp)
+		return samp
 				
 class LogNormalSampler:
 	"""
@@ -381,7 +396,7 @@ class GaussianRejectSampler:
 	def isNumeric(self):
 		return True
 	
-	def sampleAsInt(self):
+	def sampleAsIntValue(self):
 		self.sampleAsInt = True
 
 	def sample(self):
@@ -864,6 +879,7 @@ def createSampler(data):
 	"""
 	create sampler
 	"""
+	#print(data)
 	items = data.split(":")
 	size = len(items)
 	dtype = items[-1]
@@ -884,9 +900,9 @@ def createSampler(data):
 	elif stype == "normal":
 			mean = float(items[0])
 			sd = float(items[1])
-			sampler = GaussianRejectSampler(mean, sd)
+			sampler = NormalSampler(mean, sd)
 			if dtype == "int":
-				sampler.sampleAsInt()
+				sampler.sampleAsIntValue()
 	elif stype == "nonparam":
 		if dtype == "int" or dtype == "float":
 			min = int(items[0])

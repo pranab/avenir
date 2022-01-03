@@ -84,18 +84,26 @@ class RemedyCost(object):
 				if (type(fl["cost"]) == list):
 					valid = False
 					for ch in fl["cost"]:
+						self.logger.debug("discrete cost " + str(ch))
+						#print(type(ch))
+						#print(type(bval))
+						#print(type(nval))
 						if ch[0] == bval and ch[1] == nval:
 							valid = True
 							break
 					if not valid:
+						self.logger.debug("validity check for vfi " + str(vfi) + " bval " + str(bval) +  " nval " + str(nval))
+						self.logger.debug("invalid for set based cost")
 						break
 				else:
 					chdir = fl["direction"]
 					if chdir == "pos" and nval <= bval:
 						valid = False
-						break
 					elif chdir == "neg" and nval >= bval:
 						valid = False
+					if not valid:
+						self.logger.debug("validity check for vfi " + str(vfi) + " bval " + str(bval) +  " nval " + str(nval))
+						self.logger.debug("invalid for rate based based cost")
 						break
 			else:
 				exitWithMsg("field action is not change")
@@ -110,7 +118,8 @@ class RemedyCost(object):
 				self.prediction[tuple(args)] = pr
 			else:
 				valid = False
-			
+				self.logger.debug("invalid based on  model prediction")
+				
 		return valid
 		
 	def evaluate(self, args):
@@ -152,6 +161,7 @@ class RemedyCost(object):
 			minst = self.dummyVarGen.processRow(minst)
 			pr = self.model.predict(minst)
 		
+		#cost from target1`
 		target = self.costConfig["target"]
 		cintc = target["intc"]
 		unit = target["unit"]	
@@ -179,7 +189,7 @@ class RemedyCost(object):
 		for fl in self.costConfig["fields"]:
 			if fl["action"] == "change":
 				ind = fl["index"]
-				instance[ind] = arg[i]
+				instance[ind] = args[i]
 				i += 1
 		return instance
 		
@@ -199,8 +209,9 @@ if __name__ == "__main__":
 	config = optimizer.getConfig()
 	
 	#run optimizer
+	print("optimizer starting")
 	optimizer.run()
-	print("optimizer started, check log file for output details...")
+	print("optimizer ran, check log file for output details...")
 	
 	#best soln
 	print("\nbest solution found")

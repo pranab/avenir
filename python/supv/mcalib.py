@@ -311,7 +311,7 @@ class ConformalRegressionPrediction(object):
 		ymax = None
 		ymin = None
 		for yp, ya  in ypair:
-			cscore = abs(yp - ya) / ya
+			cscore = abs(yp - ya)
 			cscores.append(cscore)
 			if ymax is None:
 				ymax = ya
@@ -356,7 +356,7 @@ class ConformalRegressionPrediction(object):
 		rcount = 0
 		#print(ymin, ymax, step)
 		for ya in np.arange(ymin, ymax, step):
-			cscore = abs(yp - ya) / ya
+			cscore = abs(yp - ya)
 			if cscore < scoreConfBound:
 				if rmin is None:
 					#lower bound
