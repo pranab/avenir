@@ -292,6 +292,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			# tabular data
 			data = tableSelFieldsFilter(dataSource, selFieldIndices)
 			featData = tableSelFieldsFilter(data, featFieldIndices)
+			print(featData)
 			featData = np.array(featData)
 			
 		if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):
@@ -301,8 +302,17 @@ class FeedForwardNetwork(torch.nn.Module):
 		    nrow = featData.shape[0]
 		    minrows = model.config.getIntConfig("common.scaling.minrows")[0]
 		    if nrow > minrows:
+		    	#in place scaling
 		    	featData = scaleData(featData, scalingMethod)
-		
+		    else:
+		    	#use pre computes scaling parameters
+		    	spFile = model.config.getStringConfig("common.scaling.param.file")[0]
+		    	if spFile is None:
+		    		exitWithMsg("for small data sets pre computed scaling parameters need to provided")
+		    	scParams = restoreObject(spFile)
+		    	featData = scaleDataWithParams(featData, scalingMethod, scParams)
+		    	featData = np.array(featData)
+		    	
 		# target data
 		if includeOutFld:
 			outFieldIndices = model.config.getStringConfig("train.data.out.fields")[0]
@@ -527,12 +537,12 @@ class FeedForwardNetwork(torch.nn.Module):
 		if dataSource is None:
 			dataSource = model.config.getStringConfig("predict.data.file")[0]
 		featData  = FeedForwardNetwork.prepData(model, dataSource, False)
-		print(featData)
+		#print(featData)
 		featData = torch.from_numpy(featData)
 		model.eval()
 		yPred = model(featData)
 		yPred = yPred.data.cpu().numpy()
-		print(yPred)
+		#print(yPred)
 		
 		if model.outputSize == 2:
 			#classification

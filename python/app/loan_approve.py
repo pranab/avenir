@@ -504,7 +504,7 @@ if __name__ == "__main__":
 		""" tran neural network model """
 		prFile = sys.argv[2]
 		rec = sys.argv[3]
-		typeSpec = "0:str,1:cat,2:int,3:int,4:cat,5:int,6:float,7:float,8:int,9:int,10:cat,11:int,12:int,13:int,14:int"
+		typeSpec = "0:str,1:cat,2:int,3:int,4:int,5:int,6:float,7:float,8:int,9:int,10:cat,11:int,12:int,13:int,14:int"
 		lt = len(typeSpec.split(","))
 		lr = len(rec.split(","))
 		#print (lr, lt)
@@ -515,7 +515,7 @@ if __name__ == "__main__":
 		loanTerm = ["7", "15", "30"]
 		catVars[1] = marStatus
 		catVars[10] = loanTerm
-		dummyVarGen = DummyVarGenerator(lr, catVars, "1", "0")
+		dummyVarGen = DummyVarGenerator(lr, catVars, 1, 0)
 		rec = dummyVarGen.processRow(rec)
 		
 		loModel = FeedForwardNetwork(prFile)

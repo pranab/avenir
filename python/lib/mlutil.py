@@ -680,6 +680,32 @@ def scaleData(data, method):
 		raise ValueError("invalid scaling method")	
 	return data
 
+def scaleDataWithParams(data, method, scParams):
+	"""
+	scales feature data column wise
+	"""
+	if method == "minmax":
+		data = scaleMinMaxTabData(data, scParams)
+	elif method == "zscale":
+		raise ValueError("invalid scaling method")	
+	else:
+		raise ValueError("invalid scaling method")	
+	return data
+
+
+def scaleMinMaxTabData(tdata, minMax):
+	"""
+	for tabular scales feature data column wise using min max values for each field
+	"""
+	stdata = list()
+	for r in tdata:
+		srdata = list()
+		for i, c in enumerate(r):
+			sd = (c - minMax[i][0]) / (minMax[i][1] - minMax[i][0])
+			srdata.append(sd)
+		stdata.append(srdata)
+	return stdata
+	
 def scaleMinMax(rdata, minMax):
 	"""
 	scales feature data column wise using min max values for each field
