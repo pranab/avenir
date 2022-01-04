@@ -712,8 +712,9 @@ def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
 	tdata = list()
 	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
 		trec = list()
-		for index, value in enumerate(rec):
-			value = __convToTyped(index, value, dtypes)
+		for indx, value in enumerate(rec):
+			tindx = columns[indx]
+			value = __convToTyped(tindx, value, dtypes)
 			trec.append(value)
 		tdata.append(trec)
 	return tdata
@@ -722,12 +723,17 @@ def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
 	"""
 	extracts numeric matrix from csv file given column indices. For each column return min and max
 	"""
-	dtypes = [dtype] * len(columns)
+	dtypes = list(map(lambda c : str(c) + ":" + dtype, columns))
+	dtypes = ",".join(dtypes)
+	#print(dtypes)
+	
 	tdata = getFileColsAsTypedRecords(dirPath, columns, dtypes, delim)
 	minMax = list()
-	ncol = len(tdata[0])
+	ncola = len(tdata[0])
+	ncole = len(columns)
+	assertEqual(ncola, ncole, "actual no of columns different from expected")
 	
-	for ci in range(ncol):	
+	for ci in range(ncole):	
 		vmin = sys.float_info.max
 		vmax = sys.float_info.min
 		for r in tdata:
@@ -887,7 +893,8 @@ def fileSelFieldsRecGen(dirPath, columns, delim=","):
 	"""
 	file record generator given column indices 
 	"""
-	columns = strToIntArray(columns, delim)
+	if type(columns) == str:
+		columns = strToIntArray(columns, delim)
 	for rec in fileRecGen(dirPath, delim):
 		extracted = extractList(rec, columns)
 		yield extracted

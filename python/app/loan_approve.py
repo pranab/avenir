@@ -423,6 +423,23 @@ if __name__ == "__main__":
 		loModel.buildModel()
 		FeedForwardNetwork.batchTrain(loModel)
 	
+	elif op == "scaleParam":
+		""" get scaling parameters and save them """
+		prFile = sys.argv[2]
+		dFile = sys.argv[3]
+		loModel = FeedForwardNetwork(prFile)
+		config = loModel.getConfig()
+		scMethod = config.getStringConfig("common.scaling.method")[0]
+		columns = config.getIntListConfig("train.data.fields")[0]
+		columns = columns[:-1]
+		spFile = config.getStringConfig("common.scaling.param.file")[0]
+		if scMethod == "minmax":
+			minMax = getFileColumnsMinMax(dFile, columns, "float")
+			saveObject(minMax, spFile)
+			print(minMax)
+		else:
+			exitWithMsg("invalid scaling method")	
+
 	elif op == "calib":
 		""" calibrate """
 		prFile = sys.argv[2]
@@ -482,6 +499,29 @@ if __name__ == "__main__":
 		loModel.buildModel()
 		yp = FeedForwardNetwork.modelPredict(loModel)
 		print(yp[:4])
+
+	elif op == "predOne":
+		""" tran neural network model """
+		prFile = sys.argv[2]
+		rec = sys.argv[3]
+		typeSpec = "0:str,1:cat,2:int,3:int,4:cat,5:int,6:float,7:float,8:int,9:int,10:cat,11:int,12:int,13:int,14:int"
+		lt = len(typeSpec.split(","))
+		lr = len(rec.split(","))
+		#print (lr, lt)
+		rec = getRecAsTypedRecord(rec, typeSpec, ",")
+		
+		catVars = {}
+		marStatus = ["married", "single", "divorced"]
+		loanTerm = ["7", "15", "30"]
+		catVars[1] = marStatus
+		catVars[10] = loanTerm
+		dummyVarGen = DummyVarGenerator(lr, catVars, "1", "0")
+		rec = dummyVarGen.processRow(rec)
+		
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		yp = FeedForwardNetwork.modelPredict(loModel, [rec])
+		print(yp)
 
 	elif op == "amtarg":
 		""" make loan amount the target for approved cases turning into a regression data set """

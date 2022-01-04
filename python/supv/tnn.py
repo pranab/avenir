@@ -49,6 +49,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["common.preprocessing"] = (None, None)
 		defValues["common.scaling.method"] = ("zscale", None)
 		defValues["common.scaling.minrows"] = (50, None)
+		defValues["common.scaling.param.file"] = (None, None)
 		defValues["common.verbose"] = (False, None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
@@ -176,6 +177,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
 		
 		self.yPred  = None
+		self.restored = False
 		
 	def setValidationData(self, dataSource, prep=True):
 		"""
@@ -335,15 +337,17 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		restored checkpointed model
 		"""
-		print("..restoring model checkpoint")
-		modelDirectory = model.config.getStringConfig("common.model.directory")[0]
-		modelFile = model.config.getStringConfig("common.model.file")[0]
-		filepath = os.path.join(modelDirectory, modelFile)
-		assert os.path.exists(filepath), "model save file does not exist"
-		checkpoint = torch.load(filepath)
-		model.load_state_dict(checkpoint["state_dict"])
-		if loadOpt:
-			model.optimizer.load_state_dict(checkpoint["optim_dict"])
+		if not model.restored:
+			print("..restoring model checkpoint")
+			modelDirectory = model.config.getStringConfig("common.model.directory")[0]
+			modelFile = model.config.getStringConfig("common.model.file")[0]
+			filepath = os.path.join(modelDirectory, modelFile)
+			assert os.path.exists(filepath), "model save file does not exist"
+			checkpoint = torch.load(filepath)
+			model.load_state_dict(checkpoint["state_dict"])
+			if loadOpt:
+				model.optimizer.load_state_dict(checkpoint["optim_dict"])
+			model.restored = True
 
 	@staticmethod
 	def processClassifOutput(yPred, config):
@@ -423,6 +427,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		train with batch data
 		"""
+		model.restored = False
 		trainData = TensorDataset(model.featData, model.outData)
 		trainDataLoader = DataLoader(dataset=trainData, batch_size=model.batchSize, shuffle=True)
 		epochIntv = model.config.getIntConfig("train.epoch.intv")[0]
@@ -522,10 +527,12 @@ class FeedForwardNetwork(torch.nn.Module):
 		if dataSource is None:
 			dataSource = model.config.getStringConfig("predict.data.file")[0]
 		featData  = FeedForwardNetwork.prepData(model, dataSource, False)
+		print(featData)
 		featData = torch.from_numpy(featData)
 		model.eval()
 		yPred = model(featData)
 		yPred = yPred.data.cpu().numpy()
+		print(yPred)
 		
 		if model.outputSize == 2:
 			#classification
@@ -595,8 +602,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		
 		if retPred:
 			y = list(map(lambda i : (yPred[i][0], yActual[i][0]), range(vsize)))
-			ret = (y, score)
-			return ret
+			res = (y, score)
+			return res
 		else:	
 			return score
  		
