@@ -315,7 +315,10 @@ class BaseOptimizer(object):
 		
 		self.varSize = len(self.solnSizes) == 2
 		if not self.varSize:
-			assert self.solnSizes[0] % self.solnCompSize == 0, "soln size should be multiple of soln component size"
+			print(type(self.solnSizes[0]))
+			print(type(self.solnCompSize))
+			t = self.solnSizes[0] % self.solnCompSize
+			assert t == 0, "soln size should be multiple of soln component size"
 
 		self.createMaxTry = self.config.getIntConfig("opti.soln.create.max.try")[0]
 		self.mutateMaxTry = self.config.getIntConfig("opti.soln.mutate.max.try")[0]
@@ -330,34 +333,49 @@ class BaseOptimizer(object):
 			self.tracker = ProgressTracker()
 			self.tracker.logger = self.logger
 		
+		self.solnCount = 0
+		self.invalidSolnCount = 0
+	# get config object
+	def getConfig(self):
+		return self.config
+		
 	def createCandidate(self):
 		"""
 		create new candidate soln
 		"""
 		tryCount = 0
+		size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
 		while True:
 			cand = Candidate()
-			size = sampleUniform(self.solnSizes[0], self.solnSizes[1]) if self.varSize else self.solnSizes[0]
-			maxTry = 5
+			cmaxTry = 5
 			built = True
+			self.logger.debug("creating candidate solution")
 			for j in range(size):
 				value = self.sampleValue(j)
-				tryCount = 0
+				ctryCount = 0
 				while not cand.build(value, size):
 					value = self.sampleValue(j)
-					tryCount += 1
-					if tryCount == maxTry:
+					ctryCount += 1
+					if ctryCount == cmaxTry:
 						built = False
+						self.logger.debug("failed to create candidate component " + str(j))
 						break
 						
 				if not built:
 					break
 					
-			if built and self.domain.isValid(cand.soln):			
-				cost = self.domain.evaluate(cand.soln)
-				cand.cost = cost
-				break
-			
+			if built:
+				self.solnCount += 1
+				isValid = self.domain.isValid(cand.soln)
+				self.logger.debug("candidate validity " + str(isValid))
+				if isValid:			
+					cost = self.domain.evaluate(cand.soln)
+					cand.cost = cost
+					self.logger.debug("candidate cost {:.3f}".format(cost))
+					break
+				else:
+					self.invalidSolnCount += 1
+					
 			tryCount += 1
 			if tryCount == self.createMaxTry:
 				raise ValueError("failed to create candidate solution after {} tries".format(self.createMaxTry))
@@ -554,6 +572,7 @@ class PopulationBasedOptimizer(BaseOptimizer):
 		populate solution pool
 		"""
 		for i in range(self.poolSize):
+			self.logger.debug("next pool memeber " + str(i))
 			cand = self.createCandidate()
 			self.pool.append(cand)
 			self.logger.info("initial soln " + str(cand.soln))

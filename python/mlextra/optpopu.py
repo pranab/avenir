@@ -117,7 +117,8 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		"""
 		self.logger.info("**** starting GeneticAlgorithmOptimizer ****")
 		self.populatePool()
-
+		self.logger.info("pool populated")
+		
 		matingSize = self.config.getIntConfig("opti.mating.size")[0]
 		replSize = self.config.getIntConfig("opti.replacement.size")[0]
 		replSizeVar = self.config.getFloatConfig("opti.replacement.size.var")[0]
@@ -127,6 +128,7 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 		#iterate
 		self.sort(self.pool)
 		preSorted = True
+		self.logger.info("starting optimizer loop")
 		for i in range(self.numIter):
 			self.logger.info("next iteration " + str(i))
 			matingList = self.findMultBest(self.pool, matingSize, preSorted)
@@ -154,10 +156,15 @@ class GeneticAlgorithmOptimizer(PopulationBasedOptimizer):
 				pair = self.crossOver(parents)
 				if pair:
 					for ch in pair:
+						self.solnCount += 1
 						mutValid = self.mutate(ch)
-						if mutValid and self.domain.isValid(ch.soln):
-							ch.cost = self.domain.evaluate(ch.soln)
-							children.append(ch)
+						if mutValid: 
+							candValid = self.domain.isValid(ch.soln)
+							if candValid:
+								ch.cost = self.domain.evaluate(ch.soln)
+								children.append(ch)
+							else:
+								self.invalidSolnCount += 1
 			self.logger.info("created all children")
 
 			

@@ -40,6 +40,7 @@ class RemedyCost(object):
 		self.logger = None
 		if modelType == "ffnn":
 			self.model = FeedForwardNetwork(mlConfigFile)
+			self.model.buildModel()
 		else:
 			exitWithMsg("invalid ml model type")
 
@@ -64,10 +65,12 @@ class RemedyCost(object):
 				catVars[i] = fl["values"]
 				
 		typeSpec = typeSpec[:-1]
+		print(typeSpec)
 		self.instance = getRecAsTypedRecord(self.instance, typeSpec, ",")
 		self.numvarFld = len(self.varFiledIndexes)
 		self.prediction = dict()
-		self.dummyVarGen = DummyVarGenerator(rSize, catVars, "1", "0")
+		self.dummyVarGen = DummyVarGenerator(rSize, catVars, 1, 0)
+		self.predProb = 0.0
 				
 	def isValid(self, args):
 		"""
@@ -84,10 +87,6 @@ class RemedyCost(object):
 				if (type(fl["cost"]) == list):
 					valid = False
 					for ch in fl["cost"]:
-						self.logger.debug("discrete cost " + str(ch))
-						#print(type(ch))
-						#print(type(bval))
-						#print(type(nval))
 						if ch[0] == bval and ch[1] == nval:
 							valid = True
 							break
@@ -113,7 +112,10 @@ class RemedyCost(object):
 			minst = self.__getMutatedInstance(args)
 			minst = self.dummyVarGen.processRow(minst)
 			
-			pr = self.model.predict(minst)
+			pr = self.model.predict([minst])
+			pr = pr[0][0]
+			self.predProb = pr
+			self.logger.debug("in validation model prediction {:.3f}".format(pr))
 			if pr >=  0.5:
 				self.prediction[tuple(args)] = pr
 			else:
@@ -134,8 +136,8 @@ class RemedyCost(object):
 			bval = self.instance[vfi]
 			nval = args[i]
 			
-			if (type(fld["cost"]) == list):
-				for ch in fld["cost"]:
+			if (type(fl["cost"]) == list):
+				for ch in fl["cost"]:
 					if ch[0] == bval and ch[1] == nval:
 						cost += ch[2]
 						break
@@ -159,7 +161,10 @@ class RemedyCost(object):
 			#mutate variable fields and encode categorical fields
 			minst = self.__getMutatedInstance(args)
 			minst = self.dummyVarGen.processRow(minst)
-			pr = self.model.predict(minst)
+			pr = self.model.predict([minst])
+			pr = pr[0][0]
+			self.predProb = pr
+			self.logger.debug("in evaluation model prediction {:.3f}".format(pr))
 		
 		#cost from target1`
 		target = self.costConfig["target"]
@@ -172,14 +177,39 @@ class RemedyCost(object):
 		
 		return cost
 	
+	def getEvalCopntext(self):
+		"""
+		predicted probability
+		"""
+		return self.predProb
+		
 	def printSoln(self, cand):
 		"""
 		
 		"""
-		fsoln = __getMutatedInstance(self, cand.soln)
+		print("original")
+		print(self.instance)
+
+		fsoln = self.__getMutatedInstance(cand.soln)
+		print("\nmodified")
 		print(fsoln)
 		
+		for ov, mv in zip(self.instance, fsoln):
+			msg = toStr(ov, 3) + "\t" + toStr(mv, 3)
+			print(msg)
 	
+		
+		minst = self.dummyVarGen.processRow(self.instance)
+		pr = self.model.predict([minst])
+		pr = pr[0][0]
+		print("\ninitial  model prediction {:.3f}".format(pr))
+		
+		
+		minst = self.dummyVarGen.processRow(fsoln)
+		pr = self.model.predict([minst])
+		pr = pr[0][0]
+		print("\ncounterfactual model prediction {:.3f}".format(pr))
+
 	def __getMutatedInstance(self, args):
 		"""
 		create instance with mutated field string values
@@ -216,7 +246,7 @@ if __name__ == "__main__":
 	#best soln
 	print("\nbest solution found")
 	best = optimizer.getBest()
-	remCost.pritnSoln(best)
+	remCost.printSoln(best)
 
 	#output soln tracker
 	if optimizer.trackingOn:
@@ -227,14 +257,14 @@ if __name__ == "__main__":
 	locBest = optimizer.getLocBest()
 	if locBest is not None:
 		print("\nbest solution after local search of global best solution")
-		pritnSoln(locBest, schedCost)
+		print(locBest.soln)
 	
 		if (locBest.cost < best.cost):
 			print("\nlocally search solution is best overall")
 		else:
 			print("\nlocal search failed to find a better solution")
 		
-	print("\ntotal solution count {}  invalid solution count {}".format(schedCost.solnCount, schedCost.invalidSonlCount))
+	print("\ntotal solution count {}  invalid solution count {}".format(optimizer.solnCount, optimizer.invalidSolnCount))
 	
 	
 			
