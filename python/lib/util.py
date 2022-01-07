@@ -740,7 +740,7 @@ def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
 			cv = r[ci]
 			vmin = cv if cv < vmin else vmin
 			vmax = cv if cv > vmax else vmax
-		mm = (vmin, vmax)
+		mm = (vmin, vmax, vmax - vmin)
 		minMax.append(mm)
 
 	return minMax
@@ -1272,7 +1272,7 @@ def getColMinMax(table, col):
 				vmin = value
 			elif value > vmax:
 				vmax = value
-	return (vmin, vmax)
+	return (vmin, vmax, vmax - vmin)
 			
 def createLogger(name, logFilePath, logLevName):
 	"""

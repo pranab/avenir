@@ -701,7 +701,7 @@ def scaleMinMaxTabData(tdata, minMax):
 	for r in tdata:
 		srdata = list()
 		for i, c in enumerate(r):
-			sd = (c - minMax[i][0]) / (minMax[i][1] - minMax[i][0])
+			sd = (c - minMax[i][0]) / minMax[i][2]
 			srdata.append(sd)
 		stdata.append(srdata)
 	return stdata
@@ -713,7 +713,7 @@ def scaleMinMax(rdata, minMax):
 	srdata = list()
 	for i in range(len(rdata)):
 		d = rdata[i]
-		sd = (d - minMax[i][0]) / (minMax[i][1] - minMax[i][0])
+		sd = (d - minMax[i][0]) / minMax[i][2]
 		srdata.append(sd)
 	return srdata
 	

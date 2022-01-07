@@ -70,6 +70,10 @@ of detail documentation
 * https://pkghosh.wordpress.com/2021/03/25/robustness-measurement-of-machine-learning-models-with-examples-in-python/
 * https://pkghosh.wordpress.com/2021/05/25/data-driven-causal-relationship-discovery-with-python-example-code/
 * https://pkghosh.wordpress.com/2021/07/21/duplicate-data-detection-with-neural-network-and-contrastive-learning/
+* https://pkghosh.wordpress.com/2021/10/16/class-separation-based-machine-learning-model-performance-metric/
+* https://pkghosh.wordpress.com/2021/11/30/machine-learning-model-performance-robustness-based-on-local-neighborhood-performance/
+* https://pkghosh.wordpress.com/2021/12/30/conformal-prediction-for-a-neural-regression-model/
+
 
 
 ## Getting started

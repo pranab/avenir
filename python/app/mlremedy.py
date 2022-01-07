@@ -194,8 +194,12 @@ class RemedyCost(object):
 		print("\nmodified")
 		print(fsoln)
 		
-		for ov, mv in zip(self.instance, fsoln):
-			msg = toStr(ov, 3) + "\t" + toStr(mv, 3)
+		descs = list(map(lambda fl : fl["description"] if  fl["action"] == "fixed"  else fl["description"] + " *",  self.costConfig["fields"]))
+		
+		print("\nfield values for original and reccommended new with variable fields marked with *")
+		print("field".ljust(30, " ") + "original".ljust(20, " ") + "new")
+		for de, ov, mv in zip(descs, self.instance, fsoln):
+			msg = de.ljust(30, " ") + toStr(ov, 3).ljust(20, " ") +  toStr(mv, 3)
 			print(msg)
 	
 		

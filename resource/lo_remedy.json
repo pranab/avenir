@@ -3,33 +3,39 @@
 	[
 		{
 			"index" : 0,
+			"description" : "loan ID",
 			"type" : "str",
 			"action" : "fixed"
 		},
 		{
 			"index" : 1,
+			"description" : "marital status",
 			"type" : "cat",
 			"action" : "fixed",
 			"values" : ["married", "single", "divorced"]
 		},
 		{
 			"index" : 2,
+			"description" : "num of children",
 			"type" : "int",
 			"action" : "fixed"
 		},
 		{
 			"index" : 3,
+			"description" : "education",
 			"type" : "int",
 			"action" : "fixed"
 		},
 		{
 			"index" : 4,
+			"description" : "self employed",
 			"type" : "int",
 			"action" : "change",
 			"cost" : [[0, 1, 20], [1, 0, 0], [0, 0, 0], [1, 1, 0]]
 		},
 		{
 			"index" : 5,
+			"description" : "income",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
@@ -38,6 +44,7 @@
 		},
 		{
 			"index" : 6,
+			"description" : "years of experience",
 			"type" : "float",
 			"action" : "change",
 			"direction" : "pos",
@@ -46,6 +53,7 @@
 		},
 		{
 			"index" : 7,
+			"description" : "years in current job",
 			"type" : "float",
 			"action" : "change",
 			"direction" : "pos",
@@ -54,6 +62,7 @@
 		},
 		{
 			"index" : 8,
+			"description" : "outstanding debt",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "neg",
@@ -62,6 +71,7 @@
 		},
 		{
 			"index" : 9,
+			"description" : "loan amount",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "neg",
@@ -70,12 +80,14 @@
 		},
 		{
 			"index" : 10,
+			"description" : "loan term",
 			"type" : "cat",
 			"action" : "fixed",
 			"values" : ["7", "15", "30"]
 		},
 		{
 			"index" : 11,
+			"description" : "credit score",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
@@ -84,6 +96,7 @@
 		},
 		{
 			"index" : 12,
+			"description" : "saving",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
@@ -92,6 +105,7 @@
 		},
 		{
 			"index" : 13,
+			"description" : "retirement",
 			"type" : "int",
 			"action" : "change",
 			"direction" : "pos",
@@ -100,6 +114,7 @@
 		},
 		{
 			"index" : 14,
+			"description" : "num of prior mortgae loans",
 			"type" : "int",
 			"action" : "fixed"
 		}
