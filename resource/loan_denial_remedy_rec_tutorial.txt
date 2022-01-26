@@ -1,0 +1,32 @@
+This tutorial is for remedial action recommendation for a loan application.  A neural neuwork model 
+for predicting   loan approbval is used for predictions. A genetic algorithm based optimizer is used to
+generate candidate solutions
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where loan_approve.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Train NN model
+==============
+Prepare training data, validation data and train model as per instructions in the tutorial document 
+model_performance_with_class_sep_metric_tutorial.txt. Make sure model is saved after training with 
+the parameter setting train.model.save=True
+
+Generate remedial action recommendation
+=======================================
+./mlremedy.py lo_remedy.properties tnn_lo.properties ffnn lo_remedy.json <rec>
+
+where 
+
+lo_remedy.properties = optimizer config file
+tnn_lo.properties = ML model config file
+ffnn = type of ML model, feed forward neural network in this case
+lo_remedy.json  = cost config file
+rec = record to be be processed for recommendation e.g I used 3K5FG92033,single,1,1,1,43,6.63,1.20,50,571,7,540,60,41,0
+
+you should use the model to make predictions. Then choose a record for which approval probability 
+has been predicted to be less than 0.5
+
+The output appears in the console
