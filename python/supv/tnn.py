@@ -35,7 +35,27 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 
+"""
+forward hook function
+"""
+intermedOut = {}
+lvalues = list()
 
+def hookFn(m, i, o):
+	"""
+	call back for latent values
+	"""
+	#intermedOut[m] = o
+	lv = o.data.cpu().numpy()
+	lv = lv[0].tolist()
+	lvalues.append(lv)
+	#print(lv)
+
+def getLatValues():
+	"""
+	"""
+	return lvalues
+	
 class FeedForwardNetwork(torch.nn.Module):
 	def __init__(self, configFile, addDefValues=None):
 		"""
@@ -274,6 +294,24 @@ class FeedForwardNetwork(torch.nn.Module):
 		return y
 
 	@staticmethod
+	def addForwardHook(model, l, cl = 0):
+		"""
+		register forward hooks
+		"""
+		for name, layer in model._modules.items():
+			#If it is a sequential, don't register a hook on it
+			# but recursively register hook on all it's module children
+			print(str(cl) + " : " + name)
+			if isinstance(layer, torch.nn.Sequential):
+				FeedForwardNetwork.addForwardHook(layer, l, cl)
+			else:
+			#	 it's a non sequential. Register a hook
+				if cl == l:
+					print("setting hook at layer " + str(l))
+					layer.register_forward_hook(hookFn)
+				cl += 1
+		
+	@staticmethod
 	def prepData(model, dataSource, includeOutFld=True):
 		"""
 		loads and prepares  data
@@ -292,7 +330,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			# tabular data
 			data = tableSelFieldsFilter(dataSource, selFieldIndices)
 			featData = tableSelFieldsFilter(data, featFieldIndices)
-			print(featData)
+			#print(featData)
 			featData = np.array(featData)
 			
 		if (model.config.getStringConfig("common.preprocessing")[0] == "scale"):

@@ -20,6 +20,9 @@ import sys
 from random import randint
 import time
 from array import *
+import statistics
+import numpy as np
+from sklearn.neighbors import KDTree
 sys.path.append(os.path.abspath("../lib"))
 sys.path.append(os.path.abspath("../supv"))
 sys.path.append(os.path.abspath("../mlextra"))
@@ -383,6 +386,13 @@ def mutatorTwo(r):
 	r[7] = str(inc)
 	
 	return r
+
+def encodeRec(rec, encoder):
+	""" encode record for categorical variables """
+	typeSpec = "0:str,1:cat,2:int,3:int,4:int,5:int,6:float,7:float,8:int,9:int,10:cat,11:int,12:int,13:int,14:int"
+	rec = getRecAsTypedRecord(rec, typeSpec)
+	rec = encoder.processRow(rec)
+	return rec
 	
 ##########################################################################################
 if __name__ == "__main__":
@@ -579,6 +589,83 @@ if __name__ == "__main__":
 			res = conPred.getPredRange(y[0])
 			print("{:.3f}\t{:.3f}\t{:.3f}\t{}\t{:.3f}".format(y[0], res["predRangeMin"], res["predRangeMax"], res["status"], res["confidence"]))
 
+	elif op == "detood":
+		""" detect ood data """
+		prFile = sys.argv[2]
+		daFile = sys.argv[3]
+		lfilePath = sys.argv[4]
+		avdFilePath = sys.argv[5]
+		mode = sys.argv[6]
+		assert mode =="gen" or mode == "det" , "invalid mode for ood detection"
+		
+		encoder = None
+		loModel = FeedForwardNetwork(prFile)
+		loModel.buildModel()
+		FeedForwardNetwork.addForwardHook(loModel, 1)	
+		
+		if mode == "det":
+			#build kd tree in detection mode
+			fData = getFileAsFloatMatrix(lfilePath, list(range(8)))
+			tree = KDTree(np.array(fData), leaf_size=4)
+			
+			ucb = float(sys.argv[7])
+			avDists = getFileAsFloatColumn(avdFilePath)
+			uci = int(ucb * len(avDists))
+			ucv = avDists[uci]
+			print("upper conf value " + formatFloat(6, ucv))
+		
+		yps = list()	
+		for rec in fileRecGen(daFile):
+			frec = rec[:-1]
+			ya = int(rec[-1])
+		
+			if encoder is None:
+				lr = len(frec)
+				catVars = {}
+				marStatus = ["married", "single", "divorced"]
+				loanTerm = ["7", "15", "30"]
+				catVars[1] = marStatus
+				catVars[10] = loanTerm
+				encoder = DummyVarGenerator(lr, catVars, 1, 0)
+			frec = encodeRec(frec, encoder)
+			yp = FeedForwardNetwork.modelPredict(loModel, [frec])
+			print(frec[:5])
+			print("predicted and actual {:.3f}  {:.3f}".format(float(yp[0][0]), ya))
+			
+			if mode == "gen":
+				#latent data generation mode
+				y = yp[0][0]
+				yps.append(y)
+			else:
+				#ood pdetection mode
+				lvalues = getLatValues()
+				lv = lvalues[-1]
+				dist, ind = tree.query(np.array([lv]), k=5)
+				avDist = np.mean(dist[0])
+				ood = avDist > ucv 
+				print("av dist to neighbors {:.6f}   ood {}".format(avDist, ood))
+		
+		#save latent values	
+		if mode == "gen":
+			lvalues = getLatValues()
+			with open(lfilePath, "w") as fh:
+				for l, y in zip(lvalues, yps):
+					r = toStrFromList(l, 6) + "," + formatFloat(3, y) + "\n"
+					fh.write(r)
+		
+			#ave rage distance to neighboors in latent space
+			lvalues = np.array(lvalues)
+			tree = KDTree(lvalues, leaf_size=4)
+			dist, ind = tree.query(lvalues, k=5)
+			avDists = list()
+			for d in dist:
+				avDist = float(np.mean(d))
+				avDists.append(avDist)
+					
+			avDists.sort()	
+			writeFloatListToFile(avDists, 6, avdFilePath)
+		
+	
 	else:
 		exitWithMsg("unknow operation")
 

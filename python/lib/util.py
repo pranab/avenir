@@ -57,45 +57,62 @@ ftPerYard = 3
 ftPerMile = ftPerYard * 1760
 
 
-def genID(len):
+def genID(size):
 	"""
 	generates ID
+	
+	Parameters
+		size : size of ID
 	"""
 	id = ""
-	for i in range(len):
+	for i in range(size):
 		id = id + selectRandomFromList(tokens)
 	return id
 
 def genIdList(numId, idSize):
 	"""
 	generate list of IDs
+	
+	Parameters:
+		numId: number of Ids
+		idSize: ID size
 	"""
 	iDs = []
 	for i in range(numId):
 		iDs.append(genID(idSize))
 	return iDs
 	
-def genNumID(len):
+def genNumID(size):
 	"""
 	generates ID consisting of digits onl
+	
+	Parameters
+		size : size of ID
 	"""
 	id = ""
-	for i in range(len):
+	for i in range(size):
 		id = id + selectRandomFromList(numTokens)
 	return id
 
-def genLowCaseID(len):
+def genLowCaseID(size):
 	"""
 	generates ID consisting of lower case chars
+	
+	Parameters
+		size : size of ID
 	"""
 	id = ""
-	for i in range(len):
+	for i in range(size):
 		id = id + selectRandomFromList(loCaseChars)
 	return id
 
 def genNumIdList(numId, idSize):
 	"""
 	generate list of numeric IDs
+	
+	Parameters:
+		numId: number of Ids
+		idSize: ID size
 	"""
 	iDs = []
 	for i in range(numId):
@@ -111,6 +128,9 @@ def genNameInitial():
 def genPhoneNum(arCode):
 	"""
 	generates phone number
+	
+	Parameters
+		arCode: area code
 	"""
 	phNum = genNumID(7)
 	return arCode + str(phNum)
@@ -118,12 +138,19 @@ def genPhoneNum(arCode):
 def selectRandomFromList(ldata):
 	"""
 	select an element randomly from a lis
+	
+	Parameters
+		ldata : list data
 	"""
 	return ldata[randint(0, len(ldata)-1)]
 
 def selectOtherRandomFromList(ldata, cval):
 	"""
 	select an element randomly from a list excluding the given one
+	
+	Parameters
+		ldata : list data
+		cval : value to be excluded
 	"""
 	nval = selectRandomFromList(ldata)
 	while nval == cval:
@@ -133,6 +160,10 @@ def selectOtherRandomFromList(ldata, cval):
 def selectRandomSubListFromList(ldata, num):
 	"""
 	generates random sublist from a list without replacemment
+	
+	Parameters
+		ldata : list data
+		num : output list size
 	"""
 	i = randint(0, len(ldata)-1)
 	sel = ldata[i]
@@ -146,15 +177,23 @@ def selectRandomSubListFromList(ldata, num):
 			selList.append(sel)		
 	return selList
 
-def selectRandomSubListFromListWithRepl(values, num):
+def selectRandomSubListFromListWithRepl(ldata, num):
 	"""
 	generates random sublist from a list with replacemment
+	
+	Parameters
+		ldata : list data
+		num : output list size
+
 	"""
-	return list(map(lambda i : selectRandomFromList(values), range(num)))
+	return list(map(lambda i : selectRandomFromList(ldata), range(num)))
 
 def selectRandomFromDict(ddata):
 	"""
 	select an element randomly from a dictionary
+	
+	Parameters
+		ddata : dictionary data
 	"""
 	dkeys = list(ddata.keys())
 	dk = selectRandomFromList(dkeys)
@@ -164,6 +203,10 @@ def selectRandomFromDict(ddata):
 def setListRandomFromList(ldata, ldataRepl):
 	"""
 	sets some elents in the first list randomly with elements from the second list
+	
+	Parameters
+		ldata : list data
+		ldataRepl : list with replacement data
 	"""
 	l = len(ldata)
 	selSet = set()
@@ -194,6 +237,14 @@ def curTimeMs():
 def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	"""
 	second deg polynomial 	
+	
+	Parameters
+		x1 : 1st point x
+		y1 : 1st point y
+		x2 : 2nd point x
+		y2 : 2nd point y
+		x3 : 3rd point x
+		y3 : 3rd point y
 	"""
 	t = (y1 - y2) / (x1 - x2)
 	a = t - (y2 - y3) / (x2 - x3)
@@ -202,25 +253,39 @@ def secDegPolyFit(x1, y1, x2, y2, x3, y3):
 	c = y1 - a * x1 * x1 - b * x1
 	return (a, b, c)
 
-def range_limit(val, min, max):
+def range_limit(val, minv, maxv):
 	"""
-	range limit
+	range limit a value
+	
+	Parameters
+		val : data value
+		minv : minimum
+		maxv : maximum
 	"""
-	if (val < min):
-		val = min
-	elif (val > max):
-		val = max
+	if (val < minv):
+		val = minv
+	elif (val > maxv):
+		val = maxv
 	return val	
 
-def isInRange(val, min, max):
+def isInRange(val, minv, maxv):
 	"""
 	checks if within range
+	
+	Parameters
+		val : data value
+		minv : minimum
+		maxv : maximum
 	"""
-	return val >= min and val <= max
+	return val >= minv and val <= maxv
 	
 def stripFileLines(filePath, offset):
 	"""
 	strips number of chars from both ends
+	
+	Parameters
+		filePath : file path
+		offset : offset from both ends of  line 
 	"""
 	fp = open(filePath, "r")
 	for line in fp:
@@ -231,6 +296,12 @@ def stripFileLines(filePath, offset):
 def genLatLong(lat1, long1, lat2, long2):
 	"""
 	generate lat log within limits
+	
+	Parameters
+		lat1 : lat of 1st point
+		long1 : long of 1st point
+		lat2 : lat of 2nd point
+		long2 : long of 2nd point
 	"""
 	lat = lat1 + (lat2 - lat1) * random.random()
 	longg = long1 + (long2 - long1) * random.random()
@@ -239,6 +310,12 @@ def genLatLong(lat1, long1, lat2, long2):
 def geoDistance(lat1, long1, lat2, long2):
 	"""
 	find geo distance in ft
+	
+	Parameters
+		lat1 : lat of 1st point
+		long1 : long of 1st point
+		lat2 : lat of 2nd point
+		long2 : long of 2nd point
 	"""
 	latDiff = math.radians(lat1 - lat2)
 	longDiff = math.radians(long1 - long2)
@@ -256,6 +333,8 @@ def geoDistance(lat1, long1, lat2, long2):
 def minLimit(val, limit):
 	"""
 	min limit
+	Parameters
+
 	"""
 	if (val < limit):
 		val = limit
@@ -264,6 +343,8 @@ def minLimit(val, limit):
 def maxLimit(val, limit):
 	"""
 	max limit
+	Parameters
+
 	"""
 	if (val > limit):
 		val = limit
@@ -272,6 +353,11 @@ def maxLimit(val, limit):
 def rangeSample(val, minLim, maxLim):
 	"""
 	if out side range sample within range
+	
+	Parameters
+		val : value
+		minLim : minimum
+		maxLim : maximum
 	"""
 	if val < minLim or val > maxLim:
 		val = randint(minLim, maxLim)
@@ -280,6 +366,11 @@ def rangeSample(val, minLim, maxLim):
 def genRandomIntListWithinRange(size, minLim, maxLim):
 	"""
 	random unique list of integers within range
+	
+	Parameters
+		size : size of returned list
+		minLim : minimum
+		maxLim : maximum
 	"""
 	values = set()
 	for i in range(size):
@@ -288,30 +379,48 @@ def genRandomIntListWithinRange(size, minLim, maxLim):
 			values.add(val)
 	return list(values)
 
-def preturbScalar(value, range):
+def preturbScalar(value, vrange):
 	"""
 	preturbs a mutiplicative value within range
+	
+	Parameters
+		value : data value
+		vrange : value delta  fraction
 	"""
-	scale = 1.0 - range + 2 * range * random.random() 
+	scale = 1.0 - vrange + 2 * vrange * random.random() 
 	return value * scale
 	
-def preturbScalarAbs(value, range):
+def preturbScalarAbs(value, vrange):
 	"""
 	preturbs an absolute value within range
+	
+	Parameters
+		value : data value
+		vrange : value delta  absolute
+
 	"""
-	delta = - range + 2.0 * range * random.random() 
+	delta = - vrange + 2.0 * vrange * random.random() 
 	return value + delta
 
-def preturbVector(values, range):
+def preturbVector(values, vrange):
 	"""
 	preturbs a list within range
+	
+	Parameters
+		values : list data
+		vrange : value delta  fraction
 	"""
-	nValues = list(map(lambda va: preturbScalar(va, range), values))
+	nValues = list(map(lambda va: preturbScalar(va, vrange), values))
 	return nValues
 
 def randomShiftVector(values, smin, smax):
 	"""
 	shifts  a list by a random quanity with a range
+	
+	Parameters
+		values : list data
+		smin : samplinf minimum
+		smax : sampling maximum
 	"""
 	shift = np.random.uniform(smin, smax)
 	return list(map(lambda va: va + shift, values))
@@ -319,12 +428,21 @@ def randomShiftVector(values, smin, smax):
 def floatRange(beg, end, incr):
 	"""
 	generates float range
+	
+	Parameters
+		beg :range begin
+		end: range end
+		incr : range increment
 	"""
 	return list(np.arange(beg, end, incr))
 	
 def shuffle(values, *numShuffles):
 	"""
 	in place shuffling with swap of pairs
+	
+	Parameters
+		values : list data
+		numShuffles : parameters for number of shuffles
 	"""
 	size = len(values)
 	if len(numShuffles) == 0:
@@ -346,7 +464,11 @@ def shuffle(values, *numShuffles):
 	
 def splitList(itms, numGr):
 	"""
-	splits a list into sub lists
+	splits a list into sub lists of approximately equal size, with items in sublists randomly chod=sen
+	
+	Parameters
+		itms ; list of values		
+		numGr : no of groups
 	"""
 	tcount = len(itms)
 	cItems = list(itms)
@@ -367,17 +489,25 @@ def splitList(itms, numGr):
 		groups.append(gr)
 	return groups	
 
-def multVector(values, range):
+def multVector(values, vrange):
 	"""
-	multiplies a list within range
+	multiplies a list within value  range
+	
+	Parameters
+		values : list of values
+		vrange : fraction of vaue to be used to update
 	"""
-	scale = 1.0 - range + 2 * range * random.random()
+	scale = 1.0 - vrange + 2 * vrange * random.random()
 	nValues = list(map(lambda va: va * scale, values))
 	return nValues
 	
 def weightedAverage(values, weights):
 	"""
 	calculates weighted average
+	
+	Parameters
+		values : list of values
+		weights : list of weights
 	"""		
 	assert len(values) == len(weights), "values and weights should be same size"
 	vw = zip(values, weights)
@@ -389,6 +519,11 @@ def weightedAverage(values, weights):
 def extractFields(line, delim, keepIndices):
 	"""
 	breaks a line into fields and keeps only specified fileds and returns new line
+	
+	Parameters
+		line ; deli separated string
+		delim : delemeter
+		keepIndices : list of indexes to fields to be retained
 	"""
 	items = line.split(delim)
 	newLine = []
@@ -399,6 +534,11 @@ def extractFields(line, delim, keepIndices):
 def remFields(line, delim, remIndices):
 	"""
 	removes fields from delim separated string
+	
+	Parameters
+		line ; delemeter separated string
+		delim : delemeter
+		remIndices : list of indexes to fields to be removed
 	"""
 	items = line.split(delim)
 	newLine = []
@@ -410,6 +550,10 @@ def remFields(line, delim, remIndices):
 def extractList(data, indices):
 	"""
 	extracts list from another list, given indices
+	
+	Parameters
+		remIndices : list data
+		indices : list of indexes to fields to be retained
 	"""
 	if areAllFieldsIncluded(data, indices):
 		exList = data.copy()
@@ -426,6 +570,10 @@ def extractList(data, indices):
 def arrayContains(arr, item):
 	"""
 	checks if array contains an item 
+	
+	Parameters
+		arr : list data
+		item : item to search
 	"""
 	contains = True
 	try:
@@ -437,6 +585,9 @@ def arrayContains(arr, item):
 def strToIntArray(line, delim=","):	
 	"""
 	int array from delim separated string
+	
+	Parameters
+		line ; delemeter separated string
 	"""
 	arr = line.split(delim)
 	return [int(a) for a in arr]
@@ -444,6 +595,9 @@ def strToIntArray(line, delim=","):
 def strToFloatArray(line, delim=","):	
 	"""
 	float array from delim separated string
+	
+	Parameters
+		line ; delemeter separated string
 	"""
 	arr = line.split(delim)
 	return [float(a) for a in arr]
@@ -451,6 +605,9 @@ def strToFloatArray(line, delim=","):
 def strListOrRangeToIntArray(line):	
 	"""
 	int array from delim separated string or range
+	
+	Parameters
+		line ; delemeter separated string
 	"""
 	varr = line.split(",")
 	if (len(varr) > 1):
@@ -468,6 +625,10 @@ def strListOrRangeToIntArray(line):
 def toStr(val, precision):
 	"""
 	converts any type to string	
+	
+	Parameters
+		val : value
+		precision ; precision for float value
 	"""
 	if type(val) == float or type(val) == np.float64 or type(val) == np.float32:
 		format = "%" + ".%df" %(precision)
@@ -479,6 +640,11 @@ def toStr(val, precision):
 def toStrFromList(values, precision, delim=","):
 	"""
 	converts list of any type to delim separated string
+	
+	Parameters
+		values : list data
+		precision ; precision for float value
+		delim : delemeter
 	"""
 	sValues = list(map(lambda v: toStr(v, precision), values))
 	return delim.join(sValues)
@@ -486,31 +652,49 @@ def toStrFromList(values, precision, delim=","):
 def toIntList(values):
 	"""
 	convert to int list
+	
+	Parameters
+		values : list data
 	"""
 	return list(map(lambda va: int(va), values))
 		
 def toFloatList(values):
 	"""
 	convert to float list
+	
+	Parameters
+		values : list data
+
 	"""
 	return list(map(lambda va: float(va), values))
 
 def toStrList(values, precision=None):
 	"""
 	convert to string list
+	
+	Parameters
+		values : list data
+		precision ; precision for float value
 	"""
 	return list(map(lambda va: toStr(va, precision), values))
 	
 def toIntFromBoolean(value):
 	"""
 	convert to int
+	
+	Parameters
+		value : boolean value
 	"""
 	ival = 1 if value else 0
 	return ival
 
 def typedValue(val, dtype=None):
 	"""
-	return typed value given string
+	return typed value given string, discovers data type if not specified
+	
+	Parameters
+		val : value
+		dtype : data type
 	"""
 	tVal = None
 	
@@ -568,6 +752,9 @@ def typedValue(val, dtype=None):
 def getAllFiles(dirPath):
 	"""
 	get all files recursively
+	
+	Parameters
+		dirPath : directory path
 	"""
 	filePaths = []
 	for (thisDir, subDirs, fileNames) in os.walk(dirPath):
@@ -579,6 +766,10 @@ def getAllFiles(dirPath):
 def getFileContent(fpath, verbose=False):
 	"""
 	get file contents in directory
+	
+	Parameters
+		fpath ; directory path
+		verbose : verbosity flag
 	"""
 	# dcument list
 	docComplete  = []
@@ -596,6 +787,9 @@ def getFileContent(fpath, verbose=False):
 def getOneFileContent(fpath):
 	"""
 	get one file contents
+	
+	Parameters
+		fpath : file path
 	"""
 	with open(fpath, 'r') as contentFile:
 		docStr = contentFile.read()
@@ -604,6 +798,10 @@ def getOneFileContent(fpath):
 def getFileLines(dirPath, delim=","):
 	"""
 	get lines from a file
+	
+	Parameters
+		dirPath : file path
+		delim : delemeter
 	"""
 	lines = list()
 	for li in fileRecGen(dirPath, delim):
@@ -613,6 +811,11 @@ def getFileLines(dirPath, delim=","):
 def getFileSampleLines(dirPath, percen, delim=","):
 	"""
 	get sampled lines from a file
+	
+	Parameters
+		dirPath : file path
+		percen : sampling percentage
+		delim : delemeter
 	"""
 	lines = list()
 	for li in fileRecGen(dirPath, delim):
@@ -623,6 +826,11 @@ def getFileSampleLines(dirPath, percen, delim=","):
 def getFileColumnAsString(dirPath, index, delim=","):
 	"""
 	get string column from a file
+	
+	Parameters
+		dirPath : file path
+		index : index
+		delim : delemeter
 	"""
 	fields = list()
 	for rec in fileRecGen(dirPath, delim):
@@ -633,6 +841,12 @@ def getFileColumnAsString(dirPath, index, delim=","):
 def getFileColumnsAsString(dirPath, indexes, delim=","):
 	"""
 	get multiple string columns from a file
+	
+	Parameters
+		dirPath : file path
+		indexes : indexes of columns
+		delim : delemeter
+
 	"""
 	nindex = len(indexes)
 	columns = list(map(lambda i : list(), range(nindex)))
@@ -644,6 +858,12 @@ def getFileColumnsAsString(dirPath, indexes, delim=","):
 def getFileColumnAsFloat(dirPath, index, delim=","):
 	"""
 	get float fileds from a file
+	
+	Parameters
+		dirPath : file path
+		index : index
+		delim : delemeter
+
 	"""
 	#print("{}  {}".format(dirPath, index))
 	fields = getFileColumnAsString(dirPath, index, delim)
@@ -652,6 +872,11 @@ def getFileColumnAsFloat(dirPath, index, delim=","):
 def getFileColumnAsInt(dirPath, index, delim=","):
 	"""
 	get float fileds from a file
+	
+	Parameters
+		dirPath : file path
+		index : index
+		delim : delemeter
 	"""
 	fields = getFileColumnAsString(dirPath, index, delim)
 	return list(map(lambda v:int(v), fields))
@@ -660,6 +885,11 @@ def getFileAsIntMatrix(dirPath, columns, delim=","):
 	"""
 	extracts int matrix from csv file given column indices with each row being  concatenation of 
 	extracted column values row size = num of columns
+	
+	Parameters
+		dirPath : file path
+		columns : indexes of columns
+		delim : delemeter
 	"""
 	mat = list()
 	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
@@ -670,17 +900,40 @@ def getFileAsFloatMatrix(dirPath, columns, delim=","):
 	"""
 	extracts float matrix from csv file given column indices with each row being concatenation of  
 	extracted column values row size = num of columns
+
+	Parameters
+		dirPath : file path
+		columns : indexes of columns
+		delim : delemeter
 	"""
 	mat = list()
 	for rec in  fileSelFieldsRecGen(dirPath, columns, delim):
 		mat.append(asFloatList(rec))
 	return mat
 	
+def getFileAsFloatColumn(dirPath):
+	"""
+	grt float list from a file with one float per row
+
+	Parameters
+		dirPath : file path
+	"""
+	flist = list()
+	for rec in fileRecGen(dirPath, None):
+		flist.append(float(rec))
+	return flist
 
 def getFileAsFiltFloatMatrix(dirPath, filt, columns, delim=","):
 	"""
 	extracts float matrix from csv file given row filter and column indices with each row being 
 	concatenation of  extracted column values row size = num of columns
+
+	Parameters
+		dirPath : file path
+		columns : indexes of columns
+		filt : row filter lambda
+		delim : delemeter
+
 	"""
 	mat = list()
 	for rec in  fileFiltSelFieldsRecGen(dirPath, filt, columns, delim):
@@ -691,6 +944,11 @@ def getFileAsTypedRecords(dirPath, types, delim=","):
 	"""
 	extracts typed records from csv file with each row being concatenation of  
 	extracted column values 
+
+	Parameters
+		dirPath : file path
+		types : data types
+		delim : delemeter
 	"""
 	(dtypes, cvalues) = extractTypesFromString(types)	
 	tdata = list()
@@ -707,6 +965,13 @@ def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
 	"""
 	extracts typed records from csv file given column indices with each row being concatenation of  
 	extracted column values 
+
+	Parameters
+	Parameters
+		dirPath : file path
+		columns : column indexes
+		types : data types
+		delim : delemeter
 	"""
 	(dtypes, cvalues) = extractTypesFromString(types)	
 	tdata = list()
@@ -722,6 +987,12 @@ def getFileColsAsTypedRecords(dirPath, columns, types, delim=","):
 def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
 	"""
 	extracts numeric matrix from csv file given column indices. For each column return min and max
+
+	Parameters
+		dirPath : file path
+		columns : column indexes
+		dtype : data type
+		delim : delemeter
 	"""
 	dtypes = list(map(lambda c : str(c) + ":" + dtype, columns))
 	dtypes = ",".join(dtypes)
@@ -749,6 +1020,11 @@ def getFileColumnsMinMax(dirPath, columns, dtype, delim=","):
 def getRecAsTypedRecord(rec, types, delim=None):
 	"""
 	converts record to  typed records 
+
+	Parameters
+		rec : delemeter separate string or list of string
+		types : field  data types
+		delim : delemeter
 	"""	
 	if delim is not None:
 		rec = rec.split(delim)
@@ -764,6 +1040,11 @@ def getRecAsTypedRecord(rec, types, delim=None):
 def __convToTyped(index, value, dtypes):
 	"""
 	convert to typed value 
+
+	Parameters
+		index : index in type list
+		value : data value
+		dtypes : data type list
 	"""
 	#print(index, value)
 	dtype = dtypes[index]
@@ -779,6 +1060,9 @@ def __convToTyped(index, value, dtypes):
 def extractTypesFromString(types):
 	"""
 	extracts column data types and set values for categorical variables 
+
+	Parameters
+		types : encoded type information
 	"""
 	ftypes = types.split(",")
 	dtypes = dict()
@@ -795,8 +1079,12 @@ def extractTypesFromString(types):
 	
 def getMultipleFileAsInttMatrix(dirPathWithCol,  delim=","):
 	"""
-	extracts float matrix from from csv files given column index for each file. 
+	extracts int matrix from from csv files given column index for each file. 
 	num of columns  = number of rows in each file and num of rows = number of files
+
+	Parameters
+		dirPathWithCol: list of file path and collumn index pair
+		delim : delemeter
 	"""
 	mat = list()
 	minLen = -1
@@ -814,6 +1102,10 @@ def getMultipleFileAsFloatMatrix(dirPathWithCol,  delim=","):
 	"""
 	extracts float matrix from from csv files given column index for each file. 
 	num of columns  = number of rows in each file and num of rows = number of files
+
+	Parameters
+		dirPathWithCol: list of file path and collumn index pair
+		delim : delemeter
 	"""
 	mat = list()
 	minLen = -1
@@ -827,40 +1119,92 @@ def getMultipleFileAsFloatMatrix(dirPathWithCol,  delim=","):
 	mat = list(map(lambda li:li[:minLen], mat))	
 	return mat
 
-def takeFirst(elem):
+def writeStrListToFile(ldata, filePath, delem=","):
 	"""
-	sorting
+	writes list of dlem separated string or list of list of string to afile
+	
+	Parameters
+		ldata : list data
+		filePath : file path
+		delim : delemeter
 	"""
-	return elem[0]
+	with open(filePath, "w") as fh:
+		for r in ldata:
+			if type(r) == list:
+				r = delem.join(r)
+			fh.write(r + "\n")
 
-def takeSecond(elem):
+def writeFloatListToFile(ldata, prec, filePath):
 	"""
-	sorting
+	writes float list to file, one value per line
+	
+	Parameters
+		ldata : list data
+		prec : precision
+		filePath : file path
 	"""
-	return elem[1]
+	with open(filePath, "w") as fh:
+		for d in ldata:
+			fh.write(formatFloat(prec, d) + "\n")
 
-def takeThird(elem):
+	
+def takeFirst(elems):
 	"""
-	sorting
+	return fisrt item
+
+	Parameters
+		elems : list of data 
 	"""
-	return elem[2]
+	return elems[0]
+
+def takeSecond(elems):
+	"""
+	return 2nd element
+
+	Parameters
+		elems : list of data 
+	"""
+	return elems[1]
+
+def takeThird(elems):
+	"""
+	returns 3rd element
+
+	Parameters
+		elems : list of data 
+	"""
+	return elems[2]
 
 def addToKeyedCounter(dCounter, key, count):
 	"""
-	keyed counter
+	add to to keyed counter
+
+	Parameters
+		dCounter : dictionary of counters
+		key : dictionary key
+		count : count to add
 	"""
 	curCount = dCounter.get(key, 0)
 	dCounter[key] = curCount + count
 
 def incrKeyedCounter(dCounter, key):
 	"""
-	keyed counter
+	increment keyed counter
+
+	Parameters
+		dCounter : dictionary of counters
+		key : dictionary key
 	"""
 	addToKeyedCounter(dCounter, key, 1)
 
 def appendKeyedList(dList, key, elem):
 	"""
 	keyed list
+
+	Parameters
+		dList : dictionary of lists
+		key : dictionary key
+		elem : value to append
 	"""
 	curList = dList.get(key, [])
 	curList.append(elem)
@@ -869,18 +1213,28 @@ def appendKeyedList(dList, key, elem):
 def isNumber(st):
 	"""
 	Returns True is string is a number
+
+	Parameters
+		st : string value
 	"""
 	return st.replace('.','',1).isdigit()
 
 def removeNan(values):
 	"""
 	removes nan from list
+
+	Parameters
+		values : list data
 	"""
 	return list(filter(lambda v: not math.isnan(v), values))
 	
 def fileRecGen(filePath, delim = ","):
 	"""
 	file record generator
+
+	Parameters
+		filePath ; file path
+		delim : delemeter
 	"""
 	with open(filePath, "r") as fp:
 		for line in fp:	
@@ -892,6 +1246,11 @@ def fileRecGen(filePath, delim = ","):
 def fileSelFieldsRecGen(dirPath, columns, delim=","):
 	"""
 	file record generator given column indices 
+
+	Parameters
+		filePath ; file path
+		columns : column indexes as int array or coma separated string
+		delim : delemeter
 	"""
 	if type(columns) == str:
 		columns = strToIntArray(columns, delim)
@@ -902,6 +1261,11 @@ def fileSelFieldsRecGen(dirPath, columns, delim=","):
 def fileFiltRecGen(filePath, filt, delim = ","):
 	"""
 	file record generator with  row filter applied
+
+	Parameters
+		filePath ; file path
+		filt : row filter
+		delim : delemeter
 	"""
 	with open(filePath, "r") as fp:
 		for line in fp:	
@@ -914,6 +1278,12 @@ def fileFiltRecGen(filePath, filt, delim = ","):
 def fileFiltSelFieldsRecGen(filePath, filt, columns, delim = ","):
 	"""
 	file record generator with  row and column filter applied
+
+	Parameters
+		filePath ; file path
+		filt : row filter
+		columns : column indexes as int array or coma separated string
+		delim : delemeter
 	"""
 	columns = strToIntArray(columns, delim)
 	with open(filePath, "r") as fp:
@@ -928,6 +1298,11 @@ def fileFiltSelFieldsRecGen(filePath, filt, columns, delim = ","):
 def fileTypedRecGen(filePath, ftypes, delim = ","):
 	"""
 	file typed record generator
+
+	Parameters
+		filePath ; file path
+		ftypes : list of field types
+		delim : delemeter
 	"""
 	with open(filePath, "r") as fp:
 		for line in fp:	
@@ -948,6 +1323,11 @@ def fileTypedRecGen(filePath, ftypes, delim = ","):
 def fileMutatedFieldsRecGen(dirPath, mutator, delim=","):
 	"""
 	file record generator with some columns mutated 
+
+	Parameters
+		dirPath ; file path
+		mutator : row field mutator
+		delim : delemeter
 	"""
 	for rec in fileRecGen(dirPath, delim):
 		mutated = mutator(rec)
@@ -956,6 +1336,10 @@ def fileMutatedFieldsRecGen(dirPath, mutator, delim=","):
 def tableSelFieldsFilter(tdata, columns):
 	"""
 	gets tabular data for selected columns 
+
+	Parameters
+		tdata : tabular data
+		columns : column indexes
 	"""
 	if areAllFieldsIncluded(tdata[0], columns):
 		ntdata = tdata
@@ -972,24 +1356,38 @@ def tableSelFieldsFilter(tdata, columns):
 def areAllFieldsIncluded(ldata, columns):
 	"""
 	return True id all indexes are in the columns
+
+	Parameters
+		ldata : list data
+		columns : column indexes
 	"""
 	return list(range(len(ldata))) == columns
 	
 def asIntList(items):
 	"""
 	returns int list
+
+	Parameters
+		items : list data
 	"""
 	return [int(i) for i in items]
 			
 def asFloatList(items):
 	"""
 	returns float list
+
+	Parameters
+		items : list data
 	"""
 	return [float(i) for i in items]
 
 def pastTime(interval, unit):
 	"""
 	current and past time
+
+	Parameters
+		interval : time interval
+		unit: time unit
 	"""
 	curTime = int(time.time())
 	if unit == "d":
@@ -1005,12 +1403,19 @@ def pastTime(interval, unit):
 def minuteAlign(ts):
 	"""
 	minute aligned time	
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	return int((ts / secInMinute)) * secInMinute
 
 def multMinuteAlign(ts, min):
 	"""
 	multi minute aligned time	
+
+	Parameters
+		ts : time stamp in sec
+		min : minute value
 	"""
 	intv = secInMinute * min
 	return int((ts / intv)) * intv
@@ -1018,12 +1423,19 @@ def multMinuteAlign(ts, min):
 def hourAlign(ts):
 	"""
 	hour aligned time	
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	return int((ts / secInHour)) * secInHour
 	
 def hourOfDayAlign(ts, hour):
 	"""
 	hour of day aligned time	
+
+	Parameters
+		ts : time stamp in sec
+		hour : hour of day
 	"""
 	day = int(ts / secInDay)
 	return (24 * day + hour) * secInHour
@@ -1031,12 +1443,19 @@ def hourOfDayAlign(ts, hour):
 def dayAlign(ts):
 	"""
 	day aligned time	
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	return int(ts / secInDay) * secInDay
 
 def timeAlign(ts, unit):
 	"""
 	boundary alignment of time
+
+	Parameters
+		ts : time stamp in sec
+		unit : unit of time
 	"""
 	alignedTs = 0
 	if unit == "s":
@@ -1054,6 +1473,9 @@ def timeAlign(ts, unit):
 def monthOfYear(ts):
 	"""
 	month of year
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	rem = ts % secInYear
 	dow = int(rem / secInMonth)
@@ -1062,6 +1484,9 @@ def monthOfYear(ts):
 def dayOfWeek(ts):
 	"""
 	day of week
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	rem = ts % secInWeek
 	dow = int(rem / secInDay)
@@ -1070,6 +1495,9 @@ def dayOfWeek(ts):
 def hourOfDay(ts):
 	"""
 	hour of day
+
+	Parameters
+		ts : time stamp in sec
 	"""
 	rem = ts % secInDay
 	hod = int(rem / secInHour)
@@ -1078,6 +1506,10 @@ def hourOfDay(ts):
 def processCmdLineArgs(expectedTypes, usage):
 	"""
 	process command line args and returns args as typed values
+
+	Parameters
+		expectedTypes : expected data types of arguments
+		usage : usage message string
 	"""
 	args = []
 	numComLineArgs = len(sys.argv)
@@ -1103,6 +1535,11 @@ def processCmdLineArgs(expectedTypes, usage):
 def mutateString(val, numMutate, ctype):
 	"""
 	mutate string multiple times
+
+	Parameters
+		val : string value
+		numMutate : num of mutations
+		ctype : type of character to mutate with
 	"""
 	mutations = set()
 	count = 0
@@ -1123,6 +1560,12 @@ def mutateString(val, numMutate, ctype):
 def mutateList(values, numMutate, vmin, vmax):
 	"""
 	mutate list multiple times
+
+	Parameters
+		values : list value
+		numMutate : num of mutations
+		vmin : minimum of value range
+		vmax : maximum of value range
 	"""
 	mutations = set()
 	count = 0
@@ -1137,6 +1580,11 @@ def mutateList(values, numMutate, vmin, vmax):
 def swap(values, first, second):
 	"""
 	swap two elements
+
+	Parameters
+		values : list value
+		first : first swap position
+		second : second swap position
 	"""
 	t = values[first]
 	values[first] = values[second]	
@@ -1145,6 +1593,10 @@ def swap(values, first, second):
 def swapBetweenLists(values1, values2):
 	"""
 	swap two elements between 2 lists
+
+	Parameters
+		values1 : first list of values
+		values2 : second list of values
 	"""
 	p1 = randint(0, len(values1)-1)
 	p2 = randint(0, len(values2)-1)
@@ -1155,19 +1607,31 @@ def swapBetweenLists(values1, values2):
 def safeAppend(values, value):
 	"""
 	append only if not None
+
+	Parameters
+		values : list value
+		value : value to append
 	"""
 	if value is not None:
 		values.append(value)
 
 def getAllIndex(ldata, fldata):
 	"""
-	get ALL INDEXES OF LIST ELEMENTS
+	get ALL indexes of list elements
+
+	Parameters
+		ldata : list data to find index in
+		fldata : list data for values for index look up
 	"""
 	return list(map(lambda e : fldata.index(e), ldata))
 
 def findIntersection(lOne, lTwo):
 	"""
 	find intersection elements between 2 lists
+
+	Parameters
+		lOne : first list of data
+		lTwo : second list of data
 	"""
 	sOne = set(lOne)
 	sTwo = set(lTwo)
@@ -1177,6 +1641,10 @@ def findIntersection(lOne, lTwo):
 def isIntvOverlapped(rOne, rTwo):
 	"""
 	checks overlap between 2 intervals
+
+	Parameters
+		rOne : first interval boundaries
+		rTwo : second interval boundaries
 	"""
 	clear = rOne[1] <=  rTwo[0] or rOne[0] >=  rTwo[1] 
 	return not clear
@@ -1184,6 +1652,10 @@ def isIntvOverlapped(rOne, rTwo):
 def isIntvLess(rOne, rTwo):
 	"""
 	checks if first iterval is less than second
+
+	Parameters
+		rOne : first interval boundaries
+		rTwo : second interval boundaries
 	"""
 	less = rOne[1] <=  rTwo[0] 
 	return less
@@ -1191,6 +1663,10 @@ def isIntvLess(rOne, rTwo):
 def findRank(e, values):
 	"""
 	find rank of value in a list
+
+	Parameters
+		e : value to compare with
+		values : list data
 	"""
 	count =  1
 	for ve in values:
@@ -1201,12 +1677,21 @@ def findRank(e, values):
 def findRanks(toBeRanked, values):
 	"""
 	find ranks of values in one list in another list
+
+	Parameters
+		toBeRanked : list of values for which ranks are found
+		values : list in which rank is found : 
 	"""
 	return list(map(lambda e: findRank(e, values), toBeRanked))
 	
 def formatFloat(prec, value, label = None):
 	"""
 	formats a float with optional label
+
+	Parameters
+		prec : precision
+		value : data value
+		label : label for data
 	"""
 	st = (label + " ") if label else ""
 	formatter = "{:." + str(prec) + "f}" 
@@ -1215,6 +1700,10 @@ def formatFloat(prec, value, label = None):
 def formatAny(value, label = None):
 	"""
 	formats any obkect with optional label
+
+	Parameters
+		value : data value
+		label : label for data
 	"""
 	st = (label + " ") if label else ""
 	return st + str(value)
@@ -1222,6 +1711,9 @@ def formatAny(value, label = None):
 def printList(values):
 	"""
 	pretty print list
+
+	Parameters
+		values : list of values
 	"""
 	for v in values:
 		print(v)
@@ -1229,6 +1721,13 @@ def printList(values):
 def printMap(values, klab, vlab, precision, offset=16):
 	"""
 	pretty print hash map
+
+	Parameters
+		values : dictionary of values
+		klab : label for key
+		vlab : label for value
+		precision : precision
+		offset : left justify offset
 	"""
 	print(klab.ljust(offset, " ") + vlab)
 	for k in values.keys():
@@ -1240,6 +1739,13 @@ def printMap(values, klab, vlab, precision, offset=16):
 def printPairList(values, lab1, lab2, precision, offset=16):
 	"""
 	pretty print list of pairs
+
+	Parameters
+		values : dictionary of values
+		lab1 : first label
+		lab2 : second label
+		precision : precision
+		offset : left justify offset
 	"""
 	print(lab1.ljust(offset, " ") + lab2)
 	for (v1, v2) in values:
@@ -1250,6 +1756,9 @@ def printPairList(values, lab1, lab2, precision, offset=16):
 def createMap(*values):
 	"""
 	create disctionary with results
+
+	Parameters
+
 	"""
 	result = dict()
 	for i in range(0, len(values), 2):
@@ -1259,6 +1768,9 @@ def createMap(*values):
 def getColMinMax(table, col):
 	"""
 	return min, max values of a column
+
+	Parameters
+
 	"""
 	vmin = None
 	vmax = None
@@ -1277,6 +1789,9 @@ def getColMinMax(table, col):
 def createLogger(name, logFilePath, logLevName):
 	"""
 	creates logger
+
+	Parameters
+
 	"""
 	logger = logging.getLogger(name)
 	fHandler = logging.handlers.RotatingFileHandler(logFilePath, maxBytes=1048576, backupCount=4)
@@ -1304,6 +1819,9 @@ def createLogger(name, logFilePath, logLevName):
 def suppressStdout():
 	"""
 	suppress stdout
+
+	Parameters
+
 	"""
 	with open(os.devnull, "w") as devnull:
 		oldStdout = sys.stdout
@@ -1316,6 +1834,9 @@ def suppressStdout():
 def exitWithMsg(msg):
 	"""
 	print message and exit
+
+	Parameters
+
 	"""
 	print(msg + " -- quitting")
 	sys.exit(0)
@@ -1323,6 +1844,9 @@ def exitWithMsg(msg):
 def drawLine(data, yscale=None):
 	"""
 	line plot
+
+	Parameters
+
 	"""
 	plt.plot(data)
 	if yscale:
@@ -1334,6 +1858,9 @@ def drawLine(data, yscale=None):
 def drawPlot(x, y, xlabel, ylabel):
 	"""
 	line plot
+
+	Parameters
+
 	"""
 	plt.plot(x,y)
 	plt.xlabel(xlabel)
@@ -1343,6 +1870,9 @@ def drawPlot(x, y, xlabel, ylabel):
 def drawPairPlot(x, y1, y2, xlabel,ylabel, y1label, y2label):
 	"""
 	line plot of 2 lines
+
+	Parameters
+
 	"""
 	plt.plot(x, y1, label = y1label)
 	plt.plot(x, y2, label = y2label)
@@ -1354,6 +1884,9 @@ def drawPairPlot(x, y1, y2, xlabel,ylabel, y1label, y2label):
 def drawHist(ldata, myTitle, myXlabel, myYlabel, nbins=10):
 	"""
 	draw histogram
+
+	Parameters
+
 	"""
 	plt.hist(ldata, bins=nbins, density=True)
 	plt.title(myTitle)
@@ -1364,6 +1897,9 @@ def drawHist(ldata, myTitle, myXlabel, myYlabel, nbins=10):
 def saveObject(obj, filePath):
 	"""
 	saves an object
+
+	Parameters
+
 	"""
 	with open(filePath, "wb") as outfile:
 		pickle.dump(obj,outfile)
@@ -1371,6 +1907,9 @@ def saveObject(obj, filePath):
 def restoreObject(filePath):
 	"""
 	restores an object
+
+	Parameters
+
 	"""
 	with open(filePath, "rb") as infile:
 		obj = pickle.load(infile)
@@ -1379,6 +1918,9 @@ def restoreObject(filePath):
 def isNumeric(data):
 	"""
 	true if all elements int or float
+
+	Parameters
+
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1389,6 +1931,9 @@ def isNumeric(data):
 def isInteger(data):
 	"""
 	true if all elements int 
+
+	Parameters
+
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1399,6 +1944,9 @@ def isInteger(data):
 def isFloat(data):
 	"""
 	true if all elements  float
+
+	Parameters
+
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1409,6 +1957,9 @@ def isFloat(data):
 def isBinary(data):
 	"""
 	true if all elements either 0 or 1
+
+	Parameters
+
 	"""
 	re = next((d for d in data if not (type(d) == int and (d == 0 or d == 1))), None)
 	return (re is None)
@@ -1416,6 +1967,9 @@ def isBinary(data):
 def isCategorical(data):
 	"""
 	true if all elements int or string
+
+	Parameters
+
 	"""
 	re = next((d for d in data if not (type(d) == int or type(d) == str)), None)
 	return (re is None)
@@ -1423,54 +1977,83 @@ def isCategorical(data):
 def assertEqual(value, veq, msg):
 	"""
 	assert equal to
+
+	Parameters
+
 	"""
 	assert value == veq , msg
 
 def assertGreater(value, vmin, msg):
 	"""
 	assert greater than 
+
+	Parameters
+
 	"""
 	assert value > vmin , msg
 
 def assertGreaterEqual(value, vmin, msg):
 	"""
 	assert greater than 
+
+	Parameters
+
 	"""
 	assert value >= vmin , msg
 
 def assertLesser(value, vmax, msg):
 	"""
 	assert less than
+
+	Parameters
+
 	"""
 	assert value < vmax , msg
 
 def assertLesserEqual(value, vmax, msg):
 	"""
 	assert less than
+
+	Parameters
+
 	"""
 	assert value <= vmax , msg
 
 def assertWithinRange(value, vmin, vmax, msg):
 	"""
 	assert within range
+
+	Parameters
+
 	"""
 	assert value >= vmin and value <= vmax, msg
 		
 def assertInList(value, values, msg):
 	"""
 	assert contains in a list
+
+	Parameters
+
 	"""
 	assert value in values, msg
 
 def maxListDist(l1, l2):
 	"""
 	maximum list element difference
+
+	Parameters
+
 	"""
 	dist = max(list(map(lambda v : abs(v[0] - v[1]), zip(l1, l2))))	
 	return dist
 
 def fileLineCount(fPath):
-	""" number of lines ina file """
+	""" 
+	number of lines ina file 
+
+	Parameters
+
+	"""
 	with open(fPath) as f:
 		for i, li in enumerate(f):
 			pass
@@ -1479,6 +2062,9 @@ def fileLineCount(fPath):
 class StepFunction:
 	"""
 	step function
+
+	Parameters
+
 	"""
 	def __init__(self,  *values):
 		self.points = values
@@ -1504,6 +2090,9 @@ class StepFunction:
 class DummyVarGenerator:
 	"""
 	dummy variable generator for categorical variable
+
+	Parameters
+
 	"""
 	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim=None):
 		self.rowSize = rowSize
