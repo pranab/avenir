@@ -1,0 +1,36 @@
+This tutorial is for out of distribution data  for a machine learning model.  A neural neuwork model 
+for predicting loan approbval is used for predictions. The technique uses hidden layer output
+and k nearest neighbor nalgorithm
+
+Setup
+=====
+Make sure you have ../lib  ../supv directories with all the python files in there wrt 
+where loan_approve.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Train NN model
+==============
+Prepare training data, validation data and train model as per instructions in the tutorial document 
+model_performance_with_class_sep_metric_tutorial.txt. Make sure model is saved after training with 
+the parameter setting train.model.save=True
+
+Use this tutorial to generate input data used below
+
+Generate neareat latent output and neighbor distance data
+=========================================================
+./loan_approve.py detood <mod_config_file> <input_data_file> <latent_output_file_path> <dist_output_file_path> gen
+
+mod_config_file = neural model config file. I have used tnn_lo.properties
+input_data_file =  refrence input data file path
+latent_output_file_path = path to file where latent output will be written
+dist_output_file_path = path to file where nearest neighbor distances will be written
+
+Detect out of disttribution data
+================================
+./loan_approve.py detood <mod_config_file> <input_data_file> <latent_output_file_path> <dist_output_file_path> det <up_conf_bound>
+
+mod_config_file = neural model config file. I have used tnn_lo.properties
+input_data_file =  test input data file path
+latent_output_file_path = path to file containing latent output (generated in the previous step)
+dist_output_file_path = path to file where containing nearest neighbor distance (generated in the previous step)
+up_conf_bound = upper confidence bound e.g 0.9
