@@ -1758,7 +1758,7 @@ def createMap(*values):
 	create disctionary with results
 
 	Parameters
-
+		values : sequence of key value pairs
 	"""
 	result = dict()
 	for i in range(0, len(values), 2):
@@ -1770,7 +1770,8 @@ def getColMinMax(table, col):
 	return min, max values of a column
 
 	Parameters
-
+		table : tabular data
+		col : column index
 	"""
 	vmin = None
 	vmax = None
@@ -1791,7 +1792,9 @@ def createLogger(name, logFilePath, logLevName):
 	creates logger
 
 	Parameters
-
+		name : logger name
+		logFilePath : log file path
+		logLevName : log level
 	"""
 	logger = logging.getLogger(name)
 	fHandler = logging.handlers.RotatingFileHandler(logFilePath, maxBytes=1048576, backupCount=4)
@@ -1836,7 +1839,7 @@ def exitWithMsg(msg):
 	print message and exit
 
 	Parameters
-
+		msg : message
 	"""
 	print(msg + " -- quitting")
 	sys.exit(0)
@@ -1846,7 +1849,8 @@ def drawLine(data, yscale=None):
 	line plot
 
 	Parameters
-
+		data : list data
+		yscale : y axis scale
 	"""
 	plt.plot(data)
 	if yscale:
@@ -1860,7 +1864,10 @@ def drawPlot(x, y, xlabel, ylabel):
 	line plot
 
 	Parameters
-
+		x : x values
+		y : y values
+		xlabel : x axis label
+		ylabel : y axis label
 	"""
 	plt.plot(x,y)
 	plt.xlabel(xlabel)
@@ -1872,7 +1879,13 @@ def drawPairPlot(x, y1, y2, xlabel,ylabel, y1label, y2label):
 	line plot of 2 lines
 
 	Parameters
-
+		x : x values
+		y1 : first y values
+		y2 : second y values
+		xlabel : x labbel
+		ylabel : y label
+		y1label : first plot label
+		y2label : second plot label
 	"""
 	plt.plot(x, y1, label = y1label)
 	plt.plot(x, y2, label = y2label)
@@ -1886,7 +1899,11 @@ def drawHist(ldata, myTitle, myXlabel, myYlabel, nbins=10):
 	draw histogram
 
 	Parameters
-
+		ldata : list data
+		myTitle : title
+		myXlabel : x label
+		myYlabel : y label 
+		nbins : num of bins
 	"""
 	plt.hist(ldata, bins=nbins, density=True)
 	plt.title(myTitle)
@@ -1899,7 +1916,8 @@ def saveObject(obj, filePath):
 	saves an object
 
 	Parameters
-
+		obj : object
+		filePath : file path for saved object
 	"""
 	with open(filePath, "wb") as outfile:
 		pickle.dump(obj,outfile)
@@ -1909,7 +1927,7 @@ def restoreObject(filePath):
 	restores an object
 
 	Parameters
-
+		filePath : file path to restore object from
 	"""
 	with open(filePath, "rb") as infile:
 		obj = pickle.load(infile)
@@ -1920,7 +1938,7 @@ def isNumeric(data):
 	true if all elements int or float
 
 	Parameters
-
+		data : numeric data list
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1933,7 +1951,7 @@ def isInteger(data):
 	true if all elements int 
 
 	Parameters
-
+		data : numeric data list
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1946,7 +1964,7 @@ def isFloat(data):
 	true if all elements  float
 
 	Parameters
-
+		data : numeric data list
 	"""
 	if type(data) == list or type(data) == np.ndarray:
 		col = pd.Series(data)
@@ -1959,7 +1977,7 @@ def isBinary(data):
 	true if all elements either 0 or 1
 
 	Parameters
-
+		data : binary data
 	"""
 	re = next((d for d in data if not (type(d) == int and (d == 0 or d == 1))), None)
 	return (re is None)
@@ -1969,7 +1987,7 @@ def isCategorical(data):
 	true if all elements int or string
 
 	Parameters
-
+		data : data value
 	"""
 	re = next((d for d in data if not (type(d) == int or type(d) == str)), None)
 	return (re is None)
@@ -1979,7 +1997,9 @@ def assertEqual(value, veq, msg):
 	assert equal to
 
 	Parameters
-
+		value : value
+		veq : value to be equated with
+		msg : error msg
 	"""
 	assert value == veq , msg
 
@@ -1988,7 +2008,9 @@ def assertGreater(value, vmin, msg):
 	assert greater than 
 
 	Parameters
-
+		value : value
+		vmin : minimum value
+		msg : error msg
 	"""
 	assert value > vmin , msg
 
@@ -1997,7 +2019,9 @@ def assertGreaterEqual(value, vmin, msg):
 	assert greater than 
 
 	Parameters
-
+		value : value
+		vmin : minimum value
+		msg : error msg
 	"""
 	assert value >= vmin , msg
 
@@ -2006,7 +2030,9 @@ def assertLesser(value, vmax, msg):
 	assert less than
 
 	Parameters
-
+		value : value
+		vmax : maximum value
+		msg : error msg
 	"""
 	assert value < vmax , msg
 
@@ -2015,7 +2041,9 @@ def assertLesserEqual(value, vmax, msg):
 	assert less than
 
 	Parameters
-
+		value : value
+		vmax : maximum value
+		msg : error msg
 	"""
 	assert value <= vmax , msg
 
@@ -2024,7 +2052,10 @@ def assertWithinRange(value, vmin, vmax, msg):
 	assert within range
 
 	Parameters
-
+		value : value
+		vmin : minimum value
+		vmax : maximum value
+		msg : error msg
 	"""
 	assert value >= vmin and value <= vmax, msg
 		
@@ -2033,16 +2064,19 @@ def assertInList(value, values, msg):
 	assert contains in a list
 
 	Parameters
-
+		value ; balue to check for inclusion
+		values : list data
+		msg : error msg
 	"""
 	assert value in values, msg
 
 def maxListDist(l1, l2):
 	"""
-	maximum list element difference
+	maximum list element difference between 2 lists
 
 	Parameters
-
+		l1 : first list data
+		l2 : second list data
 	"""
 	dist = max(list(map(lambda v : abs(v[0] - v[1]), zip(l1, l2))))	
 	return dist
@@ -2052,7 +2086,7 @@ def fileLineCount(fPath):
 	number of lines ina file 
 
 	Parameters
-
+		fPath : file path
 	"""
 	with open(fPath) as f:
 		for i, li in enumerate(f):

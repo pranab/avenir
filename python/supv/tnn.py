@@ -130,7 +130,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		torch.manual_seed(9999)
 
-		self.verbose = self.config.getStringConfig("common.verbose")[0]
+		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
 		numinp = len(self.config.getIntListConfig("train.data.feature.fields")[0])
 		#numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.outputSize = self.config.getIntConfig("train.output.size")[0]
