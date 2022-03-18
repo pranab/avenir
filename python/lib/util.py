@@ -165,6 +165,7 @@ def selectRandomSubListFromList(ldata, num):
 		ldata : list data
 		num : output list size
 	"""
+	assertLesser(num, len(ldata), "size of sublist to be sampled greater than or equal to main list")
 	i = randint(0, len(ldata)-1)
 	sel = ldata[i]
 	selSet = {i}
