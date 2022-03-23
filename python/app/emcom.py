@@ -132,7 +132,7 @@ if __name__ == "__main__":
 						appendKeyedList(nidexes, k, i)
 						i += 1
 		nnodes = i
-		#print("num node ", nnodes, " num lablled ", nlabelled)
+		print("num nodes ", nnodes, " num lablled:", nlabelled)
 				
 		#edges topic based
 		e = 0
@@ -150,7 +150,8 @@ if __name__ == "__main__":
 						eis = eeids
 					for ei in eis:
 						print("{},{}".format(ji, ei))
-						e += 1
+						print("{},{}".format(ei, ji))
+						e += 2
 		#print("no of sme specific connections ", e)		
 			
 		#edges intra cluster
@@ -169,7 +170,8 @@ if __name__ == "__main__":
 				n2 = selectRandomFromList(nidexes[k])
 				if n1 != n2:
 					print("{},{}".format(n1, n2))
-					e += 1
+					print("{},{}".format(n2, n1))
+					e += 2
 		#print("no of intra cluster connections ", e)		
 						
 		#edges inter cluster
@@ -186,6 +188,7 @@ if __name__ == "__main__":
 			t = randomInt(0, nsm - 1)
 			n2 = selectRandomFromList(nidexes[k])
 			print("{},{}".format(n1, n2))
-			e += 1
+			print("{},{}".format(n2, n1))
+			e += 2
 		#print("no of inter cluster connections ", e)		
 				
