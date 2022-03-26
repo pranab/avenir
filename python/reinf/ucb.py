@@ -40,7 +40,7 @@ class UpperConfBound:
 			transientAction ; if decision involves some tied up resource it should be set True
 		"""
 		assertGreater(wsize, 9, "window size should be at least 10")
-		self.actions = list(map(lambda aname : RollingStat(aname, wsize), actions))
+		self.actions = list(map(lambda aname : RollingStat(wsize), actions))
 		self .totPlays = 0
 		self.transientAction = transientAction
 		

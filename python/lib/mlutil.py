@@ -26,6 +26,7 @@ from sklearn.datasets import make_classification
 import random
 from math import *
 from decimal import Decimal
+import statistics
 import jprops
 from Levenshtein import distance as ld
 from util import *
@@ -1210,5 +1211,40 @@ class ShiftedDataGenerator:
 			ttdata.append(nrec)
 		return ttdata
 		
+class RollingStat(object):
+	"""
+	stats for rolling windowt
+	"""
+	def __init__(self, wsize):
+		"""
+		initializer
+		
+		Parameters
+			wsize : window size
+		"""
+		self.window = list()
+		self.wsize = wsize
+		self.mean = None
+		self.sd = None
 
+	def add(self, value):
+		"""
+		add a value
+		
+		Parameters
+			value : value to add
+		"""
+		self.window.append(value)
+		if len(self.window) > self.wsize:
+			self.window = self.window[1:]
+		
+	def getStat(self):
+		"""
+		get rolling window mean and std deviation
+		"""
+		assertGreater(len(self.window), 0, "window is empty")
+		self.mean = statistics.mean(self.window)
+		self.sd = statistics.stdev(self.window, xbar=self.mean)
+		re = (self.mean, self.sd)
+		return re
 		
