@@ -468,7 +468,7 @@ def loadDataFile(file, delim, cols, colIndices):
 	Parameters
 		file : file path
 		delim : delemeter
-		cols ; columns to use from file
+		cols : columns to use from file
 		colIndices ; columns to extract
 	"""
 	data = np.loadtxt(file, delimiter=delim, usecols=cols)
@@ -482,7 +482,7 @@ def loadFeatDataFile(file, delim, cols):
 	Parameters
 		file : file path
 		delim : delemeter
-		cols ; columns to use from file
+		cols : columns to use from file
 	"""
 	data = np.loadtxt(file, delimiter=delim, usecols=cols)
 	return data
@@ -570,7 +570,7 @@ def nthRoot(value, nRoot):
 
 	Parameters
 		value : data value
-		nRoot ; root
+		nRoot : root
 	"""
 	rootValue = 1/float(nRoot)
 	return round (Decimal(value) ** Decimal(rootValue),3)
@@ -605,7 +605,7 @@ def jaccardSimilarity(x,y,wx=1.0,wy=1.0):
 	Parameters
 		x : first vector
 		y : second fvector
-		wx = weight for x
+		wx : weight for x
 		wy : weight for y
 	"""
 	sx = set(x)
@@ -637,7 +637,7 @@ def norm(values, po=2):
 	norm
 
 	Parameters
-		values = list of values
+		values : list of values
 		po : power
 	"""
 	no = sum(list(map(lambda v: pow(v,po), values)))
@@ -649,7 +649,7 @@ def createOneHotVec(size, indx = -1):
 	random one hot vector
 	
 	Parameters
-		size = vector size
+		size : vector size
 		indx : one hot position
 	"""
 	vec = [0] * size
@@ -662,7 +662,7 @@ def createAllOneHotVec(size):
 	create all one hot vectors
 	
 	Parameters
-		size = vector size and no of vectors
+		size : vector size and no of vectors
 	"""
 	vecs = list()
 	for i in range(size):
@@ -817,7 +817,7 @@ def normalizeMatrix(data, norm, axis=1):
 	normalized each row of the matrix
 	
 	Parameters
-		data 2D data
+		data : 2D data
 		nporm : normalization method
 		axis : row or column
 	"""
@@ -829,7 +829,7 @@ def standardizeMatrix(data, axis=0):
 	standardizes each column of the matrix with mean and std deviation
 
 	Parameters
-		data 2D data
+		data : 2D data
 		axis : row or column
 	"""
 	standardized = preprocessing.scale(data, axis=axis)
@@ -840,7 +840,7 @@ def asNumpyArray(data):
 	converts to numpy array
 
 	Parameters
-		data  array
+		data  : array
 	"""
 	return np.array(data)
 
@@ -849,7 +849,7 @@ def perfMetric(metric, yActual, yPred, clabels=None):
 	predictive model accuracy metric
 
 	Parameters
-		metric  accuracy metric
+		metric : accuracy metric
 		yActual : actual values array
 		yPred : predicted values array
 		clabels : class labels
@@ -898,7 +898,7 @@ def scaleData(data, method):
 
 	Parameters
 		data : 2D array
-		method  scaling method
+		method : scaling method
 	"""
 	if method == "minmax":
 		scaler = preprocessing.MinMaxScaler()
@@ -915,7 +915,7 @@ def scaleDataWithParams(data, method, scParams):
 
 	Parameters
 		data : 2D array
-		method  scaling method
+		method : scaling method
 		scParams : scaling parameters
 	"""
 	if method == "minmax":
@@ -933,7 +933,7 @@ def scaleMinMaxTabData(tdata, minMax):
 
 	Parameters
 		tdata : 2D array
-		minMax  ni, max and range for each column
+		minMax : ni, max and range for each column
 	"""
 	stdata = list()
 	for r in tdata:
@@ -950,7 +950,7 @@ def scaleMinMax(rdata, minMax):
 
 	Parameters
 		rdata : data array
-		minMax  ni, max and range for each column
+		minMax : ni, max and range for each column
 	"""
 	srdata = list()
 	for i in range(len(rdata)):
@@ -1131,7 +1131,7 @@ class ShiftedDataGenerator:
 		linear transforms data to create  distribution shift with random shift and scale
 
 		Parameters
-			types data types
+			types : data types
 		"""
 		transforms = dict()
 		for k,v in self.dtypes.items():
@@ -1171,7 +1171,7 @@ class ShiftedDataGenerator:
 		linear transforms data to create  distribution shift shift specified shift and scale
 
 		Parameters
-			types data types
+			types : data types
 			sshift : shift factor
 			scale : scale factor
 		"""
@@ -1243,8 +1243,18 @@ class RollingStat(object):
 		get rolling window mean and std deviation
 		"""
 		assertGreater(len(self.window), 0, "window is empty")
-		self.mean = statistics.mean(self.window)
-		self.sd = statistics.stdev(self.window, xbar=self.mean)
+		if len(self.window) == 1:
+			self.mean = self.window[0]
+			self.sd = 0
+		else:
+			self.mean = statistics.mean(self.window)
+			self.sd = statistics.stdev(self.window, xbar=self.mean)
 		re = (self.mean, self.sd)
 		return re
+		
+	def getSize(self):
+		"""
+		return window size
+		"""
+		return len(self.window)
 		

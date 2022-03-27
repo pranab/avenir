@@ -36,7 +36,7 @@ class Worker:
 	"""
 	worker
 	"""
-	respDistr = [100, 60, 20]
+	respDistr = [100, 40, 20]
 	incomeDistrparams = [100, 20]
 	ratingDistrparams = [3.0, 1.0]
 	scoreWeights = [.4, .2, .4]
@@ -56,6 +56,7 @@ class Worker:
 		# rating
 		self.__setRatingDistr()
 		
+		self.name = name
 		self.scheduled = False
 		self.selected = False
 		
@@ -65,7 +66,8 @@ class Worker:
 		"""
 		self.selected = True
 		self.resp = self.respSampler.sample()
-		self.scheduled = self.resp == "pos"
+		self.scheduled = (self.resp == "pos")
+		print("worker {}  scheduled {}".format(self.name, self.scheduled))
 		
 	
 	def process(self):
@@ -104,6 +106,8 @@ class Worker:
 			self.__setIncomeDistr()
 		if isEventSampled(15):
 			self.__setRatingDistr()
+
+		print("worker {}  score {:.3f}".format(self.name, self.score))
 		
 		return self.score
 		
@@ -114,6 +118,7 @@ class Worker:
 		"""
 		distr = Worker.respDistr.copy()
 		mutDistr(distr, 5, 3)
+		print("resp distr " + str(distr))
 		self.respSampler = CategoricalRejectSampler(("pos", distr[0]), ("neg", distr[1]), ("nor", distr[2]))
 	
 	def __setIncomeDistr(self):
@@ -152,6 +157,7 @@ class Manager:
 			name = genID(10)
 			self.workers[name] = Worker(name)
 			names.append(name)
+		#print(names)
 		self.model = UpperConfBound(names, 20, False)
 	
 	def schedule(self, tm):
@@ -168,7 +174,7 @@ class Manager:
 		self.scheduled  = list()
 		for _ in range(dem):
 			wname = self.model.act()
-			print("worker selected ", wname)
+			#print("worker selected ", wname)
 			self.workers[wname].schedule()
 			self.scheduled.append(wname)
 			
@@ -181,7 +187,6 @@ class Manager:
 			worker = self.workers[wname]
 			if worker.selected:
 				score = worker.process()
-				print("worker {}  score {:.3f}".format(wname, score))
 				self.model.setReward(wname, score)
 			
 ##########################################################################################
@@ -199,7 +204,7 @@ if __name__ == "__main__":
 
 		if ch == "schedule":
 			if lastCh is None or lastCh != ch:
-				manager.schedule()
+				manager.schedule(tm)
 				tm += secInDay
 				lastCh = ch
 			else:

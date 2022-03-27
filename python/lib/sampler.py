@@ -30,82 +30,132 @@ from stats import Histogram
 def randomFloat(low, high):
 	"""
 	sample float within range
+
+	Parameters
+		low : low valuee
+		high : high valuee
 	"""
 	return random.random() * (high-low) + low
 
-def randomInt(min, max):
+def randomInt(minv, maxv):
 	"""
 	sample int within range
+
+	Parameters
+		minv : low valuee
+		maxv : high valuee
 	"""
-	return randint(min, max)
+	return randint(minv, maxv)
 	
 def randIndex(lData):
 	"""
 	random index of a list
+
+	Parameters
+		lData : list data
 	"""
 	return randint(0, len(lData)-1)
 
 def randomUniformSampled(low, high):
 	"""
 	sample float within range
+	
+	Parameters
+		low : low value
+		high : high value
 	"""
 	return np.random.uniform(low, high)
 
 def randomUniformSampledList(low, high, size):
 	"""
-	sample float within range
+	sample floats within range to create list
+
+	Parameters
+		low : low value
+		high : high value
+		size ; size of list to be returned
 	"""
 	return np.random.uniform(low, high, size)
 
 def randomNormSampled(mean, sd):
 	"""
 	sample float from normal
+
+	Parameters
+		mean : mean
+		sd : std deviation
 	"""
 	return np.random.normal(mean, sd)
 	
-def randomNormSampledList(mean, sd, count):
+def randomNormSampledList(mean, sd, size):
 	"""
 	sample float list from normal 
+
+	Parameters
+		mean : mean
+		sd : std deviation
+		size : size of list to be returned
 	"""
-	return np.random.normal(mean, sd, count)
+	return np.random.normal(mean, sd, size)
 
 def randomSampledList(sampler, size):
 	"""
 	sample list from given sampler 
+
+	Parameters
+		sampler : sampler object
+		size : size of list to be returned
 	"""
 	return list(map(lambda i : sampler.sample(), range(size)))
 	
 
-def minLimit(val, min):
+def minLimit(val, minv):
 	"""
 	min limit
+	
+	Parameters
+		val : value
+		minv : min limit
 	"""
-	if (val < min):
-		val = min
+	if (val < minv):
+		val = minv
 	return val
 
 	
-def rangeLimit(val, min, max):
+def rangeLimit(val, minv, maxv):
 	"""
 	range limit
+
+	Parameters
+		val : value
+		minv : min limit
+		maxv : max limit
 	"""
-	if (val < min):
-		val = min
-	elif (val > max):
-		val = max
+	if (val < minv):
+		val = minv
+	elif (val > maxv):
+		val = maxv
 	return val
 
 
-def sampleUniform(min, max):
+def sampleUniform(minv, maxv):
 	"""
 	sample int within range
+
+	Parameters
+		minv ; int min limit
+		maxv : int max limit
 	"""
-	return randint(min, max)
+	return randint(minv, maxv)
 
 
 def sampleFromBase(value, dev):
 	"""
 	sample int wrt base
+
+	Parameters
+		value : base value
+		dev : deviation
 	"""
 	return randint(value - dev, value + dev)
 
@@ -113,13 +163,22 @@ def sampleFromBase(value, dev):
 def sampleFloatFromBase(value, dev):
 	"""
 	sample float wrt base
+
+	Parameters
+		value : base value
+		dev : deviation
 	"""
 	return randomFloat(value - dev, value + dev)
 
 
 def distrUniformWithRanndom(total, numItems, noiseLevel):
 	"""
-	uniformly distribute with some randomness
+	uniformly distribute with some randomness and preserves total
+
+	Parameters
+		total : total count
+		numItems : no of bins
+		noiseLevel : noise level fraction
 	"""
 	perItem = total / numItems
 	var = perItem * noiseLevel
@@ -134,16 +193,24 @@ def distrUniformWithRanndom(total, numItems, noiseLevel):
 	return items
 
 
-def isEventSampled(threshold, max=100):
+def isEventSampled(threshold, maxv=100):
 	"""
-	sample event
+	sample event which occurs if sampled below threshold
+
+	Parameters
+		threshold : threshold for sampling
+		maxv : maximum values
 	"""
-	return randint(0, max) < threshold
+	return randint(0, maxv) < threshold
 
 
 def sampleBinaryEvents(events, probPercent):
 	"""
 	sample binary events
+
+	Parameters
+		events : two events
+		probPercent : probability as percentage
 	"""
 	if (randint(0, 100) < probPercent):
 		event = events[0]
@@ -155,13 +222,22 @@ def sampleBinaryEvents(events, probPercent):
 def addNoiseNum(value, sampler):
 	"""
 	add noise to numeric value
+
+	Parameters
+		value : base value
+		sampler : sampler for noise
 	"""
 	return value * (1 + sampler.sample())
 
 	
 def addNoiseCat(value, values, noise):	
 	"""
-	add noise to categorical value
+	add noise to categorical value i.e with some probability change value
+
+	Parameters
+		value : cat value
+		values : cat values
+		noise : noise level fraction
 	"""
 	newValue = value
 	threshold = int(noise * 100)
@@ -175,6 +251,10 @@ def addNoiseCat(value, values, noise):
 def sampleWithReplace(data, sampSize):
 	"""
 	sample with replacement
+
+	Parameters
+		data : array
+		sampSize : sample size
 	"""
 	sampled = list()
 	le = len(data)
@@ -189,7 +269,15 @@ class CumDistr:
 	"""
 	cumulative distr
 	"""
+	
 	def __init__(self, data, numBins = None):
+		"""
+		initializer
+		
+		Parameters
+			data : array
+			numBins : no of bins
+		"""
 		if not numBins:
 			numBins = int(len(data) / 5)
 		res = stats.cumfreq(data, numbins=numBins)
@@ -199,6 +287,12 @@ class CumDistr:
 		self.binWidth = res.binsize
 		
 	def getDistr(self, value):
+		"""
+		get cumulative distribution
+		
+		Parameters
+			value : value
+		"""
 		if value <= self.loLim:
 			d = 0.0
 		elif value >= self.upLim:
@@ -212,6 +306,7 @@ class BernoulliTrialSampler:
 	"""
 	bernoulli trial sampler return True or False
 	"""
+	
 	def __init__(self, pr):
 		self.pr = pr
 		
@@ -607,18 +702,18 @@ class CategoricalRejectSampler:
 		self.distr = values
 		if (len(self.distr) == 1):
 			self.distr = self.distr[0]
-		max = 0
+		maxv = 0
 		for t in self.distr:
-			if t[1] > max:
-				max = t[1]
-		self.max = max
+			if t[1] > maxv:
+				maxv = t[1]
+		self.maxv = maxv
 		
 	def sample(self):
 		done = False
 		samp = ""
 		while not done:
 			t = self.distr[randint(0, len(self.distr)-1)]	
-			d = random.randint(0, self.max)	
+			d = randomFloat(0, self.maxv)	
 			if (d <= t[1]):
 				done = True
 				samp = t[0]

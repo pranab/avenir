@@ -24,13 +24,14 @@ sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 from sampler import *
+from bandit import *
 
 class UpperConfBound:
 	"""
 	upper conf bound multi arm bandit (ucb1)
 	"""
 	
-	def __init__(self, actions, wsize, transientAction=False):
+	def __init__(self, actions, wsize, transientAction=True):
 		"""
 		initializer
 		
@@ -40,7 +41,7 @@ class UpperConfBound:
 			transientAction ; if decision involves some tied up resource it should be set True
 		"""
 		assertGreater(wsize, 9, "window size should be at least 10")
-		self.actions = list(map(lambda aname : RollingStat(wsize), actions))
+		self.actions = list(map(lambda aname : Action(aname, wsize), actions))
 		self .totPlays = 0
 		self.transientAction = transientAction
 		
@@ -51,6 +52,7 @@ class UpperConfBound:
 		sact = None
 		scmax = 0
 		for act in self.actions:
+			#print(str(act))
 			if act.nplay == 0:
 				sact = act
 				break
@@ -61,10 +63,11 @@ class UpperConfBound:
 						scmax = sc
 						sact = act
 			
-			if not self.transientAction:
-				sact.makeAvailable(False)
-			sact.nplay += 1
-			self .totPlays += 1
+		if not self.transientAction:
+			sact.makeAvailable(False)
+		sact.nplay += 1
+		self .totPlays += 1
+		print("action selected " + str(sact))
 			
 		return sact.name
 			
@@ -78,9 +81,11 @@ class UpperConfBound:
 		"""
 		acts = list(filter(lambda act : act.name == aname, self.actions))
 		assertEqual(len(acts), 1, "invalid action name")
-		acts[0].addReward(reward)
+		act = acts[0]
+		act.addReward(reward)
 		if not self.transientAction:
-			sact.makeAvailable(True)
+			act.makeAvailable(True)
+		print("action rewarded " + str(act))
 		
 	@staticmethod
 	def save(model, filePath):

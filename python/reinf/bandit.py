@@ -67,4 +67,10 @@ class Action(object):
 		rav, rsd = self.rwindow.getStat()
 		return rav
 	
+	def __str__(self):
+		"""
+		content
+		"""
+		desc = "name {}  available {}  window size {}  no of play {}".format(self.name, self.available, self.rwindow.getSize(), self.nplay)
+		return desc
 	
