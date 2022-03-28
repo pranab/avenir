@@ -44,7 +44,14 @@ class UpperConfBound:
 		self.actions = list(map(lambda aname : Action(aname, wsize), actions))
 		self .totPlays = 0
 		self.transientAction = transientAction
-		
+		self.tuned = False
+	
+	def useTuned(self):
+		"""
+		set to use tuned UCB model
+		"""
+		self.tuned =  True
+			
 	def act(self):
 		"""
 		next play return selected action
@@ -58,7 +65,15 @@ class UpperConfBound:
 				break
 			else:		
 				if self.transientAction or act.available:
-					sc  = act.getAverageReward() * sqrt(2 * math.log(self .totPlays) / act.nplay)
+					s1 = act.getRewardStat()
+					if self.tuned:
+						v = s1[1] * s1[1] + sqrt(2 * math.log(self .totPlays) / act.nplay)
+						s2 = sqrt(math.log(self .totPlays) / act.nplay) + min(.25, v)
+					else:
+						s2 = sqrt(2 * math.log(self .totPlays) / act.nplay)
+					sc  = s1[0] + s2
+					
+					#print("ucb score {:.3f}  {:.3f}".format(s1[0],s2))
 					if sc > scmax:
 						scmax = sc
 						sact = act
@@ -67,9 +82,9 @@ class UpperConfBound:
 			sact.makeAvailable(False)
 		sact.nplay += 1
 		self .totPlays += 1
-		print("action selected " + str(sact))
-			
-		return sact.name
+		#print("action selected " + str(sact))
+		re = (sact.name, scmax)	
+		return re
 			
 	def setReward(self, aname, reward):
 		"""
@@ -85,7 +100,7 @@ class UpperConfBound:
 		act.addReward(reward)
 		if not self.transientAction:
 			act.makeAvailable(True)
-		print("action rewarded " + str(act))
+		#print("action rewarded " + str(act))
 		
 	@staticmethod
 	def save(model, filePath):

@@ -60,14 +60,14 @@ class Worker:
 		self.scheduled = False
 		self.selected = False
 		
-	def schedule(self):
+	def schedule(self, score):
 		"""
 		schedule worker
 		"""
 		self.selected = True
 		self.resp = self.respSampler.sample()
 		self.scheduled = (self.resp == "pos")
-		print("worker {}  scheduled {}".format(self.name, self.scheduled))
+		print("worker {}  score {:.3f}  scheduled {}".format(self.name, score, self.scheduled))
 		
 	
 	def process(self):
@@ -107,7 +107,7 @@ class Worker:
 		if isEventSampled(15):
 			self.__setRatingDistr()
 
-		print("worker {}  score {:.3f}".format(self.name, self.score))
+		print("worker {}  reward {:.3f}".format(self.name, self.score))
 		
 		return self.score
 		
@@ -118,7 +118,7 @@ class Worker:
 		"""
 		distr = Worker.respDistr.copy()
 		mutDistr(distr, 5, 3)
-		print("resp distr " + str(distr))
+		#print("resp distr " + str(distr))
 		self.respSampler = CategoricalRejectSampler(("pos", distr[0]), ("neg", distr[1]), ("nor", distr[2]))
 	
 	def __setIncomeDistr(self):
@@ -173,9 +173,9 @@ class Manager:
 		
 		self.scheduled  = list()
 		for _ in range(dem):
-			wname = self.model.act()
+			wname, score = self.model.act()
 			#print("worker selected ", wname)
-			self.workers[wname].schedule()
+			self.workers[wname].schedule(score)
 			self.scheduled.append(wname)
 			
 	def process(self):

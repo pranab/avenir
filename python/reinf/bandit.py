@@ -60,12 +60,11 @@ class Action(object):
 		"""
 		self.rwindow.add(reward)	
 		
-	def getAverageReward(self):
+	def getRewardStat(self):
 		"""
 		get average reward
 		"""
-		rav, rsd = self.rwindow.getStat()
-		return rav
+		return self.rwindow.getStat()
 	
 	def __str__(self):
 		"""
