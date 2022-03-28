@@ -1,0 +1,18 @@
+This tutorial is for work force scheduling with Multi Arm Bandit (MAB)  algorith called UCB.  
+
+Setup
+=====
+Make sure you have ../lib  ../reinf directories with all the python files in there wrt 
+where wfshed.py is. Alternatively you can use ../python/app directory of avenir as
+your working directory
+
+Ruuning
+=======
+./wfsched <no_worker>
+
+where 
+no_worker = no of workers e.g 100
+
+A coomand loop starts with thee menu choices 1. schedule 2. process 3. exit. You should start with schedule
+then alternate between schedule and process. Choose exit when you want to quit
+
