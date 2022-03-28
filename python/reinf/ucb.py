@@ -31,7 +31,7 @@ class UpperConfBound:
 	upper conf bound multi arm bandit (ucb1)
 	"""
 	
-	def __init__(self, actions, wsize, transientAction=True):
+	def __init__(self, actions, wsize, transientAction,logFilePath, logLevName):
 		"""
 		initializer
 		
@@ -39,12 +39,19 @@ class UpperConfBound:
 			naction : no of actions
 			rwindow : reward window size
 			transientAction ; if decision involves some tied up resource it should be set True
+			logFilePath : log file path set None for no logging
+			logLevName : log level e.g. info, debug
 		"""
 		assertGreater(wsize, 9, "window size should be at least 10")
 		self.actions = list(map(lambda aname : Action(aname, wsize), actions))
 		self .totPlays = 0
 		self.transientAction = transientAction
 		self.tuned = False
+
+		self.logger = None
+		if logFilePath is not None: 		
+			self.logger = createLogger(__name__, logFilePath, logLevName)
+			self.logger.info("******** stating new  session of UpperConfBound")
 	
 	def useTuned(self):
 		"""
@@ -67,13 +74,14 @@ class UpperConfBound:
 				if self.transientAction or act.available:
 					s1 = act.getRewardStat()
 					if self.tuned:
-						v = s1[1] * s1[1] + sqrt(2 * math.log(self .totPlays) / act.nplay)
+						v = s1[1] * s1[1] + sqrt(2 * math.log(self.totPlays) / act.nplay)
 						s2 = sqrt(math.log(self .totPlays) / act.nplay) + min(.25, v)
 					else:
-						s2 = sqrt(2 * math.log(self .totPlays) / act.nplay)
+						s2 = sqrt(2 * math.log(self.totPlays) / act.nplay)
 					sc  = s1[0] + s2
 					
-					#print("ucb score {:.3f}  {:.3f}".format(s1[0],s2))
+					self.logger.info("action {}  plays total {}  this action {}".format(act.name, self.totPlays, act.nplay))
+					self.logger.info("ucb score components {:.3f}  {:.3f}".format(s1[0],s2))
 					if sc > scmax:
 						scmax = sc
 						sact = act
@@ -82,7 +90,7 @@ class UpperConfBound:
 			sact.makeAvailable(False)
 		sact.nplay += 1
 		self .totPlays += 1
-		#print("action selected " + str(sact))
+		self.logger.info("action selected {}  score {}".format(str(sact), scmax))
 		re = (sact.name, scmax)	
 		return re
 			
@@ -100,7 +108,7 @@ class UpperConfBound:
 		act.addReward(reward)
 		if not self.transientAction:
 			act.makeAvailable(True)
-		#print("action rewarded " + str(act))
+		self.logger.info("action rewarded " + str(act))
 		
 	@staticmethod
 	def save(model, filePath):
