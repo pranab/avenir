@@ -158,6 +158,8 @@ class Manager:
 			self.workers[name] = Worker(name)
 			names.append(name)
 		#print(names)
+		
+		#UCB modelstat  action nale list, window size 20, transient action False 
 		self.model = UpperConfBound(names, 20, False, "./log/ucb.log", "info")
 	
 	def schedule(self, tm):

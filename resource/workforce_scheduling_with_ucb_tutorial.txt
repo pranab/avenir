@@ -8,11 +8,14 @@ your working directory
 
 Ruuning
 =======
-./wfsched <no_worker>
+./wfsched.py <no_worker>
 
 where 
 no_worker = no of workers e.g 100
 
 A coomand loop starts with thee menu choices 1. schedule 2. process 3. exit. You should start with schedule
-then alternate between schedule and process. Choose exit when you want to quit
+then alternate between schedule and process as many time as you want. Choose exit when you want to quit
 
+Different use case
+==================
+You can use wfsched.py as anexaple. Most of the chages will be in the reawrd simulation logic 

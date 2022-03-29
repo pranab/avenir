@@ -308,9 +308,18 @@ class BernoulliTrialSampler:
 	"""
 	
 	def __init__(self, pr):
+		"""
+		initializer
+		
+		Parameters
+			pr : probability
+		"""
 		self.pr = pr
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		return random.random() < self.pr
 	
 class PoissonSampler:
@@ -318,15 +327,31 @@ class PoissonSampler:
 	poisson sampler returns number of events
 	"""
 	def __init__(self, rateOccur, maxSamp):
+		"""
+		initializer
+		
+		Parameters
+			rateOccur : rate of occurence
+			maxSamp : max limit on no of samples
+		"""
 		self.rateOccur = rateOccur
 		self.maxSamp = int(maxSamp)
 		self.pmax = self.calculatePr(rateOccur)
 
 	def calculatePr(self, numOccur):
+		"""
+		calulates probability
+		
+		Parameters
+			numOccur : no of occurence
+		"""
 		p = (self.rateOccur ** numOccur) * math.exp(-self.rateOccur) / math.factorial(numOccur)
 		return p
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = 0
 		while not done:
@@ -343,10 +368,20 @@ class ExponentialSampler:
 	returns interval between events
 	"""
 	def __init__(self, rateOccur, maxSamp = None):
+		"""
+		initializer
+		
+		Parameters
+			rateOccur : rate of occurence
+			maxSamp : max limit on interval
+		"""
 		self.interval = 1.0 / rateOccur
 		self.maxSamp = int(maxSamp) if maxSamp is not None else None
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		sampled = np.random.exponential(scale=self.interval)
 		if self.maxSamp is not None:
 			while sampled > self.maxSamp:
@@ -357,35 +392,64 @@ class UniformNumericSampler:
 	"""
 	uniform sampler for numerical values
 	"""
-	def __init__(self, min, max):
-		self.min = min
-		self.max = max
+	def __init__(self, minv, maxv):
+		"""
+		initializer
+		
+		Parameters
+			minv : min value
+			maxv : max value
+		"""
+		self.minv = minv
+		self.maxv = maxv
 
 	def isNumeric(self):
+		"""
+		returns true
+		"""
 		return True
 	
 	def sample(self):
-		samp =	sampleUniform(self.min, self.max) if isinstance(self.min, int) else randomFloat(self.min, self.max)
+		"""
+		samples value
+		"""
+		samp =	sampleUniform(self.minv, self.maxv) if isinstance(self.minv, int) else randomFloat(self.minv, self.maxv)
 		return samp	
 
 class UniformCategoricalSampler:
 	"""
 	uniform sampler for categorical values
 	"""
-	def __init__(self, values):
-		self.values = values
+	def __init__(self, cvalues):
+		"""
+		initializer
+		
+		Parameters
+			cvalues : categorical value list
+		"""
+		self.cvalues = cvalues
 	
 	def isNumeric(self):
 		return False
 
 	def sample(self):
-		return selectRandomFromList(self.values)	
+		"""
+		samples value
+		"""
+		return selectRandomFromList(self.cvalues)	
 
 class NormalSampler:
 	"""
 	normal sampler
 	"""
 	def __init__(self, mean, stdDev):
+		"""
+		initializer
+		
+		Parameters
+			mean : mean
+			stdDev : std deviation
+		"""
 		self.mean = mean
 		self.stdDev = stdDev
 		self.sampleAsInt = False
@@ -394,9 +458,15 @@ class NormalSampler:
 		return True
 
 	def sampleAsIntValue(self):
+		"""
+		set True to sample as int
+		"""
 		self.sampleAsInt = True
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		samp =  np.random.normal(self.mean, self.stdDev)
 		if self.sampleAsInt:
 			samp = int(samp)
@@ -407,6 +477,13 @@ class LogNormalSampler:
 	log normal sampler
 	"""
 	def __init__(self, mean, stdDev):
+		"""
+		initializer
+		
+		Parameters
+			mean : mean
+			stdDev : std deviation
+		"""
 		self.mean = mean
 		self.stdDev = stdDev
 
@@ -414,13 +491,26 @@ class LogNormalSampler:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		return np.random.lognormal(self.mean, self.stdDev)
 
 class NormalSamplerWithTrendCycle:
 	"""
-	normal sampler
+	normal sampler with cycle and trend
 	"""
 	def __init__(self, mean, stdDev, dmean, cycle,  step=1):
+		"""
+		initializer
+		
+		Parameters
+			mean : mean
+			stdDev : std deviation
+			dmean : trend delta
+			cycle : cycle values wrt base mean
+			step : adjustment step for cycle and trend
+		"""
 		self.mean = mean
 		self.cmean = mean
 		self.stdDev = stdDev
@@ -434,6 +524,9 @@ class NormalSamplerWithTrendCycle:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		s = np.random.normal(self.cmean, self.stdDev)
 		self.count += 1
 		if self.count % self.step == 0:
@@ -451,6 +544,13 @@ class ParetoSampler:
 	pareto sampler
 	"""
 	def __init__(self, mode, shape):
+		"""
+		initializer
+		
+		Parameters
+			mode : mode
+			shape : shape
+		"""
 		self.mode = mode
 		self.shape = shape
 
@@ -458,6 +558,9 @@ class ParetoSampler:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		return (np.random.pareto(self.shape) + 1) * self.mode
 
 class GammaSampler:
@@ -465,6 +568,13 @@ class GammaSampler:
 	pareto sampler
 	"""
 	def __init__(self, shape, scale):
+		"""
+		initializer
+		
+		Parameters
+			shape : shape
+			scale : scale
+		"""
 		self.shape = shape
 		self.scale = scale
 
@@ -472,6 +582,9 @@ class GammaSampler:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		return np.random.gamma(self.shape, self.scale)
 
 class GaussianRejectSampler:
@@ -479,6 +592,13 @@ class GaussianRejectSampler:
 	gaussian sampling based on rejection sampling
 	"""
 	def __init__(self, mean, stdDev):
+		"""
+		initializer
+		
+		Parameters
+			mean : mean
+			stdDev : std deviation
+		"""
 		self.mean = mean
 		self.stdDev = stdDev
 		self.xmin = mean - 3 * stdDev
@@ -492,9 +612,15 @@ class GaussianRejectSampler:
 		return True
 	
 	def sampleAsIntValue(self):
+		"""
+		sample as int value
+		"""
 		self.sampleAsInt = True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = 0
 		while not done:
@@ -514,6 +640,15 @@ class DiscreteRejectSampler:
 	on rejection sampling	
 	"""
 	def __init__(self,  xmin, xmax, step, *values):
+		"""
+		initializer
+		
+		Parameters
+			xmin : min  value
+			xmax : max  value
+			step : discrete step
+			values : distr values
+		"""
 		self.xmin = xmin
 		self.xmax = xmax
 		self.step = step
@@ -531,6 +666,9 @@ class DiscreteRejectSampler:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = None
 		while not done:
@@ -549,6 +687,15 @@ class TriangularRejectSampler:
 	non parametric sampling using triangular distribution based on rejection sampling	
 	"""
 	def __init__(self, xmin, xmax, vertexValue, vertexPos=None):
+		"""
+		initializer
+		
+		Parameters
+			xmin : min  value
+			xmax : max  value
+			vertexValue : distr value at vertex
+			vertexPos : vertex pposition
+		"""
 		self.xmin = xmin
 		self.xmax = xmax
 		self.vertexValue = vertexValue
@@ -564,6 +711,9 @@ class TriangularRejectSampler:
 		return True
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = None
 		while not done:
@@ -581,6 +731,14 @@ class NonParamRejectSampler:
 	non parametric sampling using given distribution based on rejection sampling	
 	"""
 	def __init__(self, xmin, binWidth, *values):
+		"""
+		initializer
+		
+		Parameters
+			xmin : min  value
+			binWidth : bin width
+			values : distr values
+		"""
 		self.values = values
 		if (len(self.values) == 1):
 			self.values = self.values[0]
@@ -603,6 +761,9 @@ class NonParamRejectSampler:
 		self.sampleAsInt = False
 	
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = 0
 		while not done:
@@ -624,6 +785,18 @@ class JointNonParamRejectSampler:
 	non parametric sampling using given distribution based on rejection sampling	
 	"""
 	def __init__(self, xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values):
+		"""
+		initializer
+		
+		Parameters
+			xmin : min  value for x
+			xbinWidth : bin width for x
+			xnbin : no of bins for x
+			ymin : min  value for y
+			ybinWidth : bin width for y
+			ynbin : no of bins for y
+			values : distr values
+		"""
 		self.values = values
 		if (len(self.values) == 1):
 			self.values = self.values[0]
@@ -641,6 +814,9 @@ class JointNonParamRejectSampler:
 		return True
 
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = 0
 		while not done:
@@ -661,6 +837,12 @@ class JointNormalSampler:
 	joint normal sampler	
 	"""
 	def __init__(self, *values):
+		"""
+		initializer
+		
+		Parameters
+			values : 2 mean values followed by 4 values for covar matrix
+		"""
 		lvalues = list(values)
 		assert len(lvalues) == 6, "incorrect number of arguments for joint normal sampler"
 		mean = lvalues[:2]
@@ -672,6 +854,9 @@ class JointNormalSampler:
 		return True
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		return list(np.random.multivariate_normal(self.mean, self.sd))
 		
 		
@@ -680,6 +865,13 @@ class MultiVarNormalSampler:
 	muti variate normal sampler	
 	"""
 	def __init__(self, numVar, *values):
+		"""
+		initializer
+		
+		Parameters
+			numVar : no of variables
+			values : numVar mean values followed by numVar x numVar values for covar matrix
+		"""
 		lvalues = list(values)
 		assert len(lvalues) == numVar + numVar * numVar, "incorrect number of arguments for multi var normal sampler"
 		mean = lvalues[:numVar]
@@ -691,6 +883,9 @@ class MultiVarNormalSampler:
 		return True
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		return list(np.random.multivariate_normal(self.mean, self.sd))
 
 class CategoricalRejectSampler:
@@ -699,6 +894,12 @@ class CategoricalRejectSampler:
 	on rejection sampling	
 	"""
 	def __init__(self,  *values):
+		"""
+		initializer
+		
+		Parameters
+			values : list of tuples which contains a categorical value and the corresponsding distr value
+		"""
 		self.distr = values
 		if (len(self.distr) == 1):
 			self.distr = self.distr[0]
@@ -709,6 +910,9 @@ class CategoricalRejectSampler:
 		self.maxv = maxv
 		
 	def sample(self):
+		"""
+		samples value
+		"""
 		done = False
 		samp = ""
 		while not done:
@@ -725,6 +929,13 @@ class DistrMixtureSampler:
 	distr mixture sampler
 	"""
 	def __init__(self,  mixtureWtDistr, *compDistr):
+		"""
+		initializer
+		
+		Parameters
+			mixtureWtDistr : sampler that returns index into sampler list
+			compDistr : sampler list
+		"""
 		self.mixtureWtDistr = mixtureWtDistr
 		self.compDistr = compDistr
 		if (len(self.compDistr) == 1):
@@ -734,7 +945,9 @@ class DistrMixtureSampler:
 		return True
 	
 	def sample(self):
-		#sample comp wt distr
+		"""
+		samples value
+		"""
 		comp = self.mixtureWtDistr.sample()
 		
 		#sample  sampled comp distr
@@ -745,12 +958,22 @@ class AncestralSampler:
 	ancestral sampler using conditional distribution
 	"""
 	def __init__(self,  parentDistr, childDistr, numChildren):
+		"""
+		initializer
+		
+		Parameters
+			parentDistr : parent distr
+			childDistr : childdren distribution dictionary
+			numChildren : no of children
+		"""
 		self.parentDistr = parentDistr
 		self.childDistr = childDistr
 		self.numChildren = numChildren
 	
 	def sample(self):
-		#sample parent
+		"""
+		samples value
+		"""
 		parent = self.parentDistr.sample()
 		
 		#sample all children conditioned on parent
@@ -766,10 +989,20 @@ class ClusterSampler:
 	sample cluster and then sample member of sampled cluster
 	"""
 	def __init__(self,  clusters, *clustDistr):
+		"""
+		initializer
+		
+		Parameters
+			clusters : dictionary clusters
+			clustDistr : distr for clusters
+		"""
 		self.sampler = CategoricalRejectSampler(*clustDistr)
 		self.clusters = clusters
 	
 	def sample(self):
+		"""
+		samples value
+		"""
 		cluster = self.sampler.sample()
 		member = random.choice(self.clusters[cluster])
 		return (cluster, member)
@@ -780,41 +1013,71 @@ class MetropolitanSampler:
 	metropolitan sampler	
 	"""
 	def __init__(self, propStdDev, min, binWidth, values):
+		"""
+		initializer
+		
+		Parameters
+			propStdDev : proposal distr std dev
+			min : min domain value for target distr
+			binWidth : bin width
+			values : target distr values
+		"""
 		self.targetDistr = Histogram.createInitialized(min, binWidth, values)
 		self.propsalDistr = GaussianRejectSampler(0, propStdDev)
 		self.proposalMixture = False
 		
 		# bootstrap sample
-		(min, max) = self.targetDistr.getMinMax()
-		self.curSample = random.randint(min, max)
+		(minv, maxv) = self.targetDistr.getMinMax()
+		self.curSample = random.randint(minv, maxv)
 		self.curDistr = self.targetDistr.value(self.curSample)
 		self.transCount = 0
 	
-	# initialize	
 	def initialize(self):
-		(min, max) = self.targetDistr.getMinMax()
-		self.curSample = random.randint(min, max)
+		"""
+		initialize
+		"""
+		(minv, maxv) = self.targetDistr.getMinMax()
+		self.curSample = random.randint(minv, maxv)
 		self.curDistr = self.targetDistr.value(self.curSample)
 		self.transCount = 0
 	
-	# set custom proposal distribution
 	def setProposalDistr(self, propsalDistr):
+		"""
+		set custom proposal distribution
+
+		Parameters
+			propsalDistr : proposal distribution
+		"""
 		self.propsalDistr = propsalDistr
 	
-	# set custom proposal distribution
+
 	def setGlobalProposalDistr(self, globPropStdDev, proposalChoiceThreshold):
+		"""
+		set custom proposal distribution
+
+		Parameters
+			globPropStdDev : global proposal distr std deviation
+			proposalChoiceThreshold : threshold for using global proposal distribution
+		"""
 		self.globalProposalDistr = GaussianRejectSampler(0, globPropStdDev)
 		self.proposalChoiceThreshold = proposalChoiceThreshold
 		self.proposalMixture = True
 
-	# sample	
 	def sample(self):
+		"""
+		samples value
+		"""
 		nextSample = self.proposalSample(1)
 		self.targetSample(nextSample)
 		return self.curSample;
 	
-	# sample from proposal distribution
 	def proposalSample(self, skip):
+		"""
+		sample from proposal distribution
+
+		Parameters
+			skip : no of samples to skip
+		"""
 		for i in range(skip):
 			if not self.proposalMixture:
 				#one proposal distr
@@ -830,8 +1093,13 @@ class MetropolitanSampler:
 				
 		return nextSample
 	
-	# target sample
 	def targetSample(self, nextSample):
+		"""
+		target sample
+
+		Parameters
+			nextSample : proposal distr sample
+		"""
 		nextDistr = self.targetDistr.value(nextSample)
 			
 		transition = False
@@ -848,19 +1116,33 @@ class MetropolitanSampler:
 			self.transCount += 1
 	
 	
-	# sub sample
 	def subSample(self, skip):
+		"""
+		sub sample
+
+		Parameters
+			skip : no of samples to skip
+		"""
 		nextSample = self.proposalSample(skip)
 		self.targetSample(nextSample)
 		return self.curSample;
 
-	# mixture proposal
 	def setMixtureProposal(self, globPropStdDev, mixtureThreshold):
+		"""
+		mixture proposal
+
+		Parameters
+			globPropStdDev : global proposal distr std deviation
+			mixtureThreshold : threshold for using global proposal distribution
+		"""
 		self.globalProposalDistr = GaussianRejectSampler(0, globPropStdDev)
 		self.mixtureThreshold = mixtureThreshold
 	
-	# sample from proposal distr
 	def samplePropsal(self):
+		"""
+		sample from proposal distr
+
+		"""
 		if self.globalPropsalDistr is None:
 			proposal = self.propsalDistr.sample()
 		else:
@@ -873,9 +1155,12 @@ class MetropolitanSampler:
 
 class PermutationSampler:
 	"""
-	permutation sampler
+	permutation sampler by shuffling a list
 	"""
 	def __init__(self):
+		"""
+		initialize
+		"""
 		self.values = None
 		self.numShuffles = None
 	
@@ -883,6 +1168,10 @@ class PermutationSampler:
 	def createSamplerWithValues(values, *numShuffles):
 		"""
 		creator with values
+
+		Parameters
+			values : list data
+			numShuffles : no of shuffles or range of no of shuffles
 		"""
 		sampler = PermutationSampler()
 		sampler.values = values
@@ -890,12 +1179,17 @@ class PermutationSampler:
 		return sampler
 		
 	@staticmethod
-	def createSamplerWithRange(min, max, *numShuffles):
+	def createSamplerWithRange(minv, maxv, *numShuffles):
 		"""
 		creator with ramge min and max
+		
+		Parameters
+			minv : min of range
+			maxv : max of range
+			numShuffles : no of shuffles or range of no of shuffles
 		"""
 		sampler = PermutationSampler()
-		sampler.values = list(range(min, max+1))
+		sampler.values = list(range(minv, maxv + 1))
 		sampler.numShuffles = numShuffles
 		return sampler
 		
@@ -912,6 +1206,18 @@ class SpikeyDataSampler:
 	samples spikey data
 	"""
 	def __init__(self, intvMean, intvScale, distr, spikeValueMean, spikeValueStd, spikeMaxDuration, baseValue = 0):
+		"""
+		initializer
+		
+		Parameters
+			intvMean : interval mean
+			intvScale : interval std dev
+			distr : type of distr for interval
+			spikeValueMean : spike value mean
+			spikeValueStd : spike value std dev
+			spikeMaxDuration : max duration for spike
+			baseValue : base or offset value
+		"""
 		if distr == "norm":
 			self.intvSampler = NormalSampler(intvMean, intvScale)
 		elif distr == "expo":
@@ -932,7 +1238,7 @@ class SpikeyDataSampler:
 
 	def sample(self):
 		"""
-		sample new permutation
+		sample new value
 		"""
 		if self.baseCount <= self.baseLength:
 			sampled = self.baseValue
@@ -973,6 +1279,9 @@ class SpikeyDataSampler:
 def createSampler(data):
 	"""
 	create sampler
+	
+	Parameters
+		data : sampler description
 	"""
 	#print(data)
 	items = data.split(":")

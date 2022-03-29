@@ -73,6 +73,9 @@ of detail documentation
 * https://pkghosh.wordpress.com/2021/10/16/class-separation-based-machine-learning-model-performance-metric/
 * https://pkghosh.wordpress.com/2021/11/30/machine-learning-model-performance-robustness-based-on-local-neighborhood-performance/
 * https://pkghosh.wordpress.com/2021/12/30/conformal-prediction-for-a-neural-regression-model/
+* https://pkghosh.wordpress.com/2022/01/26/remedial-action-recommendation-with-machine-learning-and-genetic-algorithm/
+* https://pkghosh.wordpress.com/2022/02/25/out-of-distribution-data-detection-in-deployed-machine-learning-models/
+* https://pkghosh.wordpress.com/2022/03/28/gig-economy-workforce-scheduling-with-reinforcement-learning/
 
 
 
