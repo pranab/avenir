@@ -1,5 +1,5 @@
 ## Introduction
-Set of predictive and exploratory machine learning tools. Runs on Hadoop, Spark and Storm
+Set of predictive and exploratory machine learning tools with Spark and Python
 
 ## Philosophy
 * Simple to use
@@ -8,14 +8,24 @@ Set of predictive and exploratory machine learning tools. Runs on Hadoop, Spark 
 * Extremely configurable with tons of configuration knobs
 
 ## Solution
-* Exploratry analytic including correlation, feature subset selection
+* Exploratry Analytic 
+* KNN Cluster
 * Naive Bayes
 * Discrimininant analysis
-* Nearest neighbor
-* Decision tree and Random Forest
+* Nearest Neighbor
+* Decision Tree and Random Forest
+* SVM
 * Association Mining
 * Reinforcement learning
+* Multi Arm Bandit
 * Stochastic Optimization
+* Feedforward Network
+* LSTM
+* Autoencoder
+* Deep Reinforcement Learning
+* NLP and Neural Language Model
+* Graph Convolution Network
+* MLOps
 
 
 ## Blogs
