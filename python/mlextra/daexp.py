@@ -77,6 +77,12 @@ class DataExplorer:
 	various data exploration functions
 	"""
 	def __init__(self, verbose=True):
+		"""
+		initialize
+
+		Parameters
+			verbose : True for verbosity
+		"""
 		self.dataSets = dict()
 		self.metaData = dict()
 		self.pp = pprint.PrettyPrinter(indent=4)
@@ -85,8 +91,9 @@ class DataExplorer:
 	def save(self, filePath):
 		"""
 		save checkpoint
-		params:
-		filePath : path of file where saved
+		
+		Parameters
+			filePath : path of file where saved
 		"""
 		self.__printBanner("saving workspace")
 		ws = dict()
@@ -98,8 +105,9 @@ class DataExplorer:
 	def restore(self, filePath):
 		"""
 		restore checkpoint
-		params:
-		filePath : path of file from where to store
+		
+		Parameters
+			filePath : path of file from where to store
 		"""
 		self.__printBanner("restoring workspace")
 		ws = restoreObject(filePath)
@@ -111,9 +119,10 @@ class DataExplorer:
 	def queryFileData(self, filePath,  *columns):
 		"""
 		query column data type  from a data file
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("querying column data type from a data frame")
 		lcolumns = list(columns)
@@ -127,9 +136,10 @@ class DataExplorer:
 	def queryDataFrameData(self, df,  *columns):
 		"""
 		query column data type  from a data frame
-		params:
-		df : data frame with data
-		columns : indexes followed by column name or column names
+		
+		Parameters
+			df : data frame with data
+			columns : indexes followed by column name or column names
 		"""
 		self.__printBanner("querying column data type  from a data frame")
 		columns = list(columns)
@@ -158,8 +168,9 @@ class DataExplorer:
 	def getDataType(self, col):
 		"""
 		get data type 
-		params:
-		col : contains data array like
+		
+		Parameters
+			col : contains data array like
 		"""
 		if isBinary(col):
 			dtype = "binary"
@@ -177,9 +188,10 @@ class DataExplorer:
 	def addFileNumericData(self,filePath,  *columns):
 		"""
 		add numeric columns from a file
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding numeric columns from a file")
 		self.addFileData(filePath, True, *columns)
@@ -189,9 +201,10 @@ class DataExplorer:
 	def addFileBinaryData(self,filePath,  *columns):
 		"""
 		add binary columns from a file
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding binary columns from a file")
 		self.addFileData(filePath, False, *columns)
@@ -200,10 +213,11 @@ class DataExplorer:
 	def addFileData(self, filePath,  numeric, *columns):
 		"""
 		add columns from a file
-		params:
-		filePath : path of file with data
-		numeric : True if numeric False in binary
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			numeric : True if numeric False in binary
+			columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -216,9 +230,10 @@ class DataExplorer:
 	def addDataFrameNumericData(self,filePath,  *columns):
 		"""
 		add numeric columns from a data frame
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding numeric columns from a data frame")
 		self.addDataFrameData(filePath, True, *columns)
@@ -227,9 +242,10 @@ class DataExplorer:
 	def addDataFrameBinaryData(self,filePath,  *columns):
 		"""
 		add binary columns from a data frame
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding binary columns from a data frame")
 		self.addDataFrameData(filePath, False, *columns)
@@ -238,10 +254,11 @@ class DataExplorer:
 	def addDataFrameData(self, df,  numeric, *columns):
 		"""
 		add columns from a data frame
-		params:
-		df : data frame with data
-		numeric : True if numeric False in binary
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			df : data frame with data
+			numeric : True if numeric False in binary
+			columns : indexes followed by column names or column names
 		"""
 		columns = list(columns)
 		noHeader = type(columns[0]) ==  int
@@ -275,9 +292,10 @@ class DataExplorer:
 	def __addDataSet(self, dsn, data, dtype):
 		"""
 		add dada set
-		params:
-		dsn: data set name
-		data : numpy array data 
+		
+		Parameters
+			dsn: data set name
+			data : numpy array data 
 		"""
 		self.dataSets[dsn] = data
 		self.metaData[dsn] = DataSetMetaData(dtype)
@@ -286,9 +304,10 @@ class DataExplorer:
 	def addListNumericData(self, ds,  name):
 		"""
 		add numeric data from a list
-		params:
-		ds : list with data
-		name : name of data set
+		
+		Parameters
+			ds : list with data
+			name : name of data set
 		"""
 		self.__printBanner("add numeric data from a list")
 		self.addListData(ds, True,  name)
@@ -298,9 +317,10 @@ class DataExplorer:
 	def addListBinaryData(self, ds, name):
 		"""
 		add binary data from a list
-		params:
-		ds : list with data
-		name : name of data set
+		
+		Parameters
+			ds : list with data
+			name : name of data set
 		"""
 		self.__printBanner("adding binary data from a list")
 		self.addListData(ds, False,  name)
@@ -309,10 +329,11 @@ class DataExplorer:
 	def addListData(self, ds, numeric,  name):
 		"""
 		adds list data
-		params:
-		ds : list with data
-		numeric : True if numeric False in binary
-		name : name of data set
+		
+		Parameters
+			ds : list with data
+			numeric : True if numeric False in binary
+			name : name of data set
 		"""
 		assert type(ds) == list, "data not a list"
 		if numeric:
@@ -327,9 +348,10 @@ class DataExplorer:
 	def addFileCatData(self, filePath,  *columns):
 		"""
 		add categorical columns from a file
-		params:
-		filePath : path of file with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			filePath : path of file with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding categorical columns from a file")
 		columns = list(columns)
@@ -345,9 +367,10 @@ class DataExplorer:
 	def addDataFrameCatData(self, df,  *columns):
 		"""
 		add categorical columns from a data frame
-		params:
-		df : data frame with data
-		columns : indexes followed by column names or column names
+		
+		Parameters
+			df : data frame with data
+			columns : indexes followed by column names or column names
 		"""
 		self.__printBanner("adding categorical columns from a data frame")
 		columns = list(columns)
@@ -372,9 +395,10 @@ class DataExplorer:
 	def addCatListData(self, ds, name):
 		"""
 		add categorical list data
-		params:
-		ds : list with data
-		name : name of data set
+		
+		Parameters
+			ds : list with data
+			name : name of data set
 		"""
 		self.__printBanner("adding categorical list data")
 		assert type(ds) == list, "data not a list"
@@ -385,8 +409,9 @@ class DataExplorer:
 	def remData(self, ds):
 		"""
 		removes data set
-		params:
-		ds : data set name
+		
+		Parameters
+			ds : data set name
 		"""
 		self.__printBanner("removing data set", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -399,9 +424,10 @@ class DataExplorer:
 	def addNote(self, ds, note):
 		"""
 		get data
-		params:
-		ds : data set name or list or numpy array with data
-		note: note text
+		
+		Parameters
+			ds : data set name or list or numpy array with data
+			note: note text
 		"""
 		self.__printBanner("adding note")
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -412,8 +438,9 @@ class DataExplorer:
 	def getNotes(self, ds):
 		"""
 		get data
-		params:
-		ds : data set name or list or numpy array with data
+		
+		Parameters
+			ds : data set name or list or numpy array with data
 		"""
 		self.__printBanner("getting notes")
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)		
@@ -427,8 +454,9 @@ class DataExplorer:
 	def getNumericData(self, ds):
 		"""
 		get data
-		params:
-		ds : data set name or list or numpy array with data
+		
+		Parameters
+			ds : data set name or list or numpy array with data
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -447,8 +475,9 @@ class DataExplorer:
 	def getCatData(self, ds):
 		"""
 		get data
-		params:
-		ds : data set name or list  with data
+		
+		Parameters
+			ds : data set name or list  with data
 		"""
 		if type(ds) == str:
 			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -464,9 +493,10 @@ class DataExplorer:
 	def loadCatFloatDataFrame(self, ds1, ds2):
 		"""
 		loads float and cat data into data frame
-		params:
-		ds1: data set name or list
-		ds2: data set name or list or numpy array
+		
+		Parameters
+			ds1: data set name or list
+			ds2: data set name or list or numpy array
 		"""
 		data1 = self.getCatData(ds1)
 		data2 = self.getNumericData(ds2)
@@ -493,9 +523,10 @@ class DataExplorer:
 	def plot(self, ds, yscale=None):
 		"""
 		plots data
-		params:
-		ds: data set name or list or numpy array
-		yscale: y scale
+		
+		Parameters
+			ds: data set name or list or numpy array
+			yscale: y scale
 		"""
 		self.__printBanner("plotting data", ds)
 		data = self.getNumericData(ds)
@@ -504,11 +535,12 @@ class DataExplorer:
 	def plotZoomed(self, ds, beg, end, yscale=None):
 		"""
 		plots zoomed data
-		params:
-		ds: data set name or list or numpy array
-		beg: begin offset
-		end: end offset
-		yscale: y scale
+		
+		Parameters
+			ds: data set name or list or numpy array
+			beg: begin offset
+			end: end offset
+			yscale: y scale
 		"""
 		self.__printBanner("plotting data", ds)
 		data = self.getNumericData(ds)
@@ -517,9 +549,10 @@ class DataExplorer:
 	def scatterPlot(self, ds1, ds2):
 		"""
 		scatter plots data
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
 		"""
 		self.__printBanner("scatter plotting data", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -533,8 +566,9 @@ class DataExplorer:
 	def print(self, ds):
 		"""
 		prunt data
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
 		"""
 		self.__printBanner("printing data", ds)
 		assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
@@ -547,8 +581,12 @@ class DataExplorer:
 	def plotHist(self, ds, cumulative, density, nbins=20):
 		"""
 		plots histogram
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
+			cumulative : True if cumulative
+			density : True to normalize for probability density
+			nbins : no of bins
 		"""
 		self.__printBanner("plotting histogram", ds)
 		data = self.getNumericData(ds)
@@ -558,8 +596,9 @@ class DataExplorer:
 	def isMonotonicallyChanging(self, ds):
 		"""
 		checks if monotonically increasing or decreasing
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
 		"""
 		self.__printBanner("checking  monotonic change", ds)
 		data = self.getNumericData(ds)
@@ -571,9 +610,10 @@ class DataExplorer:
 	def getFreqDistr(self, ds,  nbins=20):
 		"""
 		get histogram
-		params:
-		ds: data set name or list or numpy array
-		nbins: num of bins
+		
+		Parameters
+			ds: data set name or list or numpy array
+			nbins: num of bins
 		"""
 		self.__printBanner("getting histogram", ds)
 		data = self.getNumericData(ds)
@@ -585,9 +625,10 @@ class DataExplorer:
 	def getCumFreqDistr(self, ds,  nbins=20):
 		"""
 		get cumulative freq distribution
-		params:
-		ds: data set name or list or numpy array
-		nbins: num of bins
+		
+		Parameters
+			ds: data set name or list or numpy array
+			nbins: num of bins
 		"""
 		self.__printBanner("getting cumulative freq distribution", ds)
 		data = self.getNumericData(ds)
@@ -598,13 +639,14 @@ class DataExplorer:
 	def getExtremeValue(self, ds,  ensamp, nsamp, polarity, doPlotDistr, nbins=20):
 		"""
 		get histogram
-		params:
-		ds: data set name or list or numpy array
-		ensamp: num of samples for extreme values
-		nsamp: num of samples
-		polarity: max or min
-		doPlotDistr: plot distr
-		nbins: num of bins
+		
+		Parameters
+			ds: data set name or list or numpy array
+			ensamp: num of samples for extreme values
+			nsamp: num of samples
+			polarity: max or min
+			doPlotDistr: plot distr
+			nbins: num of bins
 		"""
 		self.__printBanner("getting extreme values", ds)
 		data = self.getNumericData(ds)
@@ -625,9 +667,10 @@ class DataExplorer:
 	def getEntropy(self, ds,  nbins=10):
 		"""
 		get entropy
-		params:
-		ds: data set name or list or numpy array
-		nbins: num of bins
+		
+		Parameters
+			ds: data set name or list or numpy array
+			nbins: num of bins
 		"""
 		self.__printBanner("getting entropy", ds)
 		data = self.getNumericData(ds)
@@ -639,10 +682,11 @@ class DataExplorer:
 	def getRelEntropy(self, ds1,  ds2, nbins=10):
 		"""
 		get relative entropy or KL divergence
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		nbins: num of bins
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			nbins: num of bins
 		"""
 		self.__printBanner("getting relative entropy or KL divergence", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -658,10 +702,11 @@ class DataExplorer:
 	def getMutualInfo(self, ds1,  ds2, nbins=10):
 		"""
 		get mutual information
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		nbins: num of bins
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			nbins: num of bins
 		"""
 		self.__printBanner("getting mutual information", ds1, ds2)
 		en1 = self.getEntropy(ds1,nbins)
@@ -679,9 +724,10 @@ class DataExplorer:
 	def getPercentile(self, ds, value):
 		"""
 		gets percentile
-		params:
-		ds: data set name or list or numpy array
-		value: the value
+		
+		Parameters
+			ds: data set name or list or numpy array
+			value: the value
 		"""
 		self.__printBanner("getting percentile", ds)
 		data = self.getNumericData(ds)
@@ -692,10 +738,11 @@ class DataExplorer:
 	def getValueRangePercentile(self, ds, value1, value2):
 		"""
 		gets percentile
-		params:
-		ds: data set name or list or numpy array
-		value1: first value
-		value2: second value
+		
+		Parameters
+			ds: data set name or list or numpy array
+			value1: first value
+			value2: second value
 		"""
 		self.__printBanner("getting percentile difference for value range", ds)
 		if value1 < value2:
@@ -713,9 +760,10 @@ class DataExplorer:
 	def getValueAtPercentile(self, ds, percent):
 		"""
 		gets value at percentile
-		params:
-		ds: data set name or list or numpy array
-		percent: percentile
+		
+		Parameters
+			ds: data set name or list or numpy array
+			percent: percentile
 		"""
 		self.__printBanner("getting value at percentile", ds)
 		data = self.getNumericData(ds)
@@ -727,9 +775,10 @@ class DataExplorer:
 	def getLessThanValues(self, ds, cvalue):
 		"""
 		gets values less than given value
-		params:
-		ds: data set name or list or numpy array
-		cvalue: condition value
+		
+		Parameters
+			ds: data set name or list or numpy array
+			cvalue: condition value
 		"""
 		self.__printBanner("getting values less than", ds)
 		fdata = self.__getCondValues(ds, cvalue, "lt")
@@ -740,9 +789,10 @@ class DataExplorer:
 	def getGreaterThanValues(self, ds, cvalue):
 		"""
 		gets values greater than given value
-		params:
-		ds: data set name or list or numpy array
-		cvalue: condition value
+		
+		Parameters
+			ds: data set name or list or numpy array
+			cvalue: condition value
 		"""
 		self.__printBanner("getting values greater than", ds)
 		fdata = self.__getCondValues(ds, cvalue, "gt")
@@ -751,11 +801,12 @@ class DataExplorer:
 
 	def __getCondValues(self, ds, cvalue, cond):
 		"""
-		gets percentile
-		params:
-		ds: data set name or list or numpy array
-		cvalue: condition value
-		cond: condition
+		gets cinditional values
+		
+		Parameters
+			ds: data set name or list or numpy array
+			cvalue: condition value
+			cond: condition
 		"""
 		data = self.getNumericData(ds)
 		if cond == "lt":
@@ -768,9 +819,10 @@ class DataExplorer:
 	def getUniqueValueCounts(self, ds, maxCnt=10):
 		"""
 		gets unique values and counts
-		params:
-		ds: data set name or list or numpy array
-		maxCnt; max value count pairs to return
+		
+		Parameters
+			ds: data set name or list or numpy array
+			maxCnt; max value count pairs to return
 		"""
 		self.__printBanner("getting unique values and counts", ds)
 		data = self.getNumericData(ds)
@@ -784,9 +836,10 @@ class DataExplorer:
 	def getCatUniqueValueCounts(self, ds, maxCnt=10):
 		"""
 		gets unique categorical values and counts
-		params:
-		ds: data set name or list or numpy array
-		maxCnt; max value count pairs to return
+		
+		Parameters
+			ds: data set name or list or numpy array
+			maxCnt; max value count pairs to return
 		"""
 		self.__printBanner("getting unique categorical values and counts", ds)
 		data = self.getCatData(ds)
@@ -802,9 +855,10 @@ class DataExplorer:
 	def getStats(self, ds, nextreme=5):
 		"""
 		gets summary statistics
-		params:
-		ds: data set name or list or numpy array
-		nextreme: num of extreme values
+		
+		Parameters
+			ds: data set name or list or numpy array
+			nextreme: num of extreme values
 		"""
 		self.__printBanner("getting summary statistics", ds)
 		data = self.getNumericData(ds)
@@ -831,9 +885,11 @@ class DataExplorer:
 	def getDifference(self, ds, order, doPlot=False):
 		"""
 		gets difference of given order
-		params:
-		ds: data set name or list or numpy array
-		order: order of difference
+		
+		Parameters
+			ds: data set name or list or numpy array
+			order: order of difference
+			doPlot : True for plot
 		"""
 		self.__printBanner("getting difference of given order", ds)
 		data = self.getNumericData(ds)
@@ -845,9 +901,10 @@ class DataExplorer:
 	def getTrend(self, ds, doPlot=False):
 		"""
 		get trend
-		params:
-		ds: data set name or list or numpy array
-		doPlot: true if plotting needed
+		
+		Parameters
+			ds: data set name or list or numpy array
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("getting trend")
 		data = self.getNumericData(ds)
@@ -871,8 +928,9 @@ class DataExplorer:
 	def getDiffSdNoisiness(self, ds):
 		"""
 		get noisiness based on std dev of first order difference
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
 		"""
 		diff = self.getDifference(ds, 1)
 		noise = np.std(np.array(diff))
@@ -882,8 +940,10 @@ class DataExplorer:
 	def getMaRmseNoisiness(self, ds, wsize=5):
 		"""
 		gets noisiness based on RMSE with moving average
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
+			wsize : window size
 		"""
 		assert wsize % 2 == 1, "window size must be odd"
 		data = self.getNumericData(ds)
@@ -910,9 +970,11 @@ class DataExplorer:
 	def deTrend(self, ds, trend, doPlot=False):
 		"""
 		de trend
-		params:
-		ds: data set name or list or numpy array
-		doPlot: true if plotting needed
+		
+		Parameters
+			ds: data set name or list or numpy array
+			ternd : trend data
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("doing de trend", ds)
 		data = self.getNumericData(ds)
@@ -925,10 +987,13 @@ class DataExplorer:
 	def getTimeSeriesComponents(self, ds, model, freq, summaryOnly, doPlot=False):
 		"""
 		extracts trend, cycle and residue components of time series
-		params:
-		ds: data set name or list or numpy array
-
-		doPlot: true if plotting needed
+		
+		Parameters
+			ds: data set name or list or numpy array
+			model : model type
+			freq : seasnality period
+			summaryOnly : True if only summary needed in output
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("extracting trend, cycle and residue components of time series", ds)
 		assert model == "additive" or model == "multiplicative", "model must be additive or multiplicative"
@@ -960,10 +1025,12 @@ class DataExplorer:
 	def getGausianMixture(self, ncomp, cvType, ninit, *dsl):
 		"""
 		finds gaussian mixture parameters
-		params:
-		ncomp : num of gaussian componenets
-		ninit: num of intializations
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			ncomp : num of gaussian componenets
+			cvType : co variance type
+			ninit: num of intializations
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting gaussian mixture parameters", *dsl)
 		assertInList(cvType, ["full", "tied", "diag", "spherical"], "invalid covariance type")
@@ -983,10 +1050,11 @@ class DataExplorer:
 	def getKmeansCluster(self, nclust, ninit, *dsl):
 		"""
 		gets cluster parameters
-		params:
-		ncomp : num of gaussian componenets
-		ninit: num of intializations
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			nclust : num of clusters
+			ninit: num of intializations
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting kmean cluster parameters", *dsl)
 		dmat = self.__stackData(*dsl)
@@ -1004,9 +1072,10 @@ class DataExplorer:
 	def getPrincComp(self, ncomp, *dsl):
 		"""
 		finds pricipal componenet parameters
-		params:
-		ncomp : num of pricipal componenets
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			ncomp : num of pricipal componenets
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting principal componenet parameters", *dsl)
 		dmat = self.__stackData(*dsl)
@@ -1026,9 +1095,10 @@ class DataExplorer:
 	def getOutliersWithIsoForest(self, contamination,  *dsl):
 		"""
 		finds outliers using isolation forest
-		params:
-
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			contamination : proportion of outliers in the data set
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using isolation forest", *dsl)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
@@ -1046,9 +1116,10 @@ class DataExplorer:
 	def getOutliersWithLocalFactor(self, contamination,  *dsl):
 		"""
 		gets outliers using local outlier factor
-		params:
-
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			contamination : proportion of outliers in the data set
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using local outlier factor", *dsl)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
@@ -1066,9 +1137,10 @@ class DataExplorer:
 	def getOutliersWithSupVecMach(self, nu,  *dsl):
 		"""
 		gets outliers using one class svm
-		params:
-
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			nu : upper bound on the fraction of training errors and a lower bound of the fraction of support vectors
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using one class svm", *dsl)
 		assert nu >= 0 and nu <= 0.5, "error upper bound outside valid range"
@@ -1086,9 +1158,10 @@ class DataExplorer:
 	def getOutliersWithCovarDeterminant(self, contamination,  *dsl):
 		"""
 		gets outliers using covariance determinan
-		params:
-
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			contamination : proportion of outliers in the data set
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting outliers using using covariance determinant", *dsl)
 		assert contamination >= 0 and contamination <= 0.5, "contamination outside valid range"
@@ -1103,11 +1176,61 @@ class DataExplorer:
 		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
 		return result
 
+	def getSubsequenceOutliersWithDissimilarity(self, subSeqSize, ds):
+		"""
+		gets subsequence outlier with subsequence pairwise disimilarity
+		
+		Parameters
+			subSeqSize : sub sequence size
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("doing sub sequence anomaly detection with dissimilarity", ds)
+		data = self.getNumericData(ds)
+		sz = len(data)
+		dist = dict()
+		minDist = dict()
+		for i in range(sz - subSeqSize):
+			#first window
+			w1 = data[i : i + subSeqSize]
+			dmin = None
+			for j in range(sz - subSeqSize):
+				#second window not overlapping with the first
+				if j + subSeqSize <=i or j >= i + subSeqSize:
+					w2 = data[j : j + subSeqSize]
+					k = (j,i)
+					if k in dist:
+						d = dist[k]
+					else:
+						d = euclideanDistance(w1,w2)
+						k = (i,j)
+						dist[k] = d
+					if dmin is None:
+						dmin = d
+					else:
+						dmin = d if d < dmin else dmin
+			minDist[i] = dmin
+		
+		#find max of min
+		dmax = None
+		offset = None
+		for k in minDist.keys():
+			d = minDist[k]
+			if dmax is None:
+				dmax = d
+				offset = k
+			else:
+				if d > dmax:
+					dmax = d
+					offset = k
+		result = self.__printResult("subSeqOffset", offset, "outlierScore", dmax)	
+		return result
+	
 	def getNullCount(self, ds):
 		"""
 		get count of null fields
-		params:
-		ds : data set name or list or numpy array with data
+		
+		Parameters
+			ds : data set name or list or numpy array with data
 		"""
 		self.__printBanner("getting null value count", ds)
 		if type(ds) == str:
@@ -1129,10 +1252,11 @@ class DataExplorer:
 	def fitLinearReg(self, dsx, ds, doPlot=False):
 		"""
 		fit  linear regression 
-		params:
-		dsx: x data set name or None
-		ds: data set name or list or numpy array
-		doPlot: true if plotting needed
+		
+		Parameters
+			dsx: x data set name or None
+			ds: data set name or list or numpy array
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("fitting linear regression", ds)
 		data = self.getNumericData(ds)
@@ -1149,9 +1273,10 @@ class DataExplorer:
 	def fitSiegelRobustLinearReg(self, ds, doPlot=False):
 		"""
 		siegel robust linear regression fit based on median
-		params:
-		ds: data set name or list or numpy array
-		doPlot: true if plotting needed
+		
+		Parameters
+			ds: data set name or list or numpy array
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("fitting siegel robust linear regression  based on median", ds)
 		data = self.getNumericData(ds)
@@ -1165,9 +1290,10 @@ class DataExplorer:
 	def fitTheilSenRobustLinearReg(self, ds, doPlot=False):
 		"""
 		thiel sen  robust linear fit regression based on median
-		params:
-		ds: data set name or list or numpy array
-		doPlot: true if plotting needed
+		
+		Parameters
+			ds: data set name or list or numpy array
+			doPlot: true if plotting needed
 		"""
 		self.__printBanner("fitting thiel sen  robust linear regression based on median", ds)
 		data = self.getNumericData(ds)
@@ -1181,8 +1307,12 @@ class DataExplorer:
 	def plotRegFit(self, x, y, slope, intercept):
 		"""
 		plot linear rgeression fit line
-		params:
-
+		
+		Parameters
+			x : x values
+			y : y values
+			slope : slope
+			intercept : intercept
 		"""
 		self.__printBanner("plotting linear rgeression fit line")
 		fig = plt.figure()
@@ -1194,11 +1324,12 @@ class DataExplorer:
 	def getRegFit(self, xvalues, yvalues, slope, intercept):
 		"""
 		gets fitted line and residue
-		params:
-		x : x values
-		y : y values
-		slope : regression slope
-		intercept : regressiob intercept
+		
+		Parameters
+			x : x values
+			y : y values
+			slope : regression slope
+			intercept : regressiob intercept
 		"""
 		yfit = list()
 		residue = list()
@@ -1213,8 +1344,9 @@ class DataExplorer:
 	def getCovar(self, *dsl):
 		"""
 		gets covariance
-		params:
-
+		
+		Parameters
+			dsl: list of data set name or list or numpy array
 		"""
 		self.__printBanner("getting covariance", *dsl)
 		data = list(map(lambda ds : self.getNumericData(ds), dsl))
@@ -1227,10 +1359,10 @@ class DataExplorer:
 	def getPearsonCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		gets pearson correlation coefficient 
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
 		"""
 		self.__printBanner("getting pearson correlation coefficient ", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1245,10 +1377,11 @@ class DataExplorer:
 	def getSpearmanRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		gets spearman correlation coefficient
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("getting spearman correlation coefficient",ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1262,10 +1395,11 @@ class DataExplorer:
 	def getKendalRankCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		kendall’s tau, a correlation measure for ordinal data
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("getting kendall’s tau, a correlation measure for ordinal data", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1279,10 +1413,11 @@ class DataExplorer:
 	def getPointBiserialCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		point biserial  correlation  between binary and numeric
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("getting point biserial correlation  between binary and numeric", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1297,9 +1432,10 @@ class DataExplorer:
 	def getConTab(self, ds1, ds2):
 		"""
 		get contingency table for categorical data pair
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
 		"""
 		self.__printBanner("getting contingency table for categorical data", ds1, ds2)
 		data1 = self.getCatData(ds1)
@@ -1314,10 +1450,11 @@ class DataExplorer:
 	def getChiSqCorr(self, ds1, ds2, sigLev=.05):
 		"""
 		chi square correlation for  categorical	data pair
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("getting chi square correlation for  two categorical", ds1, ds2)
 		ctab = self.getConTab(ds1, ds2)
@@ -1329,11 +1466,12 @@ class DataExplorer:
 	def getAnovaCorr(self, ds1, ds2, grByCol, sigLev=.05):
 		"""
 		anova correlation for  numerical categorical	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			grByCol : group by column
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("anova correlation for numerical categorical", ds1, ds2)
 		df = self.loadCatFloatDataFrame(ds1, ds2) if grByCol == 0 else self.loadCatFloatDataFrame(ds2, ds1)
@@ -1350,10 +1488,11 @@ class DataExplorer:
 	def plotAutoCorr(self, ds, lags, alpha, diffOrder=0):
 		"""
 		plots auto correlation
-		params:
-		ds: data set name or list or numpy array
-		lags: num of lags
-		alpha: confidence level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			lags: num of lags
+			alpha: confidence level
 		"""
 		self.__printBanner("plotting auto correlation", ds)
 		data = self.getNumericData(ds)
@@ -1364,10 +1503,11 @@ class DataExplorer:
 	def getAutoCorr(self, ds, lags, alpha=.05):
 		"""
 		gets auts correlation
-		params:
-		ds: data set name or list or numpy array
-		lags: num of lags
-		alpha: confidence level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			lags: num of lags
+			alpha: confidence level
 		"""
 		self.__printBanner("getting auto correlation", ds)
 		data = self.getNumericData(ds)
@@ -1379,10 +1519,11 @@ class DataExplorer:
 	def plotParAcf(self, ds, lags, alpha):
 		"""
 		partial auto correlation
-		params:
-		ds: data set name or list or numpy array
-		lags: num of lags
-		alpha: confidence level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			lags: num of lags
+			alpha: confidence level
 		"""
 		self.__printBanner("plotting partial auto correlation", ds)
 		data = self.getNumericData(ds)
@@ -1392,10 +1533,11 @@ class DataExplorer:
 	def getParAutoCorr(self, ds, lags, alpha=.05):
 		"""
 		gets partial auts correlation
-		params:
-		ds: data set name or list or numpy array
-		lags: num of lags
-		alpha: confidence level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			lags: num of lags
+			alpha: confidence level
 		"""
 		self.__printBanner("getting partial auto correlation", ds)
 		data = self.getNumericData(ds)
@@ -1406,10 +1548,11 @@ class DataExplorer:
 	def getHurstExp(self, ds, kind, doPlot=True):
 		"""
 		gets Hurst exponent of time series
-		params:
-		ds: data set name or list or numpy array
-		kind: kind of data change, random_walk, price
-		doPlot: True for plot
+		
+		Parameters
+			ds: data set name or list or numpy array
+			kind: kind of data change, random_walk, price
+			doPlot: True for plot
 		"""
 		self.__printBanner("getting Hurst exponent", ds)
 		data = self.getNumericData(ds)
@@ -1431,10 +1574,11 @@ class DataExplorer:
 	def approxEntropy(self, ds, m, r):
 		"""
 		gets apprx entroty of time series (ref: wikipedia)
-		params:
-		ds: data set name or list or numpy array
-		m:  length of compared run of data
-		r: filtering level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			m:  length of compared run of data
+			r: filtering level
 		"""
 		self.__printBanner("getting approximate entropy", ds)
 		ldata = self.getNumericData(ds)
@@ -1445,9 +1589,11 @@ class DataExplorer:
 	def __phi(self, ldata, m, r):
 		"""
 		phi function for approximate entropy
-		ldata: data array
-		m:  length of compared run of data
-		r: filtering level
+		
+		Parameters
+			ldata: data array
+			m:  length of compared run of data
+			r: filtering level
 		"""
 		le = len(ldata)
 		x = [[ldata[j] for j in range(i, i + m - 1 + 1)] for i in range(le - m + 1)]
@@ -1465,8 +1611,9 @@ class DataExplorer:
 	def oneSpaceEntropy(self, ds, scaMethod="zscale"):
 		"""
 		gets one space  entroty  (ref:  Estimating mutual information by Kraskov)
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
 		"""
 		self.__printBanner("getting one space entropy", ds)
 		data = self.getNumericData(ds)
@@ -1488,11 +1635,12 @@ class DataExplorer:
 	def plotCrossCorr(self, ds1, ds2, normed, lags):
 		"""
 		plots cross correlation 
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		normed: If True, input vectors are normalised to unit 
-		lags: num of lags
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			normed: If True, input vectors are normalised to unit 
+			lags: num of lags
 		"""  
 		self.__printBanner("plotting cross correlation between two numeric", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1504,9 +1652,10 @@ class DataExplorer:
 	def getCrossCorr(self, ds1, ds2):
 		"""
 		gets cross correlation
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
 		"""
 		self.__printBanner("getting cross correlation", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1519,8 +1668,9 @@ class DataExplorer:
 	def getFourierTransform(self, ds):
 		"""
 		gets fast fourier transform
-		params:
-		ds: data set name or list or numpy array
+		
+		Parameters
+			ds: data set name or list or numpy array
 		"""
 		self.__printBanner("getting fourier transform", ds)
 		data = self.getNumericData(ds)
@@ -1532,11 +1682,12 @@ class DataExplorer:
 	def testStationaryAdf(self, ds, regression, autolag, sigLev=.05):
 		"""
 		Adf stationary test null hyp not stationary
-		params:
-		ds: data set name or list or numpy array
-		regression: constant and trend order to include in regression
-		autolag: method to use when automatically determining the lag
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			regression: constant and trend order to include in regression
+			autolag: method to use when automatically determining the lag
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing ADF stationary test", ds)
 		relist = ["c","ct","ctt","nc"]
@@ -1554,11 +1705,12 @@ class DataExplorer:
 	def testStationaryKpss(self, ds, regression, nlags, sigLev=.05):
 		"""
 		Kpss stationary test null hyp  stationary
-		params:
-		ds: data set name or list or numpy array
-		regression: constant and trend order to include in regression
-
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			regression: constant and trend order to include in regression
+			nlags : no of lags
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing KPSS stationary test", ds)
 		relist = ["c","ct"]
@@ -1568,7 +1720,7 @@ class DataExplorer:
 
 
 		data = self.getNumericData(ds)
-		stat, pvalue, nLags, criticalValues = stt.kpss(data, regression=regression)
+		stat, pvalue, nLags, criticalValues = stt.kpss(data, regression=regression, lags=nlags)
 		result = self.__printResult("stat", stat, "pvalue", pvalue, "num lags", nLags, "critial values", criticalValues)
 		self.__printStat(stat, pvalue, "probably stationary", "probably not stationary", sigLev)
 		return result
@@ -1576,9 +1728,10 @@ class DataExplorer:
 	def testNormalJarqBera(self, ds, sigLev=.05):
 		"""
 		jarque bera normalcy test
-		params:
-		ds: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing ajrque bera normalcy test", ds)
 		data = self.getNumericData(ds)
@@ -1591,9 +1744,10 @@ class DataExplorer:
 	def testNormalShapWilk(self, ds, sigLev=.05):
 		"""
 		shapiro wilks normalcy test
-		params:
-		ds: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing shapiro wilks normalcy test", ds)
 		data = self.getNumericData(ds)
@@ -1605,9 +1759,10 @@ class DataExplorer:
 	def testNormalDagast(self, ds, sigLev=.05):
 		"""
 		D’Agostino’s K square  normalcy test
-		params:
-		ds: data set name or list or numpy array
-		sigLev: statistical significance level
+
+		Parameters
+			ds: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing D’Agostino’s K square  normalcy test", ds)
 		data = self.getNumericData(ds)
@@ -1619,10 +1774,11 @@ class DataExplorer:
 	def testDistrAnderson(self, ds, dist, sigLev=.05):
 		"""
 		Anderson test for normal, expon, logistic, gumbel, gumbel_l, gumbel_r
-		params:
-		ds: data set name or list or numpy array
-		dist: type of distribution
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			dist: type of distribution
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Anderson test for for various distributions", ds)
 		diList = ["norm", "expon", "logistic", "gumbel", "gumbel_l", "gumbel_r", "extreme1"]
@@ -1646,9 +1802,10 @@ class DataExplorer:
 	def testSkew(self, ds, sigLev=.05):
 		"""
 		test skew wrt  normal distr
-		params:
-		ds: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("testing skew wrt normal distr", ds)
 		data = self.getNumericData(ds)
@@ -1660,10 +1817,11 @@ class DataExplorer:
 	def testTwoSampleStudent(self, ds1, ds2, sigLev=.05):
 		"""
 		student t 2 sample test
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing student t 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1676,10 +1834,11 @@ class DataExplorer:
 	def testTwoSampleKs(self, ds1, ds2, sigLev=.05):
 		"""
 		Kolmogorov Sminov 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Kolmogorov Sminov 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1692,10 +1851,11 @@ class DataExplorer:
 	def testTwoSampleMw(self, ds1, ds2, sigLev=.05):
 		"""
 		Mann-Whitney  2 sample statistic
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Mann-Whitney  2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1707,10 +1867,11 @@ class DataExplorer:
 	def testTwoSampleWilcox(self, ds1, ds2, sigLev=.05):
 		"""
 		Wilcoxon Signed-Rank 2 sample statistic
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Wilcoxon Signed-Rank 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1723,10 +1884,11 @@ class DataExplorer:
 	def testTwoSampleKw(self, ds1, ds2, sigLev=.05):
 		"""
 		Kruskal-Wallis 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Kruskal-Wallis 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1738,10 +1900,11 @@ class DataExplorer:
 	def testTwoSampleFriedman(self, ds1, ds2, ds3, sigLev=.05):
 		"""
 		Friedman 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Friedman 2 sample  test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1754,10 +1917,11 @@ class DataExplorer:
 	def testTwoSampleEs(self, ds1, ds2, sigLev=.05):
 		"""
 		Epps Singleton 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Epps Singleton 2 sample  test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1769,10 +1933,11 @@ class DataExplorer:
 	def testTwoSampleAnderson(self, ds1, ds2, sigLev=.05):
 		"""
 		Anderson 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Anderson 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1808,10 +1973,11 @@ class DataExplorer:
 	def testTwoSampleScaleAb(self, ds1, ds2, sigLev=.05):
 		"""
 		Ansari Bradley 2 sample scale statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1824,10 +1990,11 @@ class DataExplorer:
 	def testTwoSampleScaleMood(self, ds1, ds2, sigLev=.05):
 		"""
 		Mood 2 sample scale statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Mood 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1840,10 +2007,11 @@ class DataExplorer:
 	def testTwoSampleVarBartlet(self, ds1, ds2, sigLev=.05):
 		"""
 		Ansari Bradley 2 sample scale statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Ansari Bradley 2 sample scale test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1856,10 +2024,11 @@ class DataExplorer:
 	def testTwoSampleVarLevene(self, ds1, ds2, sigLev=.05):
 		"""
 		Levene 2 sample variance statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Levene 2 sample variance test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1872,10 +2041,11 @@ class DataExplorer:
 	def testTwoSampleVarFk(self, ds1, ds2, sigLev=.05):
 		"""
 		Fligner-Killeen 2 sample variance statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Fligner-Killeen 2 sample variance test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1888,10 +2058,11 @@ class DataExplorer:
 	def testTwoSampleMedMood(self, ds1, ds2, sigLev=.05):
 		"""
 		Mood 2 sample median statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Mood 2 sample median test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1904,10 +2075,11 @@ class DataExplorer:
 	def testTwoSampleZc(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang-C 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Zhang-C 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1935,10 +2107,11 @@ class DataExplorer:
 	def testTwoSampleZa(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang-A 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Zhang-A 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -1968,10 +2141,11 @@ class DataExplorer:
 	def testTwoSampleZk(self, ds1, ds2, sigLev=.05):
 		"""
 		Zhang-K 2 sample statistic	
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing Zhang-K 2 sample test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -2006,10 +2180,11 @@ class DataExplorer:
 	def testTwoSampleCvm(self, ds1, ds2, sigLev=.05):
 		"""
 		2 sample cramer von mises
-		params:
-		ds1: data set name or list or numpy array
-		ds2: data set name or list or numpy array
-		sigLev: statistical significance level
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+			sigLev: statistical significance level
 		"""
 		self.__printBanner("doing 2 sample CVM test", ds1, ds2)
 		data1 = self.getNumericData(ds1)
@@ -2040,8 +2215,9 @@ class DataExplorer:
 	def ensureSameSize(self, dlist):
 		"""
 		ensures all data sets are of same size
-		params:
-
+		
+		Parameters
+			dlist : data source list
 		"""
 		le = None
 		for d in dlist:
@@ -2054,8 +2230,9 @@ class DataExplorer:
 	def __stackData(self, *dsl):
 		"""
 		stacks collumd to create matrix
-		params:
-		dsl: data source list
+		
+		Parameters
+			dsl: data source list
 		"""
 		dlist = tuple(map(lambda ds : self.getNumericData(ds), dsl))
 		self.ensureSameSize(dlist)
@@ -2065,9 +2242,10 @@ class DataExplorer:
 	def __printBanner(self, msg, *dsl):
 		"""
 		print banner for any function
-		params:
-		msg: message
-		dsl: list of data set name or list or numpy array
+		
+		Parameters
+			msg: message
+			dsl: list of data set name or list or numpy array
 		"""
 		tags = list(map(lambda ds : ds if type(ds) == str else "annoynymous", dsl))
 		forData = " for data sets " if tags else ""
@@ -2086,7 +2264,13 @@ class DataExplorer:
 	def __printStat(self, stat, pvalue, nhMsg, ahMsg, sigLev=.05):
 		"""
 		generic stat and pvalue output
-		params:
+		
+		Parameters
+			stat : stat value
+			pvalue : p value
+			nhMsg : null hypothesis violation message
+			ahMsg : null hypothesis  message
+			sigLev : significance level
 		"""
 		if self.verbose:
 			print("\ntest result:")
@@ -2098,8 +2282,9 @@ class DataExplorer:
 	def __printResult(self,  *values):
 		"""
 		print results
-		params:
-		flattened kay and value pairs
+		
+		Parameters
+			values : flattened kay and value pairs
 		"""
 		result = dict()
 		assert len(values) % 2 == 0, "key value list should have even number of items"
