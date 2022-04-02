@@ -1095,7 +1095,33 @@ def mutDistr(distr, shift, nswap=50):
 		distr[si] += shift
 	return distr
 
-	
+def fileSelFieldSubSeqModifierGen(filePath, column, offset, seqLen, modifier, precision, delim=","):
+	"""
+	file record generator that superimposes given data in the specified segment of a column
+
+	Parameters
+		filePath ; file path
+		column : column index 
+		offset : offset into column values
+		seqLen : length of subseq
+		modifier : data to be superimposed either list or a sampler object
+		precision : floating point precision
+		delim : delemeter
+	"""
+	beg = offset
+	end = beg + seqLen
+	isList = type(modifier) == list
+	i = 0
+	for rec in fileRecGen(filePath, delim):
+		if i >= beg and i < end:
+			va = float(rec[column])
+			if isList:
+				va += modifier[i - beg] 
+			else:
+				va += modifier.sample()
+			rec[column] = formatFloat(precision, va)
+		yield delim.join(rec)
+		i += 1
 	
 class ShiftedDataGenerator:
 	"""
@@ -1188,6 +1214,13 @@ class ShiftedDataGenerator:
 		return ttdata
 		
 	def __scaleShift(self, tdata, transforms):
+		"""
+		shifts and scales tabular data
+		
+		Parameters
+			tdata : 2D array
+			transforms : transforms to apply
+		"""
 		ttdata = list()
 		for rec in tdata:
 			nrec = rec.copy()
