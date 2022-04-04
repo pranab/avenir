@@ -58,8 +58,8 @@ class GraphConvoNetwork(nn.Module):
     	defValues["common.scaling.param.file"] = (None, None)
     	defValues["common.verbose"] = (False, None)
     	defValues["train.data.file"] = (None, "missing training data file")
-    	defValues["train.data.num.nodes"] = (None, "missing num of nodes")
-    	defValues["train.data.num.labeled"] = (None, "missing num of labeled nodes")
+    	defValues["train.data.num.nodes"] = (None, None)
+    	defValues["train.data.num.labeled"] = (None, None)
     	defValues["train.labeled.data.splits"] = ([75,15,10], None)
     	defValues["train.layer.data"] = (None, "missing layer data")
     	defValues["train.input.size"] = (None, "missing  output size")
@@ -158,22 +158,32 @@ class GraphConvoNetwork(nn.Module):
     	dataFilePath = self.config.getStringConfig("train.data.file")[0]
     	numNodes = self.config.getIntConfig("train.data.num.nodes")[0]
     	numLabeled = self.config.getIntConfig("train.data.num.labeled")[0]
-    	splits = self.config.getIntListConfig("train.labeled.data.splits")[0]
+    	splits = self.config.getFloatListConfig("train.labeled.data.splits")[0]
     	
     	dx = list()
     	dy = list()
     	edges = list()
-    	for rec in fileRecGen(dataFilePath, delim):
+    	mask = None
+    	for rec in fileRecGen(dataFilePath, ","):
     		if len(rec) > 2:
     			x = rec[1 :-1]
     			x = toFloatList(x)
     			y = int(rec[-1])
     			dx.append(x)
     			dy.append(y)
-    		else:
+    		elif len(rec) == 2:
     			e = toIntList(rec)
     			edges.append(e)
-    			
+    		elif len(rec) == 1:
+    			items = rec[0].split()
+    			assertEqual(items[0], "mask", "invalid mask data")
+    			numNodes = int(items[1])
+    			mask = list()
+    			for r in range(2, len(items), 1):
+    				ri = r.split(":")
+    				ms = list(range(int(ri[0]), int(ri[0]), 1))
+    				mask.extend(ms)
+    					
     	dx = torch.tensor(dx, dtype=torch.float)
     	dy = torch.tensor(dy, dtype=torch.long)
     	edges = torch.tensor(edges, dtype=torch.long)
@@ -181,20 +191,39 @@ class GraphConvoNetwork(nn.Module):
     	self.data = Data(x=dx, edge_index=edges)
     	
     	#maks
-    	trStart = 0
-    	vaStart = int(splits[0] * numLabeled)
-    	teStart = vaStart + int(splits[1] * numLabeled)
+    	if mask is None:
+    		#trainiug data in the beginning
+    		trStart = 0
+    		vaStart = int(splits[0] * numLabeled)
+    		teStart = vaStart + int(splits[1] * numLabeled)
+
+    		trMask = [False] * numNodes
+    		trMask[0:vaStart] = [True] * vaStart
+    		vaMask = [False] * numNodes
+    		vaMask[vaStart:teStart] = [True] * (teStart - vaStart)
+    		teMask = [False] * numNodes
+    		teMask[teStart:] = [True] * (numNodes - teStart)
+    	else:
+    		#training data anywhere
+    		shuffle(mask)
+    		lmask = len(mask)
+    		trme = int(splits[0] * lmask)
+    		vame = int(splits[1] * lmask)
+    		teme = lmask
+    		trMask = [False] * numNodes
+    		for i in mask[:trme]:
+    			trMask[mask[i]] = True
+    		vaMask = [False] * numNodes
+    		for i in mask[trme:vame]:
+    			vaMask[mask[i]] = True
+    		teMask = [False] * numNodes
+    		for i in mask[vame:]:
+    			teMask[mask[i]] = True
     	
-    	trMask = [False] * numNodes
-    	trMask[0:vaStart] = [True] * vaStart
-    	vaMask = [False] * numNodes
-    	vaMask[vaStart:teStart] = [True] * (teStart - vaStart)
-    	teMask = [False] * numNodes
-    	teMask[teStart:] = [True] * (numNodes - teStart)
     	self.data.train_mask = torch.tensor(trMask, dtype=torch.bool)
     	self.data.val_mask = torch.tensor(vaMask, dtype=torch.bool)
     	self.data.test_mask = torch.tensor(teMask, dtype=torch.bool)
-    	
+    		
     def descData(self):
     	"""
     	load node and edge data
