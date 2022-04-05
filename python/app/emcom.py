@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath("../mlextra"))
 from mlutil import *
 from util import *
 from sampler import *
-from tnn import *
+from gcn import *
 
 """
 generates email communication data for discovering subject matter experts using GCN
@@ -48,6 +48,7 @@ if __name__ == "__main__":
 	parser.add_argument('--nclust', type=int, default = 3, help = "number of communication clusters")
 	parser.add_argument('--nsm', type=int, default = 3, help = "number of subject matters")
 	parser.add_argument('--trsz', type=int, default = 3, help = "training data size")
+	parser.add_argument('--cfile', type=str, default = "", help = "config file for model training")
 	args = parser.parse_args()
 	op = args.op
 	
@@ -224,4 +225,12 @@ if __name__ == "__main__":
 			print("{},{}".format(n2, n1))
 			e += 2
 		#print("no of inter cluster connections ", e)		
+	
+	elif op == "train":
+		model = GraphConvoNetwork(args.cfile)
+		model.buildModel()
+		GraphConvoNetwork.trainModel(model)
+		
+	else:
+		exitWithMsg("invalid command")
 				

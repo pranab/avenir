@@ -49,7 +49,6 @@ class GraphConvoNetwork(nn.Module):
     	member variables.
     	"""
     	defValues = dict()
-    	defValues["common.mode"] = ("training", None)
     	defValues["common.model.directory"] = ("model", None)
     	defValues["common.model.file"] = (None, None)
     	defValues["common.preprocessing"] = (None, None)
@@ -58,9 +57,9 @@ class GraphConvoNetwork(nn.Module):
     	defValues["common.scaling.param.file"] = (None, None)
     	defValues["common.verbose"] = (False, None)
     	defValues["train.data.file"] = (None, "missing training data file")
-    	defValues["train.data.num.nodes"] = (None, None)
-    	defValues["train.data.num.labeled"] = (None, None)
-    	defValues["train.labeled.data.splits"] = ([75,15,10], None)
+    	defValues["train.data.num.nodes.total"] = (None, None)
+    	defValues["train.data.num.nodes.training"] = (None, None)
+    	defValues["train.data.splits"] = ([.75,.15,.10], None)
     	defValues["train.layer.data"] = (None, "missing layer data")
     	defValues["train.input.size"] = (None, "missing  output size")
     	defValues["train.output.size"] = (None, "missing  output size")
@@ -80,7 +79,6 @@ class GraphConvoNetwork(nn.Module):
     	defValues["train.track.error"] = (False, None)
     	defValues["train.epoch.intv"] = (5, None)
     	defValues["train.print.weights"] = (False, None)
-    	defValues["valid.data.file"] = (None, None)
     	defValues["valid.accuracy.metric"] = (None, None)
     	self.config = Configuration(configFile, defValues)
     	super(GraphConvoNetwork, self).__init__()
@@ -156,8 +154,8 @@ class GraphConvoNetwork(nn.Module):
     	load node and edge data
     	"""
     	dataFilePath = self.config.getStringConfig("train.data.file")[0]
-    	numNodes = self.config.getIntConfig("train.data.num.nodes")[0]
-    	numLabeled = self.config.getIntConfig("train.data.num.labeled")[0]
+    	numNodes = self.config.getIntConfig("train.data.num.nodes.total")[0]
+    	numLabeled = self.config.getIntConfig("train.data.num.nodes.training")[0]
     	splits = self.config.getFloatListConfig("train.labeled.data.splits")[0]
     	
     	dx = list()
