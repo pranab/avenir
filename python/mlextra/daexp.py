@@ -392,7 +392,7 @@ class DataExplorer:
 				col = df[c].tolist()
 				self.__addDataSet(c, col, DataSetMetaData.dtypeCat)
 
-	def addCatListData(self, ds, name):
+	def addListCatData(self, ds, name):
 		"""
 		add categorical list data
 		
@@ -403,7 +403,7 @@ class DataExplorer:
 		self.__printBanner("adding categorical list data")
 		assert type(ds) == list, "data not a list"
 		assert isCategorical(ds), "data is not categorical"
-		self.dataSets[name] = ds
+		self.__addDataSet(name, ds, DataSetMetaData.dtypeCat)
 		self.__printDone()
 
 	def remData(self, ds):
@@ -839,7 +839,7 @@ class DataExplorer:
 		
 		Parameters
 			ds: data set name or list or numpy array
-			maxCnt; max value count pairs to return
+			maxCnt: max value count pairs to return
 		"""
 		self.__printBanner("getting unique categorical values and counts", ds)
 		data = self.getCatData(ds)
@@ -852,6 +852,101 @@ class DataExplorer:
 		result = self.__printResult("cardinality", len(values),  "unique values and repeat counts", vc[:maxCnt])
 		return result
 
+	def getCatAlphaValueCounts(self, ds):
+		"""
+		gets alphabetic value count
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting alphabetic value counts", ds)
+		data = self.getCatData(ds)
+		series = pd.Series(data)
+		flags = series.str.isalpha().tolist()
+		count = sum(flags)
+		result = self.__printResult("alphabeticValueCount", count)
+		return result
+		
+
+	def getCatNumValueCounts(self, ds):
+		"""
+		gets numeric value count
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting numeric value counts", ds)
+		data = self.getCatData(ds)
+		series = pd.Series(data)
+		flags = series.str.isnumeric().tolist()
+		count = sum(flags)
+		result = self.__printResult("numericValueCount", count)
+		return result
+
+
+	def getCatAlphaNumValueCounts(self, ds):
+		"""
+		gets alpha numeric value count
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting alpha numeric value counts", ds)
+		data = self.getCatData(ds)
+		series = pd.Series(data)
+		flags = series.str.isalnum().tolist()
+		count = sum(flags)
+		result = self.__printResult("alphaNumericValueCount", count)
+		return result
+
+	def getCatAllCharCounts(self, ds):
+		"""
+		gets alphabetic, numeric and special char count list
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting alphabetic, numeric and special  char counts", ds)
+		data = self.getCatData(ds)
+		counts = list()
+		for d in data:
+			r = getAlphaNumCharCount(d)
+			counts.append(r)
+		result = self.__printResult("AllTypeCharCounts", counts)
+		return result
+
+	def getCatAlphaCharCounts(self, ds):
+		"""
+		gets alphabetic char count list
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting alphabetic char counts", ds)
+		data = self.getCatData(ds)
+		counts = list()
+		for d in data:
+			r = getAlphaNumCharCount(d)
+			counts.append(r[0])
+		result = self.__printResult("alphaCharCounts", counts)
+		return result
+	
+	def getCatNumCharCounts(self, ds):
+		"""
+		gets numeric char count list
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting numeric char counts", ds)
+		data = self.getCatData(ds)
+		counts = list()
+		for d in data:
+			r = getAlphaNumCharCount(d)
+			counts.append(r[1])
+		result = self.__printResult("numCharCounts", counts)
+		return result
+		
 	def getStats(self, ds, nextreme=5):
 		"""
 		gets summary statistics

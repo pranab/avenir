@@ -2093,7 +2093,28 @@ def fileLineCount(fPath):
 		for i, li in enumerate(f):
 			pass
 	return (i + 1)
-		
+
+def getAlphaNumCharCount(sdata):
+	""" 
+	number of alphabetic and numeric charcters in a string 
+
+	Parameters
+		sdata : string data
+	"""
+	acount = 0
+	ncount = 0
+	ocount = 0
+	assertEqual(type(sdata), str, "input must be string")
+	for c in sdata:
+		if c.isnumeric():
+			ncount += 1
+		elif c.isalpha():
+			acount += 1
+		else:
+			ocount += 1
+	r = (acount, ncount, ocount)
+	return r	
+			
 class StepFunction:
 	"""
 	step function
