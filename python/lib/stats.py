@@ -22,16 +22,31 @@ import math
 import numpy as np
 import statistics 
 
-
-# histogram class
+"""
+histogram class
+"""
 class Histogram:
 	def __init__(self, min, binWidth):
+		"""
+    	initializer
+    	
+		Parameters
+			min : min x
+			binWidth : bin width
+    	"""
 		self.xmin = min
 		self.binWidth = binWidth
 	
-	# create with bins already created	
 	@classmethod
 	def createInitialized(cls, min, binWidth, values):
+		"""
+    	create histogram instance
+    	
+		Parameters
+			min : min x
+			binWidth : bin width
+			values : y values
+    	"""
 		instance = cls(min, binWidth)
 		instance.xmax = min + binWidth * (len(values) - 1)
 		instance.ymin = 0
@@ -44,9 +59,16 @@ class Histogram:
 		instance.ymax = instance.fmax
 		return instance
 	
-	# create with un initialized bins
 	@classmethod
 	def createUninitialized(cls, min, max, binWidth):
+		"""
+    	create histogram instance with no y values
+    	
+		Parameters
+			min : min x
+			max : max x
+			binWidth : bin width
+    	"""
 		instance = cls(min, binWidth)
 		instance.xmax = max
 		instance.numBin = (max - min) / binWidth + 1
@@ -54,28 +76,45 @@ class Histogram:
 		return instance
 	
 	def initialize(self):
+		"""
+    	set y values to 0
+    	"""
 		self.bins = np.zeros(self.numBin)
 		
-	# add a value to a bin	
 	def add(self, value):
+		"""
+    	adds a value to a bin
+    	
+		Parameters
+			value : value
+    	"""
 		bin = (value - self.xmin) / self.binWidth
 		if (bin < 0 or  bin > self.numBin - 1):
 			print (bin)
 			raise ValueError("outside histogram range")
 		self.bins[bin] += 1.0
 	
-	# normalize 	
 	def normalize(self):
+		"""
+    	normalize  bin counts
+    	"""
 		total = self.bins.sum()
 		self.bins = np.divide(self.bins, total)
 	
 	
-	# cumulative dists
 	def cumDistr(self):
+		"""
+    	cumulative dists
+    	"""
 		self.cbins = np.cumsum(self.bins)
 	
-	# return value corresponding to a percentile	
 	def percentile(self, percent):
+		"""
+    	return value corresponding to a percentile
+    	
+		Parameters
+			percent : percentile value
+    	"""
 		if self.cbins is None:
 			raise ValueError("cumulative distribution is not available")
 			
@@ -86,26 +125,48 @@ class Histogram:
 				break
 		return value
 		
-	# return max bin value	
 	def max(self):
+		"""
+    	return max bin value 
+    	"""
 		return self.bins.max()
 	
-	# return a bin value	
 	def value(self, x):
+		"""
+    	return a bin value	
+     	
+		Parameters
+			x : x value
+   		"""
 		bin = int((x - self.xmin) / self.binWidth)
 		f = self.bins[bin]
 		return f
 	
 	def cumValue(self, x):
+		"""
+    	return a cumulative bin value	
+     	
+		Parameters
+			x : x value
+   		"""
 		bin = int((x - self.xmin) / self.binWidth)
 		c = self.cbins[bin]
 		return c
 	
 		
 	def getMinMax(self):
+		"""
+    	returns x min and x max
+    	"""
 		return (self.xmin, self.xmax)
 		
 	def boundedValue(self, x):
+		"""
+    	return x bounde by min and max	
+     	
+		Parameters
+			x : x value
+   		"""
 		if x < self.xmin:
 			x = self.xmin
 		elif x > self.xmax:
@@ -117,12 +178,22 @@ class RunningStat:
 	running stat class
 	"""
 	def __init__(self):
-		self.sum = 0.0
-		self.sumSq = 0.0
-		self.count = 0
+   		"""
+    	initializer	
+   		"""
+   		self.sum = 0.0
+   		self.sumSq = 0.0
+   		self.count = 0
 	
 	@staticmethod
 	def create(count, sum, sumSq):
+		"""
+    	creates iinstance	
+     	
+		Parameters
+			sum : sum of values
+			sumSq : sum of valure squared
+		"""
 		rs = RunningStat()
 		rs.sum = sum
 		rs.sumSq = sumSq
@@ -132,6 +203,9 @@ class RunningStat:
 	def add(self, value):
 		"""
 		adds new value
+
+		Parameters
+			value : value to add
 		"""
 		self.sum += value
 		self.sumSq += (value * value)
@@ -139,7 +213,7 @@ class RunningStat:
 
 	def getStat(self):
 		"""
-		calculate mean and std deviation 
+		return mean and std deviation 
 		"""
 		mean = self.sum /self. count
 		t = self.sumSq / (self.count - 1) - mean * mean * self.count / (self.count - 1)
@@ -150,6 +224,9 @@ class RunningStat:
 	def addGetStat(self,value):
 		"""
 		calculate mean and std deviation with new value added
+
+		Parameters
+			value : value to add
 		"""
 		self.add(value)
 		re = self.getStat()
@@ -168,12 +245,14 @@ class RunningStat:
 		s = (self.count, self.sum, self.sumSq)
 		return s
 		
-
 class SlidingWindowStat:
 	"""
-	sliding window stat 
+	sliding window stats
 	"""
 	def __init__(self):
+		"""
+		initializer
+		"""
 		self.sum = 0.0
 		self.sumSq = 0.0
 		self.count = 0
@@ -181,6 +260,13 @@ class SlidingWindowStat:
 	
 	@staticmethod
 	def create(values, sum, sumSq):
+		"""
+    	creates iinstance	
+     	
+		Parameters
+			sum : sum of values
+			sumSq : sum of valure squared
+		"""
 		sws = SlidingWindowStat()
 		sws.sum = sum
 		sws.sumSq = sumSq
@@ -190,6 +276,12 @@ class SlidingWindowStat:
 		
 	@staticmethod
 	def initialize(values):
+		"""
+    	creates iinstance	
+     	
+		Parameters
+			values : list of values
+		"""
 		sws = SlidingWindowStat()
 		sws.values = values.copy()
 		for v in sws.values:
@@ -200,6 +292,12 @@ class SlidingWindowStat:
 
 	@staticmethod
 	def createEmpty(count):
+		"""
+    	creates iinstance	
+     	
+		Parameters
+			count : count of values
+		"""
 		sws = SlidingWindowStat()
 		sws.count = count
 		sws.values = list()
@@ -208,15 +306,18 @@ class SlidingWindowStat:
 	def add(self, value):
 		"""
 		adds new value
+		
+		Parameters
+			value : value to add
 		"""
 		self.values.append(value)		
 		if len(self.values) > self.count:
-			self.sum = self.sum + value - self.values[0]
-			self.sumSq = self.sumSq  + (value * value) - (self.values[0] * self.values[0])
+			self.sum += value - self.values[0]
+			self.sumSq += (value * value) - (self.values[0] * self.values[0])
 			self.values.pop(0)
 		else:
-			self.sum = self.sum + value
-			self.sumSq = self.sumSq  + (value * value)
+			self.sum += value
+			self.sumSq += (value * value)
 		
 
 	def getStat(self):
