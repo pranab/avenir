@@ -361,9 +361,27 @@ class SlidingWindowStat:
 def basicStat(ldata):
 	"""
 	mean and std dev
+
+	Parameters
+		ldata : list of values
 	"""
 	m = statistics.mean(ldata)
 	s = statistics.stdev(ldata, xbar=m)
 	r = (m, s)
 	return r
+
+def getFileColumnStat(filePath, col, delem=","):
+	"""
+	gets stats for a file column
+	
+	Parameters
+		filePath : file path
+		col : col index
+		delem : field delemter
+	"""
+	rs = RunningStat()
+	for rec in fileRecGen(filePath, delem):
+		va = float(rec[col])
+		rs.add(va)
 		
+	return rs.getStat()

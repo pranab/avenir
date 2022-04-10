@@ -1095,6 +1095,33 @@ def mutDistr(distr, shift, nswap=50):
 		distr[si] += shift
 	return distr
 
+def generateBinDistribution(size, ntrue):
+	"""
+	generate binary array with some elements set to 1
+	
+	Parameters
+		size : distr size
+		ntrue : no of true values
+	"""
+	distr = [0] * size
+	idxs = selectRandomSubListFromList(list(range(size)), ntrue)
+	for i in idxs:
+		distr[i] = 1
+	return distr
+
+def mutBinaryDistr(distr, nmut):
+	"""
+	mutate binary distribution
+	
+	Parameters
+		distr : distr
+		nmut : no of mutations
+	"""
+	idxs = selectRandomSubListFromList(list(range(len(distr))), nmut)
+	for i in idxs:
+		distr[i] = distr[i] ^ 1
+	
+	
 def fileSelFieldSubSeqModifierGen(filePath, column, offset, seqLen, modifier, precision, delim=","):
 	"""
 	file record generator that superimposes given data in the specified segment of a column
