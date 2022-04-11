@@ -88,6 +88,15 @@ class DataExplorer:
 		self.pp = pprint.PrettyPrinter(indent=4)
 		self.verbose = verbose
 
+	def setVerbose(self, verbose):
+		"""
+		sets verbose
+
+		Parameters
+			verbose : True for verbosity
+		"""
+		self.verbose = verbose
+		
 	def save(self, filePath):
 		"""
 		save checkpoint
@@ -453,7 +462,7 @@ class DataExplorer:
 
 	def getNumericData(self, ds):
 		"""
-		get data
+		get numeric data
 		
 		Parameters
 			ds : data set name or list or numpy array with data
@@ -474,7 +483,7 @@ class DataExplorer:
 
 	def getCatData(self, ds):
 		"""
-		get data
+		get categorical data
 		
 		Parameters
 			ds : data set name or list  with data
@@ -485,6 +494,22 @@ class DataExplorer:
 			data =   self.dataSets[ds]
 		elif type(ds) == list:
 			assert isCategorical(ds), "data is not categorical"
+			data = ds
+		else:
+			raise "invalid type, expecting data set name or list"
+		return data
+
+	def getAnyData(self, ds):
+		"""
+		get any data
+		
+		Parameters
+			ds : data set name or list  with data
+		"""
+		if type(ds) == str:
+			assert ds in self.dataSets, "data set {} does not exist, please add it first".format(ds)
+			data =   self.dataSets[ds]
+		elif type(ds) == list:
 			data = ds
 		else:
 			raise "invalid type, expecting data set name or list"
@@ -976,7 +1001,47 @@ class DataExplorer:
 		self.pp.pprint(stat)
 		return stat
 
+	def getStatsCat(self, ds):
+		"""
+		gets summary statistics for categorical data
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting summary statistics for categorical data", ds)
+		data = self.getCatData(ds)
+		ch = CatHistogram()
+		for d in data:
+			ch.add(d)
+		mode = ch.getMode()
+		entr = ch,getEntropy()
+		uvalues = ch.getUniqueValues()
+		result = self.__printResult("entropy", entr, "mode", mode, "uniqueValues", uvalues)
+		return result
+		
 
+	def getGroupByData(self, ds, gds):
+		"""
+		group by 
+
+		Parameters
+			ds: data set name or list or numpy array
+			gds: group by data set name or list or numpy array
+		"""
+		self.__printBanner("getting group by data", ds)
+		data = self.getAnyData(ds)
+		gdata = self.getCatData(gds)
+		self.ensureSameSize([data, gdata])
+		groups = dict()
+		for g,d in zip(gdata, data):
+			appendKeyedList(groups, g, d)
+			
+		ve = self.verbose 
+		self.verbose = False
+		result = self.__printResult("groupedData", groups)
+		self.verbose = ve
+		return result
+		
 	def getDifference(self, ds, order, doPlot=False):
 		"""
 		gets difference of given order
@@ -2321,6 +2386,24 @@ class DataExplorer:
 				le = cle
 			else:
 				assert cle == le, "all data sets need to be of same size"
+
+
+	def testTwoSampleWasserstein(self, ds1, ds2):
+		"""
+		Wasserstein 2 sample statistic	
+		
+		Parameters
+			ds1: data set name or list or numpy array
+			ds2: data set name or list or numpy array
+		"""
+		self.__printBanner("doing Wasserstein distance2 sample test", ds1, ds2)
+		data1 = self.getNumericData(ds1)
+		data2 = self.getNumericData(ds2)
+		stat = sta.wasserstein_distance(data1, data2)
+		sd = np.std(np.concatenate([data1, data2]))
+		nstat = stat / sd
+		result = self.__printResult("stat", stat, "normalizedStat", nstat)
+		return result
 				
 	def __stackData(self, *dsl):
 		"""
