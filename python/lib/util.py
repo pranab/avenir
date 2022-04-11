@@ -1176,7 +1176,7 @@ def takeThird(elems):
 	"""
 	return elems[2]
 
-def addToKeyedCounter(dCounter, key, count):
+def addToKeyedCounter(dCounter, key, count=1):
 	"""
 	add to to keyed counter
 

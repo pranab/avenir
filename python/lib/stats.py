@@ -21,6 +21,7 @@ import time
 import math
 import numpy as np
 import statistics 
+from util import *
 
 """
 histogram class
@@ -173,6 +174,73 @@ class Histogram:
 			x = self.xmax
 		return x
 
+"""
+categorical histogram class
+"""
+class CatHistogram:
+	def __init__(self):
+		"""
+    	initializer
+    	"""
+		self.binCounts = dict()
+		self.counts = 0
+		self.normalized = False
+	
+	def add(self, value):
+		"""
+		adds a value to a bin
+		
+		Parameters
+			x : x value
+		"""
+		addToKeyedCounter(self.binCounts, value)
+		self.counts += 1	
+		
+	def normalize(self):
+		"""
+		normalize
+		"""
+		if not self.normalized:
+			self.binCounts = dict(map(lambda r : (r[0],r[1] / self.counts), self.binCounts.items()))
+			self.normalized = True
+	
+	def getMode(self):
+		"""
+		get mode
+		"""
+		maxk = None
+		maxv = 0
+		#print(self.binCounts)
+		for  k,v  in  self.binCounts.items():
+			if v > maxv:
+				maxk = k
+				maxv = v
+		return (maxk, maxv)	
+	
+	def getEntropy(self):
+		"""
+		get entropy
+		"""
+		self.normalize()
+		entr = 0 
+		#print(self.binCounts)
+		for  k,v  in  self.binCounts.items():
+			entr += v * math.log(v)
+		return entr
+
+	def getUniqueValues():
+		"""
+		get unique values
+		"""		
+		return list(self.binCounts.keys())
+
+	def getDistr():
+		"""
+		get distribution
+		"""	
+		self.normalize()	
+		return self.binCounts.copy()
+		
 class RunningStat:
 	"""
 	running stat class
