@@ -225,16 +225,16 @@ class CatHistogram:
 		entr = 0 
 		#print(self.binCounts)
 		for  k,v  in  self.binCounts.items():
-			entr += v * math.log(v)
+			entr -= v * math.log(v)
 		return entr
 
-	def getUniqueValues():
+	def getUniqueValues(self):
 		"""
 		get unique values
 		"""		
 		return list(self.binCounts.keys())
 
-	def getDistr():
+	def getDistr(self):
 		"""
 		get distribution
 		"""	

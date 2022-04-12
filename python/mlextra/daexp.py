@@ -746,6 +746,58 @@ class DataExplorer:
 		result = self.__printResult("mutInfo", mutInfo)
 		return result
 
+
+	def getNumCatMutualInfo(self, nds, cds ,nbins=10):
+		"""
+		get mutiual information between numeric and categorical data
+		
+		Parameters
+			nds: numeric data set name or list or numpy array
+			cds: categoric data set name or list 
+			nbins: num of bins
+		"""
+		ndata = self.getNumericData(nds)
+		cds = self.getCatData(cds)
+		nentr = self.getEntropy(nds)["entropy"]
+		
+		#conditional entropy
+		cdistr = self.getStatsCat(cds)["distr"]
+		grdata = self.getGroupByData(nds, cds)["groupedData"]
+		cnentr = 0
+		for gr, data in grdata.items():
+			self.addListNumericData(data, "grdata")	
+			gnentr = self.getEntropy("grdata")["entropy"]
+			cnentr += gnentr * cdistr[gr]
+			
+		mutInfo = nentr - cnentr
+		result = self.__printResult("mutInfo", mutInfo, "entropy", nentr, "condEntropy", cnentr)
+		return result
+		 
+	def getTwoCatMutualInfo(self, cds1, cds2):
+		"""
+		get mutiual information between 2 categorical data sets
+		
+		Parameters
+			cds1 : categoric data set name or list 
+			cds2 : categoric data set name or list 
+		"""
+		cdata1 = self.getCatData(cds1)
+		cdata2 = self.getCatData(cds1)
+		centr = self.getStatsCat(cds1)["entropy"]
+		
+		#conditional entropy
+		cdistr = self.getStatsCat(cds2)["distr"]
+		grdata = self.getGroupByData(cds1, cds2)["groupedData"]
+		ccentr = 0
+		for gr, data in grdata.items():
+			self.addListCatData(data, "grdata")	
+			gcentr = self.getStatsCat("grdata")["entropy"]
+			ccentr += gcentr * cdistr[gr]
+			
+		mutInfo = centr - ccentr
+		result = self.__printResult("mutInfo", mutInfo, "entropy", centr, "condEntropy", ccentr)
+		return result
+		
 	def getPercentile(self, ds, value):
 		"""
 		gets percentile
@@ -1014,9 +1066,10 @@ class DataExplorer:
 		for d in data:
 			ch.add(d)
 		mode = ch.getMode()
-		entr = ch,getEntropy()
+		entr = ch.getEntropy()
 		uvalues = ch.getUniqueValues()
-		result = self.__printResult("entropy", entr, "mode", mode, "uniqueValues", uvalues)
+		distr = ch.getDistr()
+		result = self.__printResult("entropy", entr, "mode", mode, "uniqueValues", uvalues, "distr", distr)
 		return result
 		
 
@@ -2403,6 +2456,78 @@ class DataExplorer:
 		sd = np.std(np.concatenate([data1, data2]))
 		nstat = stat / sd
 		result = self.__printResult("stat", stat, "normalizedStat", nstat)
+		return result
+	
+	def getMaxRelMinRedFeatures(self, fdst, tds, nfeatures):
+		"""
+		get top n features based on max relevance and min redudancy	algorithm
+		
+		Parameters
+			fds: list of pair of data set name or list or numpy array and data type
+			tds: target data set name or list or numpy array
+			nfeatures : desired no of features
+		"""	
+		#verify data source types types
+		le = len(fdst)
+		nfeatGiven = int(le / 2)
+		assertGreater(nfeatGiven, nfeatures, "no of features should be greater than no of features to be selected")
+		fds = list()
+		types = ["num", "cat"]
+		for i in range (0, le, 2):
+			ds = fdst[i]
+			dt = fdst[i+1]
+			assertInList(dt, types, "invalid type for data source " + dt)
+			if dt == "num":
+				data = self.getNumericData(ds)
+			else:
+				data = self.getCatData(ds)
+			p =(ds, dt)
+			fds.append(p)
+		data = self.getCatData(tds)
+		
+		sfds = list()
+		selected = set()
+		for _ in range(nfeatures):
+			scorem = sys.float_info.min
+			dsm = None
+			dsmt = None
+			for ds, dt in fds:
+				if ds not in selected:
+					#relevancy
+					if dt == "num":
+						mutInfo = self.getNumCatMutualInfo(ds, tds, 15)["mutInfo"]
+					else:
+						mutInfo = self.getTwoCatMutualInfo(ds, tds)["mutInfo"]
+					relev = mutInfo
+					
+					#redundancy
+					smi = 0
+					for sds, sdt, _ in sfds:
+						if dt == "num":
+							if sdt == "cat":
+								mutInfo = self.getNumCatMutualInfo(ds, sds, 15)["mutInfo"]
+							else:
+								mutInfo = self.getMutualInfo(ds, sds, 15)["mutInfo"]
+						else:
+							if sdt == "cat":
+								mutInfo = self.getTwoCatMutualInfo(ds, tds)["mutInfo"]
+							else:
+								mutInfo = self.getNumCatMutualInfo(ds, sds, 15)["mutInfo"]
+						smi += mutInfo
+					
+					redun = smi / len(sfds) if len(sfds) > 0 else 0
+					score = relev - redun
+					if score > scorem:
+						scorem = score
+						dsm = ds
+						dsmt = dt
+						
+			pa = (dsm, dsmt, scorem)
+			sfds.aappend(pa)
+			selected.add(dsm)
+			
+		selFeatures = list(map(lambda r : (r[0], r[2]), sfds))
+		result = self.__printResult("selFeatures", selFeatures)
 		return result
 				
 	def __stackData(self, *dsl):
