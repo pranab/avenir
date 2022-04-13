@@ -2458,14 +2458,15 @@ class DataExplorer:
 		result = self.__printResult("stat", stat, "normalizedStat", nstat)
 		return result
 	
-	def getMaxRelMinRedFeatures(self, fdst, tds, nfeatures):
+	def getMaxRelMinRedFeatures(self, fdst, tdst, nfeatures, nbins=10):
 		"""
 		get top n features based on max relevance and min redudancy	algorithm
 		
 		Parameters
-			fds: list of pair of data set name or list or numpy array and data type
-			tds: target data set name or list or numpy array
+			fdst: list of pair of data set name or list or numpy array and data type
+			tdst: target data set name or list or numpy array and data type (cat for classification num for regression)
 			nfeatures : desired no of features
+			nbins : no of bins for numerical data
 		"""	
 		#verify data source types types
 		le = len(fdst)
@@ -2477,53 +2478,64 @@ class DataExplorer:
 			ds = fdst[i]
 			dt = fdst[i+1]
 			assertInList(dt, types, "invalid type for data source " + dt)
-			if dt == "num":
-				data = self.getNumericData(ds)
-			else:
-				data = self.getCatData(ds)
+			data = self.getNumericData(ds) if dt == "num" else self.getCatData(ds)
 			p =(ds, dt)
 			fds.append(p)
-		data = self.getCatData(tds)
+		
+		assertInList(tdst[1], types, "invalid type for data source " + tdst[1])
+		data = self.getNumericData(tdst[0]) if tdst[1] == "num" else self.getCatData(tdst[0])
+		#print(fds)
 		
 		sfds = list()
 		selected = set()
-		for _ in range(nfeatures):
-			scorem = sys.float_info.min
+		relevancies = dict()
+		for i in range(nfeatures):
+			#print(i)
+			scorem = None
 			dsm = None
 			dsmt = None
 			for ds, dt in fds:
+				#print(ds, dt)
 				if ds not in selected:
 					#relevancy
-					if dt == "num":
-						mutInfo = self.getNumCatMutualInfo(ds, tds, 15)["mutInfo"]
+					if ds in relevancies:
+						mutInfo = relevancies[ds]
 					else:
-						mutInfo = self.getTwoCatMutualInfo(ds, tds)["mutInfo"]
+						if tdst[1] == "num":
+							#regression problem
+							mutInfo = self.getMutualInfo(ds, tdst[0], nbins)["mutInfo"] if dt == "num" \
+							else self.getNumCatMutualInfo(tdst[0], ds, nbins)["mutInfo"]
+						else:
+							#classification problem
+							mutInfo = self.getNumCatMutualInfo(ds, tdst[0], nbins)["mutInfo"] if dt == "num" \
+							else self.getTwoCatMutualInfo(ds, tdst[0])["mutInfo"]
+						relevancies[ds] = mutInfo
 					relev = mutInfo
+					#print("relev", relev)
 					
 					#redundancy
 					smi = 0
 					for sds, sdt, _ in sfds:
+						#print(sds, sdt)
 						if dt == "num":
-							if sdt == "cat":
-								mutInfo = self.getNumCatMutualInfo(ds, sds, 15)["mutInfo"]
-							else:
-								mutInfo = self.getMutualInfo(ds, sds, 15)["mutInfo"]
+							mutInfo = self.getMutualInfo(ds, sds, nbins)["mutInfo"] if sdt == "num" \
+							else self.getNumCatMutualInfo(ds, sds, nbins)["mutInfo"]
 						else:
-							if sdt == "cat":
-								mutInfo = self.getTwoCatMutualInfo(ds, tds)["mutInfo"]
-							else:
-								mutInfo = self.getNumCatMutualInfo(ds, sds, 15)["mutInfo"]
+							mutInfo = self.getNumCatMutualInfo(sds, ds, nbins)["mutInfo"] if  sdt == "num" \
+							else self.getTwoCatMutualInfo(ds, sds)["mutInfo"]
 						smi += mutInfo
 					
 					redun = smi / len(sfds) if len(sfds) > 0 else 0
+					#print("redun", redun)
 					score = relev - redun
-					if score > scorem:
+					if scorem is None or score > scorem:
 						scorem = score
 						dsm = ds
 						dsmt = dt
 						
 			pa = (dsm, dsmt, scorem)
-			sfds.aappend(pa)
+			#print(pa)
+			sfds.append(pa)
 			selected.add(dsm)
 			
 		selFeatures = list(map(lambda r : (r[0], r[2]), sfds))
