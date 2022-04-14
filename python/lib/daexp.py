@@ -42,7 +42,6 @@ from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import hurst
-sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
 from sampler import *
