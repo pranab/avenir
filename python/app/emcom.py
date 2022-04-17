@@ -79,10 +79,10 @@ if __name__ == "__main__":
 		NormalSampler(400,30), NormalSampler(400,30)]
 		
 		#bag of words vector for eacg subject matter
-		tbow = list(map(lambda t : genAlmostUniformDistr(50,20), range(nsm)))
+		tbow = list(map(lambda t : generateBinDistribution(50, 20), range(nsm)))
 		shift = .5 / 50
-		tbow = list(map(lambda d : mutDistr(d, shift, 10), tbow))
-		gbow = genAlmostUniformDistr(50,5)
+		tbow = list(map(lambda d : mutBinaryDistr(d, 3), tbow))
+		gbow = generateBinDistribution(50, 30)
 		
 		avClSize = int(nemp / nclust)
 		nClEdges = int(avClSize * (avClSize - 1) / 2)
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 							#rest
 							bow = gbow
 							
-						bow = mutDistr(bow, .1 / 50, 5)
+						bow = mutBinaryDistr(bow, 4)
 						bow = toStrFromList(bow, 3)
 						if s == 0:
 							lab = t

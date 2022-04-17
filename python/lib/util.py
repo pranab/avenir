@@ -2123,9 +2123,21 @@ class StepFunction:
 
 	"""
 	def __init__(self,  *values):
+		"""
+		initilizer
+		
+		Parameters
+			values : list of tuples, wich each tuple containing 2 x values and corresponding y value
+		"""
 		self.points = values
 	
 	def find(self, x):
+		"""
+		finds step function value
+		
+		Parameters
+			x : x value
+		"""
 		found = False
 		y = 0
 		for p in self.points:
@@ -2146,11 +2158,18 @@ class StepFunction:
 class DummyVarGenerator:
 	"""
 	dummy variable generator for categorical variable
-
-	Parameters
-
 	"""
 	def __init__(self,  rowSize, catValues, trueVal, falseVal, delim=None):
+		"""
+		initilizer
+		
+		Parameters
+			rowSize : row size
+			catValues : dictionary with field index as key and list of categorical values as value
+			trueVal : true value, typically "1"
+			falseval : false value , typically "0"
+			delim : field delemeter
+		"""
 		self.rowSize = rowSize
 		self.catValues = catValues
 		numCatVar = len(catValues)
@@ -2164,7 +2183,12 @@ class DummyVarGenerator:
 		self.delim = delim
 	
 	def processRow(self, row):	
-		#print (row)
+		"""
+		encodes categorical variables, returning as delemeter separate dstring or list
+		
+		Parameters
+			row : row either delemeter separated string or list
+		"""
 		if self.delim is not None:
 			rowArr = row.split(self.delim)
 			msg = "row does not have expected number of columns found " + str(len(rowArr)) + " expected " + str(self.rowSize)

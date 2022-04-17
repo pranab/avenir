@@ -27,6 +27,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torch_geometric.nn import GCNConv
+from torch_geometric.nn import MessagePassing
 from torch_geometric.data import Data
 import sklearn as sk
 import matplotlib
@@ -102,6 +103,7 @@ class GraphConvoNetwork(nn.Module):
     	self.accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
     	self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
     	self.restored = False
+    	self.clabels = list(range(self.outputSize)) if self.outputSize > 1 else None
     	
     	#build network
     	layers = list()
@@ -146,8 +148,11 @@ class GraphConvoNetwork(nn.Module):
     			layers.append(torch.nn.Dropout(dpr))
     		ninp = nunit
     		
-    	self.layers = torch.nn.ModuleList(*layers)
+    	self.layers = torch.nn.ModuleList(layers)
     	self.loadData()
+    	
+    	self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
+    	self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
     	
     def loadData(self):
     	"""
@@ -156,7 +161,7 @@ class GraphConvoNetwork(nn.Module):
     	dataFilePath = self.config.getStringConfig("train.data.file")[0]
     	numNodes = self.config.getIntConfig("train.data.num.nodes.total")[0]
     	numLabeled = self.config.getIntConfig("train.data.num.nodes.training")[0]
-    	splits = self.config.getFloatListConfig("train.labeled.data.splits")[0]
+    	splits = self.config.getFloatListConfig("train.data.splits")[0]
     	
     	dx = list()
     	dy = list()
@@ -176,17 +181,25 @@ class GraphConvoNetwork(nn.Module):
     			items = rec[0].split()
     			assertEqual(items[0], "mask", "invalid mask data")
     			numNodes = int(items[1])
+    			print(numNodes)
     			mask = list()
     			for r in range(2, len(items), 1):
-    				ri = r.split(":")
-    				ms = list(range(int(ri[0]), int(ri[0]), 1))
+    				ri = items[r].split(":")
+    				print(ri)
+    				ms = list(range(int(ri[0]), int(ri[1]), 1))
     				mask.extend(ms)
-    					
+    	#scale node features
+    	if (self.config.getStringConfig("common.preprocessing")[0] == "scale"):
+    		scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
+    		dx = scaleData(dx, scalingMethod)
+				
     	dx = torch.tensor(dx, dtype=torch.float)
     	dy = torch.tensor(dy, dtype=torch.long)
     	edges = torch.tensor(edges, dtype=torch.long)
     	edges = edges.t().contiguous()
-    	self.data = Data(x=dx, edge_index=edges)
+    	self.data = Data(x=dx, edge_index=edges, y=dy)
+    	
+    	
     	
     	#maks
     	if mask is None:
@@ -203,20 +216,20 @@ class GraphConvoNetwork(nn.Module):
     		teMask[teStart:] = [True] * (numNodes - teStart)
     	else:
     		#training data anywhere
-    		shuffle(mask)
+    		shuffle(mask, 50)
     		lmask = len(mask)
     		trme = int(splits[0] * lmask)
-    		vame = int(splits[1] * lmask)
+    		vame = int((splits[0] + splits[1]) * lmask)
     		teme = lmask
     		trMask = [False] * numNodes
     		for i in mask[:trme]:
-    			trMask[mask[i]] = True
+    			trMask[i] = True
     		vaMask = [False] * numNodes
     		for i in mask[trme:vame]:
-    			vaMask[mask[i]] = True
+    			vaMask[i] = True
     		teMask = [False] * numNodes
     		for i in mask[vame:]:
-    			teMask[mask[i]] = True
+    			teMask[i] = True
     	
     	self.data.train_mask = torch.tensor(trMask, dtype=torch.bool)
     	self.data.val_mask = torch.tensor(vaMask, dtype=torch.bool)
@@ -261,17 +274,19 @@ class GraphConvoNetwork(nn.Module):
     	"""
     	x, edges = self.data.x, self.data.edge_index
     	for l in self.layers:
-    		if isinstance(l, torch_geometric.nn.MessagePassing):
+    		if isinstance(l, MessagePassing):
     			x = l(x, edges)
     		else:
     			x = l(x)
-    		return x
+    	return x
     		
     @staticmethod
     def trainModel(model):
     	"""
     	train with batch data
     	"""
+    	epochIntv = model.config.getIntConfig("train.epoch.intv")[0]
+    	
     	model.train()
     	if model.trackErr:
     		trErr = list()
@@ -279,13 +294,15 @@ class GraphConvoNetwork(nn.Module):
     		
     	for epoch in range(model.numIter):
     		out = model()
-    		loss = model.lossFn(out[self.data.train_mask], self.data.y[data.train_mask])
-    		
+    		loss = model.lossFn(out[model.data.train_mask], model.data.y[model.data.train_mask])
+    	
     		#error tracking at batch level
     		if model.trackErr:
     			trErr.append(loss.item())
     			vErr = GraphConvoNetwork.evaluateModel(model)
     			vaErr.append(vErr)
+    			if model.verbose and epoch % epochIntv == 0:
+    				print("epoch {}   loss {:.6f}   valid error {:.6f}".format(epoch, loss.item(), vErr))
     			
     		model.optimizer.zero_grad()
     		loss.backward()
@@ -298,10 +315,10 @@ class GraphConvoNetwork(nn.Module):
     	"""
     	model.eval()
     	with torch.no_grad():
-    		ypred = model(self.data)
-    		ypred = ypred[data.test_mask].data.cpu().numpy()
-    		yActual = self.data.y[data.test_mask].data.cpu().numpy()
-    		score = perfMetric(model.lossFnStr, yActual, yPred)
+    		yPred = model()
+    		yPred = yPred[model.data.val_mask].data.cpu().numpy()
+    		yActual = model.data.y[model.data.val_mask].data.cpu().numpy()
+    		score = perfMetric(model.lossFnStr, yActual, yPred, model.clabels)
     		
     	model.train()
     	return score
