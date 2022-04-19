@@ -216,7 +216,9 @@ class GraphConvoNetwork(nn.Module):
     		teMask[teStart:] = [True] * (numNodes - teStart)
     	else:
     		#training data anywhere
-    		shuffle(mask, 50)
+    		nshuffle = int(len(mask) / 2)
+    		shuffle(mask, nshuffle)
+    		print(mask)
     		lmask = len(mask)
     		trme = int(splits[0] * lmask)
     		vame = int((splits[0] + splits[1]) * lmask)
@@ -230,7 +232,7 @@ class GraphConvoNetwork(nn.Module):
     		teMask = [False] * numNodes
     		for i in mask[vame:]:
     			teMask[i] = True
-    	
+    		#print(vaMask)
     	self.data.train_mask = torch.tensor(trMask, dtype=torch.bool)
     	self.data.val_mask = torch.tensor(vaMask, dtype=torch.bool)
     	self.data.test_mask = torch.tensor(teMask, dtype=torch.bool)
@@ -302,23 +304,62 @@ class GraphConvoNetwork(nn.Module):
     			vErr = GraphConvoNetwork.evaluateModel(model)
     			vaErr.append(vErr)
     			if model.verbose and epoch % epochIntv == 0:
-    				print("epoch {}   loss {:.6f}   valid error {:.6f}".format(epoch, loss.item(), vErr))
+    				print("epoch {}   loss {:.6f}  val error {:.6f}".format(epoch, loss.item(), vErr))
     			
     		model.optimizer.zero_grad()
     		loss.backward()
     		model.optimizer.step()
+    	
+    	#acc = GraphConvoNetwork.evaluateModel(model, True)	
+    	#print(acc)
+    	modelSave = model.config.getBooleanConfig("train.model.save")[0]
+    	if modelSave:
+    		FeedForwardNetwork.saveCheckpt(model)
     		
+    	if model.trackErr:
+    		FeedForwardNetwork.errorPlot(model, trErr, vaErr)	
+		   	
     @staticmethod
-    def evaluateModel(model):
+    def evaluateModel(model, verbose=False):
     	"""
     	evaluate model
     	"""
     	model.eval()
     	with torch.no_grad():
-    		yPred = model()
-    		yPred = yPred[model.data.val_mask].data.cpu().numpy()
+    		out = model()
+    		if verbose:
+    			print(out)
+    		yPred = out[model.data.val_mask].data.cpu().numpy()
     		yActual = model.data.y[model.data.val_mask].data.cpu().numpy()
+    		if verbose:
+    			for pa in zip(yPred, yActual):
+    				print(pa)
+    		#correct = yPred == yActual
+    		#score = int(correct.sum()) / int(model.data.val_mask.sum())
+    		
     		score = perfMetric(model.lossFnStr, yActual, yPred, model.clabels)
     		
     	model.train()
     	return score
+    	
+    @staticmethod
+    def validateModel(model, retPred=False):
+    	"""
+		model validation
+		
+		Parameters
+			model : torch model
+			retPred : if True return prediction
+		"""
+    	model.eval()
+    	with torch.no_grad():
+    		out = model()
+    		yPred = out.argmax(dim=1)
+    		yPred = yPred[model.data.test_mask].data.cpu().numpy()
+    		yActual = model.data.y[model.data.test_mask].data.cpu().numpy()
+    		#correct = yPred == yActual
+    		#score = int(correct.sum()) / int(model.data.val_mask.sum())
+    		score = perfMetric(model.accMetric, yActual, yPred)
+    		print(formatFloat(3, score, "test #perf score"))
+    	return score
+

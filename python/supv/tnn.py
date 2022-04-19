@@ -61,6 +61,10 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
+    	
+		Parameters
+			configFile : config file path
+			addDefValues : dictionary of additional default values	
 		"""
 		defValues = dict() if addDefValues is None else addDefValues.copy()
 		defValues["common.mode"] = ("training", None)
@@ -112,6 +116,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def setConfigParam(self, name, value):
 		"""
 		set config param
+		
+		Parameters
+			name : config name
+			value : config value
 		"""
 		self.config.setParam(name, value)
 
@@ -202,6 +210,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def setValidationData(self, dataSource, prep=True):
 		"""
 		sets validation data
+		
+		Parameters
+			dataSource : data source str if file path or 2D array
+			prep : if True load and prepare 
 		"""
 		if prep:
 			(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataSource)
@@ -215,6 +227,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def createActivation(actName):
 		"""
 		create activation
+		
+		Parameters
+			actName : activation name
 		"""
 		if actName is None:
 			activation = None
@@ -234,6 +249,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def createLossFunction(model, lossFnName):
 		"""
 		create loss function
+		
+		Parameters
+			lossFnName : loss function name
 		"""
 		config = model.config
 		lossRed = config.getStringConfig("train.loss.reduction")[0]
@@ -259,6 +277,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def createOptimizer(model, optName):
 		"""
 		create optimizer
+		
+		Parameters
+			optName : optimizer name
 		"""
 		config = model.config
 		learnRate = config.getFloatConfig("train.opt.learning.rate")[0]
@@ -289,6 +310,9 @@ class FeedForwardNetwork(torch.nn.Module):
     	In the forward function we accept a Tensor of input data and we must return
     	a Tensor of output data. We can use Modules defined in the constructor as
     	well as arbitrary (differentiable) operations on Tensors.
+		
+		Parameters
+			x : data batch
 		"""
 		y = self.layers(x)	
 		return y
@@ -297,6 +321,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def addForwardHook(model, l, cl = 0):
 		"""
 		register forward hooks
+		
+		Parameters
+			l : 
+			cl :
 		"""
 		for name, layer in model._modules.items():
 			#If it is a sequential, don't register a hook on it
@@ -315,6 +343,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def prepData(model, dataSource, includeOutFld=True):
 		"""
 		loads and prepares  data
+		
+		Parameters
+			dataSource : data source str if file path or 2D array
+			includeOutFld : True if target freld to be included
 		"""
 		# parameters
 		fieldIndices = model.config.getIntListConfig("train.data.fields")[0]
@@ -369,6 +401,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def saveCheckpt(model):
 		"""
 		checkpoints model
+		
+		Parameters
+			model : torch model
 		"""
 		print("..saving model checkpoint")
 		modelDirectory = model.config.getStringConfig("common.model.directory")[0]
@@ -384,6 +419,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def restoreCheckpt(model, loadOpt=False):
 		"""
 		restored checkpointed model
+		
+		Parameters
+			model : torch model
+			loadOpt : True if optimizer to be loaded
 		"""
 		if not model.restored:
 			print("..restoring model checkpoint")
@@ -401,6 +440,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def processClassifOutput(yPred, config):
 		"""
 		extracts probability label 1 or label with highest probability
+		
+		Parameters
+			yPred : predicted output
+			config : config object
 		"""
 		outType = config.getStringConfig("predict.output")[0]
 		if outType == "prob":
@@ -414,6 +457,11 @@ class FeedForwardNetwork(torch.nn.Module):
 	def printPrediction(yPred, config, dataSource):
 		"""
 		prints input feature data and prediction
+		
+		Parameters
+			yPred : predicted output
+			config : config object
+			dataSource : data source str if file path or 2D array
 		"""
 		#prDataFilePath = config.getStringConfig("predict.data.file")[0]
 		padWidth = config.getIntConfig("predict.feat.pad.size")[0]
@@ -437,6 +485,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def allTrain(model):
 		"""
 		train with all data
+		
+		Parameters
+			model : torch model
 		"""
 		# train mode
 		model.train()
@@ -474,6 +525,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def batchTrain(model):
 		"""
 		train with batch data
+		
+		Parameters
+			model : torch model
 		"""
 		model.restored = False
 		trainData = TensorDataset(model.featData, model.outData)
@@ -560,9 +614,30 @@ class FeedForwardNetwork(torch.nn.Module):
 		return score
 
 	@staticmethod
+	def errorPlot(model, trErr, vaErr):
+		"""
+		plot errors
+		
+		Parameters
+			trErr : training error list	
+			vaErr : validation error list	
+		"""
+		x = np.arange(len(trErr))
+		plt.plot(x,trErr,label = "training error")
+		plt.plot(x,vaErr,label = "validation error")
+		plt.xlabel("iteration")
+		plt.ylabel("error")
+		plt.legend(["training error", "validation error"], loc='upper left')
+		plt.show()
+
+	@staticmethod
 	def modelPredict(model, dataSource = None):
 		"""
 		predict
+		
+		Parameters
+			model : torch model
+			dataSource : data source
 		"""
 		#train or restore model
 		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
@@ -595,6 +670,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def predict(self, dataSource = None):
 		"""
 		predict
+		
+		Parameters
+			dataSource : data source
 		"""
 		return FeedForwardNetwork.modelPredict(self, dataSource)
 		
@@ -602,6 +680,9 @@ class FeedForwardNetwork(torch.nn.Module):
 	def evaluateModel(model):
 		"""
 		evaluate model
+		
+		Parameters
+			model : torch model
 		"""
 		model.eval()
 		with torch.no_grad():
@@ -616,6 +697,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def prepValidate(model, dataSource=None):
 		"""
 		prepare for validation
+		
+		Parameters
+			model : torch model
+			dataSource : data source
 		"""
 		#train or restore model
 		if not model.restored:
@@ -633,6 +718,10 @@ class FeedForwardNetwork(torch.nn.Module):
 	def validateModel(model, retPred=False):
 		"""
 		pmodel validation
+		
+		Parameters
+			model : torch model
+			retPred : if True return prediction
 		"""
 		model.eval()
 		yPred = model(model.validFeatData)
