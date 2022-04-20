@@ -102,7 +102,10 @@ if __name__ == "__main__":
 					eid = prefix[s] + genID(9)
 					
 					#minimum topic allocation
-					t = randomInt(0, nsm - 1) if i > mint else (t + 1) % nsm
+					if nsm == 1:
+						t = 0
+					else:
+						t = randomInt(0, nsm - 1) if i > mint else (t + 1) % nsm
 					
 					k = (c, s, t)
 					appendKeyedList(sme, k, eid)
@@ -114,22 +117,39 @@ if __name__ == "__main__":
 		i = 0
 		mask = list()
 		nlabelled = 0
+		mranges = list()
 		for s in range(nseg):
 			if s == 1:
+				#nlabelled = i
+				#r = (0, nlabelled)
+				#mask.append(r)
+				mask.extend(mranges)
+				#nlabelled = sum(list(map(lambda r : len(r), mranges)))
+				
+				nl = 0
+				for r in mranges:
+					nl += r[1] - r[0]
+				#print("nl", nl)
+				remLabels = int((args.trsz - nl) / 2)
 				nlabelled = i
-				r = (0, nlabelled)
-				mask.append(r)
-				remLabels = int((args.trsz - nlabelled) / 2)
+				#print("nlabelled", nlabelled)
 			elif s == 2:
-				beg =  mask[0][1]
+				beg = nlabelled
 				r = (beg, beg + remLabels)
 				mask.append(r)
 				nlabelled = i
+				
 				
 			for c in range(nclust):
 				for t in range(nsm):
 					k = (c,s,t)
 					eids = sme[k]
+					if s == 0:
+						#leave some for prediction
+						le = len(eids)
+						labe = i + int(.9 * le)
+						r = (i, labe)
+						mranges.append(r)
 					for eid in eids:
 						#msg count
 						mcount = int(msgCntDistr[s].sample())
@@ -194,12 +214,12 @@ if __name__ == "__main__":
 			ne = int(nClEdges * randomFloat(.10, .15))
 			for _  in range(ne):
 				s = randomInt(0, nseg - 1)		
-				t = randomInt(0, nsm - 1)
+				t = randomInt(0, nsm - 1) if nsm > 1 else 0
 				k = (c,s,t)
 				n1 = selectRandomFromList(nidexes[k])
 				
 				s = randomInt(0, nseg - 1)	
-				t = randomInt(0, nsm - 1)
+				t = randomInt(0, nsm - 1) if nsm > 1 else 0
 				k = (c,s,t)
 				n2 = selectRandomFromList(nidexes[k])
 				if n1 != n2:
@@ -214,12 +234,12 @@ if __name__ == "__main__":
 		for _  in range(ne):
 			c = randomInt(0, nclust - 1)	
 			s = randomInt(0, nseg - 1)	
-			t = randomInt(0, nsm - 1)
+			t = randomInt(0, nsm - 1) if nsm > 1 else 0
 			n1 = selectRandomFromList(nidexes[k])
 			
 			c = selectOtherRandomFromList(clist, c)	
 			s = randomInt(0, nseg - 1)	
-			t = randomInt(0, nsm - 1)
+			t = randomInt(0, nsm - 1) if nsm > 1 else 0
 			n2 = selectRandomFromList(nidexes[k])
 			print("{},{}".format(n1, n2))
 			print("{},{}".format(n2, n1))
@@ -230,6 +250,15 @@ if __name__ == "__main__":
 		model = GraphConvoNetwork(args.cfile)
 		model.buildModel()
 		GraphConvoNetwork.trainModel(model)
+		GraphConvoNetwork.validateModel(model)
+		
+	elif op == "pred":
+		model = GraphConvoNetwork(args.cfile)
+		model.buildModel()
+		res = GraphConvoNetwork.modelPrediction(model)
+		for r in res:
+			print(r[0][:10], " prediction ", r[1])
+			
 		
 	else:
 		exitWithMsg("invalid command")

@@ -19,6 +19,10 @@
 import os
 import sys
 import matplotlib.pyplot as plt
+import matplotlib
+import random
+from random import randint
+from itertools import compress
 import numpy as np
 import torch
 from torch import nn
@@ -30,10 +34,7 @@ from torch_geometric.nn import GCNConv
 from torch_geometric.nn import MessagePassing
 from torch_geometric.data import Data
 import sklearn as sk
-import matplotlib
-import random
 import jprops
-from random import randint
 sys.path.append(os.path.abspath("../lib"))
 from util import *
 from mlutil import *
@@ -81,6 +82,9 @@ class GraphConvoNetwork(nn.Module):
     	defValues["train.epoch.intv"] = (5, None)
     	defValues["train.print.weights"] = (False, None)
     	defValues["valid.accuracy.metric"] = (None, None)
+    	defValues["predict.create.mask"] = (False, None)
+    	defValues["predict.use.saved.model"] = (True, None)
+    	
     	self.config = Configuration(configFile, defValues)
     	super(GraphConvoNetwork, self).__init__()
     	
@@ -153,6 +157,7 @@ class GraphConvoNetwork(nn.Module):
     	
     	self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
     	self.optimizer =  FeedForwardNetwork.createOptimizer(self, optimizer)
+    	self.trained = False
     	
     def loadData(self):
     	"""
@@ -162,6 +167,7 @@ class GraphConvoNetwork(nn.Module):
     	numNodes = self.config.getIntConfig("train.data.num.nodes.total")[0]
     	numLabeled = self.config.getIntConfig("train.data.num.nodes.training")[0]
     	splits = self.config.getFloatListConfig("train.data.splits")[0]
+    	crPredMask = self.config.getBooleanConfig("predict.create.mask")[0]
     	
     	dx = list()
     	dy = list()
@@ -185,7 +191,7 @@ class GraphConvoNetwork(nn.Module):
     			mask = list()
     			for r in range(2, len(items), 1):
     				ri = items[r].split(":")
-    				print(ri)
+    				#print(ri)
     				ms = list(range(int(ri[0]), int(ri[1]), 1))
     				mask.extend(ms)
     	#scale node features
@@ -198,8 +204,6 @@ class GraphConvoNetwork(nn.Module):
     	edges = torch.tensor(edges, dtype=torch.long)
     	edges = edges.t().contiguous()
     	self.data = Data(x=dx, edge_index=edges, y=dy)
-    	
-    	
     	
     	#maks
     	if mask is None:
@@ -216,9 +220,15 @@ class GraphConvoNetwork(nn.Module):
     		teMask[teStart:] = [True] * (numNodes - teStart)
     	else:
     		#training data anywhere
+    		if crPredMask:
+    			prMask = [True] * numNodes
+    			for i in mask:
+    				prMask[i] = False
+    		self.prMask = torch.tensor(prMask, dtype=torch.bool)
+    		
     		nshuffle = int(len(mask) / 2)
     		shuffle(mask, nshuffle)
-    		print(mask)
+    		#print(mask)
     		lmask = len(mask)
     		trme = int(splits[0] * lmask)
     		vame = int((splits[0] + splits[1]) * lmask)
@@ -317,8 +327,10 @@ class GraphConvoNetwork(nn.Module):
     		FeedForwardNetwork.saveCheckpt(model)
     		
     	if model.trackErr:
-    		FeedForwardNetwork.errorPlot(model, trErr, vaErr)	
-		   	
+    		FeedForwardNetwork.errorPlot(model, trErr, vaErr)
+    		
+    	model.trained = True	
+  	
     @staticmethod
     def evaluateModel(model, verbose=False):
     	"""
@@ -362,4 +374,36 @@ class GraphConvoNetwork(nn.Module):
     		score = perfMetric(model.accMetric, yActual, yPred)
     		print(formatFloat(3, score, "test #perf score"))
     	return score
-
+    	
+    @staticmethod
+    def modelPrediction(model, showData=True):
+    	"""
+    	make prediction
+    	
+		Parameters
+			model : torch model
+    		showData : True to include input data
+    	"""
+    	useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+    	if useSavedModel:
+    		FeedForwardNetwork.restoreCheckpt(model)
+    	else:
+    		if not model.trained:
+    			GraphConvoNetwork.trainModel(model)
+    	
+    	model.eval()
+    	with torch.no_grad():
+    		out = model()
+    		yPred = out.argmax(dim=1)
+    		yPred = yPred[model.prMask].data.cpu().numpy()
+    	
+    	dataFilePath = model.config.getStringConfig("train.data.file")[0]	
+    	filt = lambda r : len(r) > 2
+    	ndata = list(fileFiltRecGen(dataFilePath, filt))
+    	prMask = model.prMask.data.cpu().numpy()
+    	assertEqual(len(ndata), prMask.shape[0], "data and mask lengths are not equal")
+    	precs = list(compress(ndata, prMask))
+    	precs = list(map(lambda r : r[:-1], precs))
+    	assertEqual(len(precs), yPred.shape[0], "data and mask lengths are not equal")
+    	return zip(precs, yPred)
+    	
