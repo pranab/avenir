@@ -443,7 +443,7 @@ def shuffle(values, *numShuffles):
 	
 	Parameters
 		values : list data
-		numShuffles : parameters for number of shuffles
+		numShuffles : parameter list for number of shuffles
 	"""
 	size = len(values)
 	if len(numShuffles) == 0:
@@ -452,7 +452,7 @@ def shuffle(values, *numShuffles):
 		numShuffle = numShuffles[0]
 	else:
 		numShuffle = randint(numShuffles[0], numShuffles[1])
-	#print("numShuffle {}".format(numShuffle))
+	print("numShuffle {}".format(numShuffle))
 	for i in range(numShuffle):
 		first = random.randint(0, size - 1)
 		second = random.randint(0, size - 1)
@@ -2103,6 +2103,7 @@ def getAlphaNumCharCount(sdata):
 	"""
 	acount = 0
 	ncount = 0
+	scount = 0
 	ocount = 0
 	assertEqual(type(sdata), str, "input must be string")
 	for c in sdata:
@@ -2110,6 +2111,8 @@ def getAlphaNumCharCount(sdata):
 			ncount += 1
 		elif c.isalpha():
 			acount += 1
+		elif c.isspace():
+			scount += 1
 		else:
 			ocount += 1
 	r = (acount, ncount, ocount)

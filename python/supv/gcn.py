@@ -47,8 +47,10 @@ Graph convolution network
 class GraphConvoNetwork(nn.Module):
     def __init__(self, configFile):
     	"""
-    	In the constructor we instantiate two nn.Linear modules and assign them as
-    	member variables.
+    	initilizer
+    	
+		Parameters
+			configFile : config file path
     	"""
     	defValues = dict()
     	defValues["common.model.directory"] = ("model", None)
@@ -90,6 +92,9 @@ class GraphConvoNetwork(nn.Module):
     	
     
     def getConfig(self):
+    	"""
+    	return config
+    	"""
     	return self.config
     	
     def buildModel(self):
@@ -249,7 +254,7 @@ class GraphConvoNetwork(nn.Module):
     		
     def descData(self):
     	"""
-    	load node and edge data
+    	describe data
     	"""
     	print(f'Number of nodes: {self.data.num_nodes}')
     	print(f'Number of edges: {self.data.num_edges}')
@@ -282,7 +287,7 @@ class GraphConvoNetwork(nn.Module):
     	
     def forward(self):
     	"""
-    	
+    	forward prop
     	"""
     	x, edges = self.data.x, self.data.edge_index
     	for l in self.layers:
@@ -296,6 +301,9 @@ class GraphConvoNetwork(nn.Module):
     def trainModel(model):
     	"""
     	train with batch data
+    	
+		Parameters
+			model : torch model
     	"""
     	epochIntv = model.config.getIntConfig("train.epoch.intv")[0]
     	
@@ -335,6 +343,10 @@ class GraphConvoNetwork(nn.Module):
     def evaluateModel(model, verbose=False):
     	"""
     	evaluate model
+    	
+		Parameters
+			model : torch model
+			verbose : if True additional output
     	"""
     	model.eval()
     	with torch.no_grad():
@@ -376,14 +388,19 @@ class GraphConvoNetwork(nn.Module):
     	return score
     	
     @staticmethod
-    def modelPrediction(model, showData=True):
+    def modelPrediction(model, inclData=True):
     	"""
     	make prediction
     	
 		Parameters
 			model : torch model
-    		showData : True to include input data
+    		inclData : True to include input data
     	"""
+    	cmask = model.config.getBooleanConfig("predict.create.mask")[0]
+    	if not cmask:
+    		print("create prediction mask property needs to be set to True")
+    		return None
+    		
     	useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
     	if useSavedModel:
     		FeedForwardNetwork.restoreCheckpt(model)
@@ -397,13 +414,17 @@ class GraphConvoNetwork(nn.Module):
     		yPred = out.argmax(dim=1)
     		yPred = yPred[model.prMask].data.cpu().numpy()
     	
-    	dataFilePath = model.config.getStringConfig("train.data.file")[0]	
-    	filt = lambda r : len(r) > 2
-    	ndata = list(fileFiltRecGen(dataFilePath, filt))
-    	prMask = model.prMask.data.cpu().numpy()
-    	assertEqual(len(ndata), prMask.shape[0], "data and mask lengths are not equal")
-    	precs = list(compress(ndata, prMask))
-    	precs = list(map(lambda r : r[:-1], precs))
-    	assertEqual(len(precs), yPred.shape[0], "data and mask lengths are not equal")
-    	return zip(precs, yPred)
+    	if inclData:
+    		dataFilePath = model.config.getStringConfig("train.data.file")[0]	
+    		filt = lambda r : len(r) > 2
+    		ndata = list(fileFiltRecGen(dataFilePath, filt))
+    		prMask = model.prMask.data.cpu().numpy()
+    		assertEqual(len(ndata), prMask.shape[0], "data and mask lengths are not equal")
+    		precs = list(compress(ndata, prMask))
+    		precs = list(map(lambda r : r[:-1], precs))
+    		assertEqual(len(precs), yPred.shape[0], "data and mask lengths are not equal")
+    		res =  zip(precs, yPred)
+    	else:
+    		res = yPred
+    	return res
     	

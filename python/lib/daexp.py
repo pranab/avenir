@@ -662,7 +662,7 @@ class DataExplorer:
 
 	def getExtremeValue(self, ds,  ensamp, nsamp, polarity, doPlotDistr, nbins=20):
 		"""
-		get histogram
+		get extreme values
 		
 		Parameters
 			ds: data set name or list or numpy array
@@ -988,7 +988,7 @@ class DataExplorer:
 		for d in data:
 			r = getAlphaNumCharCount(d)
 			counts.append(r)
-		result = self.__printResult("AllTypeCharCounts", counts)
+		result = self.__printResult("allTypeCharCounts", counts)
 		return result
 
 	def getCatAlphaCharCounts(self, ds):
@@ -1022,7 +1022,59 @@ class DataExplorer:
 			counts.append(r[1])
 		result = self.__printResult("numCharCounts", counts)
 		return result
+
+	def getCatSpecialCharCounts(self, ds):
+		"""
+		gets special char count list
 		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting special char counts", ds)
+		counts = self.getCatAllCharCounts(ds)["allTypeCharCounts"]
+		counts = list(map(lambda r : r[2], counts))
+		result = self.__printResult("specialCharCounts", counts)
+		return result
+
+	def getCatAlphaCharCountStats(self, ds):
+		"""
+		gets alphabetic char count stats
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting alphabetic char count stats", ds)
+		counts = self.getCatAlphaCharCounts(ds)["alphaCharCounts"]
+		st = self.__getBasicStats(np.array(counts))
+		result = self.__printResult("mean", st[0], "std dev", st[1])
+		return result
+		
+	def getCatNumCharCountStats(self, ds):
+		"""
+		gets numeric char count stats
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting numeric char count stats", ds)
+		counts = self.getCatNumCharCounts(ds)["numCharCounts"]
+		st = self.__getBasicStats(np.array(counts))
+		result = self.__printResult("mean", st[0], "std dev", st[1])
+		return result
+
+	def getCatSpecialCharCountStats(self, ds):
+		"""
+		gets special char count stats
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting special char count stats", ds)
+		counts = self.getCatSpecialCharCounts(ds)["specialCharCounts"]
+		st = self.__getBasicStats(np.array(counts))
+		result = self.__printResult("mean", st[0], "std dev", st[1])
+		return result
+
 	def getStats(self, ds, nextreme=5):
 		"""
 		gets summary statistics
@@ -1386,6 +1438,29 @@ class DataExplorer:
 		mask = ypred != -1
 		dwoul = dmat[mask, :]
 		result = self.__printResult("numOutliers", doul.shape[0], "outliers", doul, "dataWithoutOutliers", dwoul)	
+		return result
+
+	def getOutliersWithZscore(self, ds, zthreshold, stats=None):
+		"""
+		gets outliers using zscore
+		
+		Parameters
+			ds: data set name or list or numpy array
+			zthreshold : z score threshold
+			stats : tuple cintaining mean and std dev
+		"""
+		self.__printBanner("getting outliers using zscore", ds)
+		data = self.getNumericData(ds)
+		if stats is None:
+			mean = data.mean()
+			sd = np.std(data)
+		else:
+			mean = stats[0]
+			sd = stats[1]
+			
+		zs = list(map(lambda d : abs((d - mean) / sd), data))
+		outliers = list(filter(lambda r : r[1] > zthreshold, enumerate(zs)))
+		result = self.__printResult("outliers", outliers)	
 		return result
 
 	def getSubsequenceOutliersWithDissimilarity(self, subSeqSize, ds):
@@ -2608,5 +2683,17 @@ class DataExplorer:
 			print("result details:")
 			self.pp.pprint(result)
 		return result
+		
+	def __getBasicStats(self, data):
+		"""
+		get mean and std dev
+		
+		Parameters
+			data : numpy array
+		"""
+		mean = np.average(data)
+		sd = np.std(data)
+		r = (mean, sd)
+		return r
 
 
