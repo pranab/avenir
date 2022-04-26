@@ -158,21 +158,6 @@ class AutoEncoder(nn.Module):
 		self.device = FeedForwardNetwork.getDevice(self)
 		self.to(self.device)
 		
-	#deprecated
-	def createActivation(self, act):
-		"""
-		create activation
-		"""
-		activation = None
-		if act == "relu":
-			activation = nn.ReLU()
-		elif act == "sigmoid":
-			activation = nn.Sigmoid()
-		elif act == "noact":
-			activation = None
-		else:
-			raise ValueError("invalid activation type")
-	
 	def forward(self, x):
 		"""
 		forward pass

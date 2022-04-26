@@ -44,6 +44,9 @@ class LstmNetwork(nn.Module):
     	"""
     	In the constructor we instantiate two nn.Linear modules and assign them as
     	member variables.
+
+		Parameters
+			configFile : config file path
     	"""
     	defValues = dict()
     	defValues["common.mode"] = ("training", None)
@@ -51,6 +54,7 @@ class LstmNetwork(nn.Module):
     	defValues["common.model.file"] = (None, None)
     	defValues["common.preprocessing"] = (None, None)
     	defValues["common.scaling.method"] = ("zscale", None)
+    	defValues["common.scaling.minrows"] = (50, None)
     	defValues["common.verbose"] = (False, None)
     	defValues["common.device"] = ("cpu", None)
     	defValues["train.data.file"] = (None, "missing training data file path")
@@ -111,6 +115,7 @@ class LstmNetwork(nn.Module):
     	self.batchFirst = self.config.getBooleanConfig("train.batch.first")[0]
     	dropProb = self.config.getFloatConfig("train.drop.prob")[0]
     	self.outSeq = self.config.getBooleanConfig("train.out.sequence")[0]
+    	self.device = FeedForwardNetwork.getDevice(self)
     	
     	#model
     	self.lstm = nn.LSTM(self.inputSize, self.hiddenSize, self.nLayers, dropout=dropProb, batch_first=self.batchFirst)
@@ -127,21 +132,35 @@ class LstmNetwork(nn.Module):
     	
     	self.fData, self.tData = self.loadData(dataFilePath, self.delim, self.fCols[0],self.fCols[1], self.tCol)
     	self.fData = torch.from_numpy(self.fData)
+    	self.fData = self.fData.to(self.device)
     	self.tData = torch.from_numpy(self.tData)
+    	self.tData = self.tData.to(self.device)
     	
     	#load validation data
     	vaDataFilePath = self.config.getStringConfig("valid.data.file")[0]
     	self.vfData, self.vtData = self.loadData(vaDataFilePath, self.delim, self.fCols[0], self.fCols[1], self.tCol)
     	self.vfData = torch.from_numpy(self.vfData)
+    	self.vfData = self.vfData.to(self.device)
     	self.vtData = torch.from_numpy(self.vtData)
+    	self.vtData = self.vtData.to(self.device)
     	
     	self.batchSize = self.config.getIntConfig("train.batch.size")[0]
     	self.dataSize = self.fData.shape[0]
     	self.numBatch = int(self.dataSize / self.batchSize)
+    	self.restored = False
+    	
+    	self.to(self.device)
     	
     def loadData(self, filePath, delim, scolStart, scolEnd, targetCol):
     	"""
     	loads data for file with one sequence per line and data can be a vector
+
+		Parameters
+			filePath :  file path
+			delim : field delemeter
+			scolStart : seq column start index
+			scolEnd : seq column end index
+			targetCol : target field col index
     	"""
     	if targetCol >= 0:
     		#include target column
@@ -177,6 +196,9 @@ class LstmNetwork(nn.Module):
     def scaleSeqData(self, sData):
     	"""
     	scales data transforming non squence format
+
+		Parameters
+			sData : sequence data
     	"""
     	scalingMethod = self.config.getStringConfig("common.scaling.method")[0]
     	sData = fromMultDimSeqToTabular(sData, self.inputSize, self.seqLen)
@@ -221,6 +243,10 @@ class LstmNetwork(nn.Module):
     	"""
     	transforms validation or prediction data data from (dataSize, seqLength x inputSize) to 
     	(batch, seqLength, inputSize) tensor or (seqLength, batch, inputSize) tensor
+
+		Parameters
+			fData : feature data
+			tData : target data
     	"""
     	dSize = fData.shape[0]
     	bfData = torch.zeros([dSize, self.seqLen, self.inputSize], dtype=torch.float32) if self.batchFirst\
@@ -245,6 +271,10 @@ class LstmNetwork(nn.Module):
     def forward(self, x, h):
     	"""
     	Forward pass
+    	
+		Parameters
+			x : input data
+			h : targhiddenet state
     	"""
     	out, hout = self.lstm(x,h)
     	if self.outSeq:
@@ -267,6 +297,9 @@ class LstmNetwork(nn.Module):
     def initHidden(self, batch):
     	"""
     	Initialize hidden weights
+
+		Parameters
+			batch : batch size
     	"""
     	hidden = (torch.zeros(self.nLayers,batch,self.hiddenSize),
     	torch.zeros(self.nLayers,batch,self.hiddenSize))
@@ -279,8 +312,8 @@ class LstmNetwork(nn.Module):
     	print("..starting training")
     	self.train()
  
-    	device = self.config.getStringConfig("common.device")[0]
-    	self.to(device)
+    	#device = self.config.getStringConfig("common.device")[0]
+    	#self.to(device)
     	optimizerName = self.config.getStringConfig("train.optimizer")[0]
     	self.optimizer = FeedForwardNetwork.createOptimizer(self, optimizerName)
     	lossFn = self.config.getStringConfig("train.loss.fn")[0]
@@ -295,7 +328,8 @@ class LstmNetwork(nn.Module):
     		for inputs, labels in self.formattedBatchGenarator():
     			#forward pass
     			hid = self.initHidden(self.batchSize)
-    			inputs, labels = inputs.to(device), labels.to(device)
+    			hid = (hid[0].to(self.device), hid[1].to(self.device))
+    			inputs, labels = inputs.to(self.device), labels.to(self.device)
     			output, hid = self(inputs, hid)
     			
     			#loss
@@ -318,9 +352,10 @@ class LstmNetwork(nn.Module):
     	self.eval()
     	with torch.no_grad():
     		fData, tData = self.formatData(self.vfData, self.vtData)
-    		fData = fData.to(device)
+    		fData = fData.to(self.device)
     		vsize = tData.shape[0]
     		hid = self.initHidden(vsize)
+    		hid = (hid[0].to(self.device), hid[1].to(self.device))
     		yPred, _ = self(fData, hid)
     		yPred = yPred.data.cpu().numpy()
     		yActual = tData.data.cpu().numpy()
@@ -355,12 +390,13 @@ class LstmNetwork(nn.Module):
     	dsize = pfData.shape[0]
     	
     	#predict
-    	device = self.config.getStringConfig("common.device")[0]
+    	#device = self.config.getStringConfig("common.device")[0]
     	self.eval()
     	with torch.no_grad():
     		fData = self.formatData(pfData)
-    		fData = fData.to(device)
+    		fData = fData.to(self.device)
     		hid = self.initHidden(dsize)
+    		hid = (hid[0].to(self.device), hid[1].to(self.device))
     		yPred, _ = self(fData, hid)
     		yPred = yPred.data.cpu().numpy()
     		
@@ -369,7 +405,7 @@ class LstmNetwork(nn.Module):
     		yPred = FeedForwardNetwork.processClassifOutput(yPred, self.config)
     	
     	# print prediction
-    	FeedForwardNetwork.printPrediction(yPred, self.config)
+    	FeedForwardNetwork.printPrediction(yPred, self.config, prDataFilePath)
 
 			
 
