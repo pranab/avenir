@@ -60,6 +60,7 @@ class GraphConvoNetwork(nn.Module):
     	defValues["common.scaling.minrows"] = (50, None)
     	defValues["common.scaling.param.file"] = (None, None)
     	defValues["common.verbose"] = (False, None)
+    	defValues["common.device"] = ("cpu", None)
     	defValues["train.data.file"] = (None, "missing training data file")
     	defValues["train.data.num.nodes.total"] = (None, None)
     	defValues["train.data.num.nodes.training"] = (None, None)
@@ -158,6 +159,8 @@ class GraphConvoNetwork(nn.Module):
     		ninp = nunit
     		
     	self.layers = torch.nn.ModuleList(layers)
+    	self.device = FeedForwardNetwork.getDevice(self)
+    	self.to(self.device)
     	self.loadData()
     	
     	self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
@@ -208,6 +211,9 @@ class GraphConvoNetwork(nn.Module):
     	dy = torch.tensor(dy, dtype=torch.long)
     	edges = torch.tensor(edges, dtype=torch.long)
     	edges = edges.t().contiguous()
+    	dx = dx.to(self.device)
+    	dy = dy.to(self.device)
+    	edges = edges.to(self.device)
     	self.data = Data(x=dx, edge_index=edges, y=dy)
     	
     	#maks
@@ -248,9 +254,17 @@ class GraphConvoNetwork(nn.Module):
     		for i in mask[vame:]:
     			teMask[i] = True
     		#print(vaMask)
-    	self.data.train_mask = torch.tensor(trMask, dtype=torch.bool)
-    	self.data.val_mask = torch.tensor(vaMask, dtype=torch.bool)
-    	self.data.test_mask = torch.tensor(teMask, dtype=torch.bool)
+    	
+    	trMask = torch.tensor(trMask, dtype=torch.bool)
+    	trMask = trMask.to(self.device)
+    	self.data.train_mask = trMask
+    	vaMask = torch.tensor(vaMask, dtype=torch.bool)
+    	vaMask = vaMask.to(self.device)
+    	self.data.val_mask = vaMask
+    	teMask = torch.tensor(teMask, dtype=torch.bool)
+    	teMask = teMask.to(self.device)
+    	self.data.test_mask = teMask
+    	
     		
     def descData(self):
     	"""

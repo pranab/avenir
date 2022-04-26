@@ -75,6 +75,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["common.scaling.minrows"] = (50, None)
 		defValues["common.scaling.param.file"] = (None, None)
 		defValues["common.verbose"] = (False, None)
+		defValues["common.device"] = ("cpu", None)
 		defValues["train.data.file"] = (None, "missing training data file")
 		defValues["train.data.fields"] = (None, "missing training data field ordinals")
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
@@ -152,6 +153,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
 		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
 		self.restored = False
+		self.clabels = list(range(self.outputSize)) if self.outputSize > 1 else None
 		
 		#build network
 		layers = list()
@@ -207,6 +209,31 @@ class FeedForwardNetwork(torch.nn.Module):
 		self.yPred  = None
 		self.restored = False
 		
+		#mode to device
+		self.device = FeedForwardNetwork.getDevice(self)	
+		self.featData = self.featData.to(self.device)
+		self.outData = self.outData.to(self.device)
+		self.validFeatData = self.validFeatData.to(self.device)
+		self.to(self.device)
+		
+	@staticmethod
+	def getDevice(model):
+		"""
+		gets device
+		
+		Parameters
+			model : torch model
+		"""
+		devType = model.config.getStringConfig("common.device")[0]
+		if devType == "cuda":
+			if torch.cuda.is_available():
+				device = torch.device("cuda")
+			else:
+				exitWithMsg("cuda not available")
+		else:
+			device = torch.device("cpu")
+		return device
+			
 	def setValidationData(self, dataSource, prep=True):
 		"""
 		sets validation data
@@ -222,6 +249,8 @@ class FeedForwardNetwork(torch.nn.Module):
 		else:
 			self.validFeatData = torch.from_numpy(dataSource[0])
 			self.validOutData = dataSource[1]		
+		
+		self.validFeatData = self.validFeatData.to(self.device)
  	
 	@staticmethod
 	def createActivation(actName):
@@ -432,6 +461,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			assert os.path.exists(filepath), "model save file does not exist"
 			checkpoint = torch.load(filepath)
 			model.load_state_dict(checkpoint["state_dict"])
+			model.to(model.device)
 			if loadOpt:
 				model.optimizer.load_state_dict(checkpoint["optim_dict"])
 			model.restored = True
@@ -447,8 +477,15 @@ class FeedForwardNetwork(torch.nn.Module):
 		"""
 		outType = config.getStringConfig("predict.output")[0]
 		if outType == "prob":
-			yPred = yPred[:, 1]
-			yPred = list(map(lambda v : "{:.3f}".format(v), yPred))
+			outputSize = config.getIntConfig("train.output.size")[0]
+			if outputSize == 2:
+				#return prob of pos class for binary classifier 
+				yPred = yPred[:, 1]
+			else:
+				#return  class value and probability for multi classifier 
+				yCl = np.argmax(yPred, axis=1)
+				yPred = list(map(lambda y : y[0][y[1]], zip(yPred, yCl)))
+				yPred = zip(yCl, yPred)
 		else:
 			yPred = np.argmax(yPred, axis=1)
 		return yPred
@@ -548,6 +585,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			for xBatch, yBatch in trainDataLoader:
 	
 				# Forward pass: Compute predicted y by passing x to the model
+				xBatch, yBatch = xBatch.to(model.device), yBatch.to(model.device)
 				yPred = model(xBatch)
 				
 				# Compute and print loss
@@ -599,13 +637,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			FeedForwardNetwork.saveCheckpt(model)
 
 		if model.trackErr:
-			x = np.arange(len(trErr))
-			plt.plot(x,trErr,label = "training error")
-			plt.plot(x,vaErr,label = "validation error")
-			plt.xlabel("iteration")
-			plt.ylabel("error")
-			plt.legend(["training error", "validation error"], loc='upper left')
-			plt.show()
+			FeedForwardNetwork.errorPlot(model, trErr, vaErr)
 		
 		if model.config.getBooleanConfig("train.print.weights")[0]:
 			print("model weights")
@@ -652,12 +684,14 @@ class FeedForwardNetwork(torch.nn.Module):
 		featData  = FeedForwardNetwork.prepData(model, dataSource, False)
 		#print(featData)
 		featData = torch.from_numpy(featData)
+		featData = featData.to(model.device)
+		
 		model.eval()
 		yPred = model(featData)
 		yPred = yPred.data.cpu().numpy()
 		#print(yPred)
 		
-		if model.outputSize == 2:
+		if model.outputSize >= 2:
 			#classification
 			yPred = FeedForwardNetwork.processClassifOutput(yPred, model.config)
 			
@@ -689,7 +723,7 @@ class FeedForwardNetwork(torch.nn.Module):
 			yPred = model(model.validFeatData)
 			yPred = yPred.data.cpu().numpy()
 			yActual = model.validOutData
-			score = perfMetric(model.lossFnStr, yActual, yPred)
+			score = perfMetric(model.lossFnStr, yActual, yPred, model.clabels)
 		model.train()
 		return score
     	

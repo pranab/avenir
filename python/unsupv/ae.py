@@ -51,6 +51,7 @@ class AutoEncoder(nn.Module):
 		defValues["common.model.file"] = (None, None)
 		defValues["common.preprocessing"] = (None, None)
 		defValues["common.scaling.method"] = ("zscale", None)
+		defValues["common.scaling.minrows"] = (50, None)
 		defValues["common.verbose"] = (False, None)
 		defValues["common.device"] = ("cpu", None)
 		defValues["train.data.file"] = (None, "missing training data file")
@@ -96,7 +97,6 @@ class AutoEncoder(nn.Module):
 		"""
 		torch.manual_seed(9999)
 		self.verbose = self.config.getStringConfig("common.verbose")[0]
-		self.device = self.config.getStringConfig("common.device")[0]
 		self.numinp = self.config.getIntConfig("train.num.input")[0]
 		self.numHidden = self.config.getIntListConfig("train.num.hidden.units")[0]
 		numLayers = len(self.numHidden)
@@ -113,6 +113,7 @@ class AutoEncoder(nn.Module):
 		self.useSavedModel = self.config.getBooleanConfig("encode.use.saved.model")[0]
 		self.trackErr = self.config.getBooleanConfig("train.track.error")[0]
 		self.batchIntv = self.config.getIntConfig("train.batch.intv")[0]
+		self.restored = False
 		
 		#encoder
 		inSize = self.numinp
@@ -153,7 +154,10 @@ class AutoEncoder(nn.Module):
 			if activation:
 				deModules.append(activation)
 		self.decoder = nn.ModuleList(deModules)
-
+		
+		self.device = FeedForwardNetwork.getDevice(self)
+		self.to(self.device)
+		
 	#deprecated
 	def createActivation(self, act):
 		"""
@@ -201,10 +205,12 @@ class AutoEncoder(nn.Module):
 			
 		teDataFile = self.config.getStringConfig("encode.data.file")[0]
 		enData = FeedForwardNetwork.prepData(self, teDataFile, False)
+		enData = torch.from_numpy(enData)
+		enData = enData.to(self.device)
 		with torch.no_grad():
-			regenData = self(torch.from_numpy(enData))
+			regenData = self(enData)
 			regenData = regenData.data.cpu().numpy()
-		data = (enData, regenData)
+		data = (enData.data.cpu().numpy(), regenData)
 		return data
 		
 	def regen(self):
@@ -221,8 +227,10 @@ class AutoEncoder(nn.Module):
 			
 		teDataFile = self.config.getStringConfig("encode.data.file")[0]
 		enData = FeedForwardNetwork.prepData(self, teDataFile, False)
+		enData = torch.from_numpy(enData)
+		enData = enData.to(self.device)
 		with torch.no_grad():
-			regenData = self(torch.from_numpy(enData))
+			regenData = self(enData)
 			regenData = regenData.data.cpu().numpy()
 		
 		#score = perfMetric(self.loss, enData, regenData)
@@ -279,11 +287,12 @@ class AutoEncoder(nn.Module):
 		"""
 		trDataFile = self.config.getStringConfig("train.data.file")[0]
 		featData = FeedForwardNetwork.prepData(self, trDataFile, False)
-		self.featData = torch.from_numpy(featData)
+		featData = torch.from_numpy(featData)
+		self.featData = featData.to(self.device)
 		self.dataloader = DataLoader(self.featData, batch_size=self.batchSize, shuffle=True)
 
-		if self.device == "cpu":
-			model = self.cpu()
+		#if self.device == "cpu":
+		#	model = self.cpu()
 			
 		# optimizer
 		self.optimizer = FeedForwardNetwork.createOptimizer(self, self.optimizerStr)
@@ -298,18 +307,20 @@ class AutoEncoder(nn.Module):
 		lossStat = SlidingWindowStat.createEmpty(trLossAvWindowSz) if trLossAvWindowSz > 0 else None
 		peMean = None
 		done = False
-		for it in range(model.numIter):
+		for it in range(self.numIter):
 			epochLoss = 0.0
 			for data in self.dataloader:
-				noisyData = data + model.noiseScale * torch.randn(*data.shape)
-				output = model(noisyData)
+				noisyData = data + self.noiseScale * torch.randn(*data.shape)
+				noisyData = noisyData.to(self.device)
+				output = self(noisyData)
 				loss = criterion(output, data)
-				model.optimizer.zero_grad()
+				self.optimizer.zero_grad()
 				loss.backward()
-				model.optimizer.step()
+				self.optimizer.step()
 				epochLoss += loss.item()
 			epochLoss /= len(self.dataloader)
-			print('epoch [{}-{}], loss {:.6f}'.format(it + 1, model.numIter, epochLoss))
+			print('epoch [{}-{}], loss {:.6f}'.format(it + 1, self.numIter, epochLoss))
+			
 			if lossStat is not None:
 				lossStat.add(epochLoss)
 				if lossStat.getCurSize() == trLossAvWindowSz:
@@ -327,12 +338,12 @@ class AutoEncoder(nn.Module):
 				
 		self.evaluateModel()
 		
-		if model.modelSave:
+		if self.modelSave:
 			FeedForwardNetwork.saveCheckpt(self)
 
 	def evaluateModel(self):
 		"""
-		train model
+		evaluate model
 		"""
 		(enData, regenData) = self.getRegen()
 		score = perfMetric(self.loss, enData, regenData)
