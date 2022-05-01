@@ -1000,10 +1000,8 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting alphabetic char counts", ds)
 		data = self.getCatData(ds)
-		counts = list()
-		for d in data:
-			r = getAlphaNumCharCount(d)
-			counts.append(r[0])
+		counts = self.getCatAllCharCounts(ds)["allTypeCharCounts"]
+		counts = list(map(lambda r : r[0], counts))
 		result = self.__printResult("alphaCharCounts", counts)
 		return result
 	
@@ -1016,10 +1014,8 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting numeric char counts", ds)
 		data = self.getCatData(ds)
-		counts = list()
-		for d in data:
-			r = getAlphaNumCharCount(d)
-			counts.append(r[1])
+		counts = self.getCatAllCharCounts(ds)["allTypeCharCounts"]
+		counts = list(map(lambda r : r[1], counts))
 		result = self.__printResult("numCharCounts", counts)
 		return result
 
@@ -1045,8 +1041,9 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting alphabetic char count stats", ds)
 		counts = self.getCatAlphaCharCounts(ds)["alphaCharCounts"]
+		nz = counts.count(0)
 		st = self.__getBasicStats(np.array(counts))
-		result = self.__printResult("mean", st[0], "std dev", st[1])
+		result = self.__printResult("mean", st[0], "std dev", st[1], "max", st[2], "min", st[3], "zeroCount", nz)
 		return result
 		
 	def getCatNumCharCountStats(self, ds):
@@ -1058,8 +1055,9 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting numeric char count stats", ds)
 		counts = self.getCatNumCharCounts(ds)["numCharCounts"]
+		nz = counts.count(0)
 		st = self.__getBasicStats(np.array(counts))
-		result = self.__printResult("mean", st[0], "std dev", st[1])
+		result = self.__printResult("mean", st[0], "std dev", st[1], "max", st[2], "min", st[3], "zeroCount", nz)
 		return result
 
 	def getCatSpecialCharCountStats(self, ds):
@@ -1071,8 +1069,39 @@ class DataExplorer:
 		"""
 		self.__printBanner("getting special char count stats", ds)
 		counts = self.getCatSpecialCharCounts(ds)["specialCharCounts"]
+		nz = counts.count(0)
 		st = self.__getBasicStats(np.array(counts))
-		result = self.__printResult("mean", st[0], "std dev", st[1])
+		result = self.__printResult("mean", st[0], "std dev", st[1], "max", st[2], "min", st[3], "zeroCount", nz)
+		return result
+
+	def getCatFldLenStats(self, ds):
+		"""
+		gets field length stats
+		
+		Parameters
+			ds: data set name or list or numpy array
+		"""
+		self.__printBanner("getting field length stats", ds)
+		data = self.getCatData(ds)
+		le = list(map(lambda d: len(d), data))
+		st = self.__getBasicStats(np.array(le))
+		result = self.__printResult("mean", st[0], "std dev", st[1], "max", st[2], "min", st[3])
+		return result
+
+	def getCatCharCountStats(self, ds, ch):
+		"""
+		gets field length stats
+		
+		Parameters
+			ds: data set name or list or numpy array
+			ch : character
+		"""
+		self.__printBanner("getting field length stats", ds)
+		data = self.getCatData(ds)
+		counts = list(map(lambda d: d.count(ch), data))
+		nz = counts.count(0)
+		st = self.__getBasicStats(np.array(counts))
+		result = self.__printResult("mean", st[0], "std dev", st[1], "max", st[2], "min", st[3], "zeroCount", nz)
 		return result
 
 	def getStats(self, ds, nextreme=5):
@@ -2693,7 +2722,7 @@ class DataExplorer:
 		"""
 		mean = np.average(data)
 		sd = np.std(data)
-		r = (mean, sd)
+		r = (mean, sd, np.max(data), np.min(data))
 		return r
 
 
