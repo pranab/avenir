@@ -37,6 +37,12 @@ class MonteCarloSimulator(object):
 	def __init__(self, numIter, callback, logFilePath, logLevName):
 		"""
 		constructor
+		
+		Parameters
+			numIter :num of iterations
+			callback : call back method
+			logFilePath : log file path
+			logLevName : log level
 		"""
 		self.samplers = list()
 		self.numIter = numIter;
@@ -58,110 +64,195 @@ class MonteCarloSimulator(object):
 	def registerBernoulliTrialSampler(self, pr):
 		"""
 		bernoulli trial sampler
+		
+		Parameters
+			pr : probability
 		"""
 		self.samplers.append(BernoulliTrialSampler(pr))
 		
 	def registerPoissonSampler(self, rateOccur, maxSamp):
 		"""
 		poisson sampler
+		
+		Parameters
+			rateOccur : rate of occurence
+			maxSamp : max limit on no of samples
 		"""
 		self.samplers.append(PoissonSampler(rateOccur, maxSamp))
 
-	def registerUniformSampler(self, min, max):
+	def registerUniformSampler(self, minv, maxv):
 		"""
 		uniform sampler
+		
+		Parameters
+			minv : min value
+			maxv : max value
 		"""
-		self.samplers.append(UniformNumericSampler(min, max))
+		self.samplers.append(UniformNumericSampler(minv, maxv))
 
 	def registerTriangularSampler(self, min, max, vertexValue, vertexPos=None):
 		"""
 		triangular sampler
+		
+		Parameters
+			xmin : min  value
+			xmax : max  value
+			vertexValue : distr value at vertex
+			vertexPos : vertex pposition
 		"""
 		self.samplers.append(TriangularRejectSampler(min, max, vertexValue, vertexPos))
 
 	def registerGaussianSampler(self, mean, sd):
 		"""
 		gaussian sampler
+
+		Parameters
+			mean : mean
+			sd : std deviation
 		"""
 		self.samplers.append(GaussianRejectSampler(mean, sd))
 		
 	def registerNormalSampler(self, mean, sd):
 		"""
 		gaussian sampler using numpy
+
+		Parameters
+			mean : mean
+			sd : std deviation
 		"""
 		self.samplers.append(NormalSampler(mean, sd))
 
 	def registerLogNormalSampler(self, mean, sd):
 		"""
 		log normal sampler using numpy
+
+		Parameters
+			mean : mean
+			sd : std deviation
 		"""
 		self.samplers.append(LogNormalSampler(mean, sd))
 
 	def registerParetoSampler(self, mode, shape):
 		"""
 		pareto sampler using numpy
+
+		Parameters
+			mode : mode
+			shape : shape
 		"""
 		self.samplers.append(ParetoSampler(mode, shape))
 
 	def registerGammaSampler(self, shape, scale):
 		"""
 		gamma sampler using numpy
+
+		Parameters
+			shape : shape
+			scale : scale
 		"""
 		self.samplers.append(GammaSampler(shape, scale))
 
 	def registerDiscreteRejectSampler(self, xmin, xmax, step, *values):
 		"""
 		disccrete int sampler
+
+		Parameters
+			xmin : min  value
+			xmax : max  value
+			step : discrete step
+			values : distr values
 		"""
 		self.samplers.append(DiscreteRejectSampler(xmin, xmax, step, *values))
 
-	def registerNonParametricSampler(self, min, binWidth, *values):
+	def registerNonParametricSampler(self, minv, binWidth, *values):
 		"""
 		nonparametric sampler
+
+		Parameters
+			xmin : min  value
+			binWidth : bin width
+			values : distr values
 		"""
-		sampler = NonParamRejectSampler(min, binWidth, *values)
+		sampler = NonParamRejectSampler(minv, binWidth, *values)
 		sampler.sampleAsFloat()
 		self.samplers.append(sampler)
 
 	def registerMultiVarNormalSampler(self,  numVar, *values):
 		"""
 		multi var gaussian sampler using numpy
+
+		Parameters
+			numVar : no of variables
+			values : numVar mean values followed by numVar x numVar values for covar matrix
 		"""
 		self.samplers.append(MultiVarNormalSampler(numVar, *values))
 		
 	def registerJointNonParamRejectSampler(self, xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values):
 		"""
 		joint nonparametric sampler
+
+		Parameters
+			xmin : min  value for x
+			xbinWidth : bin width for x
+			xnbin : no of bins for x
+			ymin : min  value for y
+			ybinWidth : bin width for y
+			ynbin : no of bins for y
+			values : distr values
 		"""
 		self.samplers.append(JointNonParamRejectSampler(xmin, xbinWidth, xnbin, ymin, ybinWidth, ynbin, *values))
 
-	def registerRangePermutationSampler(self, min, max, *numShuffles):
+	def registerRangePermutationSampler(self, minv, maxv, *numShuffles):
 		"""
 		permutation sampler with range
+
+		Parameters
+			minv : min of range
+			maxv : max of range
+			numShuffles : no of shuffles or range of no of shuffles
 		"""
-		self.samplers.append(PermutationSampler.createSamplerWithRange(min, max, *numShuffles))
+		self.samplers.append(PermutationSampler.createSamplerWithRange(minv, maxv, *numShuffles))
 	
-	def registerValuesPermutationSampler(self, values):
+	def registerValuesPermutationSampler(self, values, *numShuffles):
 		"""
 		permutation sampler with values
+
+		Parameters
+			values : list data
+			numShuffles : no of shuffles or range of no of shuffles
 		"""
 		self.samplers.append(PermutationSampler.createSamplerWithValues(values, *numShuffles))
 	
 	def registerNormalSamplerWithTrendCycle(self, mean, stdDev, trend, cycle,  step=1):
 		"""
 		normal sampler with trend and cycle
+
+		Parameters
+			mean : mean
+			stdDev : std deviation
+			dmean : trend delta
+			cycle : cycle values wrt base mean
+			step : adjustment step for cycle and trend
 		"""
 		self.samplers.append(NormalSamplerWithTrendCycle(mean, stdDev, trend, cycle,  step))
 
 	def registerCustomSampler(self, sampler):
 		"""
 		permutation sampler with values
+		
+		Parameters
+			sampler : sampler with sample() method
 		"""
 		self.samplers.append(sampler)
 	
 	def setSampler(self, var, iter, sampler):
 		"""
 		set sampler for some variable when iteration reaches certain point
+
+		Parameters
+			var : sampler index
+			iter : iteration count
+			sampler : new sampler
 		"""
 		key = (var, iter)
 		self.replSamplers[key] = sampler
@@ -169,12 +260,18 @@ class MonteCarloSimulator(object):
 	def registerExtraArgs(self, *args):
 		"""
 		extra args
+
+		Parameters
+			args : extra argument list
 		"""
 		self.extraArgs = args
 
 	def replSampler(self, iter):
 		"""
 		replace samper for this iteration
+
+		Parameters
+			iter : iteration number
 		"""
 		if len(self.replSamplers) > 0:
 			for v in range(self.numVars):
@@ -222,6 +319,9 @@ class MonteCarloSimulator(object):
 	def setOutput(self, values):
 		"""
 		set raw output
+
+		Parameters
+			values : output values
 		"""
 		self.output = values
 		self.numIter = len(values)
@@ -229,6 +329,11 @@ class MonteCarloSimulator(object):
 	def drawHist(self, myTitle, myXlabel, myYlabel):
 		"""
 		draw histogram
+
+		Parameters
+			myTitle : title
+			myXlabel : label for x
+			myYlabel : label for y
 		"""
 		pyplot.hist(self.output, density=True)
 		pyplot.title(myTitle)
@@ -238,7 +343,7 @@ class MonteCarloSimulator(object):
 		
 	def getSum(self):
 		"""
-		sum
+		get sum
 		"""
 		if not self.sum:
 			self.sum = sum(self.output)
@@ -246,7 +351,7 @@ class MonteCarloSimulator(object):
 		
 	def getMean(self):
 		"""
-		average
+		get average
 		"""
 		if self.mean is None:
 			self.mean = statistics.mean(self.output)
@@ -254,7 +359,7 @@ class MonteCarloSimulator(object):
 		
 	def getStdDev(self):
 		"""
-		std dev
+		get std dev
 		"""
 		if self.sd is None:
 			self.sd = statistics.stdev(self.output, xbar=self.mean) if self.mean else statistics.stdev(self.output)
@@ -263,26 +368,29 @@ class MonteCarloSimulator(object):
 
 	def getMedian(self):
 		"""
-		average
+		get average
 		"""
 		med = statistics.median(self.output)
 		return med
 
 	def getMax(self):
 		"""
-		max
+		get max
 		"""
 		return max(self.output)
 		
 	def getMin(self):
 		"""
-		min
+		get min
 		"""
 		return min(self.output)
 		
 	def getIntegral(self, bounds):
 		"""
 		integral
+
+		Parameters
+			bounds :  bound on sum
 		"""
 		if not self.sum:
 			self.sum = sum(self.output)
@@ -290,7 +398,11 @@ class MonteCarloSimulator(object):
 	
 	def getLowerTailStat(self, zvalue, numIntPoints=50):
 		"""
-		lower tail stat
+		get lower tail stat
+
+		Parameters
+			zvalue : zscore upper bound 
+			numIntPoints : no of interpolation point for cum distribution
 		"""
 		mean = self.getMean()
 		sd = self.getStdDev()
@@ -304,20 +416,50 @@ class MonteCarloSimulator(object):
 		critValues = self.interpolateCritValues(reqConf, cvaCounts, True, tailStart, tailEnd)
 		return critValues
 		
-	def getPercentile(self, value):
+	def getPercentile(self, cvalue):
 		"""
 		percentile
+
+		Parameters
+			cvalue : value for percentile 
 		"""
 		count = 0
 		for v in self.output:
-			if v < value:
+			if v < cvalue:
 				count += 1 
 		percent =  int(count * 100.0 / self.numIter)
 		return percent
+
+
+	def getCritValue(self, pvalue):	
+		"""
+		critical value for probabaility threshold
+
+		Parameters
+			pvalue : pvalue 
+		"""
+		assertWithinRange(pvalue, 0.0, 1.0, "invalid probabaility value")
+		svalues = self.output.sorted()
+		ppval = None
+		cpval = None
+		intv = 1.0 / (self.numIter - 1)
+		for i in range(self.numIter - 1):
+			cpval = (i + 1) / self.numIter
+			if cpval > pvalue:
+				sl = svalues[i] - svalues[i-1]
+				cval = svalues[i-1] + sl * (pvalue - ppval)
+				break
+			ppval = cpval
+		return cval
+		
 		
 	def getUpperTailStat(self, zvalue, numIntPoints=50):
 		"""
 		upper tail stat
+
+		Parameters
+			zvalue : zscore upper bound 
+			numIntPoints : no of interpolation point for cum distribution
 		"""
 		mean = self.getMean()
 		sd = self.getStdDev()
@@ -334,6 +476,11 @@ class MonteCarloSimulator(object):
 	def cumDistr(self, tailStart, tailEnd, numIntPoints):
 		"""
 		cumulative distribution at tail
+		
+		Parameters
+			tailStart : tail start
+			tailEnd : tail end
+			numIntPoints : no of interpolation points
 		"""
 		delta = (tailEnd - tailStart) / numIntPoints
 		cvalues = floatRange(tailStart, tailEnd, delta)
@@ -352,6 +499,13 @@ class MonteCarloSimulator(object):
 	def interpolateCritValues(self, reqConf, cvaCounts, lowertTail, tailStart, tailEnd):	
 		"""
 		interpolate for spefici confidence limits
+		
+		Parameters
+			reqConf : confidence level values
+			cvaCounts : cum values
+			lowertTail : True if lower tail
+			tailStart ; tail start
+			tailEnd : tail end
 		"""
 		critValues = list()
 		if self.logger is not None:
