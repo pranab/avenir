@@ -238,13 +238,24 @@ class MonteCarloSimulator(object):
 
 	def registerCustomSampler(self, sampler):
 		"""
-		permutation sampler with values
+		eventsampler
 		
 		Parameters
 			sampler : sampler with sample() method
 		"""
 		self.samplers.append(sampler)
 	
+	def registerEventSampler(self, intvSampler, valSampler=None):
+		"""
+		custom sampler
+		
+		Parameters
+		Parameters
+			intvSampler : interval sampler
+			valSampler : value sampler
+		"""
+		self.samplers.append(EventSampler(intvSampler, valSampler))
+
 	def setSampler(self, var, iter, sampler):
 		"""
 		set sampler for some variable when iteration reaches certain point

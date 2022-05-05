@@ -723,9 +723,9 @@ class DataExplorer:
 		result = self.__printResult("relEntropy", entropy)
 		return result
 
-	def getMutualInfo(self, ds1,  ds2, nbins=10):
+	def getAllNumMutualInfo(self, ds1,  ds2, nbins=10):
 		"""
-		get mutual information
+		get mutual information for both numeric data
 		
 		Parameters
 			ds1: data set name or list or numpy array
@@ -755,6 +755,7 @@ class DataExplorer:
 			cds: categoric data set name or list 
 			nbins: num of bins
 		"""
+		self.__printBanner("getting mutual information of numerical and categorical data", nds, cds)
 		ndata = self.getNumericData(nds)
 		cds = self.getCatData(cds)
 		nentr = self.getEntropy(nds)["entropy"]
@@ -780,6 +781,7 @@ class DataExplorer:
 			cds1 : categoric data set name or list 
 			cds2 : categoric data set name or list 
 		"""
+		self.__printBanner("getting mutual information of two categorical data sets", cds1, cds2)
 		cdata1 = self.getCatData(cds1)
 		cdata2 = self.getCatData(cds1)
 		centr = self.getStatsCat(cds1)["entropy"]
@@ -796,6 +798,74 @@ class DataExplorer:
 		mutInfo = centr - ccentr
 		result = self.__printResult("mutInfo", mutInfo, "entropy", centr, "condEntropy", ccentr)
 		return result
+
+	def getMutualInfo(self, dst, nbins=10):
+		"""
+		get mutiual information between 2 data sets,any vombination numerical and categorical
+		
+		Parameters
+			dst : data source , data type, data source , data type
+			nbins : num of bins
+		"""
+		assertEqual(len(dst), 4, "invalid data source and data type list size")
+		dtypes = ["num", "cat"]
+		assertInList(dst[1], dtypes, "invalid data type")
+		assertInList(dst[3], dtypes, "invalid data type")
+		self.__printBanner("getting mutual information of any mix numerical and categorical data", dst[0], dst[2])
+		
+		if dst[1] == "num":
+			mutInfo = self.getAllNumMutualInfo(dst[0], dst[2], nbins)["mutInfo"] if dst[3] == "num" \
+			else self.getNumCatMutualInfo(dst[0], dst[2], nbins)["mutInfo"]
+		else:
+			mutInfo = self.getNumCatMutualInfo(dst[2], dst[0], nbins)["mutInfo"] if dst[3] == "num" \
+			else self.getTwoCatMutualInfo(dst[2], dst[0])["mutInfo"]
+		
+		result = self.__printResult("mutInfo", mutInfo)
+		return result
+
+
+	def getCondMutualInfo(self, dst, nbins=10):
+		"""
+		get conditional  mutiual information between 2 data sets,any vombination numerical and categorical
+		
+		Parameters
+			dst : data source , data type, data source , data type, data source , data type
+			nbins : num of bins
+		"""
+		assertEqual(len(dst), 6, "invalid data source and data type list size")
+		dtypes = ["num", "cat"]
+		assertInList(dst[1], dtypes, "invalid data type")
+		assertInList(dst[3], dtypes, "invalid data type")
+		assertInList(dst[5], dtypes, "invalid data type")
+		self.__printBanner("getting conditional mutual information of any mix numerical and categorical data", dst[0], dst[2])
+		
+		if dst[5] == "cat":
+			cdistr = self.getStatsCat(dst[4])["distr"]
+			grdata1 = self.getGroupByData(dst[0], dst[4])["groupedData"]
+			grdata2 = self.getGroupByData(dst[2], dst[4])["groupedData"]
+			
+			cminfo = 0
+			for gr in grdata1.keys():
+				data1 = grdata1[gr]
+				data2 = grdata2[gr]
+				if dst[1] == "num":
+					self.addListNumericData(data1, "grdata1")
+				else:
+					self.addListCatData(data1, "grdata1")
+					
+				if dst[3] == "num":
+					self.addListNumericData(data2, "grdata2")
+				else:
+					self.addListCatData(data2, "grdata2")
+				gdst = ["grdata1", dst[1], "grdata2", dst[3]]
+				minfo = self.getMutualInfo(gdst, nbins)["mutInfo"] 
+				cminfo += minfo * cdistr[gr]
+		else:
+			exitWithMsg("mumerical group by not supported")
+		
+		result = self.__printResult("condMutInfo", cminfo)
+		return result
+			
 		
 	def getPercentile(self, ds, value):
 		"""
@@ -2604,14 +2674,7 @@ class DataExplorer:
 					if ds in relevancies:
 						mutInfo = relevancies[ds]
 					else:
-						if tdst[1] == "num":
-							#regression problem
-							mutInfo = self.getMutualInfo(ds, tdst[0], nbins)["mutInfo"] if dt == "num" \
-							else self.getNumCatMutualInfo(tdst[0], ds, nbins)["mutInfo"]
-						else:
-							#classification problem
-							mutInfo = self.getNumCatMutualInfo(ds, tdst[0], nbins)["mutInfo"] if dt == "num" \
-							else self.getTwoCatMutualInfo(ds, tdst[0])["mutInfo"]
+						mutInfo = self.getMutualInfo([ds, dt,  tdst[0], tdst[1]], nbins)["mutInfo"]
 						relevancies[ds] = mutInfo
 					relev = mutInfo
 					#print("relev", relev)
@@ -2620,12 +2683,7 @@ class DataExplorer:
 					smi = 0
 					for sds, sdt, _ in sfds:
 						#print(sds, sdt)
-						if dt == "num":
-							mutInfo = self.getMutualInfo(ds, sds, nbins)["mutInfo"] if sdt == "num" \
-							else self.getNumCatMutualInfo(ds, sds, nbins)["mutInfo"]
-						else:
-							mutInfo = self.getNumCatMutualInfo(sds, ds, nbins)["mutInfo"] if  sdt == "num" \
-							else self.getTwoCatMutualInfo(ds, sds)["mutInfo"]
+						mutInfo = self.getMutualInfo([ds, dt,  sds, sdt], nbins)["mutInfo"]
 						smi += mutInfo
 					
 					redun = smi / len(sfds) if len(sfds) > 0 else 0

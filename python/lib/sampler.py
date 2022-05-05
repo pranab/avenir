@@ -24,7 +24,6 @@ import numpy as np
 from scipy import stats
 from random import randint
 from util import *
-
 from stats import Histogram
 
 def randomFloat(low, high):
@@ -1275,6 +1274,46 @@ class SpikeyDataSampler:
 
 		return sampled
 
+
+class EventSampler:
+	"""
+	sample event
+	"""
+	def __init__(self, intvSampler, valSampler=None):
+		"""
+		initializer
+		
+		Parameters
+			intvSampler : interval sampler
+			valSampler : value sampler
+		"""
+		self.intvSampler = intvSampler
+		self.valSampler = valSampler
+		self.trigger = int(self.intvSampler.sample())
+		self.count = 0
+	
+	def reset(self):
+		"""
+		reset trigger
+		"""
+		self.trigger = int(self.intvSampler.sample())
+		self.count = 0
+		
+	def sample(self):
+		"""
+		sample event
+		"""
+		if self.count == self.trigger:
+			sampled = self.valSampler.sample() if self.valSampler is not None else 1.0
+			self.trigger = int(self.intvSampler.sample())
+			self.count = 0
+		else:
+			sample = 0.0
+			self.count += 1
+		return sampled
+			
+			
+		
 
 def createSampler(data):
 	"""
