@@ -247,14 +247,25 @@ class MonteCarloSimulator(object):
 	
 	def registerEventSampler(self, intvSampler, valSampler=None):
 		"""
-		custom sampler
+		event sampler
 		
-		Parameters
 		Parameters
 			intvSampler : interval sampler
 			valSampler : value sampler
 		"""
 		self.samplers.append(EventSampler(intvSampler, valSampler))
+
+	def registerMetropolitanSampler(self, propStdDev, minv, binWidth, values):
+		"""
+		metropolitan sampler
+		
+		Parameters
+			propStdDev : proposal distr std dev
+			minv : min domain value for target distr
+			binWidth : bin width
+			values : target distr values
+		"""
+		self.samplers.append(MetropolitanSampler(propStdDev, minv, binWidth, values))
 
 	def setSampler(self, var, iter, sampler):
 		"""

@@ -59,6 +59,26 @@ class Histogram:
 		instance.ymin = 0.0
 		instance.ymax = instance.fmax
 		return instance
+
+	@classmethod
+	def createWithNumBins(cls, values, numBins=20):
+		"""
+    	create histogram instance
+    	
+		Parameters
+			values : y values
+			numBins : no of bins
+		"""
+		xmin = min(values)
+		xmax = max(values)
+		binWidth = (xmax + .01 - (xmin - .01)) / numBins
+		instance = cls(minx, binWidth)
+		instance.xmax = xmax
+		instance.numBin = numBins
+		instance.bins = np.zeros(instance.numBin)
+		for v in values:
+			self.add(v)
+		return instance
 	
 	@classmethod
 	def createUninitialized(cls, min, max, binWidth):
@@ -142,6 +162,15 @@ class Histogram:
 		bin = int((x - self.xmin) / self.binWidth)
 		f = self.bins[bin]
 		return f
+
+	def bin(self, x):
+		"""
+    	return a bin index	
+     	
+		Parameters
+			x : x value
+   		"""
+		return int((x - self.xmin) / self.binWidth)
 	
 	def cumValue(self, x):
 		"""
