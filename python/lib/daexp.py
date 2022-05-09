@@ -688,7 +688,7 @@ class DataExplorer:
 		return result
 
 
-	def getEntropy(self, ds,  nbins=10):
+	def getEntropy(self, ds,  nbins=20):
 		"""
 		get entropy
 		
@@ -703,7 +703,7 @@ class DataExplorer:
 		result = self.__printResult("entropy", entropy)
 		return result
 
-	def getRelEntropy(self, ds1,  ds2, nbins=10):
+	def getRelEntropy(self, ds1,  ds2, nbins=20):
 		"""
 		get relative entropy or KL divergence
 		
@@ -723,7 +723,7 @@ class DataExplorer:
 		result = self.__printResult("relEntropy", entropy)
 		return result
 
-	def getAllNumMutualInfo(self, ds1,  ds2, nbins=10):
+	def getAllNumMutualInfo(self, ds1,  ds2, nbins=20):
 		"""
 		get mutual information for both numeric data
 		
@@ -746,7 +746,7 @@ class DataExplorer:
 		return result
 
 
-	def getNumCatMutualInfo(self, nds, cds ,nbins=10):
+	def getNumCatMutualInfo(self, nds, cds ,nbins=20):
 		"""
 		get mutiual information between numeric and categorical data
 		
@@ -762,7 +762,7 @@ class DataExplorer:
 		
 		#conditional entropy
 		cdistr = self.getStatsCat(cds)["distr"]
-		grdata = self.getGroupByData(nds, cds)["groupedData"]
+		grdata = self.getGroupByData(nds, cds, True)["groupedData"]
 		cnentr = 0
 		for gr, data in grdata.items():
 			self.addListNumericData(data, "grdata")	
@@ -788,7 +788,7 @@ class DataExplorer:
 		
 		#conditional entropy
 		cdistr = self.getStatsCat(cds2)["distr"]
-		grdata = self.getGroupByData(cds1, cds2)["groupedData"]
+		grdata = self.getGroupByData(cds1, cds2, True)["groupedData"]
 		ccentr = 0
 		for gr, data in grdata.items():
 			self.addListCatData(data, "grdata")	
@@ -799,7 +799,7 @@ class DataExplorer:
 		result = self.__printResult("mutInfo", mutInfo, "entropy", centr, "condEntropy", ccentr)
 		return result
 
-	def getMutualInfo(self, dst, nbins=10):
+	def getMutualInfo(self, dst, nbins=20):
 		"""
 		get mutiual information between 2 data sets,any vombination numerical and categorical
 		
@@ -824,7 +824,7 @@ class DataExplorer:
 		return result
 
 
-	def getCondMutualInfo(self, dst, nbins=10):
+	def getCondMutualInfo(self, dst, nbins=20):
 		"""
 		get conditional  mutiual information between 2 data sets,any vombination numerical and categorical
 		
@@ -841,31 +841,36 @@ class DataExplorer:
 		
 		if dst[5] == "cat":
 			cdistr = self.getStatsCat(dst[4])["distr"]
-			grdata1 = self.getGroupByData(dst[0], dst[4])["groupedData"]
-			grdata2 = self.getGroupByData(dst[2], dst[4])["groupedData"]
+			grdata1 = self.getGroupByData(dst[0], dst[4], True)["groupedData"]
+			grdata2 = self.getGroupByData(dst[2], dst[4], True)["groupedData"]
 			
-			cminfo = 0
-			for gr in grdata1.keys():
-				data1 = grdata1[gr]
-				data2 = grdata2[gr]
-				if dst[1] == "num":
-					self.addListNumericData(data1, "grdata1")
-				else:
-					self.addListCatData(data1, "grdata1")
-					
-				if dst[3] == "num":
-					self.addListNumericData(data2, "grdata2")
-				else:
-					self.addListCatData(data2, "grdata2")
-				gdst = ["grdata1", dst[1], "grdata2", dst[3]]
-				minfo = self.getMutualInfo(gdst, nbins)["mutInfo"] 
-				cminfo += minfo * cdistr[gr]
 		else:
-			exitWithMsg("mumerical group by not supported")
+			gdata = self.getNumericData(dst[4])
+			hist = Histogram.createWithNumBins(gdata, nbins)
+			cdistr = hist.distr()
+			grdata1 = self.getGroupByData(dst[0], dst[4], False)["groupedData"]
+			grdata2 = self.getGroupByData(dst[2], dst[4], False)["groupedData"]
+
+
+		cminfo = 0
+		for gr in grdata1.keys():
+			data1 = grdata1[gr]
+			data2 = grdata2[gr]
+			if dst[1] == "num":
+				self.addListNumericData(data1, "grdata1")
+			else:
+				self.addListCatData(data1, "grdata1")
+					
+			if dst[3] == "num":
+				self.addListNumericData(data2, "grdata2")
+			else:
+				self.addListCatData(data2, "grdata2")
+			gdst = ["grdata1", dst[1], "grdata2", dst[3]]
+			minfo = self.getMutualInfo(gdst, nbins)["mutInfo"] 
+			cminfo += minfo * cdistr[gr]
 		
 		result = self.__printResult("condMutInfo", cminfo)
 		return result
-			
 		
 	def getPercentile(self, ds, value):
 		"""
@@ -1223,22 +1228,29 @@ class DataExplorer:
 		return result
 		
 
-	def getGroupByData(self, ds, gds):
+	def getGroupByData(self, ds, gds, gdtypeCat, numBins=20):
 		"""
 		group by 
 
 		Parameters
 			ds: data set name or list or numpy array
 			gds: group by data set name or list or numpy array
+			gdtpe : group by data type
 		"""
 		self.__printBanner("getting group by data", ds)
 		data = self.getAnyData(ds)
-		gdata = self.getCatData(gds)
+		if gdtypeCat:
+			gdata = self.getCatData(gds)
+		else:
+			gdata = self.getNumericData(gds)
+			hist = Histogram.createWithNumBins(gdata, numBins)
+			gdata = list(map(lambda d : hist.bin(d), gdata))
+			
 		self.ensureSameSize([data, gdata])
 		groups = dict()
 		for g,d in zip(gdata, data):
 			appendKeyedList(groups, g, d)
-			
+				
 		ve = self.verbose 
 		self.verbose = False
 		result = self.__printResult("groupedData", groups)
@@ -2631,7 +2643,7 @@ class DataExplorer:
 		result = self.__printResult("stat", stat, "normalizedStat", nstat)
 		return result
 	
-	def getMaxRelMinRedFeatures(self, fdst, tdst, nfeatures, nbins=10):
+	def getMaxRelMinRedFeatures(self, fdst, tdst, nfeatures, nbins=20):
 		"""
 		get top n features based on max relevance and min redudancy	algorithm
 		
