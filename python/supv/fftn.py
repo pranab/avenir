@@ -43,18 +43,19 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 		defValues = dict()
 		defValues["train.twin.data.feat.count"] = (None, "missing training data feature count")
 		defValues["train.twin.final.layer.size"] = (None, "missing final layer size")
+		defValues["train.twin.crossenc"] = (False, None)
 		super(FeedForwardTwinNetwork, self).__init__(configFile, defValues)
 
 	def buildModel(self):
 		"""
     	Loads configuration and builds the various piecess necessary for the model
 		"""
-		super().buildModel(self)
+		super().buildModel()
 		
 		#final fully connected after merge
 		finSize = self.config.getIntConfig("train.twin.final.layer.size")[0]
 		self.fcOut = torch.nn.Linear(finSize, 1)
-		
+		self.crossEnc =  self.config.getBooleanConfig("train.twin.crossenc")[0]
 
 	def forward(self, x1, x2):
 		"""
@@ -62,7 +63,10 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 		"""
 		y1 = self.layers(x1)	
 		y2 = self.layers(x2)
-		y = torch.abs(y1 - y2)	
+		if self.crossEnc:
+			y = torch.cat((y1, y2), 1)
+		else:
+			y = torch.abs(y1 - y2)	
 		y = self.fcOut(y)
 		return y
 		
@@ -92,7 +96,7 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 			for xOneBatch, xTwoBatch, yBatch in trainDataLoader:
 	
 				# Forward pass: Compute predicted y by passing x to the model
-				yPred = model(fcOut, xTwoBatch)
+				yPred = model(xOneBatch, xTwoBatch)
 				
 				# Compute and print loss
 				loss = model.lossFn(yPred, yBatch)
@@ -145,13 +149,7 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 			FeedForwardNetwork.saveCheckpt(model)
 
 		if model.trackErr:
-			x = np.arange(len(trErr))
-			plt.plot(x,trErr,label = "training error")
-			plt.plot(x,vaErr,label = "validation error")
-			plt.xlabel("iteration")
-			plt.ylabel("error")
-			plt.legend(["training error", "validation error"], loc='upper left')
-			plt.show()
+			FeedForwardNetwork.errorPlot(model, trErr, vaErr)
 			
 		return score
 		
