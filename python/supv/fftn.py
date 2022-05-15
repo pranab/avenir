@@ -41,8 +41,6 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 	"""
 	def __init__(self, configFile):
 		defValues = dict()
-		defValues["train.twin.data.feat.count"] = (None, "missing training data feature count")
-		defValues["train.twin.final.layer.size"] = (None, "missing final layer size")
 		defValues["train.twin.crossenc"] = (False, None)
 		super(FeedForwardTwinNetwork, self).__init__(configFile, defValues)
 
@@ -53,9 +51,14 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 		super().buildModel()
 		
 		#final fully connected after merge
-		finSize = self.config.getIntConfig("train.twin.final.layer.size")[0]
-		self.fcOut = torch.nn.Linear(finSize, 1)
 		self.crossEnc =  self.config.getBooleanConfig("train.twin.crossenc")[0]
+		finLayer =  self.config.getStringConfig("train.layer.data")[0].split(",")[-1]
+		finSize = int(finLayer.split(":")[0])
+		self.fcOut = torch.nn.Linear(2 * finSize, 1) if self.crossEnc else torch.nn.Linear(finSize, 1)
+			
+		feCount = self.config.getIntConfig("train.input.size")[0]
+		self.vaFeOne = self.validFeatData[:,:feCount]
+		self.vaFeTwo = self.validFeatData[:,feCount:]
 
 	def forward(self, x1, x2):
 		"""
@@ -75,9 +78,11 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 		"""
 		train with batch data
 		"""
-		feCount = model.config.getIntConfig("train.data.feat.count")[0]
+		feCount = model.config.getIntConfig("train.input.size")[0]
 		feOne = model.featData[:,:feCount]
 		feTwo = model.featData[:,feCount:]
+		print(feOne.shape)
+		print(feTwo.shape)
 		trainData = TensorDataset(feOne, feTwo, model.outData)
 		trainDataLoader = DataLoader(dataset=trainData, batch_size=model.batchSize, shuffle=True)
 		epochIntv = model.config.getIntConfig("train.epoch.intv")[0]
@@ -109,7 +114,7 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 				#error tracking at batch level
 				if model.trackErr and model.batchIntv > 0 and b % model.batchIntv == 0:
 					trErr.append(loss.item())
-					vloss = FeedForwardNetwork.evaluateModel(model)
+					vloss = FeedForwardTwinNetwork.evaluateModel(model)
 					vaErr.append(vloss)
 
 				# Zero gradients, perform a backward pass, and update the weights.
@@ -122,16 +127,14 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 			if model.trackErr and model.batchIntv == 0:
 				epochLoss /= len(trainDataLoader)
 				trErr.append(epochLoss)
-				vloss = FeedForwardNetwork.evaluateModel(model)
+				vloss = FeedForwardTwinNetwork.evaluateModel(model)
 				vaErr.append(vloss)
 			
 		#validate
 		model.eval()
-		vaFeOne = model.validFeatData[:,:feCount]
-		vaFeTwo = model.validFeatData[:,feCount:]
-		yPred = model(vaFeOne, vaFeTwo)
+		yPred = model(model.vaFeOne, model.vaFeTwo)
 		yPred = yPred.data.cpu().numpy()
-		yActual = model.validOutData
+		yActual = model.validOutData.data.cpu().numpy()
 		if model.verbose:
 			vsize = yPred.shape[0]
 			print("\npredicted \t\t actual")
@@ -153,6 +156,24 @@ class FeedForwardTwinNetwork(FeedForwardNetwork):
 			
 		return score
 		
+		
+	@staticmethod
+	def evaluateModel(model):
+		"""
+		evaluate model
+		
+		Parameters
+			model : torch model
+		"""
+		model.eval()
+		with torch.no_grad():
+			yPred = model(model.vaFeOne, model.vaFeTwo)
+			#yPred = yPred.data.cpu().numpy()
+			yActual = model.validOutData
+			score = model.lossFn(yPred, yActual).item()
+		model.train()
+		return score
+
 		
 
 		
