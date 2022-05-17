@@ -32,6 +32,7 @@ from util import *
 from sampler import *
 from tnn import *
 from daexp import *
+from fftn import *
 
 """
 column type idenification
@@ -57,6 +58,15 @@ def getStats(expl, ds):
 	spsd = 	 stats["std dev"]
 	
 	return [lmean, lsd, acmean, acsd, ncmean, ncsd, spmean, spsd]	
+
+def sampRecOfClass(tdata, cl):
+	"""
+	sample rec of given class
+	"""
+	r = selectRandomFromList(tdata)
+	while r[-1] != cl:
+		r = selectRandomFromList(tdata)
+	return r
 	
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -68,7 +78,8 @@ if __name__ == "__main__":
 	parser.add_argument('--fncnt', type=int, default = 1000, help = "file name counter")
 	parser.add_argument('--sfdir', type=str, default = "none", help = "sample file directory")
 	parser.add_argument('--cfpath', type=str, default = "none", help = "column features file path")
-	parser.add_argument('--npair', type=int, default = 2, help = "positive and negative no of pairs")
+	parser.add_argument('--nrepl', type=int, default = 2, help = "no of replicationns")
+	parser.add_argument('--mlfpath', type=str, default = "none", help = "ml config file path")
 	args = parser.parse_args()
 	op = args.op
 	
@@ -77,7 +88,7 @@ if __name__ == "__main__":
 		fpath = args.fpath
 		tdata = getFileLines(fpath)
 		for i in range(args.nsamp):
-			sfpath = args.sfdir + "/" +  args.sfpref + "-" + str(args.fncnt + i) + ".txt"
+			sfpath = args.sfdir + "/" +  args.sfpref + "_" + str(args.fncnt + i) + ".txt"
 			with open(sfpath, "w") as fh:
 				for j in range(args.ssize):
 					rec = selectRandomFromList(tdata)[:3]
@@ -93,6 +104,7 @@ if __name__ == "__main__":
 		sfpaths = getAllFiles(args.sfdir)
 		expl = DataExplorer(False)
 		for sfp in 	sfpaths:
+			#print(sfp)
 			names = list()
 			addressses = list()
 			cities = list()
@@ -118,7 +130,7 @@ if __name__ == "__main__":
 		le = len(tdata)
 		for i in range(le):
 			r1 = tdata[i]
-			cp, cn = args.npair, args.npair
+			cp, cn = args.nrepl, args.nrepl
 			while cp > 0 or cn > 0:
 				j = randint(0, le - 1)
 				while j == i:
@@ -144,4 +156,77 @@ if __name__ == "__main__":
 						r.append("0")
 						cn -= 1
 						print(",".join(r))
+						
+	elif op == "ctriplet":
+		""" create col triplet """
+		tdata = getFileLines(args.cfpath)
+		le = len(tdata)
+		for i in range(le):
+			r1 = tdata[i]
+			for j in range(args.nrepl):
+				pr = None
+				nr = None
+				while pr is None or nr is None:
+					k = randint(0, le - 1)
+					while k == i:
+						k = randint(0, le - 1)
+					r2 = tdata[k]
+					if r1[-1] == r2[-1]:
+						if pr is None: 
+							pr = r2[:-1].copy()
+					else:
+						if nr is None: 
+							nr = r2[:-1].copy()
+				
+				r = r1[:-1].copy()
+				r.extend(pr)
+				r.extend(nr)
+				r.append("0")
+				print(",".join(r))
 					
+	elif op == "gtest":
+		""" create test data """
+		fpaths = args.cfpath.split(",")
+		vtdata = getFileLines(fpaths[0])
+		ttdata = getFileLines(fpaths[1])
+		
+		#one for each class
+		classes = ["N", "A", "C"]
+		for vr  in vtdata:
+			cl = vr[-1]
+			
+			rn = list()
+			ra = list()
+			rc = list()
+			allr = {"N" : rn, "A" : ra, "C" : rc}
+			while len(rn) < 2 or len(ra) < 2 or len(rc) < 2:
+				tr = selectRandomFromList(ttdata)
+				tcl = tr[-1]
+				allr[tcl].append(tr[:-1].copy())
+			
+			#pos prototype	
+			r = vr[:-1].copy()
+			r.extend(allr[cl][0])
+			r.extend(allr[cl][1])
+			r.append("0")
+			print(",".join(r))
+			
+			#negative protyples
+			for c in classes:
+				if c != cl:
+					r = vr[:-1].copy()
+					r.extend(allr[c][0])
+					r.extend(allr[c][1])
+					r.append("0")
+					print(",".join(r))
+				
+			
+	elif op == "train":
+		mod = FeedForwardTwinNetwork(args.mlfpath)
+		mod.buildModel()
+		FeedForwardTwinNetwork.batchTrain(mod)
+		
+	elif op == "test":
+		mod = FeedForwardTwinNetwork(args.mlfpath)
+		mod.buildModel()
+		FeedForwardTwinNetwork.testModel(mod)
