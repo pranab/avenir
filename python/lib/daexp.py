@@ -801,7 +801,7 @@ class DataExplorer:
 
 	def getMutualInfo(self, dst, nbins=20):
 		"""
-		get mutiual information between 2 data sets,any vombination numerical and categorical
+		get mutiual information between 2 data sets,any combination numerical and categorical
 		
 		Parameters
 			dst : data source , data type, data source , data type
@@ -826,7 +826,7 @@ class DataExplorer:
 
 	def getCondMutualInfo(self, dst, nbins=20):
 		"""
-		get conditional  mutiual information between 2 data sets,any vombination numerical and categorical
+		get conditional  mutiual information between 2 data sets,any combination numerical and categorical
 		
 		Parameters
 			dst : data source , data type, data source , data type, data source , data type
@@ -2653,6 +2653,57 @@ class DataExplorer:
 			nfeatures : desired no of features
 			nbins : no of bins for numerical data
 		"""	
+		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "mrmr", nbins)	
+
+	def getJointMutInfoFeatures(self, fdst, tdst, nfeatures, nbins=20):
+		"""
+		get top n features based on joint mutual infoormation	algorithm
+		
+		Parameters
+			fdst: list of pair of data set name or list or numpy array and data type
+			tdst: target data set name or list or numpy array and data type (cat for classification num for regression)
+			nfeatures : desired no of features
+			nbins : no of bins for numerical data
+		"""	
+		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "jmi", nbins)
+		
+	def getCondMutInfoMaxFeatures(self, fdst, tdst, nfeatures, nbins=20):
+		"""
+		get top n features based on condition mutual information maximization algorithm
+		
+		Parameters
+			fdst: list of pair of data set name or list or numpy array and data type
+			tdst: target data set name or list or numpy array and data type (cat for classification num for regression)
+			nfeatures : desired no of features
+			nbins : no of bins for numerical data
+		"""	
+		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "cmim", nbins)
+
+	def getInteractCapFeatures(self, fdst, tdst, nfeatures, nbins=20):
+		"""
+		get top n features based on interaction capping algorithm
+		
+		Parameters
+			fdst: list of pair of data set name or list or numpy array and data type
+			tdst: target data set name or list or numpy array and data type (cat for classification num for regression)
+			nfeatures : desired no of features
+			nbins : no of bins for numerical data
+		"""	
+		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "icap", nbins)
+
+	def getMutInfoFeatures(self, fdst, tdst, nfeatures, algo, nbins=20):
+		"""
+		get top n features based on various mutual information	based algorithm
+		ref: Conditional ikelihood maximisation : A unifying framework for information 
+		theoretic feature selection
+		
+		Parameters
+			fdst: list of pair of data set name or list or numpy array and data type
+			tdst: target data set name or list or numpy array and data type (cat for classification num for regression)
+			nfeatures : desired no of features
+			algo: mi based feature selection algorithm
+			nbins : no of bins for numerical data
+		"""	
 		#verify data source types types
 		le = len(fdst)
 		nfeatGiven = int(le / 2)
@@ -2666,6 +2717,8 @@ class DataExplorer:
 			data = self.getNumericData(ds) if dt == "num" else self.getCatData(ds)
 			p =(ds, dt)
 			fds.append(p)
+		algos = ["mrmr", "jmi", "cmim", "icap"]
+		assertInList(algo, algos, "invalid feature selection algo " + algo)
 		
 		assertInList(tdst[1], types, "invalid type for data source " + tdst[1])
 		data = self.getNumericData(tdst[0]) if tdst[1] == "num" else self.getCatData(tdst[0])
@@ -2693,12 +2746,22 @@ class DataExplorer:
 					
 					#redundancy
 					smi = 0
+					reds = list()
 					for sds, sdt, _ in sfds:
 						#print(sds, sdt)
 						mutInfo = self.getMutualInfo([ds, dt,  sds, sdt], nbins)["mutInfo"]
-						smi += mutInfo
-					
-					redun = smi / len(sfds) if len(sfds) > 0 else 0
+						mutInfoCnd = self.getCondMutualInfo([ds, dt,  sds, sdt, tdst[0], tdst[1]], nbins)["condMutInfo"] \
+						if algo != "mrmr" else 0
+						
+						red = mutInfo - mutInfoCnd
+						reds.append(red)	
+						
+					if algo == "mrmr" or algo == "jmi":
+						redun = sum(reds) / len(sfds) if len(sfds) > 0 else 0
+					elif algo == "cmim" or algo == "icap":
+						redun = max(reds) if len(sfds) > 0 else 0
+						if algo == "icap":
+							redun = max(0, redun)
 					#print("redun", redun)
 					score = relev - redun
 					if scorem is None or score > scorem:
