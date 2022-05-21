@@ -81,6 +81,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		defValues["train.data.feature.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.data.out.fields"] = (None, "missing training data feature field ordinals")
 		defValues["train.layer.data"] = (None, "missing layer data")
+		defValues["train.input.size"] = (None, None)
 		defValues["train.output.size"] = (None, "missing  output size")
 		defValues["train.batch.size"] = (10, None)
 		defValues["train.loss.reduction"] = ("mean", None)
@@ -140,7 +141,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		torch.manual_seed(9999)
 
 		self.verbose = self.config.getBooleanConfig("common.verbose")[0]
-		numinp = len(self.config.getIntListConfig("train.data.feature.fields")[0])
+		numinp = self.config.getIntConfig("train.input.size")[0]
+		if numinp is None:
+			numinp = len(self.config.getIntListConfig("train.data.feature.fields")[0])
 		#numOut = len(self.config.getStringConfig("train.data.out.fields")[0].split(","))
 		self.outputSize = self.config.getIntConfig("train.output.size")[0]
 		self.batchSize = self.config.getIntConfig("train.batch.size")[0]
@@ -190,6 +193,8 @@ class FeedForwardNetwork(torch.nn.Module):
 			
 		self.layers = torch.nn.Sequential(*layers)	
 		
+		self.device = FeedForwardNetwork.getDevice(self)
+		
 		#training data
 		dataFile = self.config.getStringConfig("train.data.file")[0]
 		(featData, outData) = FeedForwardNetwork.prepData(self, dataFile)
@@ -200,7 +205,7 @@ class FeedForwardNetwork(torch.nn.Module):
 		dataFile = self.config.getStringConfig("valid.data.file")[0]
 		(featDataV, outDataV) = FeedForwardNetwork.prepData(self, dataFile)
 		self.validFeatData = torch.from_numpy(featDataV)
-		self.validOutData = outDataV
+		self.validOutData = torch.from_numpy(outDataV)
 
 		# loss function and optimizer
 		self.lossFn = FeedForwardNetwork.createLossFunction(self, self.lossFnStr)
@@ -721,9 +726,9 @@ class FeedForwardNetwork(torch.nn.Module):
 		model.eval()
 		with torch.no_grad():
 			yPred = model(model.validFeatData)
-			yPred = yPred.data.cpu().numpy()
+			#yPred = yPred.data.cpu().numpy()
 			yActual = model.validOutData
-			score = perfMetric(model.lossFnStr, yActual, yPred, model.clabels)
+			score = model.lossFn(yPred, yActual).item()
 		model.train()
 		return score
     	
