@@ -1,6 +1,5 @@
 #!/usr/local/bin/python3
 
-# avenir-python: Machine Learning
 # Author: Pranab Ghosh
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); you

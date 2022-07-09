@@ -1,6 +1,5 @@
 #!/usr/local/bin/python3
 
-# avenir-python: Machine Learning
 # Author: Pranab Ghosh
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1165,7 +1164,7 @@ class DataExplorer:
 
 	def getCatCharCountStats(self, ds, ch):
 		"""
-		gets field length stats
+		gets specified char ocuurence count stats
 		
 		Parameters
 			ds: data set name or list or numpy array
@@ -2653,6 +2652,7 @@ class DataExplorer:
 			nfeatures : desired no of features
 			nbins : no of bins for numerical data
 		"""	
+		self.__printBanner("doing max relevance min redundancy feature selection")
 		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "mrmr", nbins)	
 
 	def getJointMutInfoFeatures(self, fdst, tdst, nfeatures, nbins=20):
@@ -2665,6 +2665,7 @@ class DataExplorer:
 			nfeatures : desired no of features
 			nbins : no of bins for numerical data
 		"""	
+		self.__printBanner("doingjoint mutual info feature selection")
 		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "jmi", nbins)
 		
 	def getCondMutInfoMaxFeatures(self, fdst, tdst, nfeatures, nbins=20):
@@ -2677,6 +2678,7 @@ class DataExplorer:
 			nfeatures : desired no of features
 			nbins : no of bins for numerical data
 		"""	
+		self.__printBanner("doing conditional mutual info max feature selection")
 		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "cmim", nbins)
 
 	def getInteractCapFeatures(self, fdst, tdst, nfeatures, nbins=20):
@@ -2689,13 +2691,14 @@ class DataExplorer:
 			nfeatures : desired no of features
 			nbins : no of bins for numerical data
 		"""	
+		self.__printBanner("doing interaction capped feature selection")
 		return self.getMutInfoFeatures(fdst, tdst, nfeatures, "icap", nbins)
 
 	def getMutInfoFeatures(self, fdst, tdst, nfeatures, algo, nbins=20):
 		"""
 		get top n features based on various mutual information	based algorithm
 		ref: Conditional ikelihood maximisation : A unifying framework for information 
-		theoretic feature selection
+		theoretic feature selection, Gavin Brown
 		
 		Parameters
 			fdst: list of pair of data set name or list or numpy array and data type

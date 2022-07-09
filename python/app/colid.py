@@ -30,8 +30,8 @@ sys.path.append(os.path.abspath("../mlextra"))
 from mlutil import *
 from util import *
 from sampler import *
-from tnn import *
 from daexp import *
+from tnn import *
 from fftn import *
 
 """
@@ -222,11 +222,14 @@ if __name__ == "__main__":
 				
 			
 	elif op == "train":
-		mod = FeedForwardTwinNetwork(args.mlfpath)
+		mod = FeedForwardMultiNetwork(args.mlfpath)
 		mod.buildModel()
-		FeedForwardTwinNetwork.batchTrain(mod)
+		FeedForwardMultiNetwork.batchTrain(mod)
 		
 	elif op == "test":
-		mod = FeedForwardTwinNetwork(args.mlfpath)
+		mod = FeedForwardMultiNetwork(args.mlfpath)
 		mod.buildModel()
-		FeedForwardTwinNetwork.testModel(mod)
+		FeedForwardMultiNetwork.testModel(mod)
+
+	else:
+		exitWithMsg("invalid command")
