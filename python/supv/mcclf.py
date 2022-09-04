@@ -73,22 +73,23 @@ class MarkovChainClassifier():
 			cl = rec[klen]
 			rlen = len(rec)
 			for i in range(klen+1, rlen-1, 1):
-				fst = self.states.index(rec[1])
+				fst = self.states.index(rec[i])
 				tst = self.states.index(rec[i+1])
 				self.stTranPr[cl][fst][tst] += 1
 		
 		#normalize to probability
 		for cl in self.clabels:
 			stp = self.stTranPr[cl]
-			for r in stp:
-				s = r.sum()
-				r = r / s		
+			for i in range(self.nstates):
+				s = stp[i].sum()
+				r = stp[i] / s
+				stp[i] = r
 		
 		#save		
 		if 	self.config.getBooleanConfig("train.model.save")[0]:
-			mdPath = model.config.getStringConfig("common.model.directory")[0]
+			mdPath = self.config.getStringConfig("common.model.directory")[0]
 			assert os.path.exists(mdPath), "model save directory does not exist"
-			mfPath = model.config.getStringConfig("common.model.file")[0]
+			mfPath = self.config.getStringConfig("common.model.file")[0]
 			mfPath = os.path.join(mdPath, mfPath)
 
 			with open(mfPath, "w") as fh:
@@ -103,7 +104,7 @@ class MarkovChainClassifier():
 		"""
 		predict using  model
 		"""	
-		useSavedModel = model.config.getBooleanConfig("predict.use.saved.model")[0]
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if useSavedModel:
 			self.restoreModel()
 		else:
@@ -114,6 +115,7 @@ class MarkovChainClassifier():
 		pc = self.clabels[0]
 		nc = self.clabels[1]
 		thold = self.config.getFloatConfig("predict.log.odds.threshold")[0]
+		klen = self.config.getIntConfig("train.data.key.len")[0]
 		for rec in fileRecGen(pdfPath):
 			lodds = 0
 			rlen = len(rec)
@@ -130,9 +132,9 @@ class MarkovChainClassifier():
 		"""
 		restore model
 		"""
-		mdPath = model.config.getStringConfig("common.model.directory")[0]
+		mdPath = self.config.getStringConfig("common.model.directory")[0]
 		assert os.path.exists(mdPath), "model save directory does not exist"
-		mfPath = model.config.getStringConfig("common.model.file")[0]
+		mfPath = self.config.getStringConfig("common.model.file")[0]
 		mfPath = os.path.join(mdPath, mfPath)
 		stp = None
 		cl = None
@@ -147,6 +149,8 @@ class MarkovChainClassifier():
 				frec = asFloatList(rec)
 				stp.append(frec)
 				
+		stp = np.array(stp)
+		self.stTranPr[cl] = stp
 				
 			
 		

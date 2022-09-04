@@ -1,13 +1,28 @@
-#!/usr/bin/python
+#!/usr/local/bin/python3
+
+# Author: Pranab Ghosh
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License. You may
+# obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0 
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import os
 import sys
 from random import randint
 import time
 import uuid
-sys.path.append(os.path.abspath("../lib"))
-from util import *
-
+import argparse
+sys.path.append(os.path.abspath("../supv"))
+from matumizi.util import *
+from mcclf import *
 
 def  genVisitHistory(numUsers, convRate, label):
 	for i in range(numUsers):
@@ -76,14 +91,32 @@ def  genVisitHistory(numUsers, convRate, label):
 				sessSummary = elapsed + duration
 				userSess.append(sessSummary)
 
-		print ",".join(userSess)
+		print(",".join(userSess))
 				 
-
-numUsers = int(sys.argv[1])
-convRate = int(sys.argv[2])
-label = False
-if (len(sys.argv) == 4):
-	label = sys.argv[3] == "label"
-genVisitHistory(numUsers, convRate, label)
-
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--op', type=str, default = "none", help = "operation")
+	parser.add_argument('--nuser', type=int, default = 100, help = "num of users")
+	parser.add_argument('--crate', type=int, default = 10, help = "concersion rate")
+	parser.add_argument('--label', type=str, default = "false", help = "whether to add label")
+	parser.add_argument('--mlfpath', type=str, default = "false", help = "ml config file")
+	args = parser.parse_args()
+	op = args.op
 	
+	if op == "gen":	
+		numUsers = args.nuser
+		convRate = args.crate
+		
+		label = args.label == "true"
+		genVisitHistory(numUsers, convRate, label)
+		
+	elif op == "train":
+		model = MarkovChainClassifier(args.mlfpath)
+		model.train()
+		
+	elif op == "pred":
+		model = MarkovChainClassifier(args.mlfpath)
+		model.predict()
+
+	else:
+		exitWithMsg("invalid command)")

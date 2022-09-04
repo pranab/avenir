@@ -1,17 +1,21 @@
 This tutorial for customer conversion prediction based on Markov chain classifier. 
 
+*******************
+Java Hadoop version
+*******************
+
 Dependency
 ==========
 Please refer to dependency.txt
 
 Generate training data
 ======================
-./conv.sh genTrainData <num_users> <conversion_rate> <training_data_file>
+python3 visit_history.py --op gen --nuser 1000 --crate 10 --label true >> <training_data_file>
 
-where 
-num_users = number of users e.g., 5000
-conversion_rate = conversion rate e.g., 10
-training_data_file = training data file e.g., visit_hist.txt
+nuser = num of users
+crate = conversion rate
+label = whether class label should be created
+
 
 Export training data to HDFS
 ============================
@@ -27,12 +31,8 @@ Markov model classification training MR
 
 Generate test data
 ======================
-./conv.sh genTestData <num_users> <conversion_rate> <test_data_file>
+python3 visit_history.py --op gen --nuser 100 --crate 10 --label false >> <test_data_file>
 
-where 
-num_users = number of users e.g., 5000
-conversion_rate = conversion rate e.g., 10
-test_data_file = test data file e.g., visit_hist_test.txt
 
 Export test data to HDFS
 ========================
@@ -46,3 +46,36 @@ Markov model classification prediction MR
 ./conv.sh predConv
 
 
+
+**************
+Python version
+**************
+
+Setup
+=====
+Install matumizi which is a package for data exploration and various other utilities
+pip3 install -i https://test.pypi.org/simple/ matumizi==0.0.3
+
+Make sure you have the supv directory at the same level as your working directory containing 
+visit_history.py mcclf_cc.properties
+
+
+Generate training data
+======================
+python3 visit_history.py --op gen --nuser 1000 --crate 10 --label true >> cc_tr.txt
+
+nuser = num of users
+crate = conversion rate
+label = whether class label should be created
+
+Train model
+===========
+python3 visit_history.py --op train --mlfpath mcclf_cc.properties
+
+Generate prediction data
+========================
+python3 visit_history.py --op gen --nuser 100 --crate 10 --label false >> cc_pr.txt
+
+Predict
+=======
+python3 visit_history.py --op pred --mlfpath mcclf_cc.properties
