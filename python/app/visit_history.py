@@ -114,6 +114,10 @@ if __name__ == "__main__":
 		model = MarkovChainClassifier(args.mlfpath)
 		model.train()
 		
+	elif op == "valid":
+		model = MarkovChainClassifier(args.mlfpath)
+		model.validate()
+
 	elif op == "pred":
 		model = MarkovChainClassifier(args.mlfpath)
 		model.predict()

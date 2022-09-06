@@ -42,7 +42,7 @@ class MarkovChainClassifier():
 		defValues["common.verbose"] = (False, None)
 		defValues["common.states"] = (None, "missing state list")
 		defValues["train.data.file"] = (None, "missing training data file")
-		defValues["train.data.class.labels"] = (["T", "F"], None)
+		defValues["train.data.class.labels"] = (["F", "T"], None)
 		defValues["train.data.key.len"] = (1, None)
 		defValues["train.model.save"] = (False, None)
 		defValues["train.score.method"] = ("accuracy", None)
@@ -51,7 +51,7 @@ class MarkovChainClassifier():
 		defValues["predict.log.odds.threshold"] = (0, None)
 		defValues["validate.data.file"] = (None, "missing validation data file")
 		defValues["validate.use.saved.model"] = (False, None)
-		defValues["validate.score.method"] = ("accuracy", None)
+		defValues["valid.accuracy.metric"] = ("acc", None)
 		self.config = Configuration(configFile, defValues)
 		
 		self.stTranPr = dict()
@@ -99,6 +99,27 @@ class MarkovChainClassifier():
 					for r in stp:
 						rs = ",".join(toStrList(r, 6)) + "\n"
 						fh.write(rs)
+
+	def validate(self):
+		"""
+		validate using  model
+		"""	
+		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
+		if useSavedModel:
+			self.__restoreModel()
+		else:
+			self.train() 
+			
+		vdfPath = self.config.getStringConfig("validate.data.file")[0]	
+		accMetric = self.config.getStringConfig("valid.accuracy.metric")[0]
+		
+		yac, ypr = self.__getPrediction(vdfPath, True)
+		if type(self.clabels[0]) == str:
+			yac = self.__toIntClabel(yac)
+			ypr = self.__toIntClabel(ypr)
+		score = perfMetric(accMetric, yac, ypr)
+		print(formatFloat(3, score, "perf score"))
+
 			
 	def predict(self):
 		"""
@@ -106,29 +127,16 @@ class MarkovChainClassifier():
 		"""	
 		useSavedModel = self.config.getBooleanConfig("predict.use.saved.model")[0]
 		if useSavedModel:
-			self.restoreModel()
+			self.__restoreModel()
 		else:
 			self.train() 
 			
 		#predict
 		pdfPath = self.config.getStringConfig("predict.data.file")[0]
-		pc = self.clabels[0]
-		nc = self.clabels[1]
-		thold = self.config.getFloatConfig("predict.log.odds.threshold")[0]
-		klen = self.config.getIntConfig("train.data.key.len")[0]
-		for rec in fileRecGen(pdfPath):
-			lodds = 0
-			rlen = len(rec)
-			for i in range(klen, rlen-1, 1):
-				fst = self.states.index(rec[i])
-				tst = self.states.index(rec[i+1])
-				odds = self.stTranPr[pc][fst][tst] / self.stTranPr[nc][fst][tst]
-				lodds += math.log(odds)
-			prc = pc if lodds > thold else nc
-			recp = prc + "\t" + ",".join(rec)
-			print(recp)
+		_ , ypr = self.__getPrediction(pdfPath)
+		return ypr
 		
-	def restoreModel(self):
+	def __restoreModel(self):
 		"""
 		restore model
 		"""
@@ -152,6 +160,48 @@ class MarkovChainClassifier():
 		stp = np.array(stp)
 		self.stTranPr[cl] = stp
 				
-			
+	def __getPrediction(self, fpath, validate=False):
+		"""
+		get predictions
 		
+		Parameters
+			fpath : data file path
+			validate: True if validation
+		"""
+	
+		nc = self.clabels[0]
+		pc = self.clabels[1]
+		thold = self.config.getFloatConfig("predict.log.odds.threshold")[0]
+		klen = self.config.getIntConfig("train.data.key.len")[0]
+		offset = klen+1 if validate else klen
+		ypr = list()
+		yac = list()
+		for rec in fileRecGen(fpath):
+			lodds = 0
+			rlen = len(rec)
+			for i in range(offset, rlen-1, 1):
+				fst = self.states.index(rec[i])
+				tst = self.states.index(rec[i+1])
+				odds = self.stTranPr[pc][fst][tst] / self.stTranPr[nc][fst][tst]
+				lodds += math.log(odds)
+			prc = pc if lodds > thold else nc
+			ypr.append(prc)
+			if validate:
+				yac.append(rec[klen])
+			else:
+				recp = prc + "\t" + ",".join(rec)
+				print(recp)
+
+		re = (yac, ypr)
+		return re
+	
+	def __toIntClabel(self, labels):
+		"""
+		convert string class label to int
+		
+		Parameters
+			labels : class label values
+		"""
+		return list(map(lambda l : self.clabels.index(l), labels))
+	
 		

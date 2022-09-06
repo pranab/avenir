@@ -72,6 +72,14 @@ Train model
 ===========
 python3 visit_history.py --op train --mlfpath mcclf_cc.properties
 
+Generate validation data
+========================
+python3 visit_history.py --op gen --nuser 200 --crate 10 --label false >> cc_va.txt
+
+Validate
+========
+python3 visit_history.py --op valid --mlfpath mcclf_cc.properties
+
 Generate prediction data
 ========================
 python3 visit_history.py --op gen --nuser 100 --crate 10 --label false >> cc_pr.txt
